@@ -1,0 +1,33 @@
+{
+  "name": "opencode-agora",
+  "version": "0.1.0",
+  "description": "Agora - The Developer's Terminal Marketplace & Community Hub for OpenCode",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "mcp",
+    "marketplace",
+    "community",
+    "developer-tools"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@opencode-ai/plugin": "latest",
+    "@types/bun": "latest",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "bun-types": "^1.2.0"
+  }
+}
