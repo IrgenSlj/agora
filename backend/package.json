@@ -1,0 +1,18 @@
+{
+  "name": "agora-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/index.ts",
+    "deploy": "wrangler deploy",
+    "build": "bun build --backend bundler=worker src/index.ts"
+  },
+  "dependencies": {
+    "hono": "^4.0.0",
+    "@cloudflare/workers-types": "^4.20241127.0"
+  },
+  "devDependencies": {
+    "wrangler": "^3.93.0",
+    "bun-types": "^1.2.0"
+  }
+}

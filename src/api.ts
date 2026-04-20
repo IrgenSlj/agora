@@ -1,0 +1,144 @@
+const API_BASE = process.env.AGORA_API_URL || 'https://agora-api.your-subdomain.workers.dev';
+
+export interface Package {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  version: string;
+  category: string;
+  tags: string[];
+  stars: number;
+  installs: number;
+  repository?: string;
+  npm_package?: string;
+  created_at: string;
+}
+
+export interface Workflow {
+  id: string;
+  name: string;
+  description: string;
+  author: string;
+  prompt: string;
+  model?: string;
+  tags: string[];
+  stars: number;
+  forks: number;
+  created_at: string;
+}
+
+export interface Discussion {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  category: string;
+  stars: number;
+  reply_count: number;
+  created_at: string;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  display_name?: string;
+  bio?: string;
+  avatar_url?: string;
+}
+
+export async function searchPackages(query: string, category?: string): Promise<Package[]> {
+  const params = new URLSearchParams({ q: query });
+  if (category) params.set('category', category);
+  
+  const res = await fetch(`${API_BASE}/api/packages?${params}`);
+  if (!res.ok) return [];
+  
+  const data = await res.json() as any;
+  return data.packages || [];
+}
+
+export async function getPackage(id: string): Promise<Package | null> {
+  const res = await fetch(`${API_BASE}/api/packages/${id}`);
+  if (!res.ok) return null;
+  
+  const data = await res.json() as any;
+  return data.package || null;
+}
+
+export async function searchWorkflows(query: string): Promise<Workflow[]> {
+  const res = await fetch(`${API_BASE}/api/workflows?q=${encodeURIComponent(query)}`);
+  if (!res.ok) return [];
+  
+  const data = await res.json() as any;
+  return data.workflows || [];
+}
+
+export async function getWorkflow(id: string): Promise<Workflow | null> {
+  const res = await fetch(`${API_BASE}/api/workflows/${id}`);
+  if (!res.ok) return null;
+  
+  const data = await res.json() as any;
+  return data.workflow || null;
+}
+
+export async function getTrending(type: 'packages' | 'workflows' | 'all' = 'all') {
+  const res = await fetch(`${API_BASE}/api/trending`);
+  if (!res.ok) return { packages: [], workflows: [] };
+  
+  return res.json();
+}
+
+export async function getDiscussions(category?: string): Promise<Discussion[]> {
+  const params = category ? `?category=${category}` : '';
+  const res = await fetch(`${API_BASE}/api/discussions${params}`);
+  if (!res.ok) return [];
+  
+  const data = await res.json() as any;
+  return data.discussions || [];
+}
+
+export async function createDiscussion(data: {
+  title: string;
+  content: string;
+  category: string;
+  author: string;
+}): Promise<{ id: string } | null> {
+  const res = await fetch(`${API_BASE}/api/discussions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  
+  if (!res.ok) return null;
+  return res.json() as Promise<{ id: string }>;
+}
+
+export async function getUser(username: string): Promise<User | null> {
+  const res = await fetch(`${API_BASE}/api/users/${username}`);
+  if (!res.ok) return null;
+  
+  const data = await res.json() as any;
+  return data.user || null;
+}
+
+export async function searchNpmPackages(query: string): Promise<{ npm: any[]; mcp: any[] }> {
+  const res = await fetch(`${API_BASE}/api/aggregate/packages?q=${encodeURIComponent(query)}`);
+  if (!res.ok) return { npm: [], mcp: [] };
+  
+  return res.json() as Promise<{ npm: any[]; mcp: any[] }>;
+}
+
+export async function getMcpPackage(name: string): Promise<any | null> {
+  const res = await fetch(`${API_BASE}/api/aggregate/mcp/${name}`);
+  if (!res.ok) return null;
+  
+  return res.json();
+}
+
+export async function getGitHubRepo(owner: string, repo: string): Promise<any | null> {
+  const res = await fetch(`${API_BASE}/api/aggregate/github/${owner}/${repo}`);
+  if (!res.ok) return null;
+  
+  return res.json();
+}

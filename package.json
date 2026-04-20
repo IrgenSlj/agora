@@ -5,10 +5,21 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anomalyco/opencode-plugins.git"
+  },
+  "homepage": "https://github.com/anomalyco/opencode-plugins/tree/main/agora",
+  "bugs": "https://github.com/anomalyco/opencode-plugins/issues",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test",
+    "prepublishOnly": "bun run build"
   },
   "keywords": [
     "opencode",
@@ -29,5 +40,8 @@
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0",
     "bun-types": "^1.2.0"
+  },
+  "test": {
+    "setup": "./test/setup.ts"
   }
 }

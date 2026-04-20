@@ -60,13 +60,17 @@ Or add manually to `opencode.json`:
 
 ## Usage
 
-Once installed, Agora appears as a panel in OpenCode:
+Once installed, use these commands:
 
-- `/agora` - Open the Agora marketplace
-- `/agora search <query>` - Search for tools and workflows
-- `/agora trending` - See what's popular
-- `/agora install <package>` - Install a package
-- `/agora share` - Share your workflow
+- `/agora search <query> [category]` - Search marketplace
+- `/agora browse <id>` - View package details
+- `/agora browse_category <category>` - Browse by category (mcp, workflow, prompt)
+- `/agora trending [type]` - See trending packages/workflows
+- `/agora install <id>` - Get install instructions
+- `/agora install <id> --write` - Write config snippet
+- `/agora tutorial [id] [step]` - Interactive tutorials
+- `/agora discussions [category]` - Community discussions
+- `/agora info` - Plugin information
 
 ## Development
 

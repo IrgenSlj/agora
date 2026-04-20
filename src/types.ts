@@ -53,3 +53,23 @@ export interface TutorialStep {
   content: string;
   code?: string;
 }
+
+export interface Profile {
+  username: string;
+  displayName: string;
+  bio?: string;
+  packages: number;
+  workflows: number;
+  discussions: number;
+  joinedAt: string;
+}
+
+export interface Review {
+  id: string;
+  itemId: string;
+  itemType: 'package' | 'workflow';
+  author: string;
+  rating: number;
+  content: string;
+  createdAt: string;
+}

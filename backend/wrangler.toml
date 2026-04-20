@@ -1,0 +1,16 @@
+name = "agora-api"
+main = "src/index.ts"
+compatibility_date = "2024-04-19"
+
+[vars]
+AGORA_ENV = "development"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "agora"
+database_id = "your-database-id-here"
+
+# Secrets (set via wrangler secret put):
+# GITHUB_CLIENT_ID
+# GITHUB_CLIENT_SECRET
+# AUTH_SECRET
