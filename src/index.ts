@@ -21,6 +21,9 @@ import {
   getMcpPackage,
   getGitHubRepo
 } from './api';
+import { logger, safeExecute, safeExecuteAsync } from './logger';
+import { formatPackage, formatWorkflow, truncate, formatStars, formatInstalls } from './format';
+import { generateMcpConfig, formatConfigJson, parseOpenCodeConfig, getInstallInstructions } from './config';
 
 const AGORA_VERSION = '0.1.0';
 const USE_API = process.env.AGORA_USE_API === 'true';
@@ -51,7 +54,7 @@ export const Agora: Plugin = async (ctx) => {
                 ...wfs.map(w => ({ ...w, type: 'workflow' as const, category: 'workflow' as const }))
               ];
             } catch (e) {
-              console.error('API error, using sample data:', e);
+              logger.error('API error, using sample data:', e);
             }
           }
 
@@ -382,20 +385,21 @@ This workflow is now active. To use it:
           }
 
           if (write) {
-            return `📦 **Installed**: ${p.name}
+            try {
+              const config = generateMcpConfig(p);
+              return `📦 **Config Generated** for ${p.name}
 
-To complete setup, add this to your \`opencode.json\`:
+Add this to your \`opencode.json\`:
 
 \`\`\`json
-{
-  "mcpServers": {
-    "${p.id}": {
-      "command": "npx",
-      "args": ["${p.npmPackage}"]
-    }
-  }
-}
-\`\`\``;
+${formatConfigJson(config)}
+\`\`\`
+
+Or run with higher privileges to auto-write.`;
+            } catch (e) {
+              logger.error('Config generation failed:', e);
+              return `❌ Failed to generate config: ${e}`;
+            }
           }
 
           return `📦 **Installing**: ${p.name}
