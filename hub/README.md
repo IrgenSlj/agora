@@ -1,6 +1,14 @@
 # Agora Admin Hub
 
-A web-based admin dashboard for managing the Agora marketplace.
+A web-based admin dashboard for managing the Agora marketplace directly in the browser.
+
+## Purpose
+
+Allows users to:
+- Browse and preview the Agora marketplace UI
+- Manage packages, workflows, discussions
+- View analytics and statistics
+- Configure marketplace settings
 
 ## Architecture
 
@@ -8,50 +16,55 @@ A web-based admin dashboard for managing the Agora marketplace.
 ┌─────────────────────────────────────────────────────────────┐
 │                    AGORA ADMIN HUB                         │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐        │
-│  │   Dashboard │   │  Packages  │   │ Analytics  │        │
-│  │   (stats)   │   │  (CRUD)    │   │  (charts)  │        │
-│  └─────────────┘   └─────────────┘   └─────────────┘        │
-│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐        │
-│  │ Discussions │   │  Reviews   │   │ Settings   │        │
-│  │  (mods)    │   │ (ratings)  │   │ (config)   │        │
-│  └─────────────┘   └─────────────┘   └─────────────┘        │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐      │
+│  │   Dashboard │   │   Packages  │   │  Analytics  │      │
+│  │   (stats)   │   │    (CRUD)   │   │   (charts)  │      │
+│  └─────────────┘   └─────────────┘   └─────────────┘      │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐      │
+│  │ Discussions │   │   Reviews   │   │   Settings   │      │
+│  │   (mods)    │   │  (ratings)  │   │   (config)  │      │
+│  └─────────────┘   └─────────────┘   └─────────────┘      │
 ├─────────────────────────────────────────────────────────────┤
-│                    BACKEND API                           │
+│                    BACKEND API                             │
 │  ┌───────────────────────────────────────────────┐        │
-│  │        Cloudflare Workers + D1               │        │
+│  │     Cloudflare Workers + D1 Database           │        │
 │  └───────────────────────────────────────────────┘        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Features
+## Tech Stack
 
-### Required for Deployment
+- **Frontend**: React or Next.js
+- **Backend**: Cloudflare Workers (existing in `/backend`)
+- **Database**: Cloudflare D1 (schema in `/backend/schema.sql`)
+- **Auth**: GitHub OAuth
 
-1. **Cloudflare Workers** - API server (already in `/backend`)
-2. **D1 Database** - Storage (schema in `/backend/schema.sql`)
-3. **GitHub OAuth** - Admin authentication
-4. **Custom Domain** - e.g., `hub.agora.sh`
+## Pages
 
-### Admin Features
+### Dashboard
+- Stats: total packages, users, discussions
+- Recent activity feed
+- Quick actions
 
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| Dashboard | View stats, recent activity | High |
-| Package Management | Add, edit, remove packages | High |
-| User Management | View, ban, delete users | High |
-| Category Management | Create, edit categories | Medium |
-| Analytics | Views, installs, trends | Medium |
-| Settings | Configure marketplace | Low |
+### Packages
+- List all packages with search/filter
+- Add/edit/remove packages
+- View install counts
 
-### Data Stored
+### Discussions
+- View all discussions
+- Moderate (delete, pin)
+- Reply to threads
 
-- Users (with GitHub OAuth)
-- Packages (npm MCP servers)
-- Workflows (shared prompts)
-- Discussions
-- Reviews/Ratings
-- Analytics events
+### Analytics
+- Install trends
+- Popular packages
+- User growth
+
+### Settings
+- Marketplace configuration
+- Category management
+- OAuth settings
 
 ## Deployment
 
@@ -60,34 +73,45 @@ A web-based admin dashboard for managing the Agora marketplace.
 cd backend
 wrangler deploy
 
-# 2. Set up authentication
-# Create GitHub OAuth app
+# 2. Set up GitHub OAuth app
+# Create at: https://github.com/settings/applications/new
+# Callback URL: https://your-domain.com/auth/callback
 
-# 3. Deploy hub (future)
-# Could be a simple Hono static site
+# 3. Deploy hub
+# npm run build && wrangler pages deploy
+```
+
+## Development
+
+```bash
+cd hub
+npm install
+npm run dev
+```
+
+## Data Model
+
+```
+Users ──────── Discussions
+  │                │
+  │                ▼
+  │           Replies
+  │
+  ▼
+Reviews ───── Packages
+  │              │
+  └── Workflows ─┘
 ```
 
 ## Security
 
 - Admin access via GitHub OAuth only
 - Role-based permissions (admin, moderator, viewer)
-- Rate limiting
-- Audit logging
+- Rate limiting on API endpoints
+- Audit logging for all changes
 
-## Future: Automatic npm Scanning
+## Status
 
-The hub can periodically fetch from npm to discover new MCP packages:
+📋 **Design complete** - implementation not started
 
-```typescript
-// Scheduled worker
-app.scheduled(async (event, env) => {
-  const results = await fetch('https://registry.npmjs.org/-/v1/search?text=mcp&size=50');
-  const packages = await results.json();
-  
-  for (const pkg of packages.objects) {
-    if (isMcpServer(pkg)) {
-      await upsertPackage(pkg);
-    }
-  }
-});
-```
+This is a future phase of development. The plugin works standalone without the hub.

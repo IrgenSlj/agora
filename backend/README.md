@@ -1,0 +1,114 @@
+# Agora Backend
+
+Cloudflare Workers API for the Agora marketplace.
+
+## Overview
+
+REST API backend built with Hono that provides:
+- Package and workflow management
+- User authentication (GitHub OAuth)
+- Real-time npm/GitHub data aggregation
+- Community features (discussions, reviews)
+
+## Tech Stack
+
+- **Runtime**: Cloudflare Workers
+- **Framework**: Hono
+- **Database**: Cloudflare D1 (SQLite)
+- **Auth**: GitHub OAuth
+
+## API Endpoints
+
+### Packages
+- `GET /api/packages` - List/search packages
+- `GET /api/packages/:id` - Get package details
+
+### Workflows
+- `GET /api/workflows` - List/search workflows
+- `GET /api/workflows/:id` - Get workflow details
+
+### Community
+- `GET /api/discussions` - List discussions
+- `POST /api/discussions` - Create discussion
+
+### Users
+- `GET /api/users/:username` - Get user profile
+
+### Aggregation
+- `GET /api/aggregate/packages` - Search npm with MCP filter
+- `GET /api/aggregate/mcp/:name` - Get MCP package details
+- `GET /api/aggregate/github/:owner/:repo` - Get GitHub repo data
+
+### Other
+- `GET /` - API info
+- `GET /health` - Health check
+
+## Deployment
+
+```bash
+# Login to Cloudflare
+wrangler login
+
+# Create D1 database
+wrangler d1 create agora
+
+# Run schema (replace YOUR_DATABASE_ID)
+wrangler d1 execute agora --file=schema.sql
+
+# Set secrets
+wrangler secret put GITHUB_CLIENT_ID
+wrangler secret put GITHUB_CLIENT_SECRET
+wrangler secret put AUTH_SECRET
+
+# Deploy
+wrangler deploy
+```
+
+## Local Development
+
+```bash
+# Install dependencies
+bun install
+
+# Run locally (requires D1 binding mock)
+bun run dev
+
+# Test
+curl http://localhost:8787/health
+```
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `GITHUB_CLIENT_ID` | GitHub OAuth App client ID | Yes |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth App secret | Yes |
+| `AUTH_SECRET` | Secret for JWT/sessions | Yes |
+| `AGORA_ENV` | `development` or `production` | No |
+
+## Database Schema
+
+Tables:
+- `users` - User accounts with GitHub OAuth
+- `packages` - MCP servers and plugins
+- `workflows` - Shared agentic workflows
+- `discussions` - Community discussions
+- `discussion_replies` - Discussion replies
+- `reviews` - Package/workflow ratings
+- `tutorials` - Learning content
+- `followers` - User relationships
+
+See `schema.sql` for full schema.
+
+## Authentication
+
+GitHub OAuth flow:
+1. User clicks "Login with GitHub"
+2. Redirect to GitHub OAuth
+3. Callback creates/updates user in DB
+4. Session cookie set
+
+## Status
+
+✅ API code complete
+⏳ Awaiting deployment
