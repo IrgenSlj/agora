@@ -1,6 +1,14 @@
 # Agora Backend
 
-Cloudflare Workers API for the Agora marketplace.
+<p align="center">
+  Cloudflare Workers API for the Agora marketplace.
+</p>
+
+<p align="center">
+  <a href="https://cloudflare.com"><img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare" alt="Cloudflare"></a>
+  <a href="https://hono.dev"><img src="https://img.shields.io/badge/Hono-EE4D3C?logo=hono" alt="Hono"></a>
+  <a href="https://developers.cloudflare.com/d1/"><img src="https://img.shields.io/badge/D1-SQLite-3B82F6" alt="D1"></a>
+</p>
 
 ## Overview
 

@@ -8,6 +8,12 @@
   An OpenCode plugin that brings a marketplace, community, and knowledge base to your terminal.
 </p>
 
+<p align="center">
+  <a href="https://www.npmjs.com/package/opencode-agora"><img src="https://img.shields.io/npm/v/opencode-agora" alt="npm"></a>
+  <a href="https://github.com/IrgenSlj/agora/issues"><img src="https://img.shields.io/github/issues/IrgenSlj/agora" alt="issues"></a>
+  <a href="https://github.com/IrgenSlj/agora/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/opencode-agora" alt="license"></a>
+</p>
+
 ---
 
 ## What is Agora?
@@ -75,10 +81,12 @@ Once installed, use these commands:
 
 **Categories:** mcp, prompt, workflow, skill
 
-## Development
+## Quick Start
 
 ```bash
-# Install dependencies
+# Clone and install
+git clone https://github.com/IrgenSlj/agora.git
+cd agora
 bun install
 
 # Build
@@ -86,9 +94,29 @@ bun run build
 
 # Test
 bun test
+# 66 tests passing
+```
 
-# Test locally (installs to opencode plugins dir)
+## Development
+
+```bash
+# Watch mode - rebuilds on file changes
+bun run build
+
+# Install locally to OpenCode
 bun run dev
+```
+
+## Project Structure
+
+```
+agora/
+├── src/              # Plugin source
+├── backend/          # Cloudflare Workers API
+├── hub/              # Admin Hub (future)
+├── test/             # Tests
+├── dist/             # Built output
+└── index.ts         # Entry point
 ```
 
 ## Architecture

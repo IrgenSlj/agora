@@ -1,6 +1,13 @@
 # Agora Admin Hub
 
-A web-based admin dashboard for managing the Agora marketplace directly in the browser.
+<p align="center">
+  A web-based admin dashboard for managing the Agora marketplace.
+</p>
+
+<p align="center">
+  <a href="https://react.dev"><img src="https://img.shields.io/badge/React-61DAFB?logo=react" alt="React"></a>
+  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-000000?logo=next.js" alt="Next.js"></a>
+</p>
 
 ## Purpose
 
