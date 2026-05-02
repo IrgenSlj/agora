@@ -1,124 +1,88 @@
-# Agora Admin Hub
+# Agora Hub
 
 <p align="center">
-  A web-based admin dashboard for managing the Agora marketplace.
+  An optional local web console for curating the Agora marketplace.
 </p>
 
-<p align="center">
-  <a href="https://react.dev"><img src="https://img.shields.io/badge/React-61DAFB?logo=react" alt="React"></a>
-  <a href="https://nextjs.org"><img src="https://img.shields.io/badge/Next.js-000000?logo=next.js" alt="Next.js"></a>
-</p>
+Agora is CLI-first. The Hub is a companion surface for visual browsing, install-plan review, and moderation workflows.
 
 ## Purpose
 
 Allows users to:
-- Browse and preview the Agora marketplace UI
-- Manage packages, workflows, discussions
-- View analytics and statistics
-- Configure marketplace settings
+- Browse and preview Agora packages, skills, prompts, and workflows
+- Build an OpenCode install plan and copy generated `opencode.json`
+- Moderate community discussions
+- View lightweight marketplace analytics
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    AGORA ADMIN HUB                         │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐      │
-│  │   Dashboard │   │   Packages  │   │  Analytics  │      │
-│  │   (stats)   │   │    (CRUD)   │   │   (charts)  │      │
-│  └─────────────┘   └─────────────┘   └─────────────┘      │
-│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐      │
-│  │ Discussions │   │   Reviews   │   │   Settings   │      │
-│  │   (mods)    │   │  (ratings)  │   │   (config)  │      │
-│  └─────────────┘   └─────────────┘   └─────────────┘      │
-├─────────────────────────────────────────────────────────────┤
-│                    BACKEND API                             │
-│  ┌───────────────────────────────────────────────┐        │
-│  │     Cloudflare Workers + D1 Database           │        │
-│  └───────────────────────────────────────────────┘        │
-└─────────────────────────────────────────────────────────────┘
+```text
+AGORA HUB
+|-- Overview: stats, activity, analytics
+|-- Marketplace: package search, filters, details
+|-- Workflows: prompt preview and install planning
+|-- Community: discussion moderation and drafts
+`-- Install plan: generated opencode.json and commands
+
+Future connected mode:
+Cloudflare Workers API + D1 database
 ```
 
 ## Tech Stack
 
-- **Frontend**: React or Next.js
-- **Backend**: Cloudflare Workers (existing in `/backend`)
-- **Database**: Cloudflare D1 (schema in `/backend/schema.sql`)
-- **Auth**: GitHub OAuth
+- **Frontend**: static HTML, CSS, and JavaScript
+- **Local server**: Bun
+- **Backend**: Cloudflare Workers API in `/backend` for a future connected mode
+- **Database**: Cloudflare D1 schema in `/backend/schema.sql`
 
 ## Pages
 
 ### Dashboard
 - Stats: total packages, users, discussions
 - Recent activity feed
-- Quick actions
+- Package analytics
 
 ### Packages
-- List all packages with search/filter
-- Add/edit/remove packages
-- View install counts
+- Search, filter, and sort package listings
+- Inspect package metadata
+- Add installable items to an install plan
 
 ### Discussions
 - View all discussions
-- Moderate (delete, pin)
-- Reply to threads
+- Moderate by pinning or marking reviewed
+- Create local discussion drafts
 
-### Analytics
-- Install trends
-- Popular packages
-- User growth
-
-### Settings
-- Marketplace configuration
-- Category management
-- OAuth settings
-
-## Deployment
-
-```bash
-# 1. Deploy backend first
-cd backend
-wrangler deploy
-
-# 2. Set up GitHub OAuth app
-# Create at: https://github.com/settings/applications/new
-# Callback URL: https://your-domain.com/auth/callback
-
-# 3. Deploy hub
-# npm run build && wrangler pages deploy
-```
+### Install Plan
+- Review selected packages and workflows
+- Preview `opencode.json`
+- Copy generated config and install commands
 
 ## Development
 
 ```bash
-cd hub
-npm install
-npm run dev
+bun run hub:dev
+```
+
+Then open:
+
+```text
+http://localhost:4173
 ```
 
 ## Data Model
 
-```
-Users ──────── Discussions
-  │                │
-  │                ▼
-  │           Replies
-  │
-  ▼
-Reviews ───── Packages
-  │              │
-  └── Workflows ─┘
+```text
+Users -> Discussions -> Replies
+Users -> Reviews -> Packages
+Users -> Reviews -> Workflows
 ```
 
 ## Security
 
-- Admin access via GitHub OAuth only
-- Role-based permissions (admin, moderator, viewer)
-- Rate limiting on API endpoints
-- Audit logging for all changes
+- This local version uses sample data and `localStorage`
+- A deployed version should use GitHub OAuth
+- Role-based permissions, rate limiting, and audit logging belong in the connected backend
 
 ## Status
 
-📋 **Design complete** - implementation not started
-
-This is a future phase of development. The plugin works standalone without the hub.
+**Working local app** - static Hub implementation is available in this directory.

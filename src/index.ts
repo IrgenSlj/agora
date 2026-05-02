@@ -1,32 +1,20 @@
 import type { Plugin } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
-import type { Discussion } from './types';
+import type { Discussion } from './types.js';
 import {
-  samplePackages,
-  sampleWorkflows,
   sampleDiscussions,
-  sampleTutorials,
-  trendingTags
-} from './data';
+  sampleTutorials
+} from './data.js';
 import {
-  searchPackages,
-  getPackage,
-  searchWorkflows,
-  getWorkflow,
-  getTrending,
-  getDiscussions,
-  createDiscussion,
-  getUser,
-  searchNpmPackages,
-  getMcpPackage,
-  getGitHubRepo
-} from './api';
-import { logger, safeExecute, safeExecuteAsync } from './logger';
-import { formatPackage, formatWorkflow, truncate, formatStars, formatInstalls } from './format';
-import { generateMcpConfig, formatConfigJson, parseOpenCodeConfig, getInstallInstructions } from './config';
+  createInstallPlan,
+  findMarketplaceItem,
+  getTrendingItems,
+  getTrendingTags,
+  searchMarketplaceItems
+} from './marketplace.js';
+import { formatConfigJson } from './config.js';
 
 const AGORA_VERSION = '0.1.0';
-const USE_API = process.env.AGORA_USE_API === 'true';
 
 export const Agora: Plugin = async (ctx) => {
   return {
@@ -40,52 +28,20 @@ export const Agora: Plugin = async (ctx) => {
         async execute(args, context) {
           const query = args.query;
           const category = args.category || 'all';
-
-          let allItems: any[] = [];
-
-          if (USE_API) {
-            try {
-              const [pkgs, wfs] = await Promise.all([
-                searchPackages(query, category === 'workflow' ? undefined : category),
-                searchWorkflows(query)
-              ]);
-              allItems = [
-                ...pkgs.map(p => ({ ...p, type: 'package' as const, category: p.category || 'package' })),
-                ...wfs.map(w => ({ ...w, type: 'workflow' as const, category: 'workflow' as const }))
-              ];
-            } catch (e) {
-              logger.error('API error, using sample data:', e);
-            }
-          }
-
-          if (allItems.length === 0) {
-            allItems = [
-              ...samplePackages.map(p => ({ ...p, type: 'package' as const })),
-              ...sampleWorkflows.map(w => ({ ...w, type: 'workflow' as const, category: 'workflow' as const }))
-            ];
-          }
-
-          const filtered = allItems.filter(item => {
-            const matchesQuery = item.name.toLowerCase().includes(query.toLowerCase()) ||
-              item.description?.toLowerCase().includes(query.toLowerCase());
-            const matchesCategory = category === 'all' || item.category === category;
-            return matchesQuery && matchesCategory;
-          });
+          const filtered = searchMarketplaceItems({ query, category, limit: 10 });
 
           if (filtered.length === 0) {
             return `No results found for "${query}". Try a different search term.`;
           }
 
-          const limit = Math.min(filtered.length, 10);
-          const icon = filtered[0]?.type === 'package' ? '📦' : '🔄';
-          
           return `🔍 **Search Results** for "${query}" (${filtered.length} found)
 
-${filtered.slice(0, limit).map((item, i) => {
+${filtered.map((item, i) => {
             const shortDesc = (item.description || '').slice(0, 60) + (item.description?.length > 60 ? '...' : '');
+            const icon = item.kind === 'package' ? '📦' : '🔄';
             return `${i + 1}. **${item.name}** ${icon}
    ${shortDesc}
-   ⭐ ${item.stars || 0} · 📥 ${(item as any).installs || 0} · by ${item.author}`;
+   ⭐ ${item.stars || 0} · 📥 ${item.installs || 0} · by ${item.author}`;
           }).join('\n\n')}
 
 ---
@@ -102,29 +58,18 @@ Run \`/agora browse <name>\` for details or \`/agora install <id>\` to install.`
         async execute(args) {
           const category = args.category || 'all';
           const limit = args.limit || 10;
-
-          let items: any[] = [];
-          let title = '';
-
-          if (category === 'all' || category === 'mcp' || category === 'package') {
-            items = [...samplePackages];
-            title = '📦 MCP Packages';
-          } else if (category === 'workflow') {
-            items = [...sampleWorkflows];
-            title = '🔄 Workflows';
-          } else if (category === 'prompt') {
-            items = samplePackages.filter(p => p.category === 'prompt');
-            title = '💬 Prompts';
-          }
+          const items = searchMarketplaceItems({ category, limit });
+          const title = category === 'workflow' ? '🔄 Workflows' :
+            category === 'prompt' ? '💬 Prompts' :
+              category === 'all' ? '🏛️ Marketplace' : '📦 Packages';
 
           if (items.length === 0) {
             return `No items in category "${category}". Try: mcp, workflow, prompt`;
           }
 
-          const sorted = items.sort((a, b) => b.stars - a.stars).slice(0, limit);
-          return `${title} (${items.length} total)
+          return `${title} (${items.length} shown)
 
-${sorted.map((item, i) => `${i + 1}. **${item.name}** ⭐ ${item.stars}`).join('\n')}
+${items.map((item, i) => `${i + 1}. **${item.name}** ⭐ ${item.stars}`).join('\n')}
 
 ---
 Run \`/agora browse <id>\` for details.`;
@@ -141,24 +86,24 @@ Run \`/agora browse <id>\` for details.`;
 
           let output = `📈 **Trending in Agora**\n\n`;
 
-          if (category === 'all' || category === 'packages') {
+          if (category === 'all' || category === 'packages' || category === 'package') {
             output += `**Top Packages**\n`;
-            const topPackages = [...samplePackages].sort((a, b) => b.stars - a.stars).slice(0, 5);
+            const topPackages = getTrendingItems({ category: 'package', limit: 5 });
             output += topPackages.map((p, i) =>
               `${i + 1}. ${p.name} - ⭐ ${p.stars}`
             ).join('\n');
             output += '\n\n';
           }
 
-          if (category === 'all' || category === 'workflows') {
+          if (category === 'all' || category === 'workflows' || category === 'workflow') {
             output += `**Top Workflows**\n`;
-            const topWorkflows = [...sampleWorkflows].sort((a, b) => b.stars - a.stars).slice(0, 5);
+            const topWorkflows = getTrendingItems({ category: 'workflow', limit: 5 });
             output += topWorkflows.map((w, i) =>
               `${i + 1}. ${w.name} - ⭐ ${w.stars}`
             ).join('\n');
           }
 
-          output += `\n\n🏷️ **Trending Tags**: ${trendingTags.slice(0, 8).join(', ')}`;
+          output += `\n\n🏷️ **Trending Tags**: ${getTrendingTags(8).join(', ')}`;
 
           return output;
         }
@@ -304,16 +249,14 @@ Run \`/agora discussions create --title "..." --content "..." --category questio
         async execute(args, ctx) {
           const id = args.id;
           const type = args.type;
+          const item = findMarketplaceItem(id, { type });
 
-          const pkg = samplePackages.find(p => p.id === id || p.name.includes(id));
-          const wf = sampleWorkflows.find(w => w.id === id || w.name.toLowerCase().includes(id.toLowerCase()));
-
-          if (!pkg && !wf) {
+          if (!item) {
             return `Item "${id}" not found. Run \`/agora search <query>\` to find packages.`;
           }
 
-          if (type === 'workflow' || (!type && wf)) {
-            const w = wf!;
+          if (item.kind === 'workflow') {
+            const w = item;
             return `🔄 **${w.name}**
 by ${w.author} | ⭐ ${w.stars} | 🍴 ${w.forks}
 
@@ -329,7 +272,7 @@ ${w.prompt}
 Run \`/agora install workflow ${w.id}\` to use this workflow.`;
           }
 
-          const p = pkg!;
+          const p = item;
           return `📦 **${p.name}**
 v${p.version} by ${p.author} | ⭐ ${p.stars} | 📥 ${p.installs}
 
@@ -354,18 +297,16 @@ Run \`/agora install ${p.id}\` to install to your OpenCode config.`;
         },
         async execute(args, ctx) {
           const id = args.id;
-          const type = args.type || 'package';
+          const type = args.type;
           const write = args.write || false;
+          const item = findMarketplaceItem(id, { type });
 
-          const pkg = samplePackages.find(p => p.id === id || p.name.includes(id));
-          const wf = sampleWorkflows.find(w => w.id === id || w.name.toLowerCase().includes(id.toLowerCase()));
-
-          if (!pkg && !wf) {
+          if (!item) {
             return `Item "${id}" not found. Run \`/agora search <query>\` to find packages.`;
           }
 
-          if (type === 'workflow' || (!type && wf)) {
-            const w = wf!;
+          if (item.kind === 'workflow') {
+            const w = item;
             return `🔄 **Workflow installed**: ${w.name}
 
 This workflow is now active. To use it:
@@ -378,52 +319,42 @@ This workflow is now active. To use it:
 2. Or run \`/agora info\` to see all installed workflows.`;
           }
 
-          const p = pkg!;
-          
-          if (!p.npmPackage) {
-            return `❌ ${p.name} has no npm package to install.`;
+          const plan = createInstallPlan(item);
+
+          if (!plan.installable) {
+            return `❌ ${plan.reason}`;
           }
 
           if (write) {
-            try {
-              const config = generateMcpConfig(p);
-              return `📦 **Config Generated** for ${p.name}
+            return `📦 **Config Generated** for ${item.name}
 
 Add this to your \`opencode.json\`:
 
 \`\`\`json
-${formatConfigJson(config)}
+${formatConfigJson(plan.config)}
 \`\`\`
 
-Or run with higher privileges to auto-write.`;
-            } catch (e) {
-              logger.error('Config generation failed:', e);
-              return `❌ Failed to generate config: ${e}`;
-            }
+Use the standalone CLI for safe file writes:
+\`agora install ${item.id} --write\``;
           }
 
-          return `📦 **Installing**: ${p.name}
+          const command = plan.commands[0];
+
+          return `📦 **Installing**: ${item.name}
 
 To install this MCP server to your OpenCode config:
 
 1. Install the package:
    \`\`\`bash
-   npm install -g ${p.npmPackage}
+   ${command}
    \`\`\`
 
 2. Add to your \`opencode.json\`:
    \`\`\`json
-   {
-     "mcpServers": {
-       "${p.id}": {
-         "command": "npx",
-         "args": ["${p.npmPackage}"]
-       }
-     }
-   }
-   \`\`\`\`
+   ${formatConfigJson(plan.config)}
+   \`\`\`
 
-Run \`/agora install ${p.id} --write\` to auto-write to config.`;
+Run \`agora install ${item.id} --write\` in your terminal to auto-write to config.`;
         }
       }),
 

@@ -1,4 +1,4 @@
-import type { Package, Workflow, Discussion, Tutorial } from './types';
+import type { Package, Workflow, Discussion, Tutorial } from './types.js';
 
 export const samplePackages: Package[] = [
   {

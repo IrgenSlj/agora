@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  An OpenCode plugin that brings a marketplace, community, and knowledge base to your terminal.
+  A CLI-first marketplace for discovering and installing OpenCode tools, workflows, prompts, and MCP servers.
 </p>
 
 <p align="center">
@@ -18,33 +18,50 @@
 
 ## What is Agora?
 
-Agora is an OpenCode plugin that transforms your terminal into a vibrant marketplace and community hub. Think of it as the ancient Greek agora - a place where developers gather to:
+Agora is a terminal marketplace for OpenCode. The standalone `agora` CLI is the primary interface, and the OpenCode plugin exposes the same marketplace inside OpenCode sessions.
 
-- 🔍 **Discover** - Browse and search MCP servers, prompts, and workflows
-- 📦 **Install** - One-click install tools that integrate seamlessly with OpenCode
-- 💬 **Discuss** - Share ideas, debate approaches, and learn from the community
-- 📚 **Learn** - Interactive tutorials on AI, MCP, and modern development
+Use it to:
+
+- Discover MCP servers, prompts, skills, and workflows
+- Preview install plans before touching local config
+- Safely write MCP server entries to `opencode.json`
+- Browse discussions and workflow patterns from the terminal
+- Keep the plugin and CLI behavior aligned through shared core modules
 
 ## Features
 
-### 📦 Marketplace
+### CLI Marketplace
 - Browse curated MCP servers and plugins
 - Search by category, language, or use case
-- One-click installation to your OpenCode config
-- Ratings and reviews from the community
+- Output human-readable results or `--json` for scripts
+- Preview install plans before writing files
 
-### 🔄 Workflows
+### Config-Aware Installs
+- Detect an OpenCode config path automatically
+- Use `--config path` for explicit writes
+- Merge MCP servers into existing config
+- Inspect config health with `agora config doctor`
+
+### Workflows
 - Share your agentic workflows
 - Import battle-tested patterns from others
 - Version control your prompts and workflows
 - Fork and improve community workflows
 
-### 💬 Community
+### Community
 - Discussion threads on tools and patterns
 - Trending prompts and workflows
 - Expert AMAs and knowledge sharing
 
-### 📚 Learn
+### OpenCode Plugin
+- Search, browse, install-preview, review, profile, discussion, and tutorial tools from inside OpenCode
+- Uses the same marketplace core as the CLI for core discovery flows
+
+### Local Hub
+- Optional browser console for browsing the marketplace and assembling install plans
+- Runs locally with `bun run hub:dev`
+
+### Learn
 - Interactive tutorials on MCP
 - AI development best practices
 - Terminal productivity tips
@@ -52,11 +69,23 @@ Agora is an OpenCode plugin that transforms your terminal into a vibrant marketp
 ## Installation
 
 ```bash
-# Add to your opencode.json
-npm install opencode-agora
+npx opencode-agora search filesystem
 ```
 
-Or add manually to `opencode.json`:
+For a persistent command:
+
+```bash
+npm install -g opencode-agora
+```
+
+The package exposes two binary names:
+
+```bash
+agora --help
+opencode-agora --help
+```
+
+To use the OpenCode plugin, add it to `opencode.json`:
 
 ```json
 {
@@ -66,7 +95,23 @@ Or add manually to `opencode.json`:
 
 ## Usage
 
-Once installed, use these commands:
+CLI commands:
+
+```bash
+agora search filesystem
+agora search github --category mcp --json
+agora browse mcp-github
+agora trending workflows --limit 5
+agora workflows security
+agora discussions mcp --category question
+agora install mcp-github
+agora install mcp-github --write
+agora config doctor
+```
+
+`agora install <id>` is preview-only by default. Add `--write` to update the detected OpenCode config, or pass `--config ./opencode.json` for an explicit target.
+
+OpenCode plugin commands:
 
 - `/agora search <query> [category]` - Search marketplace
 - `/agora browse_category <category>` - Browse by category (mcp, workflow, prompt)
@@ -94,39 +139,53 @@ bun run build
 
 # Test
 bun test
-# 66 tests passing
 ```
 
 ## Development
 
 ```bash
-# Watch mode - rebuilds on file changes
+# Typecheck
+bun run typecheck
+
+# Build package output
 bun run build
+
+# Run tests
+bun test
+
+# Try the CLI from source
+bun src/cli.ts search filesystem
 
 # Install locally to OpenCode
 bun run dev
+
+# Run the optional local Hub
+bun run hub:dev
 ```
 
 ## Project Structure
 
 ```
 agora/
-├── src/              # Plugin source
+├── src/              # CLI, plugin, and shared marketplace core
 ├── backend/          # Cloudflare Workers API
-├── hub/              # Admin Hub (future)
+├── hub/              # Optional local web Hub
 ├── test/             # Tests
 ├── dist/             # Built output
-└── index.ts         # Entry point
+└── README.md
 ```
 
 ## Architecture
 
 ```
 agora/
-├── src/              # OpenCode Plugin
-│   ├── index.ts      # Main plugin (10 tools)
+├── src/
+│   ├── cli.ts        # CLI entrypoint
+│   ├── cli/app.ts    # CLI command parser and handlers
+│   ├── marketplace.ts # Shared search, browse, trending, install-plan core
+│   ├── config-files.ts # OpenCode config detection, doctor, and write helpers
+│   ├── index.ts      # OpenCode plugin
 │   ├── api.ts        # API client with fallback
-│   ├── logger.ts     # Error handling
 │   ├── format.ts     # Output formatting
 │   ├── config.ts     # MCP config generation
 │   ├── data.ts       # Sample data
@@ -137,9 +196,9 @@ agora/
 │   ├── schema.sql    # D1 database schema
 │   └── services/      # npm + GitHub API clients
 │
-├── hub/              # Admin Hub (web dashboard)
+├── hub/              # Local Hub app
 │
-├── test/             # Tests (66 passing)
+├── test/             # Unit and CLI tests
 └── dist/             # Built output
 ```
 
@@ -147,23 +206,25 @@ agora/
 
 | Component | Status | Notes |
 |-----------|--------|-------|
+| CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `install`, `config doctor` |
+| Shared core | Ready | CLI and plugin share marketplace discovery/install-plan logic |
 | Plugin (offline) | ✅ Ready | Works with sample data |
 | API Client | ✅ Built | Connects to backend |
 | Backend | ⚠️ Ready | Needs deployment |
-| Admin Hub | 📋 Design | Not built yet |
+| Local Hub | Ready | Static local app served by Bun |
 
 ## Next Steps (TODO)
 
+- [ ] Add live marketplace API mode to the CLI with offline fallback
+- [ ] Add persistent local saved items under `~/.config/agora`
 - [ ] Deploy backend to Cloudflare Workers
 - [ ] Set up GitHub OAuth for backend
 - [ ] Publish plugin to npm
-- [ ] Build admin hub web interface
 
 ## Testing
 
 ```bash
 bun test
-# 66 tests, 0 failures
 ```
 
 ## License
@@ -173,5 +234,5 @@ MIT
 ---
 
 <p align="center">
-  Built with ❤️ for the developer community
+  Built for the developer community
 </p>

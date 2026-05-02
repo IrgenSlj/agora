@@ -1,4 +1,4 @@
-import type { Package, Workflow } from './types';
+import type { Package, Workflow } from './types.js';
 
 export interface OpenCodeConfig {
   $schema?: string;

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agora Hub</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <aside class="sidebar" aria-label="Primary">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">A</div>
+          <div>
+            <strong>Agora Hub</strong>
+            <span>Marketplace console</span>
+          </div>
+        </div>
+
+        <nav class="nav" aria-label="Hub views">
+          <button class="nav-item is-active" data-view="overview" type="button">
+            <span class="nav-icon" aria-hidden="true">01</span>
+            Overview
+          </button>
+          <button class="nav-item" data-view="marketplace" type="button">
+            <span class="nav-icon" aria-hidden="true">02</span>
+            Marketplace
+          </button>
+          <button class="nav-item" data-view="workflows" type="button">
+            <span class="nav-icon" aria-hidden="true">03</span>
+            Workflows
+          </button>
+          <button class="nav-item" data-view="community" type="button">
+            <span class="nav-icon" aria-hidden="true">04</span>
+            Community
+          </button>
+          <button class="nav-item" data-view="install" type="button">
+            <span class="nav-icon" aria-hidden="true">05</span>
+            Install plan
+          </button>
+        </nav>
+
+        <div class="sidebar-summary">
+          <span>Ready to publish</span>
+          <strong id="sidebar-ready">0</strong>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">OpenCode marketplace</p>
+            <h1 id="view-title">Overview</h1>
+          </div>
+          <div class="topbar-actions">
+            <label class="search">
+              <span aria-hidden="true">Search</span>
+              <input id="global-search" type="search" placeholder="Search packages, workflows, discussions" />
+            </label>
+            <button class="icon-button" id="clear-state" type="button" aria-label="Reset local workspace">
+              Reset
+            </button>
+          </div>
+        </header>
+
+        <section class="view is-active" id="view-overview" aria-labelledby="view-title">
+          <div class="metric-grid" id="metric-grid"></div>
+
+          <div class="overview-grid">
+            <section class="panel analytics-panel" aria-labelledby="analytics-title">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Demand</p>
+                  <h2 id="analytics-title">Install momentum</h2>
+                </div>
+                <select id="analytics-mode" aria-label="Analytics metric">
+                  <option value="installs">Installs</option>
+                  <option value="stars">Stars</option>
+                </select>
+              </div>
+              <div class="bar-chart" id="bar-chart" aria-label="Package analytics chart"></div>
+            </section>
+
+            <section class="panel" aria-labelledby="activity-title">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Today</p>
+                  <h2 id="activity-title">Activity</h2>
+                </div>
+              </div>
+              <div class="activity-list" id="activity-list"></div>
+            </section>
+          </div>
+
+          <section class="list-section" aria-labelledby="recommended-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Curated</p>
+                <h2 id="recommended-title">Recommended tools</h2>
+              </div>
+              <button class="text-button" data-jump-view="marketplace" type="button">Review all</button>
+            </div>
+            <div class="card-grid" id="recommended-grid"></div>
+          </section>
+        </section>
+
+        <section class="view" id="view-marketplace" aria-labelledby="view-title">
+          <div class="tool-strip">
+            <div class="segmented" role="group" aria-label="Category filter">
+              <button class="is-active" data-category="all" type="button">All</button>
+              <button data-category="mcp" type="button">MCP</button>
+              <button data-category="prompt" type="button">Prompts</button>
+              <button data-category="workflow" type="button">Workflow packs</button>
+              <button data-category="skill" type="button">Skills</button>
+            </div>
+            <select id="package-sort" aria-label="Sort packages">
+              <option value="stars">Most starred</option>
+              <option value="installs">Most installed</option>
+              <option value="name">Name</option>
+              <option value="recent">Newest</option>
+            </select>
+          </div>
+
+          <div class="workspace-grid">
+            <section class="results-list" aria-label="Marketplace results" id="package-list"></section>
+            <aside class="detail-panel" id="package-detail" aria-label="Selected package detail"></aside>
+          </div>
+        </section>
+
+        <section class="view" id="view-workflows" aria-labelledby="view-title">
+          <div class="workspace-grid">
+            <section class="results-list" aria-label="Workflow results" id="workflow-list"></section>
+            <aside class="detail-panel" id="workflow-detail" aria-label="Selected workflow detail"></aside>
+          </div>
+        </section>
+
+        <section class="view" id="view-community" aria-labelledby="view-title">
+          <div class="tool-strip">
+            <div class="segmented" role="group" aria-label="Discussion filter">
+              <button class="is-active" data-discussion-category="all" type="button">All</button>
+              <button data-discussion-category="question" type="button">Questions</button>
+              <button data-discussion-category="idea" type="button">Ideas</button>
+              <button data-discussion-category="showcase" type="button">Showcases</button>
+              <button data-discussion-category="discussion" type="button">Threads</button>
+            </div>
+          </div>
+
+          <div class="community-grid">
+            <section class="results-list" id="discussion-list" aria-label="Discussion list"></section>
+            <aside class="panel moderation-panel" aria-labelledby="moderation-title">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Moderation</p>
+                  <h2 id="moderation-title">Queue</h2>
+                </div>
+              </div>
+              <div class="moderation-stats" id="moderation-stats"></div>
+              <form class="composer" id="discussion-form">
+                <label>
+                  Title
+                  <input name="title" type="text" minlength="3" required />
+                </label>
+                <label>
+                  Category
+                  <select name="category">
+                    <option value="question">Question</option>
+                    <option value="idea">Idea</option>
+                    <option value="showcase">Showcase</option>
+                    <option value="discussion">Discussion</option>
+                  </select>
+                </label>
+                <label>
+                  Content
+                  <textarea name="content" rows="4" minlength="8" required></textarea>
+                </label>
+                <button class="primary-button" type="submit">Create thread</button>
+              </form>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="view-install" aria-labelledby="view-title">
+          <div class="install-layout">
+            <section class="panel" aria-labelledby="queue-title">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Selected</p>
+                  <h2 id="queue-title">Install queue</h2>
+                </div>
+                <button class="text-button" id="clear-queue" type="button">Clear</button>
+              </div>
+              <div class="queue-list" id="queue-list"></div>
+            </section>
+
+            <section class="panel config-panel" aria-labelledby="config-title">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Preview</p>
+                  <h2 id="config-title">opencode.json</h2>
+                </div>
+                <button class="primary-button" id="copy-config" type="button">Copy config</button>
+              </div>
+              <pre id="config-output"></pre>
+              <div class="command-block" id="install-commands"></div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

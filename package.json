@@ -5,6 +5,10 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
+  "bin": {
+    "agora": "./dist/cli.js",
+    "opencode-agora": "./dist/cli.js"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/anomalyco/opencode-plugins.git"
@@ -17,6 +21,7 @@
   "scripts": {
     "build": "tsc",
     "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
+    "hub:dev": "bun hub/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
     "prepublishOnly": "bun run build"

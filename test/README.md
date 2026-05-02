@@ -31,11 +31,18 @@ bun test
 - Date formatting
 - Table/list/card formatting
 
+### CLI Tests (`cli.test.ts`)
+- Argument parsing
+- Search and JSON output
+- Browse error handling
+- Install preview and config writes
+- Config doctor output
+
 ## Coverage
 
-- **66 tests passing**
-- **139 assertions**
-- **4 test files**
+- **74 tests passing**
+- **164 assertions**
+- **5 test files**
 
 ## Adding Tests
 
