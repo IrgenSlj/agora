@@ -106,10 +106,15 @@ agora workflows security
 agora discussions mcp --category question
 agora install mcp-github
 agora install mcp-github --write
+agora save wf-security-audit
+agora saved
+agora remove wf-security-audit
 agora config doctor
 ```
 
 `agora install <id>` is preview-only by default. Add `--write` to update the detected OpenCode config, or pass `--config ./opencode.json` for an explicit target.
+
+Saved items are stored in `~/.config/agora/state.json` by default. Use `AGORA_HOME=/path/to/agora` or `--data-dir /path/to/agora` to override that location.
 
 OpenCode plugin commands:
 
@@ -184,6 +189,7 @@ agora/
 │   ├── cli/app.ts    # CLI command parser and handlers
 │   ├── marketplace.ts # Shared search, browse, trending, install-plan core
 │   ├── config-files.ts # OpenCode config detection, doctor, and write helpers
+│   ├── state.ts      # Local Agora saved-item state
 │   ├── index.ts      # OpenCode plugin
 │   ├── api.ts        # API client with fallback
 │   ├── format.ts     # Output formatting
@@ -206,8 +212,9 @@ agora/
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `install`, `config doctor` |
+| CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `install`, `save`, `saved`, `remove`, `config doctor` |
 | Shared core | Ready | CLI and plugin share marketplace discovery/install-plan logic |
+| Local state | Ready | Saved items under `~/.config/agora` |
 | Plugin (offline) | ✅ Ready | Works with sample data |
 | API Client | ✅ Built | Connects to backend |
 | Backend | ⚠️ Ready | Needs deployment |
@@ -216,7 +223,6 @@ agora/
 ## Next Steps (TODO)
 
 - [ ] Add live marketplace API mode to the CLI with offline fallback
-- [ ] Add persistent local saved items under `~/.config/agora`
 - [ ] Deploy backend to Cloudflare Workers
 - [ ] Set up GitHub OAuth for backend
 - [ ] Publish plugin to npm

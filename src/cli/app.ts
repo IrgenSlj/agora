@@ -16,6 +16,16 @@ import {
   searchMarketplaceItems,
   type MarketplaceItem
 } from '../marketplace.js';
+import {
+  detectAgoraDataDir,
+  getAgoraStatePath,
+  loadAgoraState,
+  removeItemFromState,
+  resolveSavedItems,
+  saveItemToState,
+  writeAgoraState,
+  type ResolvedSavedItem
+} from '../state.js';
 
 const VERSION = '0.1.0';
 
@@ -65,6 +75,12 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return commandDiscussions(parsed, io);
       case 'install':
         return commandInstall(parsed, io);
+      case 'save':
+        return commandSave(parsed, io);
+      case 'saved':
+        return commandSaved(parsed, io);
+      case 'remove':
+        return commandRemove(parsed, io);
       case 'config':
         return commandConfig(parsed, io);
       case 'help':
@@ -306,6 +322,89 @@ function commandConfig(parsed: ParsedArgs, io: CliIo): number {
   return report.valid ? 0 : 1;
 }
 
+function commandSave(parsed: ParsedArgs, io: CliIo): number {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'save requires an item id');
+
+  const item = findMarketplaceItem(id, { type: stringFlag(parsed, 'type', 't') });
+  if (!item) return usageError(io, `Item not found: ${id}`);
+
+  const dataDir = detectDataDir(parsed, io);
+  const state = loadAgoraState(dataDir);
+  const result = saveItemToState(state, item);
+  writeAgoraState(dataDir, result.state);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, {
+      dataDir,
+      statePath: getAgoraStatePath(dataDir),
+      added: result.added,
+      item
+    });
+    return 0;
+  }
+
+  writeLine(io.stdout, result.added ? `Saved ${item.id}` : `${item.id} is already saved`);
+  writeLine(io.stdout, `State: ${getAgoraStatePath(dataDir)}`);
+  return 0;
+}
+
+function commandSaved(parsed: ParsedArgs, io: CliIo): number {
+  const query = parsed.args.join(' ').trim().toLowerCase();
+  const dataDir = detectDataDir(parsed, io);
+  const state = loadAgoraState(dataDir);
+  const saved = resolveSavedItems(state).filter((entry) => matchesSavedQuery(entry, query));
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, {
+      dataDir,
+      statePath: getAgoraStatePath(dataDir),
+      count: saved.length,
+      items: saved
+    });
+    return 0;
+  }
+
+  if (saved.length === 0) {
+    writeLine(io.stdout, query ? `No saved items match "${query}".` : 'No saved items yet.');
+    writeLine(io.stdout, 'Run agora save <id> to save a package or workflow.');
+    return 0;
+  }
+
+  writeLine(io.stdout, `Saved Agora items (${saved.length})`);
+  writeLine(io.stdout, formatSavedList(saved));
+  return 0;
+}
+
+function commandRemove(parsed: ParsedArgs, io: CliIo): number {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'remove requires an item id');
+
+  const dataDir = detectDataDir(parsed, io);
+  const state = loadAgoraState(dataDir);
+  const item = findMarketplaceItem(id, { type: stringFlag(parsed, 'type', 't') });
+  const targetId = item?.id || id;
+  const result = removeItemFromState(state, targetId);
+  writeAgoraState(dataDir, result.state);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, {
+      dataDir,
+      statePath: getAgoraStatePath(dataDir),
+      removed: result.removed,
+      id: targetId
+    });
+    return result.removed ? 0 : 1;
+  }
+
+  if (!result.removed) {
+    return usageError(io, `Saved item not found: ${id}`);
+  }
+
+  writeLine(io.stdout, `Removed ${targetId}`);
+  return 0;
+}
+
 function formatItemList(items: MarketplaceItem[]): string {
   return items.map((item, index) => {
     const installs = item.kind === 'package' ? ` | installs ${formatCount(item.installs)}` : '';
@@ -349,6 +448,24 @@ function formatItemDetail(item: MarketplaceItem): string {
   return lines.join('\n');
 }
 
+function formatSavedList(items: ResolvedSavedItem[]): string {
+  return items.map((entry, index) => {
+    if (!entry.item) {
+      return [
+        `${index + 1}. ${entry.saved.id} [missing]`,
+        `   saved ${formatDate(entry.saved.savedAt)}`
+      ].join('\n');
+    }
+
+    return [
+      `${index + 1}. ${entry.item.id} [${entry.item.category}]`,
+      `   ${entry.item.name}`,
+      `   ${truncate(entry.item.description, 88)}`,
+      `   saved ${formatDate(entry.saved.savedAt)}`
+    ].join('\n');
+  }).join('\n\n');
+}
+
 function usage(): string {
   return [
     'Agora CLI',
@@ -360,13 +477,18 @@ function usage(): string {
     '  agora workflows [query] [--limit 10] [--json]',
     '  agora discussions [query] [--category question|idea|showcase|discussion] [--json]',
     '  agora install <id> [--write] [--config path] [--json]',
+    '  agora save <id> [--data-dir path] [--json]',
+    '  agora saved [query] [--data-dir path] [--json]',
+    '  agora remove <id> [--data-dir path] [--json]',
     '  agora config doctor [--config path] [--json]',
     '',
     'Examples:',
     '  agora search filesystem',
     '  agora browse mcp-github',
     '  agora install mcp-github',
-    '  agora install mcp-github --write'
+    '  agora install mcp-github --write',
+    '  agora save wf-security-audit',
+    '  agora saved'
   ].join('\n');
 }
 
@@ -397,6 +519,31 @@ function shortFlag(arg: string): string {
   return flag;
 }
 
+function detectDataDir(parsed: ParsedArgs, io: CliIo): string {
+  return detectAgoraDataDir({
+    explicitDir: stringFlag(parsed, 'dataDir'),
+    cwd: io.cwd,
+    env: io.env
+  });
+}
+
+function matchesSavedQuery(entry: ResolvedSavedItem, query: string): boolean {
+  if (!query) return true;
+
+  const searchable = entry.item
+    ? [
+      entry.item.id,
+      entry.item.name,
+      entry.item.description,
+      entry.item.author,
+      entry.item.category,
+      ...entry.item.tags
+    ].join(' ')
+    : entry.saved.id;
+
+  return searchable.toLowerCase().includes(query);
+}
+
 function normalizeFlag(flag: string): string {
   return flag.trim().replace(/-([a-z])/g, (_, char: string) => char.toUpperCase());
 }
@@ -418,6 +565,10 @@ function formatCount(value: number): string {
   if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
   if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
   return String(value);
+}
+
+function formatDate(value: string): string {
+  return value.slice(0, 10);
 }
 
 export function listKnownItems(): MarketplaceItem[] {

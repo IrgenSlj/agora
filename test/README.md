@@ -37,11 +37,12 @@ bun test
 - Browse error handling
 - Install preview and config writes
 - Config doctor output
+- Local saved-item state
 
 ## Coverage
 
-- **74 tests passing**
-- **164 assertions**
+- **79 tests passing**
+- **179 assertions**
 - **5 test files**
 
 ## Adding Tests
