@@ -7,15 +7,20 @@ import {
 } from '../config-files.js';
 import {
   createInstallPlan,
-  findMarketplaceItem,
-  getDiscussions,
   getInstallKind,
   getMarketplaceItems,
-  getTrendingItems,
   getTrendingTags,
-  searchMarketplaceItems,
   type MarketplaceItem
 } from '../marketplace.js';
+import {
+  discussionsSource,
+  findMarketplaceSource,
+  searchMarketplaceSource,
+  trendingMarketplaceSource,
+  type FetchLike,
+  type SourceOptions,
+  type SourceResult
+} from '../live.js';
 import {
   detectAgoraDataDir,
   getAgoraStatePath,
@@ -38,6 +43,7 @@ export interface CliIo {
   stderr: OutputStream;
   env?: Record<string, string | undefined>;
   cwd?: string;
+  fetcher?: FetchLike;
 }
 
 export interface ParsedArgs {
@@ -46,7 +52,8 @@ export interface ParsedArgs {
   flags: Record<string, string | boolean>;
 }
 
-const booleanFlags = new Set(['help', 'json', 'offline', 'version', 'verbose', 'write']);
+const DEFAULT_API_URL = 'https://agora-api.your-subdomain.workers.dev';
+const booleanFlags = new Set(['api', 'help', 'json', 'live', 'offline', 'version', 'verbose', 'write']);
 
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
@@ -145,14 +152,16 @@ export function parseArgs(argv: string[]): ParsedArgs {
   };
 }
 
-function commandSearch(parsed: ParsedArgs, io: CliIo): number {
+async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const query = parsed.args.join(' ');
   const category = stringFlag(parsed, 'category', 'c') || 'all';
   const limit = numberFlag(parsed, 'limit', 'n') || 10;
-  const results = searchMarketplaceItems({ query, category, limit });
+  const result = await searchMarketplaceSource({ ...sourceOptions(parsed, io), query, category, limit });
+  const results = result.data;
+  warnFallback(result, io);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, { query, category, count: results.length, items: results });
+    writeJson(io.stdout, sourcePayload(result, { query, category, count: results.length, items: results }));
     return 0;
   }
 
@@ -161,20 +170,22 @@ function commandSearch(parsed: ParsedArgs, io: CliIo): number {
     return 0;
   }
 
-  writeLine(io.stdout, `Agora search: ${query || 'all'} (${results.length} shown)`);
+  writeLine(io.stdout, `Agora search: ${query || 'all'} (${results.length} shown, source: ${result.source})`);
   writeLine(io.stdout, formatItemList(results));
   return 0;
 }
 
-function commandBrowse(parsed: ParsedArgs, io: CliIo): number {
+async function commandBrowse(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'browse requires an item id');
 
-  const item = findMarketplaceItem(id, { type: stringFlag(parsed, 'type', 't') });
+  const result = await findMarketplaceSource({ ...sourceOptions(parsed, io), id, type: stringFlag(parsed, 'type', 't') });
+  const item = result.data;
+  warnFallback(result, io);
   if (!item) return usageError(io, `Item not found: ${id}`);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, item);
+    writeJson(io.stdout, sourcePayload(result, { item }));
     return 0;
   }
 
@@ -182,45 +193,50 @@ function commandBrowse(parsed: ParsedArgs, io: CliIo): number {
   return 0;
 }
 
-function commandTrending(parsed: ParsedArgs, io: CliIo): number {
+async function commandTrending(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const category = stringFlag(parsed, 'category', 'c') || parsed.args[0] || 'all';
   const limit = numberFlag(parsed, 'limit', 'n') || 5;
-  const items = getTrendingItems({ category, limit });
+  const result = await trendingMarketplaceSource({ ...sourceOptions(parsed, io), category, limit });
+  const items = result.data;
+  warnFallback(result, io);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, { category, count: items.length, tags: getTrendingTags(), items });
+    writeJson(io.stdout, sourcePayload(result, { category, count: items.length, tags: getTrendingTags(), items }));
     return 0;
   }
 
-  writeLine(io.stdout, `Trending in Agora (${category})`);
+  writeLine(io.stdout, `Trending in Agora (${category}, source: ${result.source})`);
   writeLine(io.stdout, formatItemList(items));
   writeLine(io.stdout, `Tags: ${getTrendingTags().join(', ')}`);
   return 0;
 }
 
-function commandWorkflows(parsed: ParsedArgs, io: CliIo): number {
+async function commandWorkflows(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const query = parsed.args.join(' ');
   const limit = numberFlag(parsed, 'limit', 'n') || 10;
-  const workflows = searchMarketplaceItems({ query, category: 'workflow', limit })
-    .filter((item) => item.kind === 'workflow');
+  const result = await searchMarketplaceSource({ ...sourceOptions(parsed, io), query, category: 'workflow', limit });
+  const workflows = result.data.filter((item) => item.kind === 'workflow');
+  warnFallback(result, io);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, { query, count: workflows.length, workflows });
+    writeJson(io.stdout, sourcePayload(result, { query, count: workflows.length, workflows }));
     return 0;
   }
 
-  writeLine(io.stdout, `Agora workflows (${workflows.length} shown)`);
+  writeLine(io.stdout, `Agora workflows (${workflows.length} shown, source: ${result.source})`);
   writeLine(io.stdout, formatItemList(workflows));
   return 0;
 }
 
-function commandDiscussions(parsed: ParsedArgs, io: CliIo): number {
+async function commandDiscussions(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const category = stringFlag(parsed, 'category', 'c') || 'all';
   const query = parsed.args.join(' ');
-  const discussions = getDiscussions(category, query);
+  const result = await discussionsSource({ ...sourceOptions(parsed, io), category, query });
+  const discussions = result.data;
+  warnFallback(result, io);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, { category, query, count: discussions.length, discussions });
+    writeJson(io.stdout, sourcePayload(result, { category, query, count: discussions.length, discussions }));
     return 0;
   }
 
@@ -229,7 +245,7 @@ function commandDiscussions(parsed: ParsedArgs, io: CliIo): number {
     return 0;
   }
 
-  writeLine(io.stdout, `Agora discussions (${discussions.length})`);
+  writeLine(io.stdout, `Agora discussions (${discussions.length}, source: ${result.source})`);
   writeLine(io.stdout, discussions.map((discussion, index) => {
     return [
       `${index + 1}. ${discussion.title} [${discussion.category}]`,
@@ -240,11 +256,13 @@ function commandDiscussions(parsed: ParsedArgs, io: CliIo): number {
   return 0;
 }
 
-function commandInstall(parsed: ParsedArgs, io: CliIo): number {
+async function commandInstall(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'install requires an item id');
 
-  const item = findMarketplaceItem(id, { type: stringFlag(parsed, 'type', 't') });
+  const source = await findMarketplaceSource({ ...sourceOptions(parsed, io), id, type: stringFlag(parsed, 'type', 't') });
+  const item = source.data;
+  warnFallback(source, io);
   if (!item) return usageError(io, `Item not found: ${id}`);
 
   const configPath = detectOpenCodeConfigPath({
@@ -260,6 +278,9 @@ function commandInstall(parsed: ParsedArgs, io: CliIo): number {
 
   if (parsed.flags.json) {
     writeJson(io.stdout, {
+      source: source.source,
+      apiUrl: source.apiUrl,
+      fallbackReason: source.fallbackReason,
       item,
       configPath,
       write: Boolean(parsed.flags.write),
@@ -322,11 +343,13 @@ function commandConfig(parsed: ParsedArgs, io: CliIo): number {
   return report.valid ? 0 : 1;
 }
 
-function commandSave(parsed: ParsedArgs, io: CliIo): number {
+async function commandSave(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'save requires an item id');
 
-  const item = findMarketplaceItem(id, { type: stringFlag(parsed, 'type', 't') });
+  const source = await findMarketplaceSource({ ...sourceOptions(parsed, io), id, type: stringFlag(parsed, 'type', 't') });
+  const item = source.data;
+  warnFallback(source, io);
   if (!item) return usageError(io, `Item not found: ${id}`);
 
   const dataDir = detectDataDir(parsed, io);
@@ -336,6 +359,9 @@ function commandSave(parsed: ParsedArgs, io: CliIo): number {
 
   if (parsed.flags.json) {
     writeJson(io.stdout, {
+      source: source.source,
+      apiUrl: source.apiUrl,
+      fallbackReason: source.fallbackReason,
       dataDir,
       statePath: getAgoraStatePath(dataDir),
       added: result.added,
@@ -382,8 +408,9 @@ function commandRemove(parsed: ParsedArgs, io: CliIo): number {
 
   const dataDir = detectDataDir(parsed, io);
   const state = loadAgoraState(dataDir);
-  const item = findMarketplaceItem(id, { type: stringFlag(parsed, 'type', 't') });
-  const targetId = item?.id || id;
+  const targetId = resolveSavedItems(state).find((entry) => {
+    return entry.saved.id === id || entry.item?.id === id || entry.item?.name === id;
+  })?.saved.id || id;
   const result = removeItemFromState(state, targetId);
   writeAgoraState(dataDir, result.state);
 
@@ -482,8 +509,15 @@ function usage(): string {
     '  agora remove <id> [--data-dir path] [--json]',
     '  agora config doctor [--config path] [--json]',
     '',
+    'Data source:',
+    '  --api                 Use the live Agora API',
+    '  --api-url <url>       Override AGORA_API_URL',
+    '  --api-timeout <ms>    API timeout before offline fallback',
+    '  --offline             Force local bundled marketplace data',
+    '',
     'Examples:',
     '  agora search filesystem',
+    '  agora search filesystem --api',
     '  agora browse mcp-github',
     '  agora install mcp-github',
     '  agora install mcp-github --write',
@@ -525,6 +559,45 @@ function detectDataDir(parsed: ParsedArgs, io: CliIo): string {
     cwd: io.cwd,
     env: io.env
   });
+}
+
+function sourceOptions(parsed: ParsedArgs, io: CliIo): SourceOptions {
+  const explicitApiUrl = stringFlag(parsed, 'apiUrl');
+  const envApiUrl = io.env?.AGORA_API_URL;
+  const apiUrl = explicitApiUrl || envApiUrl || DEFAULT_API_URL;
+  const useApi = !parsed.flags.offline && Boolean(
+    parsed.flags.api ||
+    parsed.flags.live ||
+    explicitApiUrl ||
+    envApiUrl ||
+    io.env?.AGORA_USE_API === 'true'
+  );
+
+  return {
+    useApi,
+    apiUrl,
+    fetcher: io.fetcher,
+    timeoutMs: numberFlag(parsed, 'apiTimeout')
+  };
+}
+
+function warnFallback<T>(result: SourceResult<T>, io: CliIo): void {
+  if (result.fallbackReason) {
+    writeLine(io.stderr, `API unavailable, using offline data: ${result.fallbackReason}`);
+  }
+}
+
+function sourcePayload<T extends object, TValue>(result: SourceResult<TValue>, payload: T): T & {
+  source: string;
+  apiUrl?: string;
+  fallbackReason?: string;
+} {
+  return {
+    source: result.source,
+    apiUrl: result.apiUrl,
+    fallbackReason: result.fallbackReason,
+    ...payload
+  };
 }
 
 function matchesSavedQuery(entry: ResolvedSavedItem, query: string): boolean {

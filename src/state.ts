@@ -14,6 +14,7 @@ export interface StatePathOptions {
 export interface SavedItem {
   id: string;
   savedAt: string;
+  item?: MarketplaceItem;
 }
 
 export interface AgoraState {
@@ -84,7 +85,8 @@ export function saveItemToState(
       savedItems: [
         {
           id: item.id,
-          savedAt: now.toISOString()
+          savedAt: now.toISOString(),
+          item
         },
         ...state.savedItems
       ]
@@ -112,7 +114,7 @@ export function removeItemFromState(
 export function resolveSavedItems(state: AgoraState): ResolvedSavedItem[] {
   return normalizeState(state).savedItems.map((saved) => ({
     saved,
-    item: findMarketplaceItem(saved.id)
+    item: saved.item || findMarketplaceItem(saved.id)
   }));
 }
 
@@ -130,6 +132,11 @@ function normalizeState(state: Partial<AgoraState>): AgoraState {
       .filter((saved): saved is SavedItem => {
         return Boolean(saved && typeof saved.id === 'string' && typeof saved.savedAt === 'string');
       })
+      .map((saved) => ({
+        id: saved.id,
+        savedAt: saved.savedAt,
+        item: isMarketplaceItem(saved.item) ? saved.item : undefined
+      }))
       .filter((saved) => {
         if (seen.has(saved.id)) return false;
         seen.add(saved.id);
@@ -149,4 +156,14 @@ function resolvePath(filePath: string, cwd: string, home: string): string {
     : filePath;
 
   return isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
+}
+
+function isMarketplaceItem(value: unknown): value is MarketplaceItem {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<MarketplaceItem>;
+  return Boolean(
+    typeof candidate.id === 'string' &&
+    typeof candidate.name === 'string' &&
+    (candidate.kind === 'package' || candidate.kind === 'workflow')
+  );
 }

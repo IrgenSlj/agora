@@ -38,11 +38,12 @@ bun test
 - Install preview and config writes
 - Config doctor output
 - Local saved-item state
+- Live API source and offline fallback
 
 ## Coverage
 
-- **79 tests passing**
-- **179 assertions**
+- **83 tests passing**
+- **193 assertions**
 - **5 test files**
 
 ## Adding Tests

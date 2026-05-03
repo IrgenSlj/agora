@@ -33,6 +33,7 @@ Use it to:
 ### CLI Marketplace
 - Browse curated MCP servers and plugins
 - Search by category, language, or use case
+- Use bundled offline data or opt into the live Agora API
 - Output human-readable results or `--json` for scripts
 - Preview install plans before writing files
 
@@ -99,6 +100,8 @@ CLI commands:
 
 ```bash
 agora search filesystem
+agora search filesystem --api
+AGORA_API_URL=https://agora.example.com agora search github --api
 agora search github --category mcp --json
 agora browse mcp-github
 agora trending workflows --limit 5
@@ -115,6 +118,8 @@ agora config doctor
 `agora install <id>` is preview-only by default. Add `--write` to update the detected OpenCode config, or pass `--config ./opencode.json` for an explicit target.
 
 Saved items are stored in `~/.config/agora/state.json` by default. Use `AGORA_HOME=/path/to/agora` or `--data-dir /path/to/agora` to override that location.
+
+The CLI uses bundled offline marketplace data by default. Add `--api`, `--live`, `AGORA_USE_API=true`, or `AGORA_API_URL=https://...` to use the live backend. If the API request fails, Agora falls back to offline data and writes a warning to stderr. Use `--offline` to force local data.
 
 OpenCode plugin commands:
 
@@ -187,6 +192,7 @@ agora/
 ├── src/
 │   ├── cli.ts        # CLI entrypoint
 │   ├── cli/app.ts    # CLI command parser and handlers
+│   ├── live.ts       # Live API source with offline fallback
 │   ├── marketplace.ts # Shared search, browse, trending, install-plan core
 │   ├── config-files.ts # OpenCode config detection, doctor, and write helpers
 │   ├── state.ts      # Local Agora saved-item state
@@ -213,6 +219,7 @@ agora/
 | Component | Status | Notes |
 |-----------|--------|-------|
 | CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `install`, `save`, `saved`, `remove`, `config doctor` |
+| Live API mode | Ready | Opt-in via `--api`, `--live`, `AGORA_USE_API`, or `AGORA_API_URL`; falls back offline |
 | Shared core | Ready | CLI and plugin share marketplace discovery/install-plan logic |
 | Local state | Ready | Saved items under `~/.config/agora` |
 | Plugin (offline) | ✅ Ready | Works with sample data |
@@ -222,7 +229,7 @@ agora/
 
 ## Next Steps (TODO)
 
-- [ ] Add live marketplace API mode to the CLI with offline fallback
+- [ ] Add authenticated publish/review commands to the CLI
 - [ ] Deploy backend to Cloudflare Workers
 - [ ] Set up GitHub OAuth for backend
 - [ ] Publish plugin to npm
