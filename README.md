@@ -36,6 +36,7 @@ Use it to:
 - Use bundled offline data or opt into the live Agora API
 - Output human-readable results or `--json` for scripts
 - Preview install plans before writing files
+- Store live API credentials for publish and review commands
 
 ### Config-Aware Installs
 - Detect an OpenCode config path automatically
@@ -112,20 +113,22 @@ agora install mcp-github --write
 agora save wf-security-audit
 agora saved
 agora remove wf-security-audit
-agora publish package --name @you/server --description "MCP server" --npm @you/server --api --token $AGORA_TOKEN
-agora publish workflow --name "Security Audit" --description "Audit workflow" --prompt-file ./prompt.md --api --token $AGORA_TOKEN
-agora review mcp-github --rating 5 --content "Works well" --api --token $AGORA_TOKEN
+agora auth login --token $AGORA_TOKEN --api-url https://agora.example.com
+agora auth status
+agora publish package --name @you/server --description "MCP server" --npm @you/server
+agora publish workflow --name "Security Audit" --description "Audit workflow" --prompt-file ./prompt.md
+agora review mcp-github --rating 5 --content "Works well"
 agora reviews mcp-github --api
 agora config doctor
 ```
 
 `agora install <id>` is preview-only by default. Add `--write` to update the detected OpenCode config, or pass `--config ./opencode.json` for an explicit target.
 
-Saved items are stored in `~/.config/agora/state.json` by default. Use `AGORA_HOME=/path/to/agora` or `--data-dir /path/to/agora` to override that location.
+Saved items and optional auth credentials are stored in `~/.config/agora/state.json` by default. Use `AGORA_HOME=/path/to/agora` or `--data-dir /path/to/agora` to override that location. Agora writes the state file with user-only permissions when the filesystem supports it.
 
-The CLI uses bundled offline marketplace data by default. Add `--api`, `--live`, `AGORA_USE_API=true`, or `AGORA_API_URL=https://...` to use the live backend. If the API request fails, Agora falls back to offline data and writes a warning to stderr. Use `--offline` to force local data.
+The CLI uses bundled offline marketplace data by default. Add `--api`, `--live`, `AGORA_USE_API=true`, `AGORA_API_URL=https://...`, or a stored auth API URL to use the live backend. If the API request fails, Agora falls back to offline data and writes a warning to stderr. Use `--offline` to force local data.
 
-Publishing and review writes require the live backend plus an API token. Pass `--token`, `AGORA_TOKEN`, or `AGORA_API_TOKEN`. The backend accepts the same GitHub token used by OAuth and resolves the author from GitHub.
+Publishing and review writes require the live backend plus an API token. Pass `--token`, `AGORA_TOKEN`, or `AGORA_API_TOKEN`, or store it once with `agora auth login --token $AGORA_TOKEN --api-url https://...`. Use `agora auth logout` to remove the stored token. The backend accepts the same GitHub token used by OAuth and resolves the author from GitHub.
 
 OpenCode plugin commands:
 
@@ -224,10 +227,10 @@ agora/
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `install`, `save`, `saved`, `remove`, `publish`, `review`, `reviews`, `config doctor` |
-| Live API mode | Ready | Opt-in via `--api`, `--live`, `AGORA_USE_API`, or `AGORA_API_URL`; falls back offline |
+| CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `install`, `save`, `saved`, `remove`, `auth`, `publish`, `review`, `reviews`, `config doctor` |
+| Live API mode | Ready | Opt-in via `--api`, `--live`, `AGORA_USE_API`, `AGORA_API_URL`, or stored auth API URL; falls back offline |
 | Shared core | Ready | CLI and plugin share marketplace discovery/install-plan logic |
-| Local state | Ready | Saved items under `~/.config/agora` |
+| Local state | Ready | Saved items and optional API token under `~/.config/agora` |
 | Plugin (offline) | ✅ Ready | Works with sample data |
 | API Client | ✅ Built | Connects to backend |
 | Backend | ⚠️ Ready | Needs deployment |

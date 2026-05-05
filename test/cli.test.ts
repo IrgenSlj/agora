@@ -225,6 +225,97 @@ describe('CLI commands', () => {
     }
   });
 
+  test('auth login stores API credentials without echoing the token', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const dataDir = join(temp, 'state');
+    const token = 'ghp_1234567890abcdef';
+    const { io, stdout } = createIo(temp);
+
+    try {
+      const code = await runCli([
+        'auth',
+        'login',
+        '--token',
+        token,
+        '--api-url',
+        'https://api.example.test',
+        '--data-dir',
+        dataDir
+      ], io);
+      const state = JSON.parse(readFileSync(join(dataDir, 'state.json'), 'utf8'));
+
+      expect(code).toBe(0);
+      expect(stdout.join('')).toContain('Stored Agora API token');
+      expect(stdout.join('')).not.toContain(token);
+      expect(state.auth.token).toBe(token);
+      expect(state.auth.apiUrl).toBe('https://api.example.test');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('auth status reports masked stored credentials as JSON', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const dataDir = join(temp, 'state');
+    const token = 'ghp_1234567890abcdef';
+    const setup = createIo(temp);
+
+    try {
+      await runCli([
+        'auth',
+        'login',
+        '--token',
+        token,
+        '--api-url',
+        'https://api.example.test',
+        '--data-dir',
+        dataDir
+      ], setup.io);
+
+      const { io, stdout } = createIo(temp);
+      const code = await runCli(['auth', 'status', '--data-dir', dataDir, '--json'], io);
+      const payload = JSON.parse(stdout.join(''));
+
+      expect(code).toBe(0);
+      expect(stdout.join('')).not.toContain(token);
+      expect(payload.authenticated).toBe(true);
+      expect(payload.tokenPreview).toBe('ghp_...cdef');
+      expect(payload.apiUrl).toBe('https://api.example.test');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('auth logout clears stored credentials', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const dataDir = join(temp, 'state');
+    const setup = createIo(temp);
+
+    try {
+      await runCli([
+        'auth',
+        'login',
+        '--token',
+        'stored-token',
+        '--api-url',
+        'https://api.example.test',
+        '--data-dir',
+        dataDir
+      ], setup.io);
+
+      const { io, stdout } = createIo(temp);
+      const code = await runCli(['auth', 'logout', '--data-dir', dataDir, '--json'], io);
+      const payload = JSON.parse(stdout.join(''));
+      const state = JSON.parse(readFileSync(join(dataDir, 'state.json'), 'utf8'));
+
+      expect(code).toBe(0);
+      expect(payload.authenticated).toBe(false);
+      expect(state.auth).toBeUndefined();
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
   test('search can use the live API source', async () => {
     const fetcher = async (input: string | URL) => {
       const url = new URL(String(input));
@@ -411,6 +502,68 @@ describe('CLI commands', () => {
     expect(requests[0].url).toBe('https://api.example.test/api/packages');
     expect(requests[0].auth).toBe('Bearer test-token');
     expect(requests[0].body.npm_package).toBe('@remote/server');
+  });
+
+  test('publish package uses stored auth credentials', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const dataDir = join(temp, 'state');
+    const setup = createIo(temp);
+    const requests: { url: string; auth: string | null }[] = [];
+    const fetcher = async (input: string | URL, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        auth: new Headers(init?.headers).get('authorization')
+      });
+      return jsonResponse({
+        package: {
+          id: 'remote-mcp',
+          name: '@remote/server',
+          description: 'Remote MCP server',
+          author: 'remote-dev',
+          version: '1.2.3',
+          category: 'mcp',
+          tags: ['remote'],
+          stars: 0,
+          installs: 0,
+          npm_package: '@remote/server',
+          created_at: '2026-01-01'
+        }
+      });
+    };
+
+    try {
+      await runCli([
+        'auth',
+        'login',
+        '--token',
+        'stored-token',
+        '--api-url',
+        'https://api.example.test',
+        '--data-dir',
+        dataDir
+      ], setup.io);
+
+      const { io, stdout } = createIo(temp, { fetcher });
+      const code = await runCli([
+        'publish',
+        'package',
+        '--name',
+        '@remote/server',
+        '--description',
+        'Remote MCP server',
+        '--npm',
+        '@remote/server',
+        '--data-dir',
+        dataDir
+      ], io);
+
+      expect(code).toBe(0);
+      expect(stdout.join('')).toContain('Published package remote-mcp');
+      expect(requests[0].url).toBe('https://api.example.test/api/packages');
+      expect(requests[0].auth).toBe('Bearer stored-token');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
   });
 
   test('publish workflow reads prompt files', async () => {

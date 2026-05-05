@@ -28,12 +28,15 @@ import {
   type SourceResult
 } from '../live.js';
 import {
+  clearAuthState,
   detectAgoraDataDir,
+  getAuthState,
   getAgoraStatePath,
   loadAgoraState,
   removeItemFromState,
   resolveSavedItems,
   saveItemToState,
+  setAuthState,
   writeAgoraState,
   type ResolvedSavedItem
 } from '../state.js';
@@ -100,6 +103,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return await commandReview(parsed, io);
       case 'reviews':
         return await commandReviews(parsed, io);
+      case 'auth':
+        return commandAuth(parsed, io);
       case 'config':
         return await commandConfig(parsed, io);
       case 'help':
@@ -353,6 +358,75 @@ function commandConfig(parsed: ParsedArgs, io: CliIo): number {
   writeLine(io.stdout, `Plugins: ${report.plugins}`);
   writeLine(io.stdout, `Packages: ${report.packages.length ? report.packages.join(', ') : 'none'}`);
   return report.valid ? 0 : 1;
+}
+
+function commandAuth(parsed: ParsedArgs, io: CliIo): number {
+  const subcommand = parsed.args[0] || 'status';
+  const dataDir = detectDataDir(parsed, io);
+  const state = loadAgoraState(dataDir);
+  const existingAuth = getAuthState(state);
+
+  if (subcommand === 'login') {
+    const token = authTokenInput(parsed, io);
+    if (!token) {
+      return usageError(io, 'auth login requires --token, AGORA_TOKEN, or AGORA_API_TOKEN');
+    }
+
+    const apiUrl = stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
+    const nextState = setAuthState(state, { token, apiUrl });
+    const auth = getAuthState(nextState);
+    writeAgoraState(dataDir, nextState);
+
+    if (parsed.flags.json) {
+      writeJson(io.stdout, authStatusPayload(dataDir, auth));
+      return 0;
+    }
+
+    writeLine(io.stdout, 'Stored Agora API token');
+    writeLine(io.stdout, `API URL: ${auth?.apiUrl || 'not stored'}`);
+    writeLine(io.stdout, `State: ${getAgoraStatePath(dataDir)}`);
+    return 0;
+  }
+
+  if (subcommand === 'status') {
+    if (parsed.flags.json) {
+      writeJson(io.stdout, authStatusPayload(dataDir, existingAuth));
+      return 0;
+    }
+
+    writeLine(io.stdout, `Authenticated: ${existingAuth ? 'yes' : 'no'}`);
+    if (existingAuth) {
+      writeLine(io.stdout, `Token: ${maskToken(existingAuth.token)}`);
+      writeLine(io.stdout, `API URL: ${existingAuth.apiUrl || 'not stored'}`);
+      writeLine(io.stdout, `Saved: ${formatDate(existingAuth.savedAt)}`);
+    }
+    writeLine(io.stdout, `State: ${getAgoraStatePath(dataDir)}`);
+    return 0;
+  }
+
+  if (subcommand === 'logout') {
+    if (!existingAuth) {
+      if (parsed.flags.json) {
+        writeJson(io.stdout, authStatusPayload(dataDir, undefined));
+        return 0;
+      }
+
+      writeLine(io.stdout, 'No stored Agora API token');
+      return 0;
+    }
+
+    writeAgoraState(dataDir, clearAuthState(state));
+
+    if (parsed.flags.json) {
+      writeJson(io.stdout, authStatusPayload(dataDir, undefined));
+      return 0;
+    }
+
+    writeLine(io.stdout, 'Removed stored Agora API token');
+    return 0;
+  }
+
+  return usageError(io, `Unknown auth command: ${subcommand}`);
 }
 
 async function commandSave(parsed: ParsedArgs, io: CliIo): Promise<number> {
@@ -650,6 +724,9 @@ function usage(): string {
     '  agora save <id> [--data-dir path] [--json]',
     '  agora saved [query] [--data-dir path] [--json]',
     '  agora remove <id> [--data-dir path] [--json]',
+    '  agora auth login --token <token> [--api-url url] [--data-dir path]',
+    '  agora auth status [--data-dir path] [--json]',
+    '  agora auth logout [--data-dir path]',
     '  agora publish package --name <name> --description <text> --npm <package> [--token token]',
     '  agora publish workflow --name <name> --description <text> --prompt-file <path> [--token token]',
     '  agora review <id> --rating 5 --content <text> [--token token]',
@@ -660,7 +737,7 @@ function usage(): string {
     '  --api                 Use the live Agora API',
     '  --api-url <url>       Override AGORA_API_URL',
     '  --api-timeout <ms>    API timeout before offline fallback',
-    '  --token <token>       API auth token, defaults to AGORA_TOKEN or AGORA_API_TOKEN',
+    '  --token <token>       API auth token, defaults to env vars or agora auth login',
     '  --offline             Force local bundled marketplace data',
     '',
     'Examples:',
@@ -671,8 +748,9 @@ function usage(): string {
     '  agora install mcp-github --write',
     '  agora save wf-security-audit',
     '  agora saved',
-    '  agora publish package --name @you/server --description "MCP server" --npm @you/server --api --token $AGORA_TOKEN',
-    '  agora review mcp-github --rating 5 --content "Works well" --api --token $AGORA_TOKEN'
+    '  agora auth login --token $AGORA_TOKEN --api-url https://agora.example.com',
+    '  agora publish package --name @you/server --description "MCP server" --npm @you/server',
+    '  agora review mcp-github --rating 5 --content "Works well"'
   ].join('\n');
 }
 
@@ -698,6 +776,17 @@ function numberFlag(parsed: ParsedArgs, longName: string, shortName?: string): n
   return Number.isFinite(parsedValue) ? parsedValue : undefined;
 }
 
+function authTokenInput(parsed: ParsedArgs, io: CliIo): string | undefined {
+  return requiredStringFlag(parsed, 'token') ||
+    envString(io, 'AGORA_TOKEN') ||
+    envString(io, 'AGORA_API_TOKEN');
+}
+
+function envString(io: CliIo, name: string): string | undefined {
+  const value = io.env?.[name];
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
 function shortFlag(arg: string): string {
   const flag = arg.slice(1);
   if (flag === 'h') return 'help';
@@ -718,20 +807,23 @@ function detectDataDir(parsed: ParsedArgs, io: CliIo): string {
 
 function sourceOptions(parsed: ParsedArgs, io: CliIo): SourceOptions {
   const explicitApiUrl = stringFlag(parsed, 'apiUrl');
-  const envApiUrl = io.env?.AGORA_API_URL;
-  const apiUrl = explicitApiUrl || envApiUrl || DEFAULT_API_URL;
+  const envApiUrl = envString(io, 'AGORA_API_URL');
+  const storedAuth = getAuthState(loadAgoraState(detectDataDir(parsed, io)));
+  const storedApiUrl = storedAuth?.apiUrl;
+  const apiUrl = explicitApiUrl || envApiUrl || storedApiUrl || DEFAULT_API_URL;
   const useApi = !parsed.flags.offline && Boolean(
     parsed.flags.api ||
     parsed.flags.live ||
     explicitApiUrl ||
     envApiUrl ||
+    storedApiUrl ||
     io.env?.AGORA_USE_API === 'true'
   );
 
   return {
     useApi,
     apiUrl,
-    token: stringFlag(parsed, 'token') || io.env?.AGORA_TOKEN || io.env?.AGORA_API_TOKEN,
+    token: authTokenInput(parsed, io) || storedAuth?.token,
     fetcher: io.fetcher,
     timeoutMs: numberFlag(parsed, 'apiTimeout')
   };
@@ -739,14 +831,13 @@ function sourceOptions(parsed: ParsedArgs, io: CliIo): SourceOptions {
 
 function writeSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options: SourceOptions } | { ok: false; error: string } {
   const options = sourceOptions(parsed, io);
-  const isDefaultPlaceholder = options.apiUrl === DEFAULT_API_URL;
 
-  if (!options.useApi && isDefaultPlaceholder) {
-    return { ok: false, error: 'This command requires --api-url or AGORA_API_URL' };
+  if (options.apiUrl === DEFAULT_API_URL) {
+    return { ok: false, error: 'This command requires --api-url, AGORA_API_URL, or an auth login API URL' };
   }
 
   if (!options.token) {
-    return { ok: false, error: 'This command requires --token, AGORA_TOKEN, or AGORA_API_TOKEN' };
+    return { ok: false, error: 'This command requires --token, AGORA_TOKEN, AGORA_API_TOKEN, or agora auth login' };
   }
 
   return {
@@ -760,8 +851,8 @@ function writeSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options:
 
 function readSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options: SourceOptions } | { ok: false; error: string } {
   const options = sourceOptions(parsed, io);
-  if (!options.useApi && options.apiUrl === DEFAULT_API_URL) {
-    return { ok: false, error: 'This command requires --api-url or AGORA_API_URL' };
+  if (options.apiUrl === DEFAULT_API_URL) {
+    return { ok: false, error: 'This command requires --api-url, AGORA_API_URL, or an auth login API URL' };
   }
   return { ok: true, options: { ...options, useApi: true } };
 }
@@ -805,6 +896,31 @@ function sourcePayload<T extends object, TValue>(result: SourceResult<TValue>, p
     fallbackReason: result.fallbackReason,
     ...payload
   };
+}
+
+function authStatusPayload(dataDir: string, auth: ReturnType<typeof getAuthState>): {
+  dataDir: string;
+  statePath: string;
+  authenticated: boolean;
+  apiUrl?: string;
+  tokenPreview?: string;
+  savedAt?: string;
+} {
+  return {
+    dataDir,
+    statePath: getAgoraStatePath(dataDir),
+    authenticated: Boolean(auth),
+    apiUrl: auth?.apiUrl,
+    tokenPreview: auth ? maskToken(auth.token) : undefined,
+    savedAt: auth?.savedAt
+  };
+}
+
+function maskToken(token: string): string {
+  const value = token.trim();
+  if (value.length <= 4) return '****';
+  if (value.length <= 8) return `${'*'.repeat(value.length - 4)}${value.slice(-4)}`;
+  return `${value.slice(0, 4)}...${value.slice(-4)}`;
 }
 
 function matchesSavedQuery(entry: ResolvedSavedItem, query: string): boolean {

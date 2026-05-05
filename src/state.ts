@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import type { MarketplaceItem } from './marketplace.js';
@@ -17,9 +17,16 @@ export interface SavedItem {
   item?: MarketplaceItem;
 }
 
+export interface AuthState {
+  token: string;
+  apiUrl?: string;
+  savedAt: string;
+}
+
 export interface AgoraState {
   version: 1;
   savedItems: SavedItem[];
+  auth?: AuthState;
 }
 
 export interface ResolvedSavedItem {
@@ -67,7 +74,17 @@ export function loadAgoraState(dataDir: string): AgoraState {
 
 export function writeAgoraState(dataDir: string, state: AgoraState): void {
   mkdirSync(dataDir, { recursive: true });
-  writeFileSync(getAgoraStatePath(dataDir), `${JSON.stringify(normalizeState(state), null, 2)}\n`, 'utf8');
+  const statePath = getAgoraStatePath(dataDir);
+  writeFileSync(statePath, `${JSON.stringify(normalizeState(state), null, 2)}\n`, {
+    encoding: 'utf8',
+    mode: 0o600
+  });
+
+  try {
+    chmodSync(statePath, 0o600);
+  } catch {
+    // Best effort: some filesystems do not support POSIX permissions.
+  }
 }
 
 export function saveItemToState(
@@ -111,6 +128,34 @@ export function removeItemFromState(
   };
 }
 
+export function setAuthState(
+  state: AgoraState,
+  auth: { token: string; apiUrl?: string },
+  now = new Date()
+): AgoraState {
+  return normalizeState({
+    ...state,
+    auth: {
+      token: auth.token.trim(),
+      apiUrl: auth.apiUrl?.trim() || undefined,
+      savedAt: now.toISOString()
+    }
+  });
+}
+
+export function clearAuthState(state: AgoraState): AgoraState {
+  const normalized = normalizeState(state);
+
+  return {
+    version: 1,
+    savedItems: normalized.savedItems
+  };
+}
+
+export function getAuthState(state: AgoraState): AuthState | undefined {
+  return normalizeState(state).auth;
+}
+
 export function resolveSavedItems(state: AgoraState): ResolvedSavedItem[] {
   return normalizeState(state).savedItems.map((saved) => ({
     saved,
@@ -146,7 +191,29 @@ function normalizeState(state: Partial<AgoraState>): AgoraState {
 
   return {
     version: 1,
-    savedItems
+    savedItems,
+    auth: normalizeAuthState(state.auth)
+  };
+}
+
+function normalizeAuthState(auth: unknown): AuthState | undefined {
+  if (!auth || typeof auth !== 'object') return undefined;
+
+  const candidate = auth as Partial<AuthState>;
+  const token = typeof candidate.token === 'string' ? candidate.token.trim() : '';
+  if (!token) return undefined;
+
+  const apiUrl = typeof candidate.apiUrl === 'string' && candidate.apiUrl.trim()
+    ? candidate.apiUrl.trim()
+    : undefined;
+  const savedAt = typeof candidate.savedAt === 'string' && candidate.savedAt
+    ? candidate.savedAt
+    : new Date(0).toISOString();
+
+  return {
+    token,
+    apiUrl,
+    savedAt
   };
 }
 
