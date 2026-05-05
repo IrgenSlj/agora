@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "bun run src/index.ts",
     "deploy": "wrangler deploy",
-    "build": "bun build --backend bundler=worker src/index.ts"
+    "build": "bun build src/index.ts --target=browser --outfile=dist/index.js"
   },
   "dependencies": {
     "hono": "^4.0.0",

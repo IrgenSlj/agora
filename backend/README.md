@@ -30,14 +30,18 @@ REST API backend built with Hono that provides:
 ### Packages
 - `GET /api/packages` - List/search packages
 - `GET /api/packages/:id` - Get package details
+- `POST /api/packages` - Publish or update a package
 
 ### Workflows
 - `GET /api/workflows` - List/search workflows
 - `GET /api/workflows/:id` - Get workflow details
+- `POST /api/workflows` - Publish or update a workflow
 
 ### Community
 - `GET /api/discussions` - List discussions
 - `POST /api/discussions` - Create discussion
+- `GET /api/reviews` - List reviews
+- `POST /api/reviews` - Create review
 
 ### Users
 - `GET /api/users/:username` - Get user profile
@@ -115,6 +119,13 @@ GitHub OAuth flow:
 2. Redirect to GitHub OAuth
 3. Callback creates/updates user in DB
 4. Session cookie set
+
+CLI write endpoints also accept `Authorization: Bearer <github-token>`. The backend resolves the token against stored OAuth sessions first, then falls back to GitHub `/user` and upserts the user record.
+
+Protected endpoints:
+- `POST /api/packages`
+- `POST /api/workflows`
+- `POST /api/reviews`
 
 ## Status
 

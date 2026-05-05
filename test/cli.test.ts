@@ -364,4 +364,198 @@ describe('CLI commands', () => {
       rmSync(temp, { recursive: true, force: true });
     }
   });
+
+  test('publish package posts authenticated metadata', async () => {
+    const requests: { url: string; body: any; auth: string | null }[] = [];
+    const fetcher = async (input: string | URL, init?: RequestInit) => {
+      requests.push({
+        url: String(input),
+        body: JSON.parse(String(init?.body || '{}')),
+        auth: new Headers(init?.headers).get('authorization')
+      });
+      return jsonResponse({
+        package: {
+          id: 'remote-mcp',
+          name: '@remote/server',
+          description: 'Remote MCP server',
+          author: 'remote-dev',
+          version: '1.2.3',
+          category: 'mcp',
+          tags: ['remote'],
+          stars: 0,
+          installs: 0,
+          npm_package: '@remote/server',
+          created_at: '2026-01-01'
+        }
+      });
+    };
+    const { io, stdout } = createIo(process.cwd(), { fetcher });
+
+    const code = await runCli([
+      'publish',
+      'package',
+      '--name',
+      '@remote/server',
+      '--description',
+      'Remote MCP server',
+      '--npm',
+      '@remote/server',
+      '--api-url',
+      'https://api.example.test',
+      '--token',
+      'test-token'
+    ], io);
+
+    expect(code).toBe(0);
+    expect(stdout.join('')).toContain('Published package remote-mcp');
+    expect(requests[0].url).toBe('https://api.example.test/api/packages');
+    expect(requests[0].auth).toBe('Bearer test-token');
+    expect(requests[0].body.npm_package).toBe('@remote/server');
+  });
+
+  test('publish workflow reads prompt files', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const promptPath = join(temp, 'prompt.md');
+    await Bun.write(promptPath, 'Review this code carefully.');
+
+    const requests: { body: any }[] = [];
+    const fetcher = async (_input: string | URL, init?: RequestInit) => {
+      requests.push({ body: JSON.parse(String(init?.body || '{}')) });
+      return jsonResponse({
+        workflow: {
+          id: 'wf-remote-review',
+          name: 'Remote Review',
+          description: 'Review workflow',
+          author: 'remote-dev',
+          prompt: 'Review this code carefully.',
+          tags: ['review'],
+          stars: 0,
+          forks: 0,
+          created_at: '2026-01-01'
+        }
+      });
+    };
+    const { io, stdout } = createIo(temp, { fetcher });
+
+    try {
+      const code = await runCli([
+        'publish',
+        'workflow',
+        '--name',
+        'Remote Review',
+        '--description',
+        'Review workflow',
+        '--prompt-file',
+        promptPath,
+        '--api-url',
+        'https://api.example.test',
+        '--token',
+        'test-token'
+      ], io);
+
+      expect(code).toBe(0);
+      expect(stdout.join('')).toContain('Published workflow wf-remote-review');
+      expect(requests[0].body.prompt).toBe('Review this code carefully.');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('review posts authenticated ratings', async () => {
+    const requests: { body: any; auth: string | null }[] = [];
+    const fetcher = async (_input: string | URL, init?: RequestInit) => {
+      requests.push({
+        body: JSON.parse(String(init?.body || '{}')),
+        auth: new Headers(init?.headers).get('authorization')
+      });
+      return jsonResponse({
+        review: {
+          id: 'review-1',
+          item_id: 'mcp-github',
+          item_type: 'package',
+          author: 'tester',
+          rating: 5,
+          content: 'Works well',
+          created_at: '2026-01-01'
+        }
+      });
+    };
+    const { io, stdout } = createIo(process.cwd(), { fetcher });
+
+    const code = await runCli([
+      'review',
+      'mcp-github',
+      '--rating',
+      '5',
+      '--content',
+      'Works well',
+      '--api-url',
+      'https://api.example.test',
+      '--token',
+      'test-token'
+    ], io);
+
+    expect(code).toBe(0);
+    expect(stdout.join('')).toContain('Reviewed mcp-github');
+    expect(requests[0].auth).toBe('Bearer test-token');
+    expect(requests[0].body.rating).toBe(5);
+  });
+
+  test('reviews lists live API reviews', async () => {
+    const fetcher = async (input: string | URL) => {
+      const url = new URL(String(input));
+      expect(url.pathname).toBe('/api/reviews');
+      expect(url.searchParams.get('item_id')).toBe('mcp-github');
+      return jsonResponse({
+        reviews: [{
+          id: 'review-1',
+          item_id: 'mcp-github',
+          item_type: 'package',
+          author: 'tester',
+          rating: 5,
+          content: 'Works well',
+          created_at: '2026-01-01'
+        }]
+      });
+    };
+    const { io, stdout } = createIo(process.cwd(), { fetcher });
+
+    const code = await runCli(['reviews', 'mcp-github', '--api-url', 'https://api.example.test'], io);
+
+    expect(code).toBe(0);
+    expect(stdout.join('')).toContain('Agora reviews');
+    expect(stdout.join('')).toContain('rating 5/5');
+  });
+
+  test('publish requires an auth token', async () => {
+    const { io, stderr } = createIo();
+
+    const code = await runCli([
+      'publish',
+      'package',
+      '--name',
+      '@remote/server',
+      '--description',
+      'Remote MCP server',
+      '--npm',
+      '@remote/server',
+      '--api-url',
+      'https://api.example.test'
+    ], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join('')).toContain('requires --token');
+  });
+
+  test('reviews reports API failures without throwing', async () => {
+    const fetcher = async () => {
+      throw new Error('reviews unavailable');
+    };
+    const { io, stderr } = createIo(process.cwd(), { fetcher });
+
+    const code = await runCli(['reviews', 'mcp-github', '--api-url', 'https://api.example.test'], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join('')).toContain('reviews unavailable');
+  });
 });

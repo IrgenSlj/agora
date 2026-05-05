@@ -17,6 +17,7 @@ export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Res
 export interface SourceOptions {
   useApi?: boolean;
   apiUrl?: string;
+  token?: string;
   fetcher?: FetchLike;
   timeoutMs?: number;
 }
@@ -42,6 +43,43 @@ export interface SourceResult<T> {
   data: T;
   apiUrl?: string;
   fallbackReason?: string;
+}
+
+export interface PublishPackageInput {
+  id?: string;
+  name: string;
+  description: string;
+  version?: string;
+  category?: string;
+  tags?: string[];
+  repository?: string;
+  npmPackage?: string;
+}
+
+export interface PublishWorkflowInput {
+  id?: string;
+  name: string;
+  description: string;
+  prompt: string;
+  model?: string;
+  tags?: string[];
+}
+
+export interface ReviewInput {
+  itemId: string;
+  itemType: 'package' | 'workflow';
+  rating: number;
+  content: string;
+}
+
+export interface ApiReview {
+  id: string;
+  itemId: string;
+  itemType: 'package' | 'workflow';
+  author: string;
+  rating: number;
+  content: string;
+  createdAt: string;
 }
 
 interface ApiPackage {
@@ -140,6 +178,71 @@ export async function discussionsSource(options: DiscussionSourceOptions = {}): 
   }
 }
 
+export async function publishPackageSource(
+  options: SourceOptions,
+  input: PublishPackageInput
+): Promise<SourceResult<MarketplaceItem>> {
+  const payload = await requestJson<{ package?: ApiPackage }>(options, '/api/packages', {
+    method: 'POST',
+    body: JSON.stringify({
+      ...input,
+      npm_package: input.npmPackage
+    })
+  });
+
+  if (!payload.package) {
+    throw new Error('API response did not include a package');
+  }
+
+  return api(mapPackage(payload.package), options);
+}
+
+export async function publishWorkflowSource(
+  options: SourceOptions,
+  input: PublishWorkflowInput
+): Promise<SourceResult<MarketplaceItem>> {
+  const payload = await requestJson<{ workflow?: ApiWorkflow }>(options, '/api/workflows', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
+
+  if (!payload.workflow) {
+    throw new Error('API response did not include a workflow');
+  }
+
+  return api(mapWorkflow(payload.workflow), options);
+}
+
+export async function createReviewSource(
+  options: SourceOptions,
+  input: ReviewInput
+): Promise<SourceResult<ApiReview>> {
+  const payload = await requestJson<{ review?: unknown }>(options, '/api/reviews', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
+
+  if (!payload.review) {
+    throw new Error('API response did not include a review');
+  }
+
+  return api(mapReview(payload.review), options);
+}
+
+export async function listReviewsSource(
+  options: SourceOptions,
+  itemId?: string,
+  itemType?: string
+): Promise<SourceResult<ApiReview[]>> {
+  const params = new URLSearchParams();
+  if (itemId) params.set('item_id', itemId);
+  if (itemType) params.set('item_type', itemType);
+
+  const suffix = params.size > 0 ? `?${params}` : '';
+  const payload = await requestJson<{ reviews?: unknown[] }>(options, `/api/reviews${suffix}`);
+  return api((payload.reviews || []).map(mapReview), options);
+}
+
 function shouldUseApi(options: SourceOptions): boolean {
   return Boolean(options.useApi && options.apiUrl);
 }
@@ -214,10 +317,10 @@ async function discussionsApi(options: DiscussionSourceOptions): Promise<Discuss
     });
 }
 
-async function requestJson<T>(options: SourceOptions, path: string): Promise<T> {
-  const response = await fetchWithTimeout(options, buildUrl(options, path));
+async function requestJson<T>(options: SourceOptions, path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetchWithTimeout(options, buildUrl(options, path), init);
   if (!response.ok) {
-    throw new Error(`API returned ${response.status} for ${path}`);
+    throw new Error(await responseError(response, path));
   }
   return response.json() as Promise<T>;
 }
@@ -226,19 +329,28 @@ async function requestNullable<T>(options: SourceOptions, path: string): Promise
   const response = await fetchWithTimeout(options, buildUrl(options, path));
   if (response.status === 404) return null;
   if (!response.ok) {
-    throw new Error(`API returned ${response.status} for ${path}`);
+    throw new Error(await responseError(response, path));
   }
   return response.json() as Promise<T>;
 }
 
-async function fetchWithTimeout(options: SourceOptions, url: string): Promise<Response> {
+async function fetchWithTimeout(options: SourceOptions, url: string, init: RequestInit = {}): Promise<Response> {
   const fetcher = options.fetcher || fetch;
   const timeoutMs = options.timeoutMs || 5000;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const headers = new Headers(init.headers);
+
+  if (!headers.has('content-type') && init.body) {
+    headers.set('content-type', 'application/json');
+  }
+
+  if (options.token && !headers.has('authorization')) {
+    headers.set('authorization', `Bearer ${options.token}`);
+  }
 
   try {
-    return await fetcher(url, { signal: controller.signal });
+    return await fetcher(url, { ...init, headers, signal: controller.signal });
   } catch (error) {
     if (controller.signal.aborted) {
       throw new Error(`API request timed out after ${timeoutMs}ms`);
@@ -247,6 +359,16 @@ async function fetchWithTimeout(options: SourceOptions, url: string): Promise<Re
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function responseError(response: Response, path: string): Promise<string> {
+  try {
+    const body = await response.json() as any;
+    if (body?.error) return `API returned ${response.status} for ${path}: ${body.error}`;
+  } catch {
+    // Use generic status message.
+  }
+  return `API returned ${response.status} for ${path}`;
 }
 
 function buildUrl(options: SourceOptions, path: string): string {
@@ -303,6 +425,21 @@ function mapDiscussion(discussion: ApiDiscussion): Discussion {
     replies: Number(discussion.replies ?? discussion.reply_count ?? 0),
     stars: Number(discussion.stars || 0),
     createdAt: discussion.createdAt || discussion.created_at || ''
+  };
+}
+
+function mapReview(value: unknown): ApiReview {
+  const review = value as any;
+  const itemType = review.itemType || review.item_type || 'package';
+
+  return {
+    id: String(review.id || ''),
+    itemId: String(review.itemId || review.item_id || ''),
+    itemType: itemType === 'workflow' ? 'workflow' : 'package',
+    author: String(review.author || 'unknown'),
+    rating: Number(review.rating || 0),
+    content: String(review.content || ''),
+    createdAt: String(review.createdAt || review.created_at || '')
   };
 }
 

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { formatConfigJson } from '../config.js';
 import {
   detectOpenCodeConfigPath,
@@ -15,8 +16,13 @@ import {
 import {
   discussionsSource,
   findMarketplaceSource,
+  createReviewSource,
+  listReviewsSource,
+  publishPackageSource,
+  publishWorkflowSource,
   searchMarketplaceSource,
   trendingMarketplaceSource,
+  type ApiReview,
   type FetchLike,
   type SourceOptions,
   type SourceResult
@@ -71,25 +77,31 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   try {
     switch (parsed.command) {
       case 'search':
-        return commandSearch(parsed, io);
+        return await commandSearch(parsed, io);
       case 'browse':
-        return commandBrowse(parsed, io);
+        return await commandBrowse(parsed, io);
       case 'trending':
-        return commandTrending(parsed, io);
+        return await commandTrending(parsed, io);
       case 'workflows':
-        return commandWorkflows(parsed, io);
+        return await commandWorkflows(parsed, io);
       case 'discussions':
-        return commandDiscussions(parsed, io);
+        return await commandDiscussions(parsed, io);
       case 'install':
-        return commandInstall(parsed, io);
+        return await commandInstall(parsed, io);
       case 'save':
-        return commandSave(parsed, io);
+        return await commandSave(parsed, io);
       case 'saved':
-        return commandSaved(parsed, io);
+        return await commandSaved(parsed, io);
       case 'remove':
-        return commandRemove(parsed, io);
+        return await commandRemove(parsed, io);
+      case 'publish':
+        return await commandPublish(parsed, io);
+      case 'review':
+        return await commandReview(parsed, io);
+      case 'reviews':
+        return await commandReviews(parsed, io);
       case 'config':
-        return commandConfig(parsed, io);
+        return await commandConfig(parsed, io);
       case 'help':
         writeLine(io.stdout, usage());
         return 0;
@@ -432,6 +444,127 @@ function commandRemove(parsed: ParsedArgs, io: CliIo): number {
   return 0;
 }
 
+async function commandPublish(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const kind = parsed.args[0];
+
+  if (kind !== 'package' && kind !== 'workflow') {
+    return usageError(io, 'publish requires "package" or "workflow"');
+  }
+
+  const source = writeSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const name = requiredStringFlag(parsed, 'name');
+  const description = requiredStringFlag(parsed, 'description', 'd');
+  if (!name || !description) {
+    return usageError(io, 'publish requires --name and --description');
+  }
+
+  if (kind === 'package') {
+    const npmPackage = stringFlag(parsed, 'npm') || stringFlag(parsed, 'npmPackage');
+    const category = stringFlag(parsed, 'category', 'c') || 'mcp';
+
+    if (category === 'mcp' && !npmPackage) {
+      return usageError(io, 'publish package requires --npm for MCP packages');
+    }
+
+    const result = await publishPackageSource(source.options, {
+      id: stringFlag(parsed, 'id'),
+      name,
+      description,
+      version: stringFlag(parsed, 'version') || '1.0.0',
+      category,
+      tags: tagsFlag(parsed),
+      repository: stringFlag(parsed, 'repo') || stringFlag(parsed, 'repository'),
+      npmPackage
+    });
+
+    if (parsed.flags.json) {
+      writeJson(io.stdout, sourcePayload(result, { item: result.data }));
+      return 0;
+    }
+
+    writeLine(io.stdout, `Published package ${result.data.id}`);
+    writeLine(io.stdout, `${result.data.name} (${result.source})`);
+    return 0;
+  }
+
+  const prompt = promptInput(parsed);
+  if (!prompt) {
+    return usageError(io, 'publish workflow requires --prompt or --prompt-file');
+  }
+
+  const result = await publishWorkflowSource(source.options, {
+    id: stringFlag(parsed, 'id'),
+    name,
+    description,
+    prompt,
+    model: stringFlag(parsed, 'model'),
+    tags: tagsFlag(parsed)
+  });
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { item: result.data }));
+    return 0;
+  }
+
+  writeLine(io.stdout, `Published workflow ${result.data.id}`);
+  writeLine(io.stdout, `${result.data.name} (${result.source})`);
+  return 0;
+}
+
+async function commandReview(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const itemId = parsed.args[0];
+  if (!itemId) return usageError(io, 'review requires an item id');
+
+  const rating = numberFlag(parsed, 'rating', 'r');
+  const content = requiredStringFlag(parsed, 'content');
+  if (!rating || rating < 1 || rating > 5 || !content) {
+    return usageError(io, 'review requires --rating 1-5 and --content');
+  }
+
+  const source = writeSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const result = await createReviewSource(source.options, {
+    itemId,
+    itemType: itemTypeFlag(parsed, itemId),
+    rating,
+    content
+  });
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { review: result.data }));
+    return 0;
+  }
+
+  writeLine(io.stdout, `Reviewed ${result.data.itemId}`);
+  writeLine(io.stdout, `${result.data.rating}/5 by ${result.data.author}`);
+  return 0;
+}
+
+async function commandReviews(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const itemId = parsed.args[0];
+  const source = readSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const result = await listReviewsSource(source.options, itemId, stringFlag(parsed, 'type', 't'));
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { count: result.data.length, reviews: result.data }));
+    return 0;
+  }
+
+  if (result.data.length === 0) {
+    writeLine(io.stdout, itemId ? `No reviews found for ${itemId}.` : 'No reviews found.');
+    return 0;
+  }
+
+  writeLine(io.stdout, `Agora reviews (${result.data.length}, source: ${result.source})`);
+  writeLine(io.stdout, formatReviewList(result.data));
+  return 0;
+}
+
 function formatItemList(items: MarketplaceItem[]): string {
   return items.map((item, index) => {
     const installs = item.kind === 'package' ? ` | installs ${formatCount(item.installs)}` : '';
@@ -493,6 +626,16 @@ function formatSavedList(items: ResolvedSavedItem[]): string {
   }).join('\n\n');
 }
 
+function formatReviewList(reviews: ApiReview[]): string {
+  return reviews.map((review, index) => {
+    return [
+      `${index + 1}. ${review.itemId} [${review.itemType}]`,
+      `   rating ${review.rating}/5 by ${review.author}`,
+      `   ${truncate(review.content, 88)}`
+    ].join('\n');
+  }).join('\n\n');
+}
+
 function usage(): string {
   return [
     'Agora CLI',
@@ -507,12 +650,17 @@ function usage(): string {
     '  agora save <id> [--data-dir path] [--json]',
     '  agora saved [query] [--data-dir path] [--json]',
     '  agora remove <id> [--data-dir path] [--json]',
+    '  agora publish package --name <name> --description <text> --npm <package> [--token token]',
+    '  agora publish workflow --name <name> --description <text> --prompt-file <path> [--token token]',
+    '  agora review <id> --rating 5 --content <text> [--token token]',
+    '  agora reviews [id] [--type package|workflow]',
     '  agora config doctor [--config path] [--json]',
     '',
     'Data source:',
     '  --api                 Use the live Agora API',
     '  --api-url <url>       Override AGORA_API_URL',
     '  --api-timeout <ms>    API timeout before offline fallback',
+    '  --token <token>       API auth token, defaults to AGORA_TOKEN or AGORA_API_TOKEN',
     '  --offline             Force local bundled marketplace data',
     '',
     'Examples:',
@@ -522,7 +670,9 @@ function usage(): string {
     '  agora install mcp-github',
     '  agora install mcp-github --write',
     '  agora save wf-security-audit',
-    '  agora saved'
+    '  agora saved',
+    '  agora publish package --name @you/server --description "MCP server" --npm @you/server --api --token $AGORA_TOKEN',
+    '  agora review mcp-github --rating 5 --content "Works well" --api --token $AGORA_TOKEN'
   ].join('\n');
 }
 
@@ -534,6 +684,11 @@ function usageError(io: CliIo, message: string): number {
 function stringFlag(parsed: ParsedArgs, longName: string, shortName?: string): string | undefined {
   const value = parsed.flags[longName] ?? (shortName ? parsed.flags[shortName] : undefined);
   return typeof value === 'string' ? value : undefined;
+}
+
+function requiredStringFlag(parsed: ParsedArgs, longName: string, shortName?: string): string | undefined {
+  const value = stringFlag(parsed, longName, shortName);
+  return value?.trim() || undefined;
 }
 
 function numberFlag(parsed: ParsedArgs, longName: string, shortName?: string): number | undefined {
@@ -576,9 +731,61 @@ function sourceOptions(parsed: ParsedArgs, io: CliIo): SourceOptions {
   return {
     useApi,
     apiUrl,
+    token: stringFlag(parsed, 'token') || io.env?.AGORA_TOKEN || io.env?.AGORA_API_TOKEN,
     fetcher: io.fetcher,
     timeoutMs: numberFlag(parsed, 'apiTimeout')
   };
+}
+
+function writeSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options: SourceOptions } | { ok: false; error: string } {
+  const options = sourceOptions(parsed, io);
+  const isDefaultPlaceholder = options.apiUrl === DEFAULT_API_URL;
+
+  if (!options.useApi && isDefaultPlaceholder) {
+    return { ok: false, error: 'This command requires --api-url or AGORA_API_URL' };
+  }
+
+  if (!options.token) {
+    return { ok: false, error: 'This command requires --token, AGORA_TOKEN, or AGORA_API_TOKEN' };
+  }
+
+  return {
+    ok: true,
+    options: {
+      ...options,
+      useApi: true
+    }
+  };
+}
+
+function readSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options: SourceOptions } | { ok: false; error: string } {
+  const options = sourceOptions(parsed, io);
+  if (!options.useApi && options.apiUrl === DEFAULT_API_URL) {
+    return { ok: false, error: 'This command requires --api-url or AGORA_API_URL' };
+  }
+  return { ok: true, options: { ...options, useApi: true } };
+}
+
+function tagsFlag(parsed: ParsedArgs): string[] {
+  const value = stringFlag(parsed, 'tags');
+  if (!value) return [];
+  return value.split(',').map((tag) => tag.trim()).filter(Boolean);
+}
+
+function promptInput(parsed: ParsedArgs): string | undefined {
+  const prompt = stringFlag(parsed, 'prompt');
+  if (prompt) return prompt;
+
+  const promptFile = stringFlag(parsed, 'promptFile');
+  if (!promptFile) return undefined;
+
+  return readFileSync(promptFile, 'utf8');
+}
+
+function itemTypeFlag(parsed: ParsedArgs, itemId: string): 'package' | 'workflow' {
+  const type = stringFlag(parsed, 'type', 't');
+  if (type === 'workflow' || itemId.startsWith('wf-')) return 'workflow';
+  return 'package';
 }
 
 function warnFallback<T>(result: SourceResult<T>, io: CliIo): void {
