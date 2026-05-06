@@ -44,7 +44,7 @@ REST API backend built with Hono that provides:
 - `POST /api/reviews` - Create review
 
 ### Users
-- `GET /api/users/:username` - Get user profile
+- `GET /api/users/:username` - Get public user profile with contribution counts
 
 ### Aggregation
 - `GET /api/aggregate/packages` - Search npm with MCP filter

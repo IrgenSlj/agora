@@ -42,11 +42,12 @@ bun test
 - Live API source and offline fallback
 - Discussion creation
 - Publish/review API commands
+- Profile lookup
 
 ## Coverage
 
-- **95 tests passing**
-- **242 assertions**
+- **98 tests passing**
+- **254 assertions**
 - **5 test files**
 
 ## Adding Tests

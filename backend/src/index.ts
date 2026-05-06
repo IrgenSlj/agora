@@ -584,14 +584,39 @@ app.get('/api/users/:username', async (c) => {
   const username = c.req.param('username');
   
   try {
-    const user = await c.env.DB.prepare(
-      'SELECT * FROM users WHERE username = ?'
-    ).bind(username).first();
+    const user = await c.env.DB.prepare(`
+      SELECT id, username, display_name, bio, avatar_url, created_at
+      FROM users
+      WHERE username = ?
+    `).bind(username).first() as any;
     
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
     }
-    return c.json({ user });
+
+    const packageCount = await c.env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM packages WHERE author = ?'
+    ).bind(user.username).first() as any;
+    const workflowCount = await c.env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM workflows WHERE author = ?'
+    ).bind(user.username).first() as any;
+    const discussionCount = await c.env.DB.prepare(
+      'SELECT COUNT(*) AS count FROM discussions WHERE author = ?'
+    ).bind(user.username).first() as any;
+
+    return c.json({
+      user: {
+        id: user.id,
+        username: user.username,
+        display_name: user.display_name,
+        bio: user.bio,
+        avatar_url: user.avatar_url,
+        package_count: Number(packageCount?.count || 0),
+        workflow_count: Number(workflowCount?.count || 0),
+        discussion_count: Number(discussionCount?.count || 0),
+        created_at: user.created_at
+      }
+    });
   } catch (e) {
     return c.json({ error: String(e) }, 500);
   }

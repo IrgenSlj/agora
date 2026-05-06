@@ -26,6 +26,7 @@ Use it to:
 - Preview install plans before touching local config
 - Safely write MCP server entries to `opencode.json`
 - Browse and create discussions from the terminal
+- View marketplace user profiles
 - Keep the plugin and CLI behavior aligned through shared core modules
 
 ## Features
@@ -121,6 +122,7 @@ agora publish package --name @you/server --description "MCP server" --npm @you/s
 agora publish workflow --name "Security Audit" --description "Audit workflow" --prompt-file ./prompt.md
 agora review mcp-github --rating 5 --content "Works well"
 agora reviews mcp-github --api
+agora profile alice
 agora config doctor
 ```
 
@@ -130,7 +132,7 @@ Saved items and optional auth credentials are stored in `~/.config/agora/state.j
 
 The CLI uses bundled offline marketplace data by default. Add `--api`, `--live`, `AGORA_USE_API=true`, `AGORA_API_URL=https://...`, or a stored auth API URL to use the live backend. If the API request fails, Agora falls back to offline data and writes a warning to stderr. Use `--offline` to force local data.
 
-Discussion creation, publishing, and review writes require the live backend plus an API token. Pass `--token`, `AGORA_TOKEN`, or `AGORA_API_TOKEN`, or store it once with `agora auth login --token $AGORA_TOKEN --api-url https://...`. Use `agora auth logout` to remove the stored token. The backend accepts the same GitHub token used by OAuth and resolves the author from GitHub.
+Discussion creation, publishing, and review writes require the live backend plus an API token. Pass `--token`, `AGORA_TOKEN`, or `AGORA_API_TOKEN`, or store it once with `agora auth login --token $AGORA_TOKEN --api-url https://...`. Use `agora auth logout` to remove the stored token. Read commands like `agora profile` can also use the stored API URL. The backend accepts the same GitHub token used by OAuth and resolves the author from GitHub.
 
 OpenCode plugin commands:
 
@@ -229,7 +231,7 @@ agora/
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `auth`, `publish`, `review`, `reviews`, `config doctor` |
+| CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `auth`, `publish`, `review`, `reviews`, `profile`, `config doctor` |
 | Live API mode | Ready | Opt-in via `--api`, `--live`, `AGORA_USE_API`, `AGORA_API_URL`, or stored auth API URL; falls back offline |
 | Shared core | Ready | CLI and plugin share marketplace discovery/install-plan logic |
 | Local state | Ready | Saved items and optional API token under `~/.config/agora` |

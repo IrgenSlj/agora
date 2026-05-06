@@ -790,6 +790,91 @@ describe('CLI commands', () => {
     expect(stdout.join('')).toContain('rating 5/5');
   });
 
+  test('profile displays live API user profiles', async () => {
+    const fetcher = async (input: string | URL) => {
+      const url = new URL(String(input));
+      expect(url.pathname).toBe('/api/users/alice');
+      return jsonResponse({
+        user: {
+          id: 'user-1',
+          username: 'alice',
+          display_name: 'Alice Doe',
+          bio: 'Builds MCP tools',
+          avatar_url: 'https://example.test/alice.png',
+          github_access_token: 'should-not-render',
+          package_count: 2,
+          workflow_count: 3,
+          discussion_count: 4,
+          created_at: '2026-01-01'
+        }
+      });
+    };
+    const { io, stdout } = createIo(process.cwd(), { fetcher });
+
+    const code = await runCli(['profile', 'alice', '--api-url', 'https://api.example.test'], io);
+
+    expect(code).toBe(0);
+    expect(stdout.join('')).toContain('Alice Doe');
+    expect(stdout.join('')).toContain('packages: 2');
+    expect(stdout.join('')).toContain('discussions: 4');
+    expect(stdout.join('')).not.toContain('should-not-render');
+  });
+
+  test('profile uses stored API URL and auth token', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const dataDir = join(temp, 'state');
+    const setup = createIo(temp);
+    const requests: { auth: string | null }[] = [];
+    const fetcher = async (_input: string | URL, init?: RequestInit) => {
+      requests.push({ auth: new Headers(init?.headers).get('authorization') });
+      return jsonResponse({
+        user: {
+          id: 'user-2',
+          username: 'bob',
+          display_name: 'Bob Smith',
+          package_count: 1,
+          workflow_count: 0,
+          discussion_count: 2,
+          created_at: '2026-02-01'
+        }
+      });
+    };
+
+    try {
+      await runCli([
+        'auth',
+        'login',
+        '--token',
+        'stored-token',
+        '--api-url',
+        'https://api.example.test',
+        '--data-dir',
+        dataDir
+      ], setup.io);
+
+      const { io, stdout } = createIo(temp, { fetcher });
+      const code = await runCli(['profile', 'bob', '--data-dir', dataDir, '--json'], io);
+      const payload = JSON.parse(stdout.join(''));
+
+      expect(code).toBe(0);
+      expect(payload.profile.username).toBe('bob');
+      expect(payload.profile.discussions).toBe(2);
+      expect(requests[0].auth).toBe('Bearer stored-token');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('profile reports missing API users', async () => {
+    const fetcher = async () => jsonResponse({ error: 'User not found' }, 404);
+    const { io, stderr } = createIo(process.cwd(), { fetcher });
+
+    const code = await runCli(['profile', 'missing', '--api-url', 'https://api.example.test'], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join('')).toContain('Profile not found: missing');
+  });
+
   test('publish requires an auth token', async () => {
     const { io, stderr } = createIo();
 

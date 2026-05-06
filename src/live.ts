@@ -88,6 +88,18 @@ export interface ApiReview {
   createdAt: string;
 }
 
+export interface ApiProfile {
+  id: string;
+  username: string;
+  displayName: string;
+  bio?: string;
+  avatarUrl?: string;
+  packages: number;
+  workflows: number;
+  discussions: number;
+  joinedAt: string;
+}
+
 interface ApiPackage {
   id: string;
   name: string;
@@ -128,6 +140,25 @@ interface ApiDiscussion {
   replies?: number;
   reply_count?: number;
   stars?: number;
+  createdAt?: string;
+  created_at?: string;
+}
+
+interface ApiUser {
+  id?: string;
+  username?: string;
+  displayName?: string;
+  display_name?: string;
+  bio?: string | null;
+  avatarUrl?: string;
+  avatar_url?: string;
+  packages?: number;
+  package_count?: number;
+  workflows?: number;
+  workflow_count?: number;
+  discussions?: number;
+  discussion_count?: number;
+  joinedAt?: string;
   createdAt?: string;
   created_at?: string;
 }
@@ -264,6 +295,15 @@ export async function listReviewsSource(
   const suffix = params.size > 0 ? `?${params}` : '';
   const payload = await requestJson<{ reviews?: unknown[] }>(options, `/api/reviews${suffix}`);
   return api((payload.reviews || []).map(mapReview), options);
+}
+
+export async function profileSource(options: SourceOptions, username: string): Promise<SourceResult<ApiProfile | null>> {
+  if (!shouldUseApi(options)) {
+    return offline(null);
+  }
+
+  const payload = await requestNullable<{ user?: ApiUser }>(options, `/api/users/${encodeURIComponent(username)}`);
+  return api(payload?.user ? mapProfile(payload.user) : null, options);
 }
 
 function shouldUseApi(options: SourceOptions): boolean {
@@ -463,6 +503,22 @@ function mapReview(value: unknown): ApiReview {
     rating: Number(review.rating || 0),
     content: String(review.content || ''),
     createdAt: String(review.createdAt || review.created_at || '')
+  };
+}
+
+function mapProfile(user: ApiUser): ApiProfile {
+  const username = String(user.username || '');
+
+  return {
+    id: String(user.id || username),
+    username,
+    displayName: String(user.displayName || user.display_name || username),
+    bio: user.bio || undefined,
+    avatarUrl: user.avatarUrl || user.avatar_url || undefined,
+    packages: Number(user.packages ?? user.package_count ?? 0),
+    workflows: Number(user.workflows ?? user.workflow_count ?? 0),
+    discussions: Number(user.discussions ?? user.discussion_count ?? 0),
+    joinedAt: String(user.joinedAt || user.createdAt || user.created_at || '')
   };
 }
 

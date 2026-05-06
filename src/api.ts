@@ -45,6 +45,10 @@ export interface User {
   display_name?: string;
   bio?: string;
   avatar_url?: string;
+  package_count?: number;
+  workflow_count?: number;
+  discussion_count?: number;
+  created_at?: string;
 }
 
 export async function searchPackages(query: string, category?: string): Promise<Package[]> {

@@ -19,10 +19,12 @@ import {
   findMarketplaceSource,
   createReviewSource,
   listReviewsSource,
+  profileSource,
   publishPackageSource,
   publishWorkflowSource,
   searchMarketplaceSource,
   trendingMarketplaceSource,
+  type ApiProfile,
   type ApiReview,
   type FetchLike,
   type SourceOptions,
@@ -106,6 +108,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return await commandReview(parsed, io);
       case 'reviews':
         return await commandReviews(parsed, io);
+      case 'profile':
+        return await commandProfile(parsed, io);
       case 'auth':
         return commandAuth(parsed, io);
       case 'config':
@@ -671,6 +675,25 @@ async function commandReviews(parsed: ParsedArgs, io: CliIo): Promise<number> {
   return 0;
 }
 
+async function commandProfile(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const username = parsed.args[0] || stringFlag(parsed, 'username');
+  if (!username) return usageError(io, 'profile requires a username');
+
+  const source = readSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const result = await profileSource(source.options, username);
+  if (!result.data) return usageError(io, `Profile not found: ${username}`);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { profile: result.data }));
+    return 0;
+  }
+
+  writeLine(io.stdout, formatProfileDetail(result.data));
+  return 0;
+}
+
 function formatItemList(items: MarketplaceItem[]): string {
   return items.map((item, index) => {
     const installs = item.kind === 'package' ? ` | installs ${formatCount(item.installs)}` : '';
@@ -742,6 +765,22 @@ function formatReviewList(reviews: ApiReview[]): string {
   }).join('\n\n');
 }
 
+function formatProfileDetail(profile: ApiProfile): string {
+  const lines = [
+    profile.displayName,
+    `username: ${profile.username}`,
+    `packages: ${formatCount(profile.packages)}`,
+    `workflows: ${formatCount(profile.workflows)}`,
+    `discussions: ${formatCount(profile.discussions)}`
+  ];
+
+  if (profile.bio) lines.splice(2, 0, `bio: ${profile.bio}`);
+  if (profile.avatarUrl) lines.push(`avatar: ${profile.avatarUrl}`);
+  if (profile.joinedAt) lines.push(`joined: ${formatDate(profile.joinedAt)}`);
+
+  return lines.join('\n');
+}
+
 function usage(): string {
   return [
     'Agora CLI',
@@ -764,6 +803,7 @@ function usage(): string {
     '  agora publish workflow --name <name> --description <text> --prompt-file <path> [--token token]',
     '  agora review <id> --rating 5 --content <text> [--token token]',
     '  agora reviews [id] [--type package|workflow]',
+    '  agora profile <username> [--json]',
     '  agora config doctor [--config path] [--json]',
     '',
     'Data source:',
@@ -783,6 +823,7 @@ function usage(): string {
     '  agora saved',
     '  agora auth login --token $AGORA_TOKEN --api-url https://agora.example.com',
     '  agora discuss --title "MCP question" --content "How are you composing servers?" --category question',
+    '  agora profile alice',
     '  agora publish package --name @you/server --description "MCP server" --npm @you/server',
     '  agora review mcp-github --rating 5 --content "Works well"'
   ].join('\n');
