@@ -40,12 +40,13 @@ bun test
 - Local saved-item state
 - Auth token state
 - Live API source and offline fallback
+- Discussion creation
 - Publish/review API commands
 
 ## Coverage
 
-- **93 tests passing**
-- **231 assertions**
+- **95 tests passing**
+- **242 assertions**
 - **5 test files**
 
 ## Adding Tests

@@ -39,7 +39,7 @@ REST API backend built with Hono that provides:
 
 ### Community
 - `GET /api/discussions` - List discussions
-- `POST /api/discussions` - Create discussion
+- `POST /api/discussions` - Create discussion, authenticated
 - `GET /api/reviews` - List reviews
 - `POST /api/reviews` - Create review
 
@@ -120,11 +120,12 @@ GitHub OAuth flow:
 3. Callback creates/updates user in DB
 4. Session cookie set
 
-CLI write endpoints also accept `Authorization: Bearer <github-token>`. The backend resolves the token against stored OAuth sessions first, then falls back to GitHub `/user` and upserts the user record.
+CLI write endpoints also accept `Authorization: Bearer <github-token>`. The backend resolves the token against stored OAuth sessions first, then falls back to GitHub `/user` and upserts the user record. Protected write routes derive the author from that resolved user instead of trusting request body author fields.
 
 Protected endpoints:
 - `POST /api/packages`
 - `POST /api/workflows`
+- `POST /api/discussions`
 - `POST /api/reviews`
 
 ## Status

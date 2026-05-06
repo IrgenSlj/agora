@@ -237,6 +237,10 @@ function normalizePackageCategory(category: unknown): string {
   return category === 'prompt' || category === 'workflow' || category === 'skill' ? category : 'mcp';
 }
 
+function normalizeDiscussionCategory(category: unknown): string {
+  return category === 'question' || category === 'idea' || category === 'showcase' ? category : 'discussion';
+}
+
 // Packages
 app.get('/api/packages', async (c) => {
   const search = c.req.query('q');
@@ -455,23 +459,39 @@ app.get('/api/discussions', async (c) => {
 });
 
 app.post('/api/discussions', async (c) => {
-  const body = await c.req.json();
-  const { title, content, category, author } = body;
-  
-  if (!title || !content || !author) {
-    return c.json({ error: 'Missing required fields' }, 400);
+  const user = await requireUser(c);
+  if (isResponse(user)) return user;
+
+  const body = await c.req.json() as any;
+  const title = String(body.title || '').trim();
+  const content = String(body.content || '').trim();
+  const category = normalizeDiscussionCategory(body.category);
+
+  if (!title || !content) {
+    return c.json({ error: 'title and content are required' }, 400);
   }
   
-  const id = `disc-${Date.now()}`;
+  const id = `disc-${crypto.randomUUID()}`;
   const createdAt = new Date().toISOString();
   
   try {
     await c.env.DB.prepare(`
-      INSERT INTO discussions (id, title, content, category, author, created_at)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).bind(id, title, content, category || 'discussion', author, createdAt).run();
-    
-    return c.json({ id, title, content, category, author, createdAt });
+      INSERT INTO discussions (id, title, content, category, author, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).bind(id, title, content, category, user.username, createdAt, createdAt).run();
+
+    return c.json({
+      discussion: {
+        id,
+        title,
+        content,
+        category,
+        author: user.username,
+        stars: 0,
+        reply_count: 0,
+        created_at: createdAt
+      }
+    });
   } catch (e) {
     return c.json({ error: String(e) }, 500);
   }

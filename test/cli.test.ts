@@ -456,6 +456,116 @@ describe('CLI commands', () => {
     }
   });
 
+  test('discuss posts authenticated community discussions', async () => {
+    const requests: { url: string; body: any; auth: string | null }[] = [];
+    const fetcher = async (input: string | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body || '{}'));
+      requests.push({
+        url: String(input),
+        body,
+        auth: new Headers(init?.headers).get('authorization')
+      });
+      return jsonResponse({
+        discussion: {
+          id: 'disc-remote',
+          title: body.title,
+          content: body.content,
+          author: 'tester',
+          category: body.category,
+          stars: 0,
+          reply_count: 0,
+          created_at: '2026-01-01'
+        }
+      });
+    };
+    const { io, stdout } = createIo(process.cwd(), { fetcher });
+
+    const code = await runCli([
+      'discuss',
+      '--title',
+      'MCP composition',
+      '--content',
+      'How are you composing servers?',
+      '--category',
+      'question',
+      '--api-url',
+      'https://api.example.test',
+      '--token',
+      'test-token',
+      '--json'
+    ], io);
+    const payload = JSON.parse(stdout.join(''));
+
+    expect(code).toBe(0);
+    expect(payload.discussion.id).toBe('disc-remote');
+    expect(payload.discussion.category).toBe('question');
+    expect(requests[0].url).toBe('https://api.example.test/api/discussions');
+    expect(requests[0].auth).toBe('Bearer test-token');
+    expect(requests[0].body.author).toBeUndefined();
+  });
+
+  test('discuss uses stored auth credentials and content files', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const dataDir = join(temp, 'state');
+    const contentPath = join(temp, 'discussion.md');
+    await Bun.write(contentPath, 'What review workflows are working well?');
+    const setup = createIo(temp);
+    const requests: { body: any; auth: string | null }[] = [];
+    const fetcher = async (_input: string | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body || '{}'));
+      requests.push({
+        body,
+        auth: new Headers(init?.headers).get('authorization')
+      });
+      return jsonResponse({
+        discussion: {
+          id: 'disc-file',
+          title: body.title,
+          content: body.content,
+          author: 'tester',
+          category: body.category,
+          stars: 0,
+          reply_count: 0,
+          created_at: '2026-01-01'
+        }
+      });
+    };
+
+    try {
+      await runCli([
+        'auth',
+        'login',
+        '--token',
+        'stored-token',
+        '--api-url',
+        'https://api.example.test',
+        '--data-dir',
+        dataDir
+      ], setup.io);
+
+      const { io, stdout } = createIo(temp, { fetcher });
+      const code = await runCli([
+        'discuss',
+        '--title',
+        'Workflow review patterns',
+        '--content-file',
+        contentPath,
+        '--category',
+        'idea',
+        '--data-dir',
+        dataDir
+      ], io);
+
+      expect(code).toBe(0);
+      expect(stdout.join('')).toContain('Created discussion disc-file');
+      expect(requests[0].auth).toBe('Bearer stored-token');
+      expect(requests[0].body.content).toBe('What review workflows are working well?');
+      expect(requests[0].body.category).toBe('idea');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
   test('publish package posts authenticated metadata', async () => {
     const requests: { url: string; body: any; auth: string | null }[] = [];
     const fetcher = async (input: string | URL, init?: RequestInit) => {

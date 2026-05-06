@@ -102,16 +102,20 @@ export async function createDiscussion(data: {
   title: string;
   content: string;
   category: string;
-  author: string;
-}): Promise<{ id: string } | null> {
+  author?: string;
+}, token?: string): Promise<{ id: string } | null> {
+  const headers = new Headers({ 'Content-Type': 'application/json' });
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+
   const res = await fetch(`${API_BASE}/api/discussions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(data)
   });
   
   if (!res.ok) return null;
-  return res.json() as Promise<{ id: string }>;
+  const payload = await res.json() as any;
+  return payload.discussion || payload;
 }
 
 export async function getUser(username: string): Promise<User | null> {

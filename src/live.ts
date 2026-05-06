@@ -72,6 +72,12 @@ export interface ReviewInput {
   content: string;
 }
 
+export interface DiscussionInput {
+  title: string;
+  content: string;
+  category?: string;
+}
+
 export interface ApiReview {
   id: string;
   itemId: string;
@@ -176,6 +182,23 @@ export async function discussionsSource(options: DiscussionSourceOptions = {}): 
   } catch (error) {
     return offline(getDiscussions(options.category, options.query), error);
   }
+}
+
+export async function createDiscussionSource(
+  options: SourceOptions,
+  input: DiscussionInput
+): Promise<SourceResult<Discussion>> {
+  const payload = await requestJson<{ discussion?: ApiDiscussion } & Partial<ApiDiscussion>>(options, '/api/discussions', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  });
+  const discussion = (payload.discussion || payload) as ApiDiscussion;
+
+  if (!discussion.id) {
+    throw new Error('API response did not include a discussion');
+  }
+
+  return api(mapDiscussion(discussion), options);
 }
 
 export async function publishPackageSource(

@@ -14,6 +14,7 @@ import {
   type MarketplaceItem
 } from '../marketplace.js';
 import {
+  createDiscussionSource,
   discussionsSource,
   findMarketplaceSource,
   createReviewSource,
@@ -89,6 +90,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return await commandWorkflows(parsed, io);
       case 'discussions':
         return await commandDiscussions(parsed, io);
+      case 'discuss':
+        return await commandDiscuss(parsed, io);
       case 'install':
         return await commandInstall(parsed, io);
       case 'save':
@@ -270,6 +273,35 @@ async function commandDiscussions(parsed: ParsedArgs, io: CliIo): Promise<number
       `   replies ${discussion.replies} | stars ${discussion.stars} | by ${discussion.author}`
     ].join('\n');
   }).join('\n\n'));
+  return 0;
+}
+
+async function commandDiscuss(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const source = writeSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const title = requiredStringFlag(parsed, 'title');
+  const content = contentInput(parsed);
+  if (!title || !content) {
+    return usageError(io, 'discuss requires --title and --content or --content-file');
+  }
+
+  const category = discussionCategoryFlag(parsed);
+  if (!category.ok) return usageError(io, category.error);
+
+  const result = await createDiscussionSource(source.options, {
+    title,
+    content,
+    category: category.value
+  });
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { discussion: result.data }));
+    return 0;
+  }
+
+  writeLine(io.stdout, `Created discussion ${result.data.id}`);
+  writeLine(io.stdout, `${result.data.title} (${result.source})`);
   return 0;
 }
 
@@ -720,6 +752,7 @@ function usage(): string {
     '  agora trending [all|packages|workflows] [--limit 5] [--json]',
     '  agora workflows [query] [--limit 10] [--json]',
     '  agora discussions [query] [--category question|idea|showcase|discussion] [--json]',
+    '  agora discuss --title <title> (--content <text>|--content-file path) [--category question|idea|showcase|discussion]',
     '  agora install <id> [--write] [--config path] [--json]',
     '  agora save <id> [--data-dir path] [--json]',
     '  agora saved [query] [--data-dir path] [--json]',
@@ -749,6 +782,7 @@ function usage(): string {
     '  agora save wf-security-audit',
     '  agora saved',
     '  agora auth login --token $AGORA_TOKEN --api-url https://agora.example.com',
+    '  agora discuss --title "MCP question" --content "How are you composing servers?" --category question',
     '  agora publish package --name @you/server --description "MCP server" --npm @you/server',
     '  agora review mcp-github --rating 5 --content "Works well"'
   ].join('\n');
@@ -873,10 +907,28 @@ function promptInput(parsed: ParsedArgs): string | undefined {
   return readFileSync(promptFile, 'utf8');
 }
 
+function contentInput(parsed: ParsedArgs): string | undefined {
+  const content = requiredStringFlag(parsed, 'content');
+  if (content) return content;
+
+  const contentFile = stringFlag(parsed, 'contentFile');
+  if (!contentFile) return undefined;
+
+  return readFileSync(contentFile, 'utf8').trim();
+}
+
 function itemTypeFlag(parsed: ParsedArgs, itemId: string): 'package' | 'workflow' {
   const type = stringFlag(parsed, 'type', 't');
   if (type === 'workflow' || itemId.startsWith('wf-')) return 'workflow';
   return 'package';
+}
+
+function discussionCategoryFlag(parsed: ParsedArgs): { ok: true; value: string } | { ok: false; error: string } {
+  const category = stringFlag(parsed, 'category', 'c') || 'discussion';
+  if (category === 'question' || category === 'idea' || category === 'showcase' || category === 'discussion') {
+    return { ok: true, value: category };
+  }
+  return { ok: false, error: 'discussion category must be question, idea, showcase, or discussion' };
 }
 
 function warnFallback<T>(result: SourceResult<T>, io: CliIo): void {

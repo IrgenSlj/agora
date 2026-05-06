@@ -25,7 +25,7 @@ Use it to:
 - Discover MCP servers, prompts, skills, and workflows
 - Preview install plans before touching local config
 - Safely write MCP server entries to `opencode.json`
-- Browse discussions and workflow patterns from the terminal
+- Browse and create discussions from the terminal
 - Keep the plugin and CLI behavior aligned through shared core modules
 
 ## Features
@@ -37,6 +37,7 @@ Use it to:
 - Output human-readable results or `--json` for scripts
 - Preview install plans before writing files
 - Store live API credentials for publish and review commands
+- Start community discussions from the CLI
 
 ### Config-Aware Installs
 - Detect an OpenCode config path automatically
@@ -108,6 +109,7 @@ agora browse mcp-github
 agora trending workflows --limit 5
 agora workflows security
 agora discussions mcp --category question
+agora discuss --title "MCP question" --content "How are you composing servers?" --category question
 agora install mcp-github
 agora install mcp-github --write
 agora save wf-security-audit
@@ -128,7 +130,7 @@ Saved items and optional auth credentials are stored in `~/.config/agora/state.j
 
 The CLI uses bundled offline marketplace data by default. Add `--api`, `--live`, `AGORA_USE_API=true`, `AGORA_API_URL=https://...`, or a stored auth API URL to use the live backend. If the API request fails, Agora falls back to offline data and writes a warning to stderr. Use `--offline` to force local data.
 
-Publishing and review writes require the live backend plus an API token. Pass `--token`, `AGORA_TOKEN`, or `AGORA_API_TOKEN`, or store it once with `agora auth login --token $AGORA_TOKEN --api-url https://...`. Use `agora auth logout` to remove the stored token. The backend accepts the same GitHub token used by OAuth and resolves the author from GitHub.
+Discussion creation, publishing, and review writes require the live backend plus an API token. Pass `--token`, `AGORA_TOKEN`, or `AGORA_API_TOKEN`, or store it once with `agora auth login --token $AGORA_TOKEN --api-url https://...`. Use `agora auth logout` to remove the stored token. The backend accepts the same GitHub token used by OAuth and resolves the author from GitHub.
 
 OpenCode plugin commands:
 
@@ -227,7 +229,7 @@ agora/
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `install`, `save`, `saved`, `remove`, `auth`, `publish`, `review`, `reviews`, `config doctor` |
+| CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `auth`, `publish`, `review`, `reviews`, `config doctor` |
 | Live API mode | Ready | Opt-in via `--api`, `--live`, `AGORA_USE_API`, `AGORA_API_URL`, or stored auth API URL; falls back offline |
 | Shared core | Ready | CLI and plugin share marketplace discovery/install-plan logic |
 | Local state | Ready | Saved items and optional API token under `~/.config/agora` |
