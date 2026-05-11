@@ -1,6 +1,6 @@
 {
   "name": "opencode-agora",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Agora - The Developer's Terminal Marketplace & Community Hub for OpenCode",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
