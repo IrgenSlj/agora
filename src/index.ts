@@ -16,7 +16,7 @@ import { formatConfigJson } from './config.js';
 
 const AGORA_VERSION = '0.1.0';
 
-export const Agora: Plugin = async (ctx) => {
+export const Agora: Plugin = async (_ctx) => {
   return {
     tool: {
       agora_search: tool({
@@ -25,7 +25,7 @@ export const Agora: Plugin = async (ctx) => {
           query: tool.schema.string().describe('Search query'),
           category: tool.schema.string().optional().describe('Filter by category: mcp, prompt, workflow, all')
         },
-        async execute(args, context) {
+        async execute(args, _context) {
           const query = args.query;
           const category = args.category || 'all';
           const filtered = searchMarketplaceItems({ query, category, limit: 10 });
@@ -246,7 +246,7 @@ Run \`/agora discussions create --title "..." --content "..." --category questio
           id: tool.schema.string().describe('Package or workflow ID'),
           type: tool.schema.string().optional().describe('Type: package, workflow (default: auto-detect)')
         },
-        async execute(args, ctx) {
+        async execute(args, _ctx) {
           const id = args.id;
           const type = args.type;
           const item = findMarketplaceItem(id, { type });
@@ -295,7 +295,7 @@ Run \`/agora install ${p.id}\` to install to your OpenCode config.`;
           type: tool.schema.string().optional().describe('Type: package, workflow'),
           write: tool.schema.boolean().optional().describe('Write to config file (default: false)')
         },
-        async execute(args, ctx) {
+        async execute(args, _ctx) {
           const id = args.id;
           const type = args.type;
           const write = args.write || false;

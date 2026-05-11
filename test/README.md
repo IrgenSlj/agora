@@ -47,8 +47,11 @@ bun test
 ## Coverage
 
 - **98 tests passing**
-- **254 assertions**
+- **596 assertions**
 - **5 test files**
+- Tests cover: argument parsing, search, browse, install, config doctor,
+  saved items, auth login/logout/status, live API fallback, discussion
+  creation, publish/review API, profile lookup, data validation, formatting
 
 ## Adding Tests
 

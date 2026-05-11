@@ -11,10 +11,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/anomalyco/opencode-plugins.git"
+    "url": "https://github.com/IrgenSlj/agora.git"
   },
-  "homepage": "https://github.com/anomalyco/opencode-plugins/tree/main/agora",
-  "bugs": "https://github.com/anomalyco/opencode-plugins/issues",
+  "homepage": "https://github.com/IrgenSlj/agora",
+  "bugs": "https://github.com/IrgenSlj/agora/issues",
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=18.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "files": [
     "dist"
   ],
@@ -34,14 +41,14 @@
     "community",
     "developer-tools"
   ],
-  "author": "",
+  "author": "IrgenSlj",
   "license": "MIT",
   "dependencies": {
     "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@opencode-ai/plugin": "latest",
-    "@types/bun": "latest",
+    "@opencode-ai/plugin": "^1.0.0",
+    "@types/bun": "^1.2.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.7.0",
     "bun-types": "^1.2.0"

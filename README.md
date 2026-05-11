@@ -1,85 +1,84 @@
-# Agora - The Developer's Terminal Marketplace & Community
+# Agora — Instant OpenCode Setup & Marketplace
 
 <p align="center">
-  <strong>Where developers trade tools, ideas, and workflows</strong>
+  <strong>One command from zero to a perfectly configured OpenCode environment.</strong>
 </p>
 
 <p align="center">
-  A CLI-first marketplace for discovering and installing OpenCode tools, workflows, prompts, and MCP servers.
+  Project scanner, MCP marketplace, workflow manager, and community hub — all in one CLI.
 </p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/opencode-agora"><img src="https://img.shields.io/npm/v/opencode-agora" alt="npm"></a>
   <a href="https://github.com/IrgenSlj/agora/issues"><img src="https://img.shields.io/github/issues/IrgenSlj/agora" alt="issues"></a>
   <a href="https://github.com/IrgenSlj/agora/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/opencode-agora" alt="license"></a>
+  <a href="https://github.com/IrgenSlj/agora/actions"><img src="https://img.shields.io/github/actions/workflow/status/IrgenSlj/agora/ci.yml?branch=main" alt="CI"></a>
 </p>
 
 ---
 
 ## What is Agora?
 
-Agora is a terminal marketplace for OpenCode. The standalone `agora` CLI is the primary interface, and the OpenCode plugin exposes the same marketplace inside OpenCode sessions.
+Agora is a **zero-config OpenCode setup tool** and terminal marketplace. Run `npx opencode-agora init` in any project and it automatically scans your stack, generates the perfect `opencode.json`, installs MCP servers, and registers the plugin.
 
-Use it to:
-
-- Discover MCP servers, prompts, skills, and workflows
-- Preview install plans before touching local config
-- Safely write MCP server entries to `opencode.json`
-- Browse and create discussions from the terminal
-- View marketplace user profiles
-- Keep the plugin and CLI behavior aligned through shared core modules
+It also bundles **36+ MCP servers**, **10 production workflows**, **6 tutorials**, and a full community discussion system — all usable offline.
 
 ## Features
 
-### CLI Marketplace
-- Browse curated MCP servers and plugins
-- Search by category, language, or use case
-- Use bundled offline data or opt into the live Agora API
-- Output human-readable results or `--json` for scripts
-- Preview install plans before writing files
-- Store live API credentials for publish and review commands
-- Start community discussions from the CLI
+### `agora init` — One-Command Setup
+- Scans your project for `package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, `Gemfile`, `Dockerfile`, and more
+- Detects frameworks (React, Next.js, Django, Rails, Spring, Vue)
+- Generates the optimal `opencode.json` with stack-matched MCP servers
+- Automatically installs npm packages and registers the `opencode-agora` plugin
+- Ready in seconds — run once, done
+
+### `agora use` — Apply Workflows as Skills
+- Browse 10+ production-tested workflows (TDD, security audit, API design, refactoring, etc.)
+- `agora use wf-tdd-cycle` creates an OpenCode skill file and registers it
+- No manual copy-pasting — one command and the workflow is live
+
+### Rich Offline Marketplace
+- **36+ MCP servers** across 12 categories (filesystem, databases, cloud, browser automation, monitoring, etc.)
+- All official `@modelcontextprotocol/*` servers plus top community servers
+- Fully functional offline — no backend required
+- Search, browse, trending — all work with bundled data
 
 ### Config-Aware Installs
-- Detect an OpenCode config path automatically
-- Use `--config path` for explicit writes
+- `agora install mcp-github --write` installs the npm package **and** writes to config
+- Detects OpenCode config path automatically
 - Merge MCP servers into existing config
 - Inspect config health with `agora config doctor`
-
-### Workflows
-- Share your agentic workflows
-- Import battle-tested patterns from others
-- Version control your prompts and workflows
-- Fork and improve community workflows
 
 ### Community
 - Discussion threads on tools and patterns
 - Trending prompts and workflows
-- Expert AMAs and knowledge sharing
+- Browse and create discussions from the terminal
 
 ### OpenCode Plugin
 - Search, browse, install-preview, review, profile, discussion, and tutorial tools from inside OpenCode
-- Uses the same marketplace core as the CLI for core discovery flows
+- Uses the same marketplace core as the CLI
 
 ### Local Hub
-- Optional browser console for browsing the marketplace and assembling install plans
+- Optional browser console for browsing the marketplace
 - Runs locally with `bun run hub:dev`
 
 ### Learn
-- Interactive tutorials on MCP
-- AI development best practices
-- Terminal productivity tips
+- 6 interactive tutorials on MCP, OpenCode agents, security auditing, and more
 
-## Installation
+## Quick Start
+
+The fastest way to get started — works in any project directory:
 
 ```bash
-npx opencode-agora search filesystem
+# One command: scan project, set up OpenCode, install MCP servers, register plugin
+npx opencode-agora init
 ```
 
 For a persistent command:
 
 ```bash
 npm install -g opencode-agora
+agora init
 ```
 
 The package exposes two binary names:
@@ -89,33 +88,52 @@ agora --help
 opencode-agora --help
 ```
 
-To use the OpenCode plugin, add it to `opencode.json`:
-
-```json
-{
-  "plugins": ["opencode-agora"]
-}
-```
-
 ## Usage
 
-CLI commands:
+### Setup
 
 ```bash
+# Scan project and generate optimal OpenCode config
+agora init
+agora init --dry-run    # Preview without writing
+
+# Apply a workflow as an OpenCode skill
+agora use wf-tdd-cycle
+agora use wf-security-audit
+```
+
+### Marketplace
+
+```bash
+# Search and browse
 agora search filesystem
-agora search filesystem --api
+agora search database --category mcp
 AGORA_API_URL=https://agora.example.com agora search github --api
-agora search github --category mcp --json
-agora browse mcp-github
-agora trending workflows --limit 5
-agora workflows security
-agora discussions mcp --category question
-agora discuss --title "MCP question" --content "How are you composing servers?" --category question
-agora install mcp-github
-agora install mcp-github --write
+agora browse mcp-postgres
+agora trending
+
+# Install MCP servers
+agora install mcp-github           # preview only
+agora install mcp-github --write   # install npm package + write config
+
+# Save/bookmark items
 agora save wf-security-audit
 agora saved
 agora remove wf-security-audit
+```
+
+### Workflows
+
+```bash
+agora workflows
+agora workflows security
+```
+
+### Community & Auth
+
+```bash
+agora discussions mcp --category question
+agora discuss --title "MCP question" --content "How are you composing servers?" --category question
 agora auth login --token $AGORA_TOKEN --api-url https://agora.example.com
 agora auth status
 agora publish package --name @you/server --description "MCP server" --npm @you/server
@@ -123,46 +141,39 @@ agora publish workflow --name "Security Audit" --description "Audit workflow" --
 agora review mcp-github --rating 5 --content "Works well"
 agora reviews mcp-github --api
 agora profile alice
-agora config doctor
 ```
 
-`agora install <id>` is preview-only by default. Add `--write` to update the detected OpenCode config, or pass `--config ./opencode.json` for an explicit target.
-
-Saved items and optional auth credentials are stored in `~/.config/agora/state.json` by default. Use `AGORA_HOME=/path/to/agora` or `--data-dir /path/to/agora` to override that location. Agora writes the state file with user-only permissions when the filesystem supports it.
-
-The CLI uses bundled offline marketplace data by default. Add `--api`, `--live`, `AGORA_USE_API=true`, `AGORA_API_URL=https://...`, or a stored auth API URL to use the live backend. If the API request fails, Agora falls back to offline data and writes a warning to stderr. Use `--offline` to force local data.
-
-Discussion creation, publishing, and review writes require the live backend plus an API token. Pass `--token`, `AGORA_TOKEN`, or `AGORA_API_TOKEN`, or store it once with `agora auth login --token $AGORA_TOKEN --api-url https://...`. Use `agora auth logout` to remove the stored token. Read commands like `agora profile` can also use the stored API URL. The backend accepts the same GitHub token used by OAuth and resolves the author from GitHub.
-
-OpenCode plugin commands:
-
-- `/agora search <query> [category]` - Search marketplace
-- `/agora browse_category <category>` - Browse by category (mcp, workflow, prompt)
-- `/agora browse <id>` - View package details
-- `/agora trending [type]` - See trending packages/workflows
-- `/agora install <id> [--write]` - Install to config
-- `/agora review [action] [--id] [--rating] [--content]` - Reviews/ratings
-- `/agora discussions [action] [--id] [--title] [--content]` - Community
-- `/agora profile [action] [--username]` - User profiles
-- `/agora tutorial [id] [step]` - Interactive tutorials
-- `/agora info` - This help
-
-**Categories:** mcp, prompt, workflow, skill
-
-## Quick Start
+### Diagnostics
 
 ```bash
-# Clone and install
-git clone https://github.com/IrgenSlj/agora.git
-cd agora
-bun install
-
-# Build
-bun run build
-
-# Test
-bun test
+agora config doctor
+agora config doctor --json
 ```
+
+`agora install <id>` is preview-only by default. Add `--write` to install the npm package and update config. Pass `--config ./opencode.json` for an explicit target.
+
+Saved items and optional auth credentials are stored in `~/.config/agora/state.json` by default. Use `AGORA_HOME=/path/to/agora` or `--data-dir /path/to/agora` to override.
+
+The CLI uses bundled offline marketplace data (36+ MCP servers, 10 workflows) by default. Add `--api`, `--live`, `AGORA_USE_API=true`, or `AGORA_API_URL` to use the live backend. Falls back to offline data if the API is unavailable.
+
+### OpenCode Plugin Commands
+
+Once registered (via `agora init` or manually), use inside OpenCode:
+
+| Command | Description |
+|---|---|
+| `/agora search <query> [category]` | Search marketplace |
+| `/agora browse_category <category>` | Browse by category |
+| `/agora browse <id>` | View package details |
+| `/agora trending [type]` | See trending |
+| `/agora install <id> [--write]` | Install to config |
+| `/agora review [action] [...]` | Reviews/ratings |
+| `/agora discussions [action] [...]` | Community |
+| `/agora profile [action] [--username]` | User profiles |
+| `/agora tutorial [id] [step]` | Interactive tutorials |
+| `/agora info` | Help |
+
+**Categories:** mcp, prompt, workflow, skill `|` **Data sources:** offline (default), `--api`
 
 ## Development
 
@@ -205,6 +216,7 @@ agora/
 ├── src/
 │   ├── cli.ts        # CLI entrypoint
 │   ├── cli/app.ts    # CLI command parser and handlers
+│   ├── init.ts       # Project scanner + init plan generator
 │   ├── live.ts       # Live API source with offline fallback
 │   ├── marketplace.ts # Shared search, browse, trending, install-plan core
 │   ├── config-files.ts # OpenCode config detection, doctor, and write helpers
@@ -213,7 +225,7 @@ agora/
 │   ├── api.ts        # API client with fallback
 │   ├── format.ts     # Output formatting
 │   ├── config.ts     # MCP config generation
-│   ├── data.ts       # Sample data
+│   ├── data.ts       # 36+ MCP servers, 10 workflows, 6 tutorials
 │   └── types.ts      # TypeScript types
 │
 ├── backend/          # Cloudflare Workers API
@@ -231,20 +243,19 @@ agora/
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| CLI | Ready | `search`, `browse`, `trending`, `workflows`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `auth`, `publish`, `review`, `reviews`, `profile`, `config doctor` |
-| Live API mode | Ready | Opt-in via `--api`, `--live`, `AGORA_USE_API`, `AGORA_API_URL`, or stored auth API URL; falls back offline |
-| Shared core | Ready | CLI and plugin share marketplace discovery/install-plan logic |
-| Local state | Ready | Saved items and optional API token under `~/.config/agora` |
-| Plugin (offline) | ✅ Ready | Works with sample data |
-| API Client | ✅ Built | Connects to backend |
-| Backend | ⚠️ Ready | Needs deployment |
-| Local Hub | Ready | Static local app served by Bun |
-
-## Next Steps (TODO)
-
-- [ ] Deploy backend to Cloudflare Workers
-- [ ] Set up GitHub OAuth for backend
-- [ ] Publish plugin to npm
+| `agora init` | ✅ **New** | Project scanning, config generation, auto-install, plugin registration |
+| `agora use` | ✅ **New** | Apply workflows as OpenCode skills in one command |
+| `agora install --write` | ✅ **Improved** | Now auto-installs npm packages |
+| CLI | Ready | 20 commands: `init`, `use`, `search`, `browse`, `trending`, `workflows`, `tutorials`, `tutorial`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `auth`, `publish`, `review`, `reviews`, `profile`, `config doctor` |
+| Offline data | ✅ **Expanded** | 36 MCP servers, 10 workflows, 7 discussions, 6 tutorials |
+| Live API mode | Ready | Opt-in via `--api`, `AGORA_API_URL`; falls back offline |
+| Shared core | Ready | CLI and plugin share marketplace logic |
+| Local state | Ready | Saved items and auth tokens under `~/.config/agora` |
+| Plugin (offline) | Ready | Works with bundled data |
+| Backend | ⚠️ Needs deploy | Cloudflare Workers + D1 ready for deployment |
+| Local Hub | Ready | Static web app served by Bun |
+| CI | Ready | Typecheck + tests on push/PR |
+| Publish CI | ✅ **New** | Auto-publish to npm on release |
 
 ## Testing
 

@@ -1,5 +1,5 @@
-import type { Package, Workflow, Discussion } from './types.js';
-import { samplePackages, sampleWorkflows, sampleDiscussions, trendingTags } from './data.js';
+import type { Package, Workflow, Discussion, Tutorial } from './types.js';
+import { samplePackages, sampleWorkflows, sampleDiscussions, sampleTutorials, trendingTags } from './data.js';
 import type { OpenCodeConfig } from './config.js';
 
 export type MarketplaceCategory = 'all' | 'package' | 'mcp' | 'prompt' | 'workflow' | 'skill';
@@ -22,6 +22,12 @@ export type MarketplaceItem = PackageMarketplaceItem | WorkflowMarketplaceItem;
 export interface SearchOptions {
   query?: string;
   category?: string;
+  limit?: number;
+}
+
+export interface TutorialSearchOptions {
+  query?: string;
+  level?: string;
   limit?: number;
 }
 
@@ -104,6 +110,30 @@ export function getDiscussions(category = 'all', query = ''): Discussion[] {
       return normalize(`${discussion.title} ${discussion.content} ${discussion.author}`).includes(normalizedQuery);
     })
     .sort((a, b) => b.stars - a.stars);
+}
+
+export function getTutorials(options: TutorialSearchOptions = {}): Tutorial[] {
+  const query = normalize(options.query || '');
+  const level = normalizeTutorialLevel(options.level || 'all');
+  const limit = normalizeLimit(options.limit);
+
+  const tutorials = sampleTutorials
+    .filter((tutorial) => level === 'all' || tutorial.level === level)
+    .filter((tutorial) => matchesTutorialQuery(tutorial, query))
+    .sort((a, b) => a.title.localeCompare(b.title));
+
+  return limit ? tutorials.slice(0, limit) : tutorials;
+}
+
+export function findTutorial(id: string): Tutorial | null {
+  const target = normalize(id);
+  return (
+    sampleTutorials.find((tutorial) => normalize(tutorial.id) === target) ||
+    sampleTutorials.find((tutorial) => normalize(tutorial.title) === target) ||
+    sampleTutorials.find((tutorial) => normalize(tutorial.id).includes(target)) ||
+    sampleTutorials.find((tutorial) => normalize(tutorial.title).includes(target)) ||
+    null
+  );
 }
 
 export function getTrendingTags(limit = 8): string[] {
@@ -193,6 +223,14 @@ export function normalizeCategory(category: string): MarketplaceCategory {
   return 'all';
 }
 
+export function normalizeTutorialLevel(level: string): Tutorial['level'] | 'all' {
+  const normalized = normalize(level);
+  if (normalized === 'beginner' || normalized === 'intermediate' || normalized === 'advanced') {
+    return normalized;
+  }
+  return 'all';
+}
+
 function matchesCategory(item: MarketplaceItem, category: MarketplaceCategory): boolean {
   if (category === 'all') return true;
   if (category === 'package') return item.kind === 'package';
@@ -210,6 +248,21 @@ function matchesQuery(item: MarketplaceItem, query: string): boolean {
     item.author,
     item.category,
     ...item.tags
+  ].join(' ');
+
+  return normalize(searchable).includes(query);
+}
+
+function matchesTutorialQuery(tutorial: Tutorial, query: string): boolean {
+  if (!query) return true;
+
+  const searchable = [
+    tutorial.id,
+    tutorial.title,
+    tutorial.description,
+    tutorial.level,
+    tutorial.duration,
+    ...tutorial.steps.flatMap((step) => [step.title, step.content, step.code || ''])
   ].join(' ');
 
   return normalize(searchable).includes(query);

@@ -67,7 +67,7 @@ export function extractPackageFromConfig(config: OpenCodeConfig): string[] {
   const packages: string[] = [];
   
   if (config.mcpServers) {
-    for (const [name, server] of Object.entries(config.mcpServers)) {
+    for (const [_name, server] of Object.entries(config.mcpServers)) {
       if (server.args?.[0]?.startsWith('@')) {
         packages.push(server.args[0]);
       }

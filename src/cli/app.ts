@@ -1,4 +1,6 @@
-import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { formatConfigJson } from '../config.js';
 import {
   detectOpenCodeConfigPath,
@@ -13,17 +15,21 @@ import {
   getTrendingTags,
   type MarketplaceItem
 } from '../marketplace.js';
+import { scanProject, generateInitPlan, applyInitPlan, runCommands } from '../init.js';
+import { sampleWorkflows } from '../data.js';
 import {
   createDiscussionSource,
   discussionsSource,
   findMarketplaceSource,
   createReviewSource,
+  findTutorialSource,
   listReviewsSource,
   profileSource,
   publishPackageSource,
   publishWorkflowSource,
   searchMarketplaceSource,
   trendingMarketplaceSource,
+  tutorialsSource,
   type ApiProfile,
   type ApiReview,
   type FetchLike,
@@ -43,6 +49,7 @@ import {
   writeAgoraState,
   type ResolvedSavedItem
 } from '../state.js';
+import type { Tutorial } from '../types.js';
 
 const VERSION = '0.1.0';
 
@@ -90,6 +97,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return await commandTrending(parsed, io);
       case 'workflows':
         return await commandWorkflows(parsed, io);
+      case 'tutorials':
+        return await commandTutorials(parsed, io);
+      case 'tutorial':
+        return await commandTutorial(parsed, io);
       case 'discussions':
         return await commandDiscussions(parsed, io);
       case 'discuss':
@@ -114,6 +125,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return commandAuth(parsed, io);
       case 'config':
         return await commandConfig(parsed, io);
+      case 'init':
+        return await commandInit(parsed, io);
+      case 'use':
+        return await commandUse(parsed, io);
       case 'help':
         writeLine(io.stdout, usage());
         return 0;
@@ -252,6 +267,55 @@ async function commandWorkflows(parsed: ParsedArgs, io: CliIo): Promise<number> 
   return 0;
 }
 
+async function commandTutorials(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const query = parsed.args.join(' ');
+  const level = tutorialLevelFlag(parsed);
+  if (!level.ok) return usageError(io, level.error);
+
+  const limit = numberFlag(parsed, 'limit', 'n') || 20;
+  const result = await tutorialsSource({ ...sourceOptions(parsed, io), query, level: level.value, limit });
+  const tutorials = result.data;
+  warnFallback(result, io);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { query, level: level.value, count: tutorials.length, tutorials }));
+    return 0;
+  }
+
+  if (tutorials.length === 0) {
+    writeLine(io.stdout, query ? `No tutorials match "${query}".` : 'No tutorials found.');
+    return 0;
+  }
+
+  writeLine(io.stdout, `Agora tutorials (${tutorials.length} shown, source: ${result.source})`);
+  writeLine(io.stdout, formatTutorialList(tutorials));
+  return 0;
+}
+
+async function commandTutorial(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'tutorial requires a tutorial id');
+
+  const step = tutorialStepNumber(parsed);
+  if (!step.ok) return usageError(io, step.error);
+
+  const result = await findTutorialSource({ ...sourceOptions(parsed, io), id });
+  const tutorial = result.data;
+  warnFallback(result, io);
+  if (!tutorial) return usageError(io, `Tutorial not found: ${id}`);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, {
+      tutorial,
+      step: tutorialStepPayload(tutorial, step.value)
+    }));
+    return 0;
+  }
+
+  writeLine(io.stdout, formatTutorialStep(tutorial, step.value));
+  return 0;
+}
+
 async function commandDiscussions(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const category = stringFlag(parsed, 'category', 'c') || 'all';
   const query = parsed.args.join(' ');
@@ -349,8 +413,15 @@ async function commandInstall(parsed: ParsedArgs, io: CliIo): Promise<number> {
     writeLine(io.stdout, `Installed ${item.name}`);
     writeLine(io.stdout, `Updated ${configPath}`);
     if (plan.commands.length) {
-      writeLine(io.stdout, 'Run package install command separately if it is not already available:');
-      writeLine(io.stdout, plan.commands.join('\n'));
+      writeLine(io.stdout, 'Installing packages...');
+      for (const cmd of plan.commands) {
+        try {
+          execSync(cmd, { stdio: 'pipe', timeout: 120000 });
+          writeLine(io.stdout, `  ✓ ${cmd}`);
+        } catch {
+          writeLine(io.stdout, `  ! Failed: ${cmd} (may already be installed)`);
+        }
+      }
     }
     return 0;
   }
@@ -363,7 +434,100 @@ async function commandInstall(parsed: ParsedArgs, io: CliIo): Promise<number> {
   }
   writeLine(io.stdout, '\nopencode.json preview:');
   writeLine(io.stdout, formatConfigJson(plan.config));
-  writeLine(io.stdout, '\nRun with --write to update the config file.');
+  writeLine(io.stdout, '\nRun with --write to update the config file and install packages.');
+  return 0;
+}
+
+async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const cwd = io.cwd || process.cwd();
+  const scan = scanProject(cwd);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { projectType: scan.type, frameworks: scan.frameworks });
+    return 0;
+  }
+
+  writeLine(io.stdout, `Scanning ${cwd}...`);
+  writeLine(io.stdout, `  Project type: ${scan.type}`);
+  if (scan.frameworks.length) writeLine(io.stdout, `  Frameworks: ${scan.frameworks.join(', ')}`);
+  if (scan.hasDocker) writeLine(io.stdout, '  Docker: detected');
+  if (scan.hasTests) writeLine(io.stdout, '  Tests: detected');
+  if (scan.hasDatabase) writeLine(io.stdout, '  Database: detected');
+
+  const plan = generateInitPlan(scan);
+  const configPath = detectOpenCodeConfigPath({ cwd, env: io.env });
+
+  if (!parsed.flags.dryRun) {
+    applyInitPlan(plan, configPath);
+    writeLine(io.stdout, `\nWrote config to ${configPath}`);
+
+    if (plan.commands.length) {
+      writeLine(io.stdout, '\nInstalling MCP server packages...');
+      runCommands(plan.commands);
+      writeLine(io.stdout, `  Done (${plan.commands.length} packages)`);
+    }
+
+    writeLine(io.stdout, '\n✓ Agora initialized! Restart OpenCode to pick up the changes.');
+    writeLine(io.stdout, '  Plugin "opencode-agora" is now registered in your config.');
+    writeLine(io.stdout, `  ${plan.servers.length} MCP servers configured.`);
+    if (plan.workflows.length) writeLine(io.stdout, `  ${plan.workflows.length} workflows available via \`agora use\`.`);
+    for (const note of plan.notes) writeLine(io.stdout, `  ${note}`);
+  } else {
+    writeLine(io.stdout, '\n--- Dry run ---');
+    writeLine(io.stdout, `Target config: ${configPath}`);
+    writeLine(io.stdout, formatConfigJson(plan.config));
+    writeLine(io.stdout, '\nPackages to install:');
+    for (const cmd of plan.commands) writeLine(io.stdout, `  ${cmd}`);
+    writeLine(io.stdout, '\nRun without --dry-run to apply.');
+  }
+  return 0;
+}
+
+async function commandUse(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'use requires a workflow id');
+
+  const workflow = sampleWorkflows.find((w) => w.id === id || w.name.toLowerCase() === id.toLowerCase());
+  if (!workflow) return usageError(io, `Workflow not found: ${id}. Run \`agora workflows\` to see available workflows.`);
+
+  const cwd = io.cwd || process.cwd();
+  const skillsDir = join(cwd, '.opencode', 'skills');
+  mkdirSync(skillsDir, { recursive: true });
+
+  const skillId = workflow.id.replace(/^wf-/, 'skill-');
+  const skillPath = join(skillsDir, `${skillId}.md`);
+  const skillContent = `---
+name: ${workflow.name}
+description: ${workflow.description}
+model: ${workflow.model || ''}
+tags: [${workflow.tags.map((t) => `"${t}"`).join(', ')}]
+---
+
+${workflow.prompt}
+`;
+
+  writeFileSync(skillPath, skillContent, 'utf8');
+
+  const configPath = detectOpenCodeConfigPath({ cwd, env: io.env });
+  const loaded = loadOpenCodeConfig(configPath);
+  const plugins = new Set(loaded.config.plugins || []);
+  plugins.add(skillId);
+
+  const updatedConfig = {
+    ...loaded.config,
+    plugins: Array.from(plugins),
+  };
+  writeOpenCodeConfig(configPath, updatedConfig);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { workflow: workflow.id, skillPath, registered: true });
+    return 0;
+  }
+
+  writeLine(io.stdout, `✓ Applied "${workflow.name}" as an OpenCode skill.`);
+  writeLine(io.stdout, `  Skill file: ${skillPath}`);
+  writeLine(io.stdout, `  Registered in: ${configPath}`);
+  writeLine(io.stdout, '  Restart OpenCode to start using it.');
   return 0;
 }
 
@@ -781,15 +945,59 @@ function formatProfileDetail(profile: ApiProfile): string {
   return lines.join('\n');
 }
 
+function formatTutorialList(tutorials: Tutorial[]): string {
+  return tutorials.map((tutorial, index) => {
+    return [
+      `${index + 1}. ${tutorial.id} [${tutorial.level}]`,
+      `   ${tutorial.title}`,
+      `   ${truncate(tutorial.description, 88)}`,
+      `   ${tutorial.duration} | ${tutorial.steps.length} steps`
+    ].join('\n');
+  }).join('\n\n');
+}
+
+function formatTutorialStep(tutorial: Tutorial, stepNumber: number): string {
+  const payload = tutorialStepPayload(tutorial, stepNumber);
+
+  if (payload.completed) {
+    return [
+      `${tutorial.title}`,
+      `Completed ${tutorial.steps.length}/${tutorial.steps.length} steps.`,
+      'Run agora tutorials for more tutorials.'
+    ].join('\n');
+  }
+
+  const lines = [
+    `${tutorial.title}`,
+    `id: ${tutorial.id}`,
+    `level: ${tutorial.level}`,
+    `duration: ${tutorial.duration}`,
+    `step: ${payload.stepNumber}/${tutorial.steps.length}`,
+    '',
+    payload.title || '',
+    payload.content || ''
+  ];
+
+  if (payload.code) {
+    lines.push('', 'code:', payload.code);
+  }
+
+  return lines.join('\n');
+}
+
 function usage(): string {
   return [
     'Agora CLI',
     '',
     'Usage:',
+    '  agora init [--dry-run] [--json]',
+    '  agora use <workflow-id> [--json]',
     '  agora search <query> [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
     '  agora browse <id> [--type package|workflow] [--json]',
     '  agora trending [all|packages|workflows] [--limit 5] [--json]',
     '  agora workflows [query] [--limit 10] [--json]',
+    '  agora tutorials [query] [--level beginner|intermediate|advanced] [--limit 20] [--json]',
+    '  agora tutorial <id> [step] [--json]',
     '  agora discussions [query] [--category question|idea|showcase|discussion] [--json]',
     '  agora discuss --title <title> (--content <text>|--content-file path) [--category question|idea|showcase|discussion]',
     '  agora install <id> [--write] [--config path] [--json]',
@@ -814,9 +1022,14 @@ function usage(): string {
     '  --offline             Force local bundled marketplace data',
     '',
     'Examples:',
+    '  agora init',
+    '  agora init --dry-run',
+    '  agora use wf-tdd-cycle',
     '  agora search filesystem',
     '  agora search filesystem --api',
     '  agora browse mcp-github',
+    '  agora tutorials mcp',
+    '  agora tutorial tut-mcp-basics 2',
     '  agora install mcp-github',
     '  agora install mcp-github --write',
     '  agora save wf-security-audit',
@@ -970,6 +1183,46 @@ function discussionCategoryFlag(parsed: ParsedArgs): { ok: true; value: string }
     return { ok: true, value: category };
   }
   return { ok: false, error: 'discussion category must be question, idea, showcase, or discussion' };
+}
+
+function tutorialLevelFlag(parsed: ParsedArgs): { ok: true; value: string } | { ok: false; error: string } {
+  const level = stringFlag(parsed, 'level') || 'all';
+  if (level === 'all' || level === 'beginner' || level === 'intermediate' || level === 'advanced') {
+    return { ok: true, value: level };
+  }
+  return { ok: false, error: 'tutorial level must be beginner, intermediate, advanced, or all' };
+}
+
+function tutorialStepNumber(parsed: ParsedArgs): { ok: true; value: number } | { ok: false; error: string } {
+  const rawStep = parsed.args[1] || stringFlag(parsed, 'step');
+  if (!rawStep) return { ok: true, value: 1 };
+
+  const step = Number(rawStep);
+  if (!Number.isInteger(step) || step < 1) {
+    return { ok: false, error: 'tutorial step must be a positive integer' };
+  }
+
+  return { ok: true, value: step };
+}
+
+function tutorialStepPayload(tutorial: Tutorial, stepNumber: number): {
+  stepNumber: number;
+  totalSteps: number;
+  completed: boolean;
+  title?: string;
+  content?: string;
+  code?: string;
+} {
+  const step = tutorial.steps[stepNumber - 1];
+
+  return {
+    stepNumber,
+    totalSteps: tutorial.steps.length,
+    completed: !step,
+    title: step?.title,
+    content: step?.content,
+    code: step?.code
+  };
 }
 
 function warnFallback<T>(result: SourceResult<T>, io: CliIo): void {

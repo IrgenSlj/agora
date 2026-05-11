@@ -1,9 +1,12 @@
-import type { Discussion } from './types.js';
+import type { Discussion, Tutorial, TutorialStep } from './types.js';
 import {
   findMarketplaceItem,
+  findTutorial,
   getDiscussions,
+  getTutorials,
   getTrendingItems,
   normalizeCategory,
+  normalizeTutorialLevel,
   searchMarketplaceItems,
   type MarketplaceCategory,
   type MarketplaceItem,
@@ -36,6 +39,16 @@ export interface FindSourceOptions extends SourceOptions {
 export interface DiscussionSourceOptions extends SourceOptions {
   category?: string;
   query?: string;
+}
+
+export interface TutorialSourceOptions extends SourceOptions {
+  query?: string;
+  level?: string;
+  limit?: number;
+}
+
+export interface FindTutorialSourceOptions extends SourceOptions {
+  id: string;
 }
 
 export interface SourceResult<T> {
@@ -144,6 +157,17 @@ interface ApiDiscussion {
   created_at?: string;
 }
 
+interface ApiTutorial {
+  id: string;
+  title: string;
+  description?: string;
+  level?: string;
+  duration?: string;
+  steps?: TutorialStep[] | string | null;
+  createdAt?: string;
+  created_at?: string;
+}
+
 interface ApiUser {
   id?: string;
   username?: string;
@@ -212,6 +236,32 @@ export async function discussionsSource(options: DiscussionSourceOptions = {}): 
     return api(data, options);
   } catch (error) {
     return offline(getDiscussions(options.category, options.query), error);
+  }
+}
+
+export async function tutorialsSource(options: TutorialSourceOptions = {}): Promise<SourceResult<Tutorial[]>> {
+  if (!shouldUseApi(options)) {
+    return offline(getTutorials(options));
+  }
+
+  try {
+    const data = await tutorialsApi(options);
+    return api(data, options);
+  } catch (error) {
+    return offline(getTutorials(options), error);
+  }
+}
+
+export async function findTutorialSource(options: FindTutorialSourceOptions): Promise<SourceResult<Tutorial | null>> {
+  if (!shouldUseApi(options)) {
+    return offline(findTutorial(options.id));
+  }
+
+  try {
+    const tutorials = await tutorialsApi(options);
+    return api(findTutorialInList(tutorials, options.id), options);
+  } catch (error) {
+    return offline(findTutorial(options.id), error);
   }
 }
 
@@ -380,6 +430,23 @@ async function discussionsApi(options: DiscussionSourceOptions): Promise<Discuss
     });
 }
 
+async function tutorialsApi(options: TutorialSourceOptions): Promise<Tutorial[]> {
+  const payload = await requestJson<{ tutorials?: ApiTutorial[] }>(options, '/api/tutorials');
+  const query = (options.query || '').trim().toLowerCase();
+  const level = normalizeTutorialLevel(options.level || 'all');
+  const limit = normalizeLimit(options.limit);
+  const tutorials = (payload.tutorials || [])
+    .map(mapTutorial)
+    .filter((tutorial) => level === 'all' || tutorial.level === level)
+    .filter((tutorial) => {
+      if (!query) return true;
+      return `${tutorial.id} ${tutorial.title} ${tutorial.description} ${tutorial.level}`.toLowerCase().includes(query);
+    })
+    .sort((a, b) => a.title.localeCompare(b.title));
+
+  return limit ? tutorials.slice(0, limit) : tutorials;
+}
+
 async function requestJson<T>(options: SourceOptions, path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetchWithTimeout(options, buildUrl(options, path), init);
   if (!response.ok) {
@@ -491,6 +558,19 @@ function mapDiscussion(discussion: ApiDiscussion): Discussion {
   };
 }
 
+function mapTutorial(tutorial: ApiTutorial): Tutorial {
+  const level = normalizeTutorialLevel(tutorial.level || 'beginner');
+
+  return {
+    id: tutorial.id,
+    title: tutorial.title,
+    description: tutorial.description || '',
+    level: level === 'all' ? 'beginner' : level,
+    duration: tutorial.duration || '',
+    steps: parseTutorialSteps(tutorial.steps)
+  };
+}
+
 function mapReview(value: unknown): ApiReview {
   const review = value as any;
   const itemType = review.itemType || review.item_type || 'package';
@@ -522,6 +602,17 @@ function mapProfile(user: ApiUser): ApiProfile {
   };
 }
 
+function findTutorialInList(tutorials: Tutorial[], id: string): Tutorial | null {
+  const target = id.trim().toLowerCase();
+  return (
+    tutorials.find((tutorial) => tutorial.id.toLowerCase() === target) ||
+    tutorials.find((tutorial) => tutorial.title.toLowerCase() === target) ||
+    tutorials.find((tutorial) => tutorial.id.toLowerCase().includes(target)) ||
+    tutorials.find((tutorial) => tutorial.title.toLowerCase().includes(target)) ||
+    null
+  );
+}
+
 function parseTags(tags: ApiPackage['tags']): string[] {
   if (Array.isArray(tags)) return tags;
   if (!tags) return [];
@@ -534,6 +625,34 @@ function parseTags(tags: ApiPackage['tags']): string[] {
   }
 
   return tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+}
+
+function parseTutorialSteps(steps: ApiTutorial['steps']): TutorialStep[] {
+  if (Array.isArray(steps)) return steps.map(normalizeTutorialStep).filter(Boolean) as TutorialStep[];
+  if (!steps) return [];
+
+  try {
+    const parsed = JSON.parse(steps);
+    if (Array.isArray(parsed)) return parsed.map(normalizeTutorialStep).filter(Boolean) as TutorialStep[];
+  } catch {
+    // Fall back to one text step when a backend stores plain text.
+  }
+
+  return [{
+    title: 'Tutorial',
+    content: steps
+  }];
+}
+
+function normalizeTutorialStep(step: unknown): TutorialStep | null {
+  if (!step || typeof step !== 'object') return null;
+  const candidate = step as Partial<TutorialStep>;
+  const title = typeof candidate.title === 'string' && candidate.title.trim() ? candidate.title : 'Step';
+  const content = typeof candidate.content === 'string' ? candidate.content : '';
+  const code = typeof candidate.code === 'string' && candidate.code ? candidate.code : undefined;
+
+  if (!content) return null;
+  return { title, content, code };
 }
 
 function normalizePackageCategory(category?: string): PackageMarketplaceItem['category'] {

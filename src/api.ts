@@ -86,7 +86,7 @@ export async function getWorkflow(id: string): Promise<Workflow | null> {
   return data.workflow || null;
 }
 
-export async function getTrending(type: 'packages' | 'workflows' | 'all' = 'all') {
+export async function getTrending(_type: 'packages' | 'workflows' | 'all' = 'all') {
   const res = await fetch(`${API_BASE}/api/trending`);
   if (!res.ok) return { packages: [], workflows: [] };
   
