@@ -10,6 +10,8 @@
   <a href="https://developers.cloudflare.com/d1/"><img src="https://img.shields.io/badge/D1-SQLite-3B82F6" alt="D1"></a>
 </p>
 
+> **Status:** Not yet deployed. The CLI works fully offline by default; live-mode features (`--api`, publish, auth, reviews/discussions writes) require self-hosting the backend in this directory. A public hosted instance is on the [roadmap](../ROADMAP.md).
+
 ## Overview
 
 REST API backend built with Hono that provides:
@@ -130,5 +132,6 @@ Protected endpoints:
 
 ## Status
 
-✅ API code complete
-⏳ Awaiting deployment
+- API code: complete
+- Deployed (hosted instance): not yet — see [ROADMAP.md](../ROADMAP.md)
+- Self-hosting via instructions above: supported

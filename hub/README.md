@@ -85,4 +85,4 @@ Users -> Reviews -> Workflows
 
 ## Status
 
-**Working local app** - static Hub implementation is available in this directory.
+Local-only for now. Run with `bun run hub:dev` from the project root. A public deploy is on the [roadmap](../ROADMAP.md).

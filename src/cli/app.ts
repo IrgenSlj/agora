@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import pkg from '../../package.json';
 import { formatConfigJson } from '../config.js';
 import {
   detectOpenCodeConfigPath,
@@ -51,7 +52,7 @@ import {
 } from '../state.js';
 import type { Tutorial } from '../types.js';
 
-const VERSION = '0.1.0';
+const VERSION = pkg.version;
 
 type OutputStream = {
   write(chunk: string): unknown;
@@ -71,7 +72,6 @@ export interface ParsedArgs {
   flags: Record<string, string | boolean>;
 }
 
-const DEFAULT_API_URL = 'https://agora-api.your-subdomain.workers.dev';
 const booleanFlags = new Set(['api', 'help', 'json', 'live', 'offline', 'version', 'verbose', 'write']);
 
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
@@ -1098,7 +1098,7 @@ function sourceOptions(parsed: ParsedArgs, io: CliIo): SourceOptions {
   const envApiUrl = envString(io, 'AGORA_API_URL');
   const storedAuth = getAuthState(loadAgoraState(detectDataDir(parsed, io)));
   const storedApiUrl = storedAuth?.apiUrl;
-  const apiUrl = explicitApiUrl || envApiUrl || storedApiUrl || DEFAULT_API_URL;
+  const apiUrl = explicitApiUrl || envApiUrl || storedApiUrl || '';
   const useApi = !parsed.flags.offline && Boolean(
     parsed.flags.api ||
     parsed.flags.live ||
@@ -1120,7 +1120,7 @@ function sourceOptions(parsed: ParsedArgs, io: CliIo): SourceOptions {
 function writeSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options: SourceOptions } | { ok: false; error: string } {
   const options = sourceOptions(parsed, io);
 
-  if (options.apiUrl === DEFAULT_API_URL) {
+  if (!options.apiUrl) {
     return { ok: false, error: 'This command requires --api-url, AGORA_API_URL, or an auth login API URL' };
   }
 
@@ -1139,7 +1139,7 @@ function writeSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options:
 
 function readSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options: SourceOptions } | { ok: false; error: string } {
   const options = sourceOptions(parsed, io);
-  if (options.apiUrl === DEFAULT_API_URL) {
+  if (!options.apiUrl) {
     return { ok: false, error: 'This command requires --api-url, AGORA_API_URL, or an auth login API URL' };
   }
   return { ok: true, options: { ...options, useApi: true } };

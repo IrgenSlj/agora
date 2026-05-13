@@ -88,7 +88,7 @@ src/
 └── logger.ts       # Logging utilities
 backend/   # Cloudflare Workers API (Hono + D1)
 hub/       # Optional local web Hub
-test/      # Tests (98 passing)
+test/      # Tests
 ```
 
 ## Key Files for New Contributors
@@ -100,6 +100,13 @@ test/      # Tests (98 passing)
 | `src/cli/app.ts` | All CLI commands live here — easy to add new ones |
 | `src/marketplace.ts` | Core search, browse, install-plan logic |
 | `src/state.ts` | Local persistence for saved items and auth tokens |
+
+## Adding an MCP server to the offline marketplace
+
+1. Open `src/data.ts` — the offline marketplace data lives there.
+2. Find the array of MCP servers. Each entry has a clear shape: `id`, `name`, `description`, `category`, and the npm package name (plus optional fields). Use an existing entry in the same category as a template.
+3. Add your entry alphabetically within its category.
+4. Run `bun test && bun run typecheck` before opening your PR.
 
 ## Code Style
 

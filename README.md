@@ -17,6 +17,10 @@
 
 ---
 
+## Demo
+
+_A terminal recording is in the works — see ROADMAP.md._
+
 ## What is Agora?
 
 Agora is a **zero-config OpenCode setup tool** and terminal marketplace. Run `npx opencode-agora init` in any project and it automatically scans your stack, generates the perfect `opencode.json`, installs MCP servers, and registers the plugin.
@@ -81,12 +85,24 @@ npm install -g opencode-agora
 agora init
 ```
 
+### Install from source
+
+Until the package is published to npm, or if you prefer to run from source:
+
+```bash
+git clone https://github.com/IrgenSlj/agora.git && cd agora && bun install && bun run build && bun link
+```
+
 The package exposes two binary names:
 
 ```bash
 agora --help
 opencode-agora --help
 ```
+
+## Live mode / hosted backend
+
+> **Note:** Browse, search, and all read-only commands work fully offline using bundled data — no backend required. Features that write data (publish, reviews, discussions, auth login) and the `--api` flag require a live backend. A hosted instance is not yet deployed. Until then, self-host via the `backend/` directory and set `AGORA_API_URL` to your instance URL before using `--api` or any write commands.
 
 ## Usage
 
@@ -175,6 +191,21 @@ Once registered (via `agora init` or manually), use inside OpenCode:
 
 **Categories:** mcp, prompt, workflow, skill `|` **Data sources:** offline (default), `--api`
 
+### Registering the plugin manually
+
+If you did not run `agora init`, register the plugin by hand:
+
+1. Install the package globally:
+   ```bash
+   npm install -g opencode-agora
+   ```
+2. Add `"opencode-agora"` to the `plugins` array in `~/.config/opencode/opencode.json` (or your project-local `opencode.json`):
+   ```json
+   {
+     "plugins": ["opencode-agora"]
+   }
+   ```
+
 ## Development
 
 ```bash
@@ -252,7 +283,7 @@ agora/
 | Shared core | Ready | CLI and plugin share marketplace logic |
 | Local state | Ready | Saved items and auth tokens under `~/.config/agora` |
 | Plugin (offline) | Ready | Works with bundled data |
-| Backend | ⚠️ Needs deploy | Cloudflare Workers + D1 ready for deployment |
+| Backend | 🚧 Not deployed — self-host required (see backend/) | Cloudflare Workers + D1 ready for deployment |
 | Local Hub | Ready | Static web app served by Bun |
 | CI | Ready | Typecheck + tests on push/PR |
 | Publish CI | ✅ **New** | Auto-publish to npm on release |
@@ -262,6 +293,10 @@ agora/
 ```bash
 bun test
 ```
+
+## Roadmap
+
+See [ROADMAP.md](./ROADMAP.md) for upcoming work and ways to contribute.
 
 ## License
 

@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.2.1] - 2026-05-13
+
+### Fixed
+
+- Version drift: `agora --version` now reflects the version in package.json
+- Removed placeholder backend URL; `--api` now requires an explicit `AGORA_API_URL` environment variable
+- Removed duplicate `test` key in package.json
+
+### Added
+
+- ROADMAP.md outlining upcoming work and contribution areas
+- Dependabot config for weekly dependency updates
+
+### Docs
+
+- Clarified backend self-host requirement; hosted instance not yet deployed
+- Added manual plugin registration guide to README
+
 ## [0.2.0] - 2026-05-11
 
 ### Added
@@ -39,4 +57,4 @@
 - Config detection, doctor, and safe write operations
 - Community discussions, reviews, and user profiles
 - Interactive tutorials on MCP and AI development
-- Comprehensive test suite (98 tests, 254 assertions)
+- Comprehensive test suite
