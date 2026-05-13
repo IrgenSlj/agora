@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.2.2] - 2026-05-13
+
+### Fixed
+
+- Invalid `package.json` (trailing comma after `devDependencies` left by the 0.2.1 cleanup) that prevented `npm publish` from parsing the manifest. 0.2.1 was tagged but never published; 0.2.2 is the first publishable release.
+
 ## [0.2.1] - 2026-05-13
 
 ### Fixed
