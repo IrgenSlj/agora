@@ -26,7 +26,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
     "hub:dev": "bun hub/server.ts",
     "typecheck": "tsc -p tsconfig.check.json",
