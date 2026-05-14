@@ -8,17 +8,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs, runCli } from '../src/cli/app';
 
-function createIo(
-  cwd = process.cwd(),
-  options: { env?: Record<string, string | undefined> } = {}
-) {
+function createIo(cwd = process.cwd(), options: { env?: Record<string, string | undefined> } = {}) {
   const stdout: string[] = [];
   const stderr: string[] = [];
+  // Pin the OpenCode config to the (temp) cwd so a test can never write to
+  // the developer's real ~/.config/opencode/opencode.json. Callers can still
+  // override via options.env.
+  const env = { OPENCODE_CONFIG: join(cwd, 'opencode.json'), ...options.env };
   return {
     io: {
       stdout: { write: (chunk: string) => stdout.push(chunk) },
       stderr: { write: (chunk: string) => stderr.push(chunk) },
-      env: options.env ?? {},
+      env,
       cwd
     },
     stdout,
@@ -218,7 +219,9 @@ describe('agora use', () => {
       const io2 = createIo(dir).io;
       await runCli(['use', 'wf-tdd-cycle'], io2);
       const config = JSON.parse(readFileSync(configPath, 'utf8'));
-      const occurrences = (config.plugins as string[]).filter((p) => p === 'skill-tdd-cycle').length;
+      const occurrences = (config.plugins as string[]).filter(
+        (p) => p === 'skill-tdd-cycle'
+      ).length;
       expect(occurrences).toBe(1);
     } finally {
       rmSync(dir, { recursive: true, force: true });

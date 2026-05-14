@@ -3,12 +3,7 @@
  * Every assertion covers the FULL dataset, not just the first element.
  */
 import { describe, expect, test } from 'bun:test';
-import {
-  samplePackages,
-  sampleTutorials,
-  sampleWorkflows,
-  trendingTags
-} from '../src/data';
+import { samplePackages, sampleTutorials, sampleWorkflows, trendingTags } from '../src/data';
 
 // npm package-name shape: optional scope (@scope/) + package name
 const NPM_PKG_RE = /^@?[a-z0-9][\w.-]*(\/[\w.-]+)?$/;

@@ -200,7 +200,7 @@ describe('findTutorial', () => {
 
 describe('getInstallKind', () => {
   test('package with npmPackage → mcp', () => {
-    const pkg = samplePackages.find((p) => p.npmPackage) as typeof samplePackages[0];
+    const pkg = samplePackages.find((p) => p.npmPackage) as (typeof samplePackages)[0];
     const item: PackageMarketplaceItem = { ...pkg, kind: 'package' };
     expect(getInstallKind(item)).toBe('mcp');
   });
