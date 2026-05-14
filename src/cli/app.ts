@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import pkg from '../../package.json';
 import { formatConfigJson } from '../config.js';
@@ -170,7 +170,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
       if (inlineValue !== undefined) {
         flags[key] = inlineValue;
-      } else if (!booleanFlags.has(key) && argv[index + 1] && !argv[index + 1].startsWith('-')) {
+      } else if (
+        !booleanFlags.has(key) &&
+        argv[index + 1] &&
+        (!argv[index + 1].startsWith('-') || /^-\d/.test(argv[index + 1]))
+      ) {
         flags[key] = argv[index + 1];
         index += 1;
       } else {
@@ -181,7 +185,11 @@ export function parseArgs(argv: string[]): ParsedArgs {
 
     if (arg.startsWith('-') && arg.length > 1) {
       const key = shortFlag(arg);
-      if (!booleanFlags.has(key) && argv[index + 1] && !argv[index + 1].startsWith('-')) {
+      if (
+        !booleanFlags.has(key) &&
+        argv[index + 1] &&
+        (!argv[index + 1].startsWith('-') || /^-\d/.test(argv[index + 1]))
+      ) {
         flags[key] = argv[index + 1];
         index += 1;
       } else {
@@ -401,7 +409,7 @@ async function commandDiscuss(parsed: ParsedArgs, io: CliIo): Promise<number> {
   if (!source.ok) return usageError(io, source.error);
 
   const title = requiredStringFlag(parsed, 'title');
-  const content = contentInput(parsed);
+  const content = contentInput(parsed, io);
   if (!title || !content) {
     return usageError(io, 'discuss requires --title and --content or --content-file');
   }
@@ -497,9 +505,37 @@ async function commandInstall(parsed: ParsedArgs, io: CliIo): Promise<number> {
 async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const cwd = io.cwd || process.cwd();
   const scan = scanProject(cwd);
+  const plan = generateInitPlan(scan);
+  const configPath = detectOpenCodeConfigPath({ cwd, env: io.env });
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, { projectType: scan.type, frameworks: scan.frameworks });
+    if (parsed.flags.dryRun) {
+      writeJson(io.stdout, {
+        projectType: scan.type,
+        frameworks: scan.frameworks,
+        config: plan.config,
+        servers: plan.servers,
+        commands: plan.commands,
+        dryRun: true
+      });
+      return 0;
+    }
+
+    applyInitPlan(plan, configPath);
+    const installResults = plan.commands.length ? runCommands(plan.commands) : [];
+    const installed = installResults.filter((r) => r.ok).length;
+    const failed = installResults.filter((r) => !r.ok).length;
+
+    writeJson(io.stdout, {
+      projectType: scan.type,
+      frameworks: scan.frameworks,
+      config: plan.config,
+      servers: plan.servers,
+      commands: plan.commands,
+      installResults,
+      installed,
+      failed
+    });
     return 0;
   }
 
@@ -510,17 +546,19 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
   if (scan.hasTests) writeLine(io.stdout, '  Tests: detected');
   if (scan.hasDatabase) writeLine(io.stdout, '  Database: detected');
 
-  const plan = generateInitPlan(scan);
-  const configPath = detectOpenCodeConfigPath({ cwd, env: io.env });
-
   if (!parsed.flags.dryRun) {
     applyInitPlan(plan, configPath);
     writeLine(io.stdout, `\nWrote config to ${configPath}`);
 
     if (plan.commands.length) {
       writeLine(io.stdout, '\nInstalling MCP server packages...');
-      runCommands(plan.commands);
-      writeLine(io.stdout, `  Done (${plan.commands.length} packages)`);
+      const installResults = runCommands(plan.commands);
+      const installed = installResults.filter((r) => r.ok).length;
+      const failed = installResults.filter((r) => !r.ok).length;
+      writeLine(
+        io.stdout,
+        `  Installed ${installed} of ${plan.commands.length} packages${failed ? ` (${failed} failed)` : ''}`
+      );
     }
 
     writeLine(io.stdout, '\n✓ Agora initialized! Restart OpenCode to pick up the changes.');
@@ -573,6 +611,7 @@ ${workflow.prompt}
 
   const configPath = detectOpenCodeConfigPath({ cwd, env: io.env });
   const loaded = loadOpenCodeConfig(configPath);
+  if (loaded.error) return usageError(io, `${loaded.path}: ${loaded.error}`);
   const plugins = new Set(loaded.config.plugins || []);
   plugins.add(skillId);
 
@@ -832,8 +871,8 @@ async function commandPublish(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  const prompt = promptInput(parsed);
-  if (!prompt) {
+  const prompt = promptInput(parsed, io);
+  if (prompt === undefined) {
     return usageError(io, 'publish workflow requires --prompt or --prompt-file');
   }
 
@@ -1257,22 +1296,32 @@ function tagsFlag(parsed: ParsedArgs): string[] {
     .filter(Boolean);
 }
 
-function promptInput(parsed: ParsedArgs): string | undefined {
+function promptInput(parsed: ParsedArgs, io: CliIo): string | undefined {
   const prompt = stringFlag(parsed, 'prompt');
   if (prompt) return prompt;
 
   const promptFile = stringFlag(parsed, 'promptFile');
   if (!promptFile) return undefined;
 
+  if (!existsSync(promptFile)) {
+    usageError(io, `prompt-file not found: ${promptFile}`);
+    return undefined;
+  }
+
   return readFileSync(promptFile, 'utf8');
 }
 
-function contentInput(parsed: ParsedArgs): string | undefined {
+function contentInput(parsed: ParsedArgs, io: CliIo): string | undefined {
   const content = requiredStringFlag(parsed, 'content');
   if (content) return content;
 
   const contentFile = stringFlag(parsed, 'contentFile');
   if (!contentFile) return undefined;
+
+  if (!existsSync(contentFile)) {
+    usageError(io, `content-file not found: ${contentFile}`);
+    return undefined;
+  }
 
   return readFileSync(contentFile, 'utf8').trim();
 }

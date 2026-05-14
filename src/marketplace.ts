@@ -86,13 +86,16 @@ export function findMarketplaceItem(id: string, options: FindOptions = {}): Mark
     return true;
   });
 
-  return (
-    items.find((item) => normalize(item.id) === target) ||
-    items.find((item) => normalize(item.name) === target) ||
-    items.find((item) => normalize(item.id).includes(target)) ||
-    items.find((item) => normalize(item.name).includes(target)) ||
-    null
+  const exactId = items.find((item) => normalize(item.id) === target);
+  if (exactId) return exactId;
+
+  const exactName = items.find((item) => normalize(item.name) === target);
+  if (exactName) return exactName;
+
+  const substringMatches = items.filter(
+    (item) => normalize(item.id).includes(target) || normalize(item.name).includes(target)
   );
+  return substringMatches.length === 1 ? substringMatches[0] : null;
 }
 
 export function getTrendingItems(options: SearchOptions = {}): MarketplaceItem[] {

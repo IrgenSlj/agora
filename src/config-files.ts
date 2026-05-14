@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import {
@@ -90,7 +90,9 @@ export function loadOpenCodeConfig(configPath: string): LoadedConfig {
 
 export function writeOpenCodeConfig(configPath: string, config: OpenCodeConfig): void {
   mkdirSync(dirname(configPath), { recursive: true });
-  writeFileSync(configPath, `${formatConfigJson(config)}\n`, 'utf8');
+  const tmpPath = `${configPath}.tmp`;
+  writeFileSync(tmpPath, `${formatConfigJson(config)}\n`, 'utf8');
+  renameSync(tmpPath, configPath);
 }
 
 export function doctorOpenCodeConfig(configPath: string): ConfigDoctorReport {

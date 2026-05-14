@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import type { MarketplaceItem } from './marketplace.js';
@@ -68,6 +68,7 @@ export function loadAgoraState(dataDir: string): AgoraState {
     const parsed = JSON.parse(readFileSync(statePath, 'utf8')) as Partial<AgoraState>;
     return normalizeState(parsed);
   } catch {
+    console.error(`Warning: ${statePath} was unreadable and has been reset`);
     return createEmptyState();
   }
 }
@@ -75,16 +76,19 @@ export function loadAgoraState(dataDir: string): AgoraState {
 export function writeAgoraState(dataDir: string, state: AgoraState): void {
   mkdirSync(dataDir, { recursive: true });
   const statePath = getAgoraStatePath(dataDir);
-  writeFileSync(statePath, `${JSON.stringify(normalizeState(state), null, 2)}\n`, {
+  const tmpPath = `${statePath}.tmp`;
+  writeFileSync(tmpPath, `${JSON.stringify(normalizeState(state), null, 2)}\n`, {
     encoding: 'utf8',
     mode: 0o600
   });
 
   try {
-    chmodSync(statePath, 0o600);
+    chmodSync(tmpPath, 0o600);
   } catch {
     // Best effort: some filesystems do not support POSIX permissions.
   }
+
+  renameSync(tmpPath, statePath);
 }
 
 export function saveItemToState(
