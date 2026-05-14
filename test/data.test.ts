@@ -1,0 +1,194 @@
+/**
+ * Data integrity contract tests for src/data.ts.
+ * Every assertion covers the FULL dataset, not just the first element.
+ */
+import { describe, expect, test } from 'bun:test';
+import {
+  samplePackages,
+  sampleTutorials,
+  sampleWorkflows,
+  trendingTags
+} from '../src/data';
+
+// npm package-name shape: optional scope (@scope/) + package name
+const NPM_PKG_RE = /^@?[a-z0-9][\w.-]*(\/[\w.-]+)?$/;
+
+describe('samplePackages — data integrity', () => {
+  test('ids are unique', () => {
+    const ids = samplePackages.map((p) => p.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test('every package has non-empty required string fields', () => {
+    for (const pkg of samplePackages) {
+      expect(pkg.id.length).toBeGreaterThan(0);
+      expect(pkg.name.length).toBeGreaterThan(0);
+      expect(pkg.description.length).toBeGreaterThan(0);
+      expect(pkg.author.length).toBeGreaterThan(0);
+      expect(pkg.version.length).toBeGreaterThan(0);
+      expect(pkg.createdAt.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('every package has a valid category', () => {
+    const validCategories = new Set(['mcp', 'prompt', 'workflow', 'skill']);
+    for (const pkg of samplePackages) {
+      expect(validCategories.has(pkg.category)).toBe(true);
+    }
+  });
+
+  test('every package has a non-empty tags array', () => {
+    for (const pkg of samplePackages) {
+      expect(Array.isArray(pkg.tags)).toBe(true);
+      expect(pkg.tags.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('every MCP package has an npmPackage field', () => {
+    const mcpPkgs = samplePackages.filter((p) => p.category === 'mcp');
+    expect(mcpPkgs.length).toBeGreaterThan(0);
+    for (const pkg of mcpPkgs) {
+      expect(typeof pkg.npmPackage).toBe('string');
+      expect((pkg.npmPackage as string).length).toBeGreaterThan(0);
+    }
+  });
+
+  test('every npmPackage matches the npm package-name shape', () => {
+    for (const pkg of samplePackages) {
+      if (pkg.npmPackage) {
+        expect(pkg.npmPackage).toMatch(NPM_PKG_RE);
+      }
+    }
+  });
+
+  test('non-MCP packages do not need an npmPackage', () => {
+    const nonMcp = samplePackages.filter((p) => p.category !== 'mcp');
+    // Prompt packages in the dataset have no npmPackage — that's fine.
+    // This test just asserts that IF they do have one, it is valid.
+    for (const pkg of nonMcp) {
+      if (pkg.npmPackage) {
+        expect(pkg.npmPackage).toMatch(NPM_PKG_RE);
+      }
+    }
+  });
+
+  test('stars and installs are non-negative numbers', () => {
+    for (const pkg of samplePackages) {
+      expect(pkg.stars).toBeGreaterThanOrEqual(0);
+      expect(pkg.installs).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  test('dataset contains at least 31 entries', () => {
+    expect(samplePackages.length).toBeGreaterThanOrEqual(31);
+  });
+});
+
+describe('sampleWorkflows — data integrity', () => {
+  test('ids are unique', () => {
+    const ids = sampleWorkflows.map((w) => w.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test('every workflow has non-empty required string fields', () => {
+    for (const wf of sampleWorkflows) {
+      expect(wf.id.length).toBeGreaterThan(0);
+      expect(wf.name.length).toBeGreaterThan(0);
+      expect(wf.description.length).toBeGreaterThan(0);
+      expect(wf.author.length).toBeGreaterThan(0);
+      expect(wf.prompt.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('stars and forks are non-negative', () => {
+    for (const wf of sampleWorkflows) {
+      expect(wf.stars).toBeGreaterThanOrEqual(0);
+      expect(wf.forks).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  test('every workflow has non-empty tags', () => {
+    for (const wf of sampleWorkflows) {
+      expect(Array.isArray(wf.tags)).toBe(true);
+      expect(wf.tags.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('sampleTutorials — data integrity', () => {
+  test('ids are unique', () => {
+    const ids = sampleTutorials.map((t) => t.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  test('every tutorial has non-empty required string fields', () => {
+    for (const tut of sampleTutorials) {
+      expect(tut.id.length).toBeGreaterThan(0);
+      expect(tut.title.length).toBeGreaterThan(0);
+      expect(tut.description.length).toBeGreaterThan(0);
+      expect(tut.duration.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('every tutorial has a valid level', () => {
+    const validLevels = new Set(['beginner', 'intermediate', 'advanced']);
+    for (const tut of sampleTutorials) {
+      expect(validLevels.has(tut.level)).toBe(true);
+    }
+  });
+
+  test('every tutorial has at least one step', () => {
+    for (const tut of sampleTutorials) {
+      expect(Array.isArray(tut.steps)).toBe(true);
+      expect(tut.steps.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('every tutorial step has non-empty title and content', () => {
+    for (const tut of sampleTutorials) {
+      for (const step of tut.steps) {
+        expect(step.title.length).toBeGreaterThan(0);
+        expect(step.content.length).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
+describe('trendingTags', () => {
+  test('is non-empty', () => {
+    expect(trendingTags.length).toBeGreaterThan(0);
+  });
+
+  test('all tags are lowercase non-empty strings', () => {
+    for (const tag of trendingTags) {
+      expect(typeof tag).toBe('string');
+      expect(tag.length).toBeGreaterThan(0);
+      expect(tag).toBe(tag.toLowerCase());
+    }
+  });
+});
+
+// ── Network-gated test — only runs when AGORA_NETWORK_TESTS=1 ──────────────
+describe('samplePackages — npm registry reachability (network-gated)', () => {
+  test.if(!!process.env.AGORA_NETWORK_TESTS)(
+    'every npmPackage resolves to HTTP 200 on the npm registry',
+    async () => {
+      const mcpPkgs = samplePackages.filter((p) => p.npmPackage);
+      const results = await Promise.all(
+        mcpPkgs.map(async (pkg) => {
+          const url = `https://registry.npmjs.org/${encodeURIComponent(pkg.npmPackage!)}/latest`;
+          const res = await fetch(url);
+          return { id: pkg.id, npm: pkg.npmPackage, status: res.status };
+        })
+      );
+
+      const failures = results.filter((r) => r.status !== 200);
+      if (failures.length > 0) {
+        throw new Error(
+          `npm registry returned non-200 for:\n${failures.map((f) => `  ${f.id} (${f.npm}) → ${f.status}`).join('\n')}`
+        );
+      }
+    },
+    60_000
+  );
+});
