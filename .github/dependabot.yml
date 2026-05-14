@@ -1,6 +1,9 @@
 version: 2
 updates:
-  - package-ecosystem: 'npm'
+  # The `bun` ecosystem updates package.json AND bun.lock together. The old
+  # `npm` ecosystem bumped package.json but left bun.lock stale, which broke
+  # `bun install --frozen-lockfile` in CI.
+  - package-ecosystem: 'bun'
     directory: '/'
     schedule:
       interval: 'weekly'
@@ -8,7 +11,7 @@ updates:
     commit-message:
       prefix: 'chore'
       include: 'scope'
-  - package-ecosystem: 'npm'
+  - package-ecosystem: 'bun'
     directory: '/backend'
     schedule:
       interval: 'weekly'
