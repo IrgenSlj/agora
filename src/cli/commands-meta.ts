@@ -1,0 +1,366 @@
+export type CommandGroup = 'Marketplace' | 'Setup' | 'Library' | 'Learn' | 'Community';
+
+export interface CommandMeta {
+  name: string;
+  group: CommandGroup;
+  summary: string;
+  usage: string;
+  details?: string;
+  flags?: { flag: string; description: string }[];
+  examples?: string[];
+}
+
+export const COMMANDS: CommandMeta[] = [
+  // Marketplace
+  {
+    name: 'search',
+    group: 'Marketplace',
+    summary: 'Search the marketplace for packages and workflows',
+    usage: 'agora search <query> [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
+    details:
+      'Searches all marketplace items by keyword. Use --category to filter by kind. ' +
+      'Add --api to query the live Agora API; without it, the bundled offline data is used.',
+    flags: [
+      { flag: '--category, -c', description: 'Filter by category: mcp, prompt, workflow, skill' },
+      { flag: '--limit, -n', description: 'Maximum number of results (default 10)' },
+      { flag: '--json', description: 'Output results as JSON' }
+    ],
+    examples: [
+      'agora search filesystem',
+      'agora search filesystem --api',
+      'agora search github --category mcp --limit 5'
+    ]
+  },
+  {
+    name: 'browse',
+    group: 'Marketplace',
+    summary: 'View full details for a single marketplace item',
+    usage: 'agora browse <id> [--type package|workflow] [--json]',
+    details:
+      'Fetches and displays the full metadata for a package or workflow by its id. ' +
+      'Use --type to disambiguate when an id is shared by multiple kinds.',
+    flags: [
+      { flag: '--type, -t', description: 'Item kind: package or workflow' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora browse mcp-github', 'agora browse mcp-github --type package']
+  },
+  {
+    name: 'trending',
+    group: 'Marketplace',
+    summary: 'Show trending packages and workflows',
+    usage: 'agora trending [all|packages|workflows] [--limit 5] [--json]',
+    details:
+      'Lists the most-starred marketplace items. Pass a category filter as the first positional ' +
+      'argument, or use --category.',
+    flags: [
+      {
+        flag: '--category, -c',
+        description: 'Category filter: all, packages, workflows (default all)'
+      },
+      { flag: '--limit, -n', description: 'Maximum number of results (default 5)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora trending', 'agora trending packages', 'agora trending --limit 10']
+  },
+  {
+    name: 'workflows',
+    group: 'Marketplace',
+    summary: 'List and search AI workflow templates',
+    usage: 'agora workflows [query] [--limit 10] [--json]',
+    details:
+      'Searches the workflow subset of the marketplace. Provide an optional keyword to narrow results.',
+    flags: [
+      { flag: '--limit, -n', description: 'Maximum number of results (default 10)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora workflows', 'agora workflows tdd', 'agora workflows security --json']
+  },
+  {
+    name: 'install',
+    group: 'Marketplace',
+    summary: 'Install a package into your OpenCode config',
+    usage: 'agora install <id> [--write] [--config path] [--json]',
+    details:
+      'Generates an install plan for a marketplace package. Without --write the plan is previewed only. ' +
+      'With --write, opencode.json is updated and any required npm packages are installed.',
+    flags: [
+      { flag: '--write', description: 'Apply the install plan (update config + run npm install)' },
+      { flag: '--config', description: 'Path to opencode.json (auto-detected by default)' },
+      { flag: '--type, -t', description: 'Item kind: package or workflow' },
+      { flag: '--json', description: 'Output plan as JSON' }
+    ],
+    examples: [
+      'agora install mcp-github',
+      'agora install mcp-github --write',
+      'agora install mcp-github --write --config ./opencode.json'
+    ]
+  },
+
+  // Setup
+  {
+    name: 'init',
+    group: 'Setup',
+    summary: 'Scaffold Agora into the current project',
+    usage: 'agora init [--dry-run] [--json]',
+    details:
+      'Scans the current directory, generates an opencode.json with recommended MCP servers, ' +
+      'and installs the /agora slash command. Use --dry-run to preview without writing.',
+    flags: [
+      { flag: '--dry-run', description: 'Preview what would be written without applying changes' },
+      { flag: '--json', description: 'Output the generated config as JSON' }
+    ],
+    examples: ['agora init', 'agora init --dry-run']
+  },
+  {
+    name: 'use',
+    group: 'Setup',
+    summary: 'Apply a workflow template as an OpenCode skill',
+    usage: 'agora use <workflow-id> [--json]',
+    details:
+      'Copies a workflow from the marketplace into .opencode/skills/ and registers it in opencode.json ' +
+      'so OpenCode can load it on the next restart.',
+    flags: [{ flag: '--json', description: 'Output result as JSON' }],
+    examples: ['agora use wf-tdd-cycle', 'agora use wf-security-audit']
+  },
+  {
+    name: 'config',
+    group: 'Setup',
+    summary: 'Inspect or validate your OpenCode configuration',
+    usage: 'agora config doctor [--config path] [--json]',
+    details:
+      'Runs a health-check on opencode.json: reports path, validity, MCP server count, and registered plugins.',
+    flags: [
+      { flag: '--config', description: 'Explicit path to opencode.json' },
+      { flag: '--json', description: 'Output report as JSON' }
+    ],
+    examples: ['agora config doctor', 'agora config doctor --config ./opencode.json --json']
+  },
+
+  // Library
+  {
+    name: 'save',
+    group: 'Library',
+    summary: 'Save a marketplace item to your local library',
+    usage: 'agora save <id> [--data-dir path] [--json]',
+    details:
+      'Persists a package or workflow reference in the Agora state file so you can recall it later ' +
+      'with `agora saved`.',
+    flags: [
+      { flag: '--data-dir', description: 'Override the Agora data directory' },
+      { flag: '--type, -t', description: 'Item kind: package or workflow' },
+      { flag: '--json', description: 'Output result as JSON' }
+    ],
+    examples: ['agora save wf-security-audit', 'agora save mcp-github --data-dir ~/.agora']
+  },
+  {
+    name: 'saved',
+    group: 'Library',
+    summary: 'List saved marketplace items',
+    usage: 'agora saved [query] [--data-dir path] [--json]',
+    details: 'Shows all items in your local library. Provide a keyword to filter the list.',
+    flags: [
+      { flag: '--data-dir', description: 'Override the Agora data directory' },
+      { flag: '--json', description: 'Output list as JSON' }
+    ],
+    examples: ['agora saved', 'agora saved github', 'agora saved --json']
+  },
+  {
+    name: 'remove',
+    group: 'Library',
+    summary: 'Remove an item from your saved library',
+    usage: 'agora remove <id> [--data-dir path] [--json]',
+    details: 'Deletes a saved item from the Agora state file by its id.',
+    flags: [
+      { flag: '--data-dir', description: 'Override the Agora data directory' },
+      { flag: '--json', description: 'Output result as JSON' }
+    ],
+    examples: ['agora remove wf-security-audit', 'agora remove mcp-github']
+  },
+
+  // Learn
+  {
+    name: 'tutorials',
+    group: 'Learn',
+    summary: 'List available step-by-step tutorials',
+    usage: 'agora tutorials [query] [--level beginner|intermediate|advanced] [--limit 20] [--json]',
+    details:
+      'Browses the tutorial catalog. Filter by keyword and skill level. ' +
+      'Use `agora tutorial <id>` to start a specific tutorial.',
+    flags: [
+      { flag: '--level', description: 'Skill level: beginner, intermediate, or advanced' },
+      { flag: '--limit, -n', description: 'Maximum number of results (default 20)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora tutorials', 'agora tutorials mcp', 'agora tutorials --level beginner']
+  },
+  {
+    name: 'tutorial',
+    group: 'Learn',
+    summary: 'Read a tutorial step-by-step',
+    usage: 'agora tutorial <id> [step] [--json]',
+    details:
+      'Displays a single tutorial step. Omit the step number to start from step 1. ' +
+      'Increment the step number to advance through the tutorial.',
+    flags: [
+      { flag: '--step', description: 'Step number to display (default 1)' },
+      { flag: '--json', description: 'Output step as JSON' }
+    ],
+    examples: [
+      'agora tutorial tut-mcp-basics',
+      'agora tutorial tut-mcp-basics 2',
+      'agora tutorial tut-mcp-basics --json'
+    ]
+  },
+
+  // Community
+  {
+    name: 'discuss',
+    group: 'Community',
+    summary: 'Post a new community discussion',
+    usage:
+      'agora discuss --title <title> (--content <text>|--content-file path) [--category question|idea|showcase|discussion]',
+    details:
+      'Creates a new discussion thread via the Agora API. Requires --api-url and a token ' +
+      '(via --token, AGORA_TOKEN, or `agora auth login`).',
+    flags: [
+      { flag: '--title', description: 'Discussion title (required)' },
+      { flag: '--content', description: 'Discussion body as inline text' },
+      { flag: '--content-file', description: 'Read discussion body from a file' },
+      {
+        flag: '--category, -c',
+        description: 'Category: question, idea, showcase, discussion (default discussion)'
+      },
+      { flag: '--json', description: 'Output created discussion as JSON' }
+    ],
+    examples: [
+      'agora discuss --title "MCP question" --content "How are you composing servers?" --category question',
+      'agora discuss --title "My workflow" --content-file ./prompt.md --category showcase'
+    ]
+  },
+  {
+    name: 'discussions',
+    group: 'Community',
+    summary: 'Browse community discussions',
+    usage: 'agora discussions [query] [--category question|idea|showcase|discussion] [--json]',
+    details:
+      'Lists community discussion threads from the Agora API. Requires --api-url. ' +
+      'Filter by keyword or category.',
+    flags: [
+      {
+        flag: '--category, -c',
+        description: 'Category filter: question, idea, showcase, or discussion'
+      },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora discussions',
+      'agora discussions --category question',
+      'agora discussions mcp --json'
+    ]
+  },
+  {
+    name: 'review',
+    group: 'Community',
+    summary: 'Post a rating and review for a marketplace item',
+    usage: 'agora review <id> --rating 5 --content <text>',
+    details:
+      'Submits a review to the Agora API. Requires --api-url and a token ' +
+      '(via --token, AGORA_TOKEN, or `agora auth login`). Rating must be 1–5.',
+    flags: [
+      { flag: '--rating, -r', description: 'Star rating 1–5 (required)' },
+      { flag: '--content', description: 'Review text (required)' },
+      { flag: '--type, -t', description: 'Item kind: package or workflow (auto-detected)' },
+      { flag: '--json', description: 'Output created review as JSON' }
+    ],
+    examples: [
+      'agora review mcp-github --rating 5 --content "Works well"',
+      'agora review wf-security-audit --rating 4 --content "Solid workflow" --type workflow'
+    ]
+  },
+  {
+    name: 'reviews',
+    group: 'Community',
+    summary: 'List reviews for a marketplace item',
+    usage: 'agora reviews [id] [--type package|workflow] [--api-url url] [--json]',
+    details:
+      'Fetches reviews from the Agora API. Requires --api-url. ' +
+      'Omit the id to list all recent reviews.',
+    flags: [
+      { flag: '--type, -t', description: 'Item kind: package or workflow' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora reviews mcp-github --api-url https://agora.example.com',
+      'agora reviews --json'
+    ]
+  },
+  {
+    name: 'profile',
+    group: 'Community',
+    summary: 'View a community member profile',
+    usage: 'agora profile <username> [--json]',
+    details:
+      'Retrieves a user profile from the Agora API. Requires --api-url. ' +
+      'Displays packages, workflows, and discussion counts.',
+    flags: [
+      { flag: '--username', description: 'Username (alternative to positional argument)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora profile alice', 'agora profile alice --api-url https://agora.example.com']
+  },
+  {
+    name: 'publish',
+    group: 'Community',
+    summary: 'Publish a package or workflow to the marketplace',
+    usage:
+      'agora publish package --name <name> --description <text> --npm <package> [--token token]\n' +
+      '  agora publish workflow --name <name> --description <text> --prompt-file <path> [--token token]',
+    details:
+      'Submits a new package or workflow to the Agora API. Requires --api-url and a token ' +
+      '(via --token, AGORA_TOKEN, or `agora auth login`).',
+    flags: [
+      { flag: '--name', description: 'Item name (required)' },
+      { flag: '--description, -d', description: 'Short description (required)' },
+      { flag: '--npm', description: 'npm package name (required for MCP packages)' },
+      {
+        flag: '--prompt-file',
+        description: 'Path to workflow prompt file (required for workflows)'
+      },
+      { flag: '--prompt', description: 'Workflow prompt as inline text' },
+      { flag: '--version', description: 'Package version (default 1.0.0)' },
+      { flag: '--category, -c', description: 'Category (default mcp)' },
+      { flag: '--tags', description: 'Comma-separated tags' },
+      { flag: '--repo, --repository', description: 'Repository URL' },
+      { flag: '--model', description: 'Preferred model for workflow' },
+      { flag: '--json', description: 'Output published item as JSON' }
+    ],
+    examples: [
+      'agora publish package --name @you/server --description "MCP server" --npm @you/server',
+      'agora publish workflow --name "My Workflow" --description "Review workflow" --prompt-file ./prompt.md'
+    ]
+  },
+  {
+    name: 'auth',
+    group: 'Community',
+    summary: 'Manage Agora API credentials',
+    usage:
+      'agora auth login --token <token> [--api-url url] [--data-dir path]\n' +
+      '  agora auth status [--data-dir path] [--json]\n' +
+      '  agora auth logout [--data-dir path]',
+    details:
+      'Stores or clears API credentials in the Agora state file. ' +
+      'Saved credentials are used automatically by commands that require a token or API URL.',
+    flags: [
+      { flag: '--token', description: 'API auth token (also AGORA_TOKEN / AGORA_API_TOKEN env)' },
+      { flag: '--api-url', description: 'Override AGORA_API_URL for stored auth' },
+      { flag: '--data-dir', description: 'Override the Agora data directory' },
+      { flag: '--json', description: 'Output status as JSON' }
+    ],
+    examples: [
+      'agora auth login --token $AGORA_TOKEN --api-url https://agora.example.com',
+      'agora auth status',
+      'agora auth logout'
+    ]
+  }
+];

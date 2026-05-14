@@ -975,3 +975,59 @@ describe('CLI commands', () => {
     expect(stderr.join('')).toContain('reviews unavailable');
   });
 });
+
+describe('help system', () => {
+  test('agora help outputs all group labels and a sampling of command names', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['help'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).toContain('Marketplace');
+    expect(out).toContain('Setup');
+    expect(out).toContain('Library');
+    expect(out).toContain('Learn');
+    expect(out).toContain('Community');
+    expect(out).toContain('search');
+    expect(out).toContain('install');
+    expect(out).toContain('init');
+    expect(out).toContain('tutorials');
+    expect(out).toContain('auth');
+  });
+
+  test('agora help install outputs install-specific manual content', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['help', 'install'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).toContain('install');
+    expect(out).toContain('Usage:');
+    expect(out).toContain('agora install');
+    expect(out).toContain('--write');
+  });
+
+  test('agora help bogus exits 1 with error on stderr', async () => {
+    const { io, stderr } = createIo();
+    const code = await runCli(['help', 'bogus'], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join('')).toContain('Unknown command: bogus');
+  });
+
+  test('agora install --help shows manual not the normal install preview', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-help-'));
+    const { io, stdout } = createIo(temp);
+
+    try {
+      const code = await runCli(['install', '--help'], io);
+      const out = stdout.join('');
+
+      expect(code).toBe(0);
+      expect(out).toContain('Usage:');
+      expect(out).not.toContain('Install preview');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+});
