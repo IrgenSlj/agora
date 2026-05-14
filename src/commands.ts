@@ -23,7 +23,6 @@ Route the request to the matching Agora tool and return its output:
 - \`agora_trending\` — trending packages and workflows
 - \`agora_browse\` — full details for one package or workflow by id (\`browse <id>\`)
 - \`agora_install\` — install steps / config for a package or workflow (\`install <id>\`)
-- \`agora_review\` — list or add reviews
 - \`agora_tutorial\` — interactive AI/MCP tutorials (\`tutorial <id> [step]\`)
 - \`agora_info\` — plugin help and the command list
 

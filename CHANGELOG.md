@@ -14,12 +14,23 @@
 - README and the `agora_info` tool now explain the tool-vs-slash-command
   distinction instead of implying the plugin registers `/agora` itself
 
+### Removed
+
+- **Dropped the fabricated plugin tools.** `agora_review`, `agora_discussions`,
+  and `agora_profile` returned hardcoded or fake-success data with nothing
+  behind them. The plugin now ships only the seven offline-capable marketplace
+  tools. Profiles, reviews, discussions, and publishing remain in the `agora`
+  CLI, which is backend-backed.
+
 ### Fixed
 
 - **Trending no longer ties on stars.** Every package in the
   modelcontextprotocol/servers monorepo shares one repo-level star count, so
   trending and empty-query search now rank by `installs` (npm downloads) — a
   real per-package signal. `agora_trending` shows install counts for packages.
+- Plugin tool output now formats counts (`264.2K` instead of `264237`), leads
+  with installs, shows item ids for `browse`/`install`, and the `install`
+  command's fenced config blocks are no longer mis-indented.
 
 ## [0.3.0] - 2026-05-14
 
