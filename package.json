@@ -31,7 +31,8 @@
     "hub:dev": "bun hub/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "prepublishOnly": "bun run build"
+    "prepublishOnly": "bun run build",
+    "refresh:data": "bun scripts/refresh-data.ts"
   },
   "keywords": [
     "opencode",

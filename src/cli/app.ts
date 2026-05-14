@@ -17,7 +17,7 @@ import {
   type MarketplaceItem
 } from '../marketplace.js';
 import { scanProject, generateInitPlan, applyInitPlan, runCommands } from '../init.js';
-import { sampleWorkflows } from '../data.js';
+import { sampleWorkflows, dataRefreshedAt } from '../data.js';
 import {
   createDiscussionSource,
   discussionsSource,
@@ -209,7 +209,10 @@ async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  writeLine(io.stdout, `Agora search: ${query || 'all'} (${results.length} shown, source: ${result.source})`);
+  const sourceLabel = result.source === 'offline'
+    ? `source: offline, refreshed ${dataRefreshedAt}`
+    : `source: ${result.source}`;
+  writeLine(io.stdout, `Agora search: ${query || 'all'} (${results.length} shown, ${sourceLabel})`);
   writeLine(io.stdout, formatItemList(results));
   return 0;
 }
@@ -1227,7 +1230,7 @@ function tutorialStepPayload(tutorial: Tutorial, stepNumber: number): {
 
 function warnFallback<T>(result: SourceResult<T>, io: CliIo): void {
   if (result.fallbackReason) {
-    writeLine(io.stderr, `API unavailable, using offline data: ${result.fallbackReason}`);
+    writeLine(io.stderr, `API unavailable, using offline data (refreshed ${dataRefreshedAt}): ${result.fallbackReason}`);
   }
 }
 

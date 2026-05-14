@@ -1,5 +1,7 @@
 import type { Package, Workflow, Discussion, Tutorial } from './types.js';
 
+export const dataRefreshedAt = '2026-05-14';
+
 export const samplePackages: Package[] = [
   // ── Filesystem & Core I/O ──
   {
@@ -21,7 +23,7 @@ export const samplePackages: Package[] = [
     name: '@modelcontextprotocol/server-github',
     description: 'Full GitHub API integration — issues, PRs, repos, search, file contents, and releases',
     author: 'modelcontextprotocol',
-    version: '2026.1.14',
+    version: '2025.4.8',
     category: 'mcp',
     tags: ['github', 'git', 'api', 'official', 'devtools'],
     stars: 5200,
@@ -49,7 +51,7 @@ export const samplePackages: Package[] = [
     name: '@modelcontextprotocol/server-brave-search',
     description: 'Web search and local business queries using the Brave Search API',
     author: 'modelcontextprotocol',
-    version: '2026.1.14',
+    version: '0.6.2',
     category: 'mcp',
     tags: ['search', 'web', 'brave', 'api', 'official'],
     stars: 1800,
@@ -65,7 +67,7 @@ export const samplePackages: Package[] = [
     name: '@modelcontextprotocol/server-postgres',
     description: 'Read/write PostgreSQL databases — schema inspection, queries, and transaction support',
     author: 'modelcontextprotocol',
-    version: '2026.1.14',
+    version: '0.6.2',
     category: 'mcp',
     tags: ['postgresql', 'database', 'sql', 'official', 'data'],
     stars: 3400,
@@ -93,7 +95,7 @@ export const samplePackages: Package[] = [
     name: '@modelcontextprotocol/server-redis',
     description: 'Redis key-value store operations — get/set, list management, and cache control',
     author: 'modelcontextprotocol',
-    version: '2026.1.14',
+    version: '2025.4.25',
     category: 'mcp',
     tags: ['redis', 'cache', 'database', 'official', 'data'],
     stars: 1200,
@@ -109,7 +111,7 @@ export const samplePackages: Package[] = [
     name: '@modelcontextprotocol/server-sequential-thinking',
     description: 'Structured multi-step reasoning with branching, revision, and chain-of-thought',
     author: 'modelcontextprotocol',
-    version: '2026.1.14',
+    version: '2025.12.18',
     category: 'mcp',
     tags: ['reasoning', 'thinking', 'ai', 'official'],
     stars: 4100,
@@ -123,7 +125,7 @@ export const samplePackages: Package[] = [
     name: '@modelcontextprotocol/server-memory',
     description: 'Persistent knowledge graph memory for cross-session context retention',
     author: 'modelcontextprotocol',
-    version: '2026.1.14',
+    version: '2026.1.26',
     category: 'mcp',
     tags: ['memory', 'knowledge-graph', 'persistence', 'official'],
     stars: 3900,
@@ -139,7 +141,7 @@ export const samplePackages: Package[] = [
     name: '@modelcontextprotocol/server-puppeteer',
     description: 'Headless Chrome browser automation — navigation, screenshots, PDF generation, and JavaScript evaluation',
     author: 'modelcontextprotocol',
-    version: '2026.1.14',
+    version: '2025.5.12',
     category: 'mcp',
     tags: ['browser', 'automation', 'puppeteer', 'official', 'web'],
     stars: 3100,
@@ -169,7 +171,7 @@ export const samplePackages: Package[] = [
     name: '@modelcontextprotocol/server-slack',
     description: 'Slack workspace integration — messaging, channel management, search, and user presence',
     author: 'modelcontextprotocol',
-    version: '2026.1.14',
+    version: '2025.4.25',
     category: 'mcp',
     tags: ['slack', 'communication', 'messaging', 'official'],
     stars: 2600,
