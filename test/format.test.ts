@@ -1,8 +1,8 @@
 import { describe, test, expect } from 'bun:test';
-import { 
-  truncate, 
-  formatStars, 
-  formatInstalls, 
+import {
+  truncate,
+  formatStars,
+  formatInstalls,
   formatDate,
   formatList,
   formatCard,
@@ -90,7 +90,10 @@ describe('formatCard', () => {
 describe('formatTable', () => {
   test('formats headers and rows', () => {
     const headers = ['Name', 'Stars'];
-    const rows = [['pkg1', '100'], ['pkg2', '200']];
+    const rows = [
+      ['pkg1', '100'],
+      ['pkg2', '200']
+    ];
     const result = formatTable(headers, rows);
     expect(result).toContain('Name');
     expect(result).toContain('Stars');

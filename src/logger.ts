@@ -7,29 +7,29 @@ export enum LogLevel {
 
 class Logger {
   private level: LogLevel = LogLevel.INFO;
-  
+
   setLevel(level: LogLevel) {
     this.level = level;
   }
-  
+
   debug(...args: any[]) {
     if (this.level <= LogLevel.DEBUG) {
       console.debug('[Agora DEBUG]', ...args);
     }
   }
-  
+
   info(...args: any[]) {
     if (this.level <= LogLevel.INFO) {
       console.log('[Agora INFO]', ...args);
     }
   }
-  
+
   warn(...args: any[]) {
     if (this.level <= LogLevel.WARN) {
       console.warn('[Agora WARN]', ...args);
     }
   }
-  
+
   error(...args: any[]) {
     if (this.level <= LogLevel.ERROR) {
       console.error('[Agora ERROR]', ...args);
@@ -56,8 +56,8 @@ export function safeExecute<T>(fn: () => T, fallback: T, context = ''): T {
 }
 
 export async function safeExecuteAsync<T>(
-  fn: () => Promise<T>, 
-  fallback: T, 
+  fn: () => Promise<T>,
+  fallback: T,
   context = ''
 ): Promise<T> {
   try {

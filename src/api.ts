@@ -59,7 +59,7 @@ export async function searchPackages(query: string, category?: string): Promise<
   const res = await fetch(`${API_BASE}/api/packages?${params}`);
   if (!res.ok) return [];
 
-  const data = await res.json() as any;
+  const data = (await res.json()) as any;
   return data.packages || [];
 }
 
@@ -68,7 +68,7 @@ export async function getPackage(id: string): Promise<Package | null> {
   const res = await fetch(`${API_BASE}/api/packages/${id}`);
   if (!res.ok) return null;
 
-  const data = await res.json() as any;
+  const data = (await res.json()) as any;
   return data.package || null;
 }
 
@@ -77,7 +77,7 @@ export async function searchWorkflows(query: string): Promise<Workflow[]> {
   const res = await fetch(`${API_BASE}/api/workflows?q=${encodeURIComponent(query)}`);
   if (!res.ok) return [];
 
-  const data = await res.json() as any;
+  const data = (await res.json()) as any;
   return data.workflows || [];
 }
 
@@ -86,16 +86,18 @@ export async function getWorkflow(id: string): Promise<Workflow | null> {
   const res = await fetch(`${API_BASE}/api/workflows/${id}`);
   if (!res.ok) return null;
 
-  const data = await res.json() as any;
+  const data = (await res.json()) as any;
   return data.workflow || null;
 }
 
-export async function getTrending(_type: 'packages' | 'workflows' | 'all' = 'all') {
+export async function getTrending(
+  _type: 'packages' | 'workflows' | 'all' = 'all'
+): Promise<{ packages: unknown[]; workflows: unknown[] }> {
   if (!API_BASE) return { packages: [], workflows: [] };
   const res = await fetch(`${API_BASE}/api/trending`);
   if (!res.ok) return { packages: [], workflows: [] };
 
-  return res.json();
+  return res.json() as Promise<{ packages: unknown[]; workflows: unknown[] }>;
 }
 
 export async function getDiscussions(category?: string): Promise<Discussion[]> {
@@ -104,16 +106,19 @@ export async function getDiscussions(category?: string): Promise<Discussion[]> {
   const res = await fetch(`${API_BASE}/api/discussions${params}`);
   if (!res.ok) return [];
 
-  const data = await res.json() as any;
+  const data = (await res.json()) as any;
   return data.discussions || [];
 }
 
-export async function createDiscussion(data: {
-  title: string;
-  content: string;
-  category: string;
-  author?: string;
-}, token?: string): Promise<{ id: string } | null> {
+export async function createDiscussion(
+  data: {
+    title: string;
+    content: string;
+    category: string;
+    author?: string;
+  },
+  token?: string
+): Promise<{ id: string } | null> {
   if (!API_BASE) {
     throw new Error(
       'AGORA_API_URL is not set. The hosted backend is not yet deployed — set AGORA_API_URL to your self-hosted backend (see backend/) to use --api mode.'
@@ -129,7 +134,7 @@ export async function createDiscussion(data: {
   });
 
   if (!res.ok) return null;
-  const payload = await res.json() as any;
+  const payload = (await res.json()) as any;
   return payload.discussion || payload;
 }
 
@@ -138,7 +143,7 @@ export async function getUser(username: string): Promise<User | null> {
   const res = await fetch(`${API_BASE}/api/users/${username}`);
   if (!res.ok) return null;
 
-  const data = await res.json() as any;
+  const data = (await res.json()) as any;
   return data.user || null;
 }
 

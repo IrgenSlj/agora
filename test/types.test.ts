@@ -5,7 +5,7 @@ import { samplePackages, sampleWorkflows, sampleDiscussions, sampleTutorials } f
 describe('TypeScript Types', () => {
   test('Package type matches sample data', () => {
     const pkg = samplePackages[0];
-    
+
     const typed: Package = {
       id: pkg.id,
       name: pkg.name,
@@ -20,14 +20,14 @@ describe('TypeScript Types', () => {
       npmPackage: pkg.npmPackage,
       createdAt: pkg.createdAt
     };
-    
+
     expect(typed.id).toBeDefined();
     expect(typed.category).toBe('mcp');
   });
 
   test('Workflow type matches sample data', () => {
     const wf = sampleWorkflows[0];
-    
+
     const typed: Workflow = {
       id: wf.id,
       name: wf.name,
@@ -40,14 +40,14 @@ describe('TypeScript Types', () => {
       forks: wf.forks,
       createdAt: wf.createdAt
     };
-    
+
     expect(typed.id).toBeDefined();
     expect(typed.prompt).toBeDefined();
   });
 
   test('Discussion type matches sample data', () => {
     const disc = sampleDiscussions[0];
-    
+
     const typed: Discussion = {
       id: disc.id,
       title: disc.title,
@@ -58,13 +58,13 @@ describe('TypeScript Types', () => {
       stars: disc.stars,
       createdAt: disc.createdAt
     };
-    
+
     expect(typed.id).toBeDefined();
   });
 
   test('Tutorial type matches sample data', () => {
     const tut = sampleTutorials[0];
-    
+
     const typed: Tutorial = {
       id: tut.id,
       title: tut.title,
@@ -73,7 +73,7 @@ describe('TypeScript Types', () => {
       duration: tut.duration,
       steps: tut.steps
     };
-    
+
     expect(typed.id).toBeDefined();
     expect(typed.steps.length).toBeGreaterThan(0);
   });
@@ -81,21 +81,21 @@ describe('TypeScript Types', () => {
 
 describe('Type Validation', () => {
   test('Package category is valid', () => {
-    samplePackages.forEach(pkg => {
+    samplePackages.forEach((pkg) => {
       const validCategories = ['mcp', 'prompt', 'workflow', 'skill'];
       expect(validCategories).toContain(pkg.category);
     });
   });
 
   test('Discussion category is valid', () => {
-    sampleDiscussions.forEach(disc => {
+    sampleDiscussions.forEach((disc) => {
       const validCategories = ['question', 'idea', 'showcase', 'discussion'];
       expect(validCategories).toContain(disc.category);
     });
   });
 
   test('Tutorial level is valid', () => {
-    sampleTutorials.forEach(tut => {
+    sampleTutorials.forEach((tut) => {
       const validLevels = ['beginner', 'intermediate', 'advanced'];
       expect(validLevels).toContain(tut.level);
     });
@@ -111,7 +111,7 @@ describe('Type Validation', () => {
       content: 'Great!',
       createdAt: '2025-01-01'
     };
-    
+
     expect(mockReview.rating).toBeGreaterThanOrEqual(1);
     expect(mockReview.rating).toBeLessThanOrEqual(5);
   });
@@ -122,7 +122,7 @@ describe('Type Compatibility', () => {
     const pkg = samplePackages[0];
     const json = JSON.stringify(pkg);
     const parsed = JSON.parse(json);
-    
+
     expect(parsed.id).toBe(pkg.id);
     expect(parsed.name).toBe(pkg.name);
   });
@@ -131,7 +131,7 @@ describe('Type Compatibility', () => {
     const wf = sampleWorkflows[0];
     const json = JSON.stringify(wf);
     const parsed = JSON.parse(json);
-    
+
     expect(parsed.id).toBe(wf.id);
     expect(parsed.prompt).toBe(wf.prompt);
   });
@@ -140,7 +140,7 @@ describe('Type Compatibility', () => {
     const disc = sampleDiscussions[0];
     const json = JSON.stringify(disc);
     const parsed = JSON.parse(json);
-    
+
     expect(parsed.id).toBe(disc.id);
     expect(parsed.title).toBe(disc.title);
   });

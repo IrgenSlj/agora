@@ -187,7 +187,9 @@ interface ApiUser {
   created_at?: string;
 }
 
-export async function searchMarketplaceSource(options: SearchSourceOptions = {}): Promise<SourceResult<MarketplaceItem[]>> {
+export async function searchMarketplaceSource(
+  options: SearchSourceOptions = {}
+): Promise<SourceResult<MarketplaceItem[]>> {
   if (!shouldUseApi(options)) {
     return offline(searchMarketplaceItems(options));
   }
@@ -200,7 +202,9 @@ export async function searchMarketplaceSource(options: SearchSourceOptions = {})
   }
 }
 
-export async function findMarketplaceSource(options: FindSourceOptions): Promise<SourceResult<MarketplaceItem | null>> {
+export async function findMarketplaceSource(
+  options: FindSourceOptions
+): Promise<SourceResult<MarketplaceItem | null>> {
   if (!shouldUseApi(options)) {
     return offline(findMarketplaceItem(options.id, { type: options.type }));
   }
@@ -213,7 +217,9 @@ export async function findMarketplaceSource(options: FindSourceOptions): Promise
   }
 }
 
-export async function trendingMarketplaceSource(options: SearchSourceOptions = {}): Promise<SourceResult<MarketplaceItem[]>> {
+export async function trendingMarketplaceSource(
+  options: SearchSourceOptions = {}
+): Promise<SourceResult<MarketplaceItem[]>> {
   if (!shouldUseApi(options)) {
     return offline(getTrendingItems(options));
   }
@@ -226,7 +232,9 @@ export async function trendingMarketplaceSource(options: SearchSourceOptions = {
   }
 }
 
-export async function discussionsSource(options: DiscussionSourceOptions = {}): Promise<SourceResult<Discussion[]>> {
+export async function discussionsSource(
+  options: DiscussionSourceOptions = {}
+): Promise<SourceResult<Discussion[]>> {
   if (!shouldUseApi(options)) {
     return offline(getDiscussions(options.category, options.query));
   }
@@ -239,7 +247,9 @@ export async function discussionsSource(options: DiscussionSourceOptions = {}): 
   }
 }
 
-export async function tutorialsSource(options: TutorialSourceOptions = {}): Promise<SourceResult<Tutorial[]>> {
+export async function tutorialsSource(
+  options: TutorialSourceOptions = {}
+): Promise<SourceResult<Tutorial[]>> {
   if (!shouldUseApi(options)) {
     return offline(getTutorials(options));
   }
@@ -252,7 +262,9 @@ export async function tutorialsSource(options: TutorialSourceOptions = {}): Prom
   }
 }
 
-export async function findTutorialSource(options: FindTutorialSourceOptions): Promise<SourceResult<Tutorial | null>> {
+export async function findTutorialSource(
+  options: FindTutorialSourceOptions
+): Promise<SourceResult<Tutorial | null>> {
   if (!shouldUseApi(options)) {
     return offline(findTutorial(options.id));
   }
@@ -269,10 +281,14 @@ export async function createDiscussionSource(
   options: SourceOptions,
   input: DiscussionInput
 ): Promise<SourceResult<Discussion>> {
-  const payload = await requestJson<{ discussion?: ApiDiscussion } & Partial<ApiDiscussion>>(options, '/api/discussions', {
-    method: 'POST',
-    body: JSON.stringify(input)
-  });
+  const payload = await requestJson<{ discussion?: ApiDiscussion } & Partial<ApiDiscussion>>(
+    options,
+    '/api/discussions',
+    {
+      method: 'POST',
+      body: JSON.stringify(input)
+    }
+  );
   const discussion = (payload.discussion || payload) as ApiDiscussion;
 
   if (!discussion.id) {
@@ -347,12 +363,18 @@ export async function listReviewsSource(
   return api((payload.reviews || []).map(mapReview), options);
 }
 
-export async function profileSource(options: SourceOptions, username: string): Promise<SourceResult<ApiProfile | null>> {
+export async function profileSource(
+  options: SourceOptions,
+  username: string
+): Promise<SourceResult<ApiProfile | null>> {
   if (!shouldUseApi(options)) {
     return offline(null);
   }
 
-  const payload = await requestNullable<{ user?: ApiUser }>(options, `/api/users/${encodeURIComponent(username)}`);
+  const payload = await requestNullable<{ user?: ApiUser }>(
+    options,
+    `/api/users/${encodeURIComponent(username)}`
+  );
   return api(payload?.user ? mapProfile(payload.user) : null, options);
 }
 
@@ -369,14 +391,20 @@ async function searchApi(options: SearchSourceOptions): Promise<MarketplaceItem[
   if (category === 'all' || category === 'package' || isPackageCategory(category)) {
     const params = new URLSearchParams({ q: query, limit: String(limit) });
     if (isPackageCategory(category)) params.set('category', category);
-    tasks.push(requestJson<{ packages?: ApiPackage[] }>(options, `/api/packages?${params}`)
-      .then((payload) => (payload.packages || []).map(mapPackage)));
+    tasks.push(
+      requestJson<{ packages?: ApiPackage[] }>(options, `/api/packages?${params}`).then((payload) =>
+        (payload.packages || []).map(mapPackage)
+      )
+    );
   }
 
   if (category === 'all' || category === 'workflow') {
     const params = new URLSearchParams({ q: query, limit: String(limit) });
-    tasks.push(requestJson<{ workflows?: ApiWorkflow[] }>(options, `/api/workflows?${params}`)
-      .then((payload) => (payload.workflows || []).map(mapWorkflow)));
+    tasks.push(
+      requestJson<{ workflows?: ApiWorkflow[] }>(options, `/api/workflows?${params}`).then(
+        (payload) => (payload.workflows || []).map(mapWorkflow)
+      )
+    );
   }
 
   const results = (await Promise.all(tasks)).flat().sort((a, b) => b.stars - a.stars);
@@ -387,31 +415,51 @@ async function findApi(options: FindSourceOptions): Promise<MarketplaceItem | nu
   const type = options.type?.toLowerCase();
 
   if (type === 'package') {
-    const pkg = await requestNullable<{ package?: ApiPackage }>(options, `/api/packages/${encodeURIComponent(options.id)}`);
+    const pkg = await requestNullable<{ package?: ApiPackage }>(
+      options,
+      `/api/packages/${encodeURIComponent(options.id)}`
+    );
     return pkg?.package ? mapPackage(pkg.package) : null;
   }
 
   if (type === 'workflow') {
-    const workflow = await requestNullable<{ workflow?: ApiWorkflow }>(options, `/api/workflows/${encodeURIComponent(options.id)}`);
+    const workflow = await requestNullable<{ workflow?: ApiWorkflow }>(
+      options,
+      `/api/workflows/${encodeURIComponent(options.id)}`
+    );
     return workflow?.workflow ? mapWorkflow(workflow.workflow) : null;
   }
 
-  const pkg = await requestNullable<{ package?: ApiPackage }>(options, `/api/packages/${encodeURIComponent(options.id)}`);
+  const pkg = await requestNullable<{ package?: ApiPackage }>(
+    options,
+    `/api/packages/${encodeURIComponent(options.id)}`
+  );
   if (pkg?.package) return mapPackage(pkg.package);
 
-  const workflow = await requestNullable<{ workflow?: ApiWorkflow }>(options, `/api/workflows/${encodeURIComponent(options.id)}`);
+  const workflow = await requestNullable<{ workflow?: ApiWorkflow }>(
+    options,
+    `/api/workflows/${encodeURIComponent(options.id)}`
+  );
   return workflow?.workflow ? mapWorkflow(workflow.workflow) : null;
 }
 
 async function trendingApi(options: SearchSourceOptions): Promise<MarketplaceItem[]> {
   const category = normalizeCategory(options.category || 'all');
   const limit = normalizeLimit(options.limit) || 5;
-  const payload = await requestJson<{ packages?: ApiPackage[]; workflows?: ApiWorkflow[] }>(options, '/api/trending');
+  const payload = await requestJson<{ packages?: ApiPackage[]; workflows?: ApiWorkflow[] }>(
+    options,
+    '/api/trending'
+  );
   const packages = (payload.packages || []).map(mapPackage);
   const workflows = (payload.workflows || []).map(mapWorkflow);
 
   return [...packages, ...workflows]
-    .filter((item) => category === 'all' || item.category === category || (category === 'package' && item.kind === 'package'))
+    .filter(
+      (item) =>
+        category === 'all' ||
+        item.category === category ||
+        (category === 'package' && item.kind === 'package')
+    )
     .sort((a, b) => b.stars - a.stars)
     .slice(0, limit);
 }
@@ -419,15 +467,18 @@ async function trendingApi(options: SearchSourceOptions): Promise<MarketplaceIte
 async function discussionsApi(options: DiscussionSourceOptions): Promise<Discussion[]> {
   const category = options.category && options.category !== 'all' ? options.category : '';
   const params = category ? `?${new URLSearchParams({ category })}` : '';
-  const payload = await requestJson<{ discussions?: ApiDiscussion[] }>(options, `/api/discussions${params}`);
+  const payload = await requestJson<{ discussions?: ApiDiscussion[] }>(
+    options,
+    `/api/discussions${params}`
+  );
   const query = (options.query || '').trim().toLowerCase();
 
-  return (payload.discussions || [])
-    .map(mapDiscussion)
-    .filter((discussion) => {
-      if (!query) return true;
-      return `${discussion.title} ${discussion.content} ${discussion.author}`.toLowerCase().includes(query);
-    });
+  return (payload.discussions || []).map(mapDiscussion).filter((discussion) => {
+    if (!query) return true;
+    return `${discussion.title} ${discussion.content} ${discussion.author}`
+      .toLowerCase()
+      .includes(query);
+  });
 }
 
 async function tutorialsApi(options: TutorialSourceOptions): Promise<Tutorial[]> {
@@ -440,14 +491,20 @@ async function tutorialsApi(options: TutorialSourceOptions): Promise<Tutorial[]>
     .filter((tutorial) => level === 'all' || tutorial.level === level)
     .filter((tutorial) => {
       if (!query) return true;
-      return `${tutorial.id} ${tutorial.title} ${tutorial.description} ${tutorial.level}`.toLowerCase().includes(query);
+      return `${tutorial.id} ${tutorial.title} ${tutorial.description} ${tutorial.level}`
+        .toLowerCase()
+        .includes(query);
     })
     .sort((a, b) => a.title.localeCompare(b.title));
 
   return limit ? tutorials.slice(0, limit) : tutorials;
 }
 
-async function requestJson<T>(options: SourceOptions, path: string, init: RequestInit = {}): Promise<T> {
+async function requestJson<T>(
+  options: SourceOptions,
+  path: string,
+  init: RequestInit = {}
+): Promise<T> {
   const response = await fetchWithTimeout(options, buildUrl(options, path), init);
   if (!response.ok) {
     throw new Error(await responseError(response, path));
@@ -464,7 +521,11 @@ async function requestNullable<T>(options: SourceOptions, path: string): Promise
   return response.json() as Promise<T>;
 }
 
-async function fetchWithTimeout(options: SourceOptions, url: string, init: RequestInit = {}): Promise<Response> {
+async function fetchWithTimeout(
+  options: SourceOptions,
+  url: string,
+  init: RequestInit = {}
+): Promise<Response> {
   const fetcher = options.fetcher || fetch;
   const timeoutMs = options.timeoutMs || 5000;
   const controller = new AbortController();
@@ -493,7 +554,7 @@ async function fetchWithTimeout(options: SourceOptions, url: string, init: Reque
 
 async function responseError(response: Response, path: string): Promise<string> {
   try {
-    const body = await response.json() as any;
+    const body = (await response.json()) as any;
     if (body?.error) return `API returned ${response.status} for ${path}: ${body.error}`;
   } catch {
     // Use generic status message.
@@ -624,30 +685,38 @@ function parseTags(tags: ApiPackage['tags']): string[] {
     // Fall back to comma-separated tags.
   }
 
-  return tags.split(',').map((tag) => tag.trim()).filter(Boolean);
+  return tags
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 function parseTutorialSteps(steps: ApiTutorial['steps']): TutorialStep[] {
-  if (Array.isArray(steps)) return steps.map(normalizeTutorialStep).filter(Boolean) as TutorialStep[];
+  if (Array.isArray(steps))
+    return steps.map(normalizeTutorialStep).filter(Boolean) as TutorialStep[];
   if (!steps) return [];
 
   try {
     const parsed = JSON.parse(steps);
-    if (Array.isArray(parsed)) return parsed.map(normalizeTutorialStep).filter(Boolean) as TutorialStep[];
+    if (Array.isArray(parsed))
+      return parsed.map(normalizeTutorialStep).filter(Boolean) as TutorialStep[];
   } catch {
     // Fall back to one text step when a backend stores plain text.
   }
 
-  return [{
-    title: 'Tutorial',
-    content: steps
-  }];
+  return [
+    {
+      title: 'Tutorial',
+      content: steps
+    }
+  ];
 }
 
 function normalizeTutorialStep(step: unknown): TutorialStep | null {
   if (!step || typeof step !== 'object') return null;
   const candidate = step as Partial<TutorialStep>;
-  const title = typeof candidate.title === 'string' && candidate.title.trim() ? candidate.title : 'Step';
+  const title =
+    typeof candidate.title === 'string' && candidate.title.trim() ? candidate.title : 'Step';
   const content = typeof candidate.content === 'string' ? candidate.content : '';
   const code = typeof candidate.code === 'string' && candidate.code ? candidate.code : undefined;
 
@@ -657,11 +726,18 @@ function normalizeTutorialStep(step: unknown): TutorialStep | null {
 
 function normalizePackageCategory(category?: string): PackageMarketplaceItem['category'] {
   const normalized = normalizeCategory(category || 'mcp');
-  return ['mcp', 'prompt', 'workflow', 'skill'].includes(normalized) ? normalized as PackageMarketplaceItem['category'] : 'mcp';
+  return ['mcp', 'prompt', 'workflow', 'skill'].includes(normalized)
+    ? (normalized as PackageMarketplaceItem['category'])
+    : 'mcp';
 }
 
 function normalizeDiscussionCategory(category?: string): Discussion['category'] {
-  if (category === 'question' || category === 'idea' || category === 'showcase' || category === 'discussion') {
+  if (
+    category === 'question' ||
+    category === 'idea' ||
+    category === 'showcase' ||
+    category === 'discussion'
+  ) {
     return category;
   }
   return 'discussion';

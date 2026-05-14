@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { getCookie, setCookie } from 'hono/cookie';
+import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 
 type Env = {
-  DB: D1Database;
   Bindings: {
+    DB: D1Database;
     AGORA_ENV: string;
     GITHUB_CLIENT_ID: string;
     GITHUB_CLIENT_SECRET: string;
@@ -23,17 +23,22 @@ type AuthUser = {
 };
 
 app.use('*', logger());
-app.use('*', cors({
-  origin: '*',
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  '*',
+  cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization']
+  })
+);
 
-app.get('/', (c) => c.json({
-  name: 'Agora API',
-  version: '1.0.0',
-  status: 'running'
-}));
+app.get('/', (c) =>
+  c.json({
+    name: 'Agora API',
+    version: '1.0.0',
+    status: 'running'
+  })
+);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
@@ -41,17 +46,17 @@ app.get('/health', (c) => c.json({ status: 'ok' }));
 app.get('/auth/github', async (c) => {
   const clientId = c.env.GITHUB_CLIENT_ID;
   const redirectUri = c.req.query('redirect') || 'http://localhost:8787/auth/callback';
-  
+
   const state = crypto.randomUUID();
   const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user&state=${state}`;
-  
-  c.cookie('oauth_state', state, {
+
+  setCookie(c, 'oauth_state', state, {
     httpOnly: true,
     secure: c.env.AGORA_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 600,
+    sameSite: 'Lax',
+    maxAge: 600
   });
-  
+
   return c.redirect(url);
 });
 
@@ -59,65 +64,78 @@ app.get('/auth/callback', async (c) => {
   const code = c.req.query('code');
   const state = c.req.query('state');
   const cookieState = getCookie(c, 'oauth_state');
-  
+
   if (!code || !state || state !== cookieState) {
     return c.json({ error: 'Invalid state or code' }, 400);
   }
-  
+
   const clientId = c.env.GITHUB_CLIENT_ID;
   const clientSecret = c.env.GITHUB_CLIENT_SECRET;
-  
+
   try {
     const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
+        Accept: 'application/json'
       },
       body: JSON.stringify({
         client_id: clientId,
         client_secret: clientSecret,
-        code,
-      }),
+        code
+      })
     });
-    
-    const tokenData = await tokenRes.json() as any;
-    
+
+    const tokenData = (await tokenRes.json()) as any;
+
     if (tokenData.error) {
       return c.json({ error: tokenData.error_description }, 400);
     }
-    
+
     const accessToken = tokenData.access_token;
-    
+
     const userRes = await fetch('https://api.github.com/user', {
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/vnd.github.v3+json',
-      },
+        Authorization: `Bearer ${accessToken}`,
+        Accept: 'application/vnd.github.v3+json'
+      }
     });
-    
-    const userData = await userRes.json() as any;
-    
+
+    const userData = (await userRes.json()) as any;
+
     const username = userData.login;
     const githubId = String(userData.id);
     const avatarUrl = userData.avatar_url;
     const now = new Date().toISOString();
-    
-    await c.env.DB.prepare(`
+
+    await c.env.DB.prepare(
+      `
       INSERT INTO users (id, username, display_name, avatar_url, github_id, github_access_token, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(github_id) DO UPDATE SET
         github_access_token = excluded.github_access_token,
         updated_at = excluded.updated_at
-    `).bind(githubId, username, userData.name || username, avatarUrl, githubId, accessToken, now, now).run();
-    
+    `
+    )
+      .bind(
+        githubId,
+        username,
+        userData.name || username,
+        avatarUrl,
+        githubId,
+        accessToken,
+        now,
+        now
+      )
+      .run();
+
     setCookie(c, 'agora_token', accessToken, {
       httpOnly: true,
       secure: c.env.AGORA_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: 60 * 60 * 24 * 30
     });
-    
+
     return c.redirect('/');
   } catch (e) {
     return c.json({ error: String(e) }, 500);
@@ -125,7 +143,7 @@ app.get('/auth/callback', async (c) => {
 });
 
 app.post('/auth/logout', (c) => {
-  c.deleteCookie('agora_token');
+  deleteCookie(c, 'agora_token');
   return c.json({ success: true });
 });
 
@@ -138,9 +156,11 @@ async function requireUser(c: any): Promise<AuthUser | Response> {
     return c.json({ error: 'Authentication required' }, 401);
   }
 
-  const existing = await c.env.DB.prepare(
+  const existing = (await c.env.DB.prepare(
     'SELECT id, username, display_name, avatar_url FROM users WHERE github_access_token = ?'
-  ).bind(token).first() as any;
+  )
+    .bind(token)
+    .first()) as any;
 
   if (existing) {
     return {
@@ -157,7 +177,8 @@ async function requireUser(c: any): Promise<AuthUser | Response> {
   }
 
   const now = new Date().toISOString();
-  await c.env.DB.prepare(`
+  await c.env.DB.prepare(
+    `
     INSERT INTO users (id, username, display_name, avatar_url, github_id, github_access_token, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(github_id) DO UPDATE SET
@@ -166,16 +187,19 @@ async function requireUser(c: any): Promise<AuthUser | Response> {
       avatar_url = excluded.avatar_url,
       github_access_token = excluded.github_access_token,
       updated_at = excluded.updated_at
-  `).bind(
-    String(githubUser.id),
-    githubUser.login,
-    githubUser.name || githubUser.login,
-    githubUser.avatar_url,
-    String(githubUser.id),
-    token,
-    now,
-    now
-  ).run();
+  `
+  )
+    .bind(
+      String(githubUser.id),
+      githubUser.login,
+      githubUser.name || githubUser.login,
+      githubUser.avatar_url,
+      String(githubUser.id),
+      token,
+      now,
+      now
+    )
+    .run();
 
   return {
     id: String(githubUser.id),
@@ -189,8 +213,8 @@ async function fetchGitHubUser(token: string): Promise<any | null> {
   try {
     const res = await fetch('https://api.github.com/user', {
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Accept': 'application/vnd.github.v3+json',
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github.v3+json',
         'User-Agent': 'agora-cli'
       }
     });
@@ -228,17 +252,26 @@ function normalizeTags(tags: unknown): string {
     } catch {
       // Fall back to comma-separated tags.
     }
-    return JSON.stringify(trimmed.split(',').map((tag) => tag.trim()).filter(Boolean));
+    return JSON.stringify(
+      trimmed
+        .split(',')
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    );
   }
   return JSON.stringify([]);
 }
 
 function normalizePackageCategory(category: unknown): string {
-  return category === 'prompt' || category === 'workflow' || category === 'skill' ? category : 'mcp';
+  return category === 'prompt' || category === 'workflow' || category === 'skill'
+    ? category
+    : 'mcp';
 }
 
 function normalizeDiscussionCategory(category: unknown): string {
-  return category === 'question' || category === 'idea' || category === 'showcase' ? category : 'discussion';
+  return category === 'question' || category === 'idea' || category === 'showcase'
+    ? category
+    : 'discussion';
 }
 
 // Packages
@@ -246,11 +279,11 @@ app.get('/api/packages', async (c) => {
   const search = c.req.query('q');
   const category = c.req.query('category');
   const limit = c.req.query('limit') || '20';
-  
+
   let query = 'SELECT * FROM packages';
   const params: any[] = [];
   const conditions: string[] = [];
-  
+
   if (search) {
     conditions.push('(name LIKE ? OR description LIKE ?)');
     params.push(`%${search}%`, `%${search}%`);
@@ -259,15 +292,17 @@ app.get('/api/packages', async (c) => {
     conditions.push('category = ?');
     params.push(category);
   }
-  
+
   if (conditions.length > 0) {
     query += ' WHERE ' + conditions.join(' AND ');
   }
   query += ' ORDER BY stars DESC LIMIT ?';
   params.push(parseInt(limit));
-  
+
   try {
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
+    const { results } = await c.env.DB.prepare(query)
+      .bind(...params)
+      .all();
     return c.json({ packages: results || [] });
   } catch (e) {
     return c.json({ error: 'Database error', details: String(e) }, 500);
@@ -278,7 +313,7 @@ app.post('/api/packages', async (c) => {
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
-  const body = await c.req.json() as any;
+  const body = (await c.req.json()) as any;
   const name = String(body.name || '').trim();
   const description = String(body.description || '').trim();
   const id = String(body.id || slugify(name)).trim();
@@ -286,7 +321,8 @@ app.post('/api/packages', async (c) => {
   const category = normalizePackageCategory(body.category);
   const tags = normalizeTags(body.tags);
   const repository = body.repository ? String(body.repository).trim() : null;
-  const npmPackage = body.npmPackage || body.npm_package ? String(body.npmPackage || body.npm_package).trim() : null;
+  const npmPackage =
+    body.npmPackage || body.npm_package ? String(body.npmPackage || body.npm_package).trim() : null;
   const now = new Date().toISOString();
 
   if (!id || !name || !description) {
@@ -298,15 +334,16 @@ app.post('/api/packages', async (c) => {
   }
 
   try {
-    const existing = await c.env.DB.prepare(
-      'SELECT id, author FROM packages WHERE id = ?'
-    ).bind(id).first() as any;
+    const existing = (await c.env.DB.prepare('SELECT id, author FROM packages WHERE id = ?')
+      .bind(id)
+      .first()) as any;
 
     if (existing && existing.author !== user.username) {
       return c.json({ error: 'Package id is owned by another user' }, 403);
     }
 
-    await c.env.DB.prepare(`
+    await c.env.DB.prepare(
+      `
       INSERT INTO packages (id, name, description, author, version, category, tags, repository, npm_package, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -318,11 +355,24 @@ app.post('/api/packages', async (c) => {
         repository = excluded.repository,
         npm_package = excluded.npm_package,
         updated_at = excluded.updated_at
-    `).bind(id, name, description, user.username, version, category, tags, repository, npmPackage, now, now).run();
+    `
+    )
+      .bind(
+        id,
+        name,
+        description,
+        user.username,
+        version,
+        category,
+        tags,
+        repository,
+        npmPackage,
+        now,
+        now
+      )
+      .run();
 
-    const pkg = await c.env.DB.prepare(
-      'SELECT * FROM packages WHERE id = ?'
-    ).bind(id).first();
+    const pkg = await c.env.DB.prepare('SELECT * FROM packages WHERE id = ?').bind(id).first();
 
     return c.json({ package: pkg, created: !existing });
   } catch (e) {
@@ -332,12 +382,12 @@ app.post('/api/packages', async (c) => {
 
 app.get('/api/packages/:id', async (c) => {
   const id = c.req.param('id');
-  
+
   try {
-    const pkg = await c.env.DB.prepare(
-      'SELECT * FROM packages WHERE id = ? OR name = ?'
-    ).bind(id, id).first();
-    
+    const pkg = await c.env.DB.prepare('SELECT * FROM packages WHERE id = ? OR name = ?')
+      .bind(id, id)
+      .first();
+
     if (!pkg) {
       return c.json({ error: 'Package not found' }, 404);
     }
@@ -351,19 +401,21 @@ app.get('/api/packages/:id', async (c) => {
 app.get('/api/workflows', async (c) => {
   const search = c.req.query('q');
   const limit = c.req.query('limit') || '20';
-  
+
   let query = 'SELECT * FROM workflows';
   const params: any[] = [];
-  
+
   if (search) {
     query += ' WHERE name LIKE ? OR description LIKE ?';
     params.push(`%${search}%`, `%${search}%`);
   }
   query += ' ORDER BY stars DESC LIMIT ?';
   params.push(parseInt(limit));
-  
+
   try {
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
+    const { results } = await c.env.DB.prepare(query)
+      .bind(...params)
+      .all();
     return c.json({ workflows: results || [] });
   } catch (e) {
     return c.json({ error: String(e) }, 500);
@@ -374,7 +426,7 @@ app.post('/api/workflows', async (c) => {
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
-  const body = await c.req.json() as any;
+  const body = (await c.req.json()) as any;
   const name = String(body.name || '').trim();
   const description = String(body.description || '').trim();
   const prompt = String(body.prompt || '').trim();
@@ -388,15 +440,16 @@ app.post('/api/workflows', async (c) => {
   }
 
   try {
-    const existing = await c.env.DB.prepare(
-      'SELECT id, author FROM workflows WHERE id = ?'
-    ).bind(id).first() as any;
+    const existing = (await c.env.DB.prepare('SELECT id, author FROM workflows WHERE id = ?')
+      .bind(id)
+      .first()) as any;
 
     if (existing && existing.author !== user.username) {
       return c.json({ error: 'Workflow id is owned by another user' }, 403);
     }
 
-    await c.env.DB.prepare(`
+    await c.env.DB.prepare(
+      `
       INSERT INTO workflows (id, name, description, author, prompt, model, tags, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -406,11 +459,14 @@ app.post('/api/workflows', async (c) => {
         model = excluded.model,
         tags = excluded.tags,
         updated_at = excluded.updated_at
-    `).bind(id, name, description, user.username, prompt, model, tags, now, now).run();
+    `
+    )
+      .bind(id, name, description, user.username, prompt, model, tags, now, now)
+      .run();
 
-    const workflow = await c.env.DB.prepare(
-      'SELECT * FROM workflows WHERE id = ?'
-    ).bind(id).first();
+    const workflow = await c.env.DB.prepare('SELECT * FROM workflows WHERE id = ?')
+      .bind(id)
+      .first();
 
     return c.json({ workflow, created: !existing });
   } catch (e) {
@@ -420,12 +476,12 @@ app.post('/api/workflows', async (c) => {
 
 app.get('/api/workflows/:id', async (c) => {
   const id = c.req.param('id');
-  
+
   try {
-    const workflow = await c.env.DB.prepare(
-      'SELECT * FROM workflows WHERE id = ?'
-    ).bind(id).first();
-    
+    const workflow = await c.env.DB.prepare('SELECT * FROM workflows WHERE id = ?')
+      .bind(id)
+      .first();
+
     if (!workflow) {
       return c.json({ error: 'Workflow not found' }, 404);
     }
@@ -439,19 +495,21 @@ app.get('/api/workflows/:id', async (c) => {
 app.get('/api/discussions', async (c) => {
   const category = c.req.query('category');
   const limit = c.req.query('limit') || '20';
-  
+
   let query = 'SELECT * FROM discussions';
   const params: any[] = [];
-  
+
   if (category) {
     query += ' WHERE category = ?';
     params.push(category);
   }
   query += ' ORDER BY created_at DESC LIMIT ?';
   params.push(parseInt(limit));
-  
+
   try {
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
+    const { results } = await c.env.DB.prepare(query)
+      .bind(...params)
+      .all();
     return c.json({ discussions: results || [] });
   } catch (e) {
     return c.json({ error: String(e) }, 500);
@@ -462,7 +520,7 @@ app.post('/api/discussions', async (c) => {
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
-  const body = await c.req.json() as any;
+  const body = (await c.req.json()) as any;
   const title = String(body.title || '').trim();
   const content = String(body.content || '').trim();
   const category = normalizeDiscussionCategory(body.category);
@@ -470,15 +528,19 @@ app.post('/api/discussions', async (c) => {
   if (!title || !content) {
     return c.json({ error: 'title and content are required' }, 400);
   }
-  
+
   const id = `disc-${crypto.randomUUID()}`;
   const createdAt = new Date().toISOString();
-  
+
   try {
-    await c.env.DB.prepare(`
+    await c.env.DB.prepare(
+      `
       INSERT INTO discussions (id, title, content, category, author, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).bind(id, title, content, category, user.username, createdAt, createdAt).run();
+    `
+    )
+      .bind(id, title, content, category, user.username, createdAt, createdAt)
+      .run();
 
     return c.json({
       discussion: {
@@ -523,7 +585,9 @@ app.get('/api/reviews', async (c) => {
   params.push(parseInt(limit));
 
   try {
-    const { results } = await c.env.DB.prepare(query).bind(...params).all();
+    const { results } = await c.env.DB.prepare(query)
+      .bind(...params)
+      .all();
     return c.json({ reviews: results || [] });
   } catch (e) {
     return c.json({ error: String(e) }, 500);
@@ -534,7 +598,7 @@ app.post('/api/reviews', async (c) => {
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
-  const body = await c.req.json() as any;
+  const body = (await c.req.json()) as any;
   const itemId = String(body.itemId || body.item_id || '').trim();
   const itemType = String(body.itemType || body.item_type || 'package').trim();
   const rating = Number(body.rating);
@@ -552,14 +616,16 @@ app.post('/api/reviews', async (c) => {
   const now = new Date().toISOString();
 
   try {
-    await c.env.DB.prepare(`
+    await c.env.DB.prepare(
+      `
       INSERT INTO reviews (id, item_id, item_type, author, rating, content, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).bind(id, itemId, itemType, user.username, rating, content, now).run();
+    `
+    )
+      .bind(id, itemId, itemType, user.username, rating, content, now)
+      .run();
 
-    const review = await c.env.DB.prepare(
-      'SELECT * FROM reviews WHERE id = ?'
-    ).bind(id).first();
+    const review = await c.env.DB.prepare('SELECT * FROM reviews WHERE id = ?').bind(id).first();
 
     return c.json({ review });
   } catch (e) {
@@ -570,9 +636,7 @@ app.post('/api/reviews', async (c) => {
 // Tutorials
 app.get('/api/tutorials', async (c) => {
   try {
-    const { results } = await c.env.DB.prepare(
-      'SELECT * FROM tutorials ORDER BY id'
-    ).all();
+    const { results } = await c.env.DB.prepare('SELECT * FROM tutorials ORDER BY id').all();
     return c.json({ tutorials: results || [] });
   } catch (e) {
     return c.json({ error: String(e) }, 500);
@@ -582,27 +646,37 @@ app.get('/api/tutorials', async (c) => {
 // Users
 app.get('/api/users/:username', async (c) => {
   const username = c.req.param('username');
-  
+
   try {
-    const user = await c.env.DB.prepare(`
+    const user = (await c.env.DB.prepare(
+      `
       SELECT id, username, display_name, bio, avatar_url, created_at
       FROM users
       WHERE username = ?
-    `).bind(username).first() as any;
-    
+    `
+    )
+      .bind(username)
+      .first()) as any;
+
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
     }
 
-    const packageCount = await c.env.DB.prepare(
+    const packageCount = (await c.env.DB.prepare(
       'SELECT COUNT(*) AS count FROM packages WHERE author = ?'
-    ).bind(user.username).first() as any;
-    const workflowCount = await c.env.DB.prepare(
+    )
+      .bind(user.username)
+      .first()) as any;
+    const workflowCount = (await c.env.DB.prepare(
       'SELECT COUNT(*) AS count FROM workflows WHERE author = ?'
-    ).bind(user.username).first() as any;
-    const discussionCount = await c.env.DB.prepare(
+    )
+      .bind(user.username)
+      .first()) as any;
+    const discussionCount = (await c.env.DB.prepare(
       'SELECT COUNT(*) AS count FROM discussions WHERE author = ?'
-    ).bind(user.username).first() as any;
+    )
+      .bind(user.username)
+      .first()) as any;
 
     return c.json({
       user: {
@@ -628,11 +702,11 @@ app.get('/api/trending', async (c) => {
     const topPackages = await c.env.DB.prepare(
       'SELECT * FROM packages ORDER BY stars DESC LIMIT 5'
     ).all();
-    
+
     const topWorkflows = await c.env.DB.prepare(
       'SELECT * FROM workflows ORDER BY stars DESC LIMIT 5'
     ).all();
-    
+
     return c.json({
       packages: topPackages.results || [],
       workflows: topWorkflows.results || []
@@ -646,24 +720,30 @@ app.get('/api/trending', async (c) => {
 app.get('/api/search', async (c) => {
   const q = c.req.query('q');
   const type = c.req.query('type') || 'all';
-  
+
   if (!q) {
     return c.json({ error: 'Query required' }, 400);
   }
-  
+
   try {
-    const packages = type === 'all' || type === 'packages' 
-      ? await c.env.DB.prepare(
-          'SELECT * FROM packages WHERE name LIKE ? OR description LIKE ? LIMIT 10'
-        ).bind(`%${q}%`, `%${q}%`).all()
-      : { results: [] };
-    
-    const workflows = type === 'all' || type === 'workflows'
-      ? await c.env.DB.prepare(
-          'SELECT * FROM workflows WHERE name LIKE ? OR description LIKE ? LIMIT 10'
-        ).bind(`%${q}%`, `%${q}%`).all()
-      : { results: [] };
-    
+    const packages =
+      type === 'all' || type === 'packages'
+        ? await c.env.DB.prepare(
+            'SELECT * FROM packages WHERE name LIKE ? OR description LIKE ? LIMIT 10'
+          )
+            .bind(`%${q}%`, `%${q}%`)
+            .all()
+        : { results: [] };
+
+    const workflows =
+      type === 'all' || type === 'workflows'
+        ? await c.env.DB.prepare(
+            'SELECT * FROM workflows WHERE name LIKE ? OR description LIKE ? LIMIT 10'
+          )
+            .bind(`%${q}%`, `%${q}%`)
+            .all()
+        : { results: [] };
+
     return c.json({
       query: q,
       packages: packages.results || [],
@@ -682,19 +762,19 @@ import { fetchGitHubRepo, getGitHubReleases } from './services/github';
 app.get('/api/aggregate/packages', async (c) => {
   const query = c.req.query('q');
   const limit = parseInt(c.req.query('limit') || '20');
-  
+
   if (!query) {
     return c.json({ error: 'Query required' }, 400);
   }
-  
+
   try {
     const npmResults = await searchNpmPackages(query, limit);
     const mcpPackages = npmResults.filter(isMcpServer);
-    
+
     return c.json({
       query,
       npm: npmResults,
-      mcp: mcpPackages,
+      mcp: mcpPackages
     });
   } catch (e) {
     return c.json({ error: String(e) }, 500);
@@ -704,26 +784,26 @@ app.get('/api/aggregate/packages', async (c) => {
 app.get('/api/aggregate/mcp/:name', async (c) => {
   const name = c.req.param('name');
   const npmData = await fetchNpmPackage(name);
-  
+
   return c.json({
     npm: npmData,
-    isMcp: npmData ? isMcpServer(npmData) : false,
+    isMcp: npmData ? isMcpServer(npmData) : false
   });
 });
 
 app.get('/api/aggregate/github/:owner/:repo', async (c) => {
   const owner = c.req.param('owner');
   const repo = c.req.param('repo');
-  
+
   const repoData = await fetchGitHubRepo(owner, repo);
   const releases = await getGitHubReleases(owner, repo);
   const topics = repoData?.topics || [];
-  
+
   return c.json({
     repo: repoData,
     releases,
     topics,
-    likelyMcp: topics.includes('mcp') || topics.includes('mcp-server'),
+    likelyMcp: topics.includes('mcp') || topics.includes('mcp-server')
   });
 });
 

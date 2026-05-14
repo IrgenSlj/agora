@@ -2,11 +2,14 @@ import type { Package, Workflow } from './types.js';
 
 export interface OpenCodeConfig {
   $schema?: string;
-  mcpServers?: Record<string, {
-    command: string;
-    args?: string[];
-    env?: Record<string, string>;
-  }>;
+  mcpServers?: Record<
+    string,
+    {
+      command: string;
+      args?: string[];
+      env?: Record<string, string>;
+    }
+  >;
   plugins?: string[];
 }
 
@@ -43,7 +46,7 @@ export function generateWorkflowConfig(
   existingConfig: OpenCodeConfig = {}
 ): OpenCodeConfig {
   const skillName = wf.id.replace('wf-', 'skill-');
-  
+
   return {
     $schema: 'https://opencode.ai/config.json',
     mcpServers: existingConfig.mcpServers || {},
@@ -65,7 +68,7 @@ export function parseOpenCodeConfig(content: string): OpenCodeConfig | null {
 
 export function extractPackageFromConfig(config: OpenCodeConfig): string[] {
   const packages: string[] = [];
-  
+
   if (config.mcpServers) {
     for (const [_name, server] of Object.entries(config.mcpServers)) {
       if (server.args?.[0]?.startsWith('@')) {
@@ -73,7 +76,7 @@ export function extractPackageFromConfig(config: OpenCodeConfig): string[] {
       }
     }
   }
-  
+
   return packages;
 }
 
@@ -81,7 +84,7 @@ export function validatePackageName(name: string): { valid: boolean; error?: str
   if (!name) {
     return { valid: false, error: 'Package name is required' };
   }
-  
+
   if (name.startsWith('@')) {
     const scoped = name.split('/');
     if (scoped.length !== 2) {
@@ -90,19 +93,19 @@ export function validatePackageName(name: string): { valid: boolean; error?: str
   } else if (!/^[a-zA-Z0-9-_]+$/.test(name)) {
     return { valid: false, error: 'Package name contains invalid characters' };
   }
-  
+
   return { valid: true };
 }
 
 export function getInstallInstructions(pkg: Package): string[] {
   const instructions: string[] = [];
-  
+
   if (pkg.npmPackage) {
     instructions.push(`npm install -g ${pkg.npmPackage}`);
   }
-  
+
   const config = generateMcpConfig(pkg);
   instructions.push(`\nAdd to opencode.json:\n${formatConfigJson(config)}`);
-  
+
   return instructions;
 }

@@ -72,7 +72,16 @@ export interface ParsedArgs {
   flags: Record<string, string | boolean>;
 }
 
-const booleanFlags = new Set(['api', 'help', 'json', 'live', 'offline', 'version', 'verbose', 'write']);
+const booleanFlags = new Set([
+  'api',
+  'help',
+  'json',
+  'live',
+  'offline',
+  'version',
+  'verbose',
+  'write'
+]);
 
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
@@ -195,12 +204,20 @@ async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const query = parsed.args.join(' ');
   const category = stringFlag(parsed, 'category', 'c') || 'all';
   const limit = numberFlag(parsed, 'limit', 'n') || 10;
-  const result = await searchMarketplaceSource({ ...sourceOptions(parsed, io), query, category, limit });
+  const result = await searchMarketplaceSource({
+    ...sourceOptions(parsed, io),
+    query,
+    category,
+    limit
+  });
   const results = result.data;
   warnFallback(result, io);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, sourcePayload(result, { query, category, count: results.length, items: results }));
+    writeJson(
+      io.stdout,
+      sourcePayload(result, { query, category, count: results.length, items: results })
+    );
     return 0;
   }
 
@@ -209,9 +226,10 @@ async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  const sourceLabel = result.source === 'offline'
-    ? `source: offline, refreshed ${dataRefreshedAt}`
-    : `source: ${result.source}`;
+  const sourceLabel =
+    result.source === 'offline'
+      ? `source: offline, refreshed ${dataRefreshedAt}`
+      : `source: ${result.source}`;
   writeLine(io.stdout, `Agora search: ${query || 'all'} (${results.length} shown, ${sourceLabel})`);
   writeLine(io.stdout, formatItemList(results));
   return 0;
@@ -221,7 +239,11 @@ async function commandBrowse(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'browse requires an item id');
 
-  const result = await findMarketplaceSource({ ...sourceOptions(parsed, io), id, type: stringFlag(parsed, 'type', 't') });
+  const result = await findMarketplaceSource({
+    ...sourceOptions(parsed, io),
+    id,
+    type: stringFlag(parsed, 'type', 't')
+  });
   const item = result.data;
   warnFallback(result, io);
   if (!item) return usageError(io, `Item not found: ${id}`);
@@ -243,7 +265,10 @@ async function commandTrending(parsed: ParsedArgs, io: CliIo): Promise<number> {
   warnFallback(result, io);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, sourcePayload(result, { category, count: items.length, tags: getTrendingTags(), items }));
+    writeJson(
+      io.stdout,
+      sourcePayload(result, { category, count: items.length, tags: getTrendingTags(), items })
+    );
     return 0;
   }
 
@@ -256,7 +281,12 @@ async function commandTrending(parsed: ParsedArgs, io: CliIo): Promise<number> {
 async function commandWorkflows(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const query = parsed.args.join(' ');
   const limit = numberFlag(parsed, 'limit', 'n') || 10;
-  const result = await searchMarketplaceSource({ ...sourceOptions(parsed, io), query, category: 'workflow', limit });
+  const result = await searchMarketplaceSource({
+    ...sourceOptions(parsed, io),
+    query,
+    category: 'workflow',
+    limit
+  });
   const workflows = result.data.filter((item) => item.kind === 'workflow');
   warnFallback(result, io);
 
@@ -276,12 +306,20 @@ async function commandTutorials(parsed: ParsedArgs, io: CliIo): Promise<number> 
   if (!level.ok) return usageError(io, level.error);
 
   const limit = numberFlag(parsed, 'limit', 'n') || 20;
-  const result = await tutorialsSource({ ...sourceOptions(parsed, io), query, level: level.value, limit });
+  const result = await tutorialsSource({
+    ...sourceOptions(parsed, io),
+    query,
+    level: level.value,
+    limit
+  });
   const tutorials = result.data;
   warnFallback(result, io);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, sourcePayload(result, { query, level: level.value, count: tutorials.length, tutorials }));
+    writeJson(
+      io.stdout,
+      sourcePayload(result, { query, level: level.value, count: tutorials.length, tutorials })
+    );
     return 0;
   }
 
@@ -308,10 +346,13 @@ async function commandTutorial(parsed: ParsedArgs, io: CliIo): Promise<number> {
   if (!tutorial) return usageError(io, `Tutorial not found: ${id}`);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, sourcePayload(result, {
-      tutorial,
-      step: tutorialStepPayload(tutorial, step.value)
-    }));
+    writeJson(
+      io.stdout,
+      sourcePayload(result, {
+        tutorial,
+        step: tutorialStepPayload(tutorial, step.value)
+      })
+    );
     return 0;
   }
 
@@ -327,7 +368,10 @@ async function commandDiscussions(parsed: ParsedArgs, io: CliIo): Promise<number
   warnFallback(result, io);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, sourcePayload(result, { category, query, count: discussions.length, discussions }));
+    writeJson(
+      io.stdout,
+      sourcePayload(result, { category, query, count: discussions.length, discussions })
+    );
     return 0;
   }
 
@@ -337,13 +381,18 @@ async function commandDiscussions(parsed: ParsedArgs, io: CliIo): Promise<number
   }
 
   writeLine(io.stdout, `Agora discussions (${discussions.length}, source: ${result.source})`);
-  writeLine(io.stdout, discussions.map((discussion, index) => {
-    return [
-      `${index + 1}. ${discussion.title} [${discussion.category}]`,
-      `   ${truncate(discussion.content, 88)}`,
-      `   replies ${discussion.replies} | stars ${discussion.stars} | by ${discussion.author}`
-    ].join('\n');
-  }).join('\n\n'));
+  writeLine(
+    io.stdout,
+    discussions
+      .map((discussion, index) => {
+        return [
+          `${index + 1}. ${discussion.title} [${discussion.category}]`,
+          `   ${truncate(discussion.content, 88)}`,
+          `   replies ${discussion.replies} | stars ${discussion.stars} | by ${discussion.author}`
+        ].join('\n');
+      })
+      .join('\n\n')
+  );
   return 0;
 }
 
@@ -380,7 +429,11 @@ async function commandInstall(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'install requires an item id');
 
-  const source = await findMarketplaceSource({ ...sourceOptions(parsed, io), id, type: stringFlag(parsed, 'type', 't') });
+  const source = await findMarketplaceSource({
+    ...sourceOptions(parsed, io),
+    id,
+    type: stringFlag(parsed, 'type', 't')
+  });
   const item = source.data;
   warnFallback(source, io);
   if (!item) return usageError(io, `Item not found: ${id}`);
@@ -473,7 +526,8 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
     writeLine(io.stdout, '\n✓ Agora initialized! Restart OpenCode to pick up the changes.');
     writeLine(io.stdout, '  Plugin "opencode-agora" is now registered in your config.');
     writeLine(io.stdout, `  ${plan.servers.length} MCP servers configured.`);
-    if (plan.workflows.length) writeLine(io.stdout, `  ${plan.workflows.length} workflows available via \`agora use\`.`);
+    if (plan.workflows.length)
+      writeLine(io.stdout, `  ${plan.workflows.length} workflows available via \`agora use\`.`);
     for (const note of plan.notes) writeLine(io.stdout, `  ${note}`);
   } else {
     writeLine(io.stdout, '\n--- Dry run ---');
@@ -490,8 +544,14 @@ async function commandUse(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'use requires a workflow id');
 
-  const workflow = sampleWorkflows.find((w) => w.id === id || w.name.toLowerCase() === id.toLowerCase());
-  if (!workflow) return usageError(io, `Workflow not found: ${id}. Run \`agora workflows\` to see available workflows.`);
+  const workflow = sampleWorkflows.find(
+    (w) => w.id === id || w.name.toLowerCase() === id.toLowerCase()
+  );
+  if (!workflow)
+    return usageError(
+      io,
+      `Workflow not found: ${id}. Run \`agora workflows\` to see available workflows.`
+    );
 
   const cwd = io.cwd || process.cwd();
   const skillsDir = join(cwd, '.opencode', 'skills');
@@ -518,7 +578,7 @@ ${workflow.prompt}
 
   const updatedConfig = {
     ...loaded.config,
-    plugins: Array.from(plugins),
+    plugins: Array.from(plugins)
   };
   writeOpenCodeConfig(configPath, updatedConfig);
 
@@ -575,7 +635,8 @@ function commandAuth(parsed: ParsedArgs, io: CliIo): number {
       return usageError(io, 'auth login requires --token, AGORA_TOKEN, or AGORA_API_TOKEN');
     }
 
-    const apiUrl = stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
+    const apiUrl =
+      stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
     const nextState = setAuthState(state, { token, apiUrl });
     const auth = getAuthState(nextState);
     writeAgoraState(dataDir, nextState);
@@ -636,7 +697,11 @@ async function commandSave(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'save requires an item id');
 
-  const source = await findMarketplaceSource({ ...sourceOptions(parsed, io), id, type: stringFlag(parsed, 'type', 't') });
+  const source = await findMarketplaceSource({
+    ...sourceOptions(parsed, io),
+    id,
+    type: stringFlag(parsed, 'type', 't')
+  });
   const item = source.data;
   warnFallback(source, io);
   if (!item) return usageError(io, `Item not found: ${id}`);
@@ -697,9 +762,10 @@ function commandRemove(parsed: ParsedArgs, io: CliIo): number {
 
   const dataDir = detectDataDir(parsed, io);
   const state = loadAgoraState(dataDir);
-  const targetId = resolveSavedItems(state).find((entry) => {
-    return entry.saved.id === id || entry.item?.id === id || entry.item?.name === id;
-  })?.saved.id || id;
+  const targetId =
+    resolveSavedItems(state).find((entry) => {
+      return entry.saved.id === id || entry.item?.id === id || entry.item?.name === id;
+    })?.saved.id || id;
   const result = removeItemFromState(state, targetId);
   writeAgoraState(dataDir, result.state);
 
@@ -828,7 +894,10 @@ async function commandReviews(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const result = await listReviewsSource(source.options, itemId, stringFlag(parsed, 'type', 't'));
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, sourcePayload(result, { count: result.data.length, reviews: result.data }));
+    writeJson(
+      io.stdout,
+      sourcePayload(result, { count: result.data.length, reviews: result.data })
+    );
     return 0;
   }
 
@@ -862,15 +931,17 @@ async function commandProfile(parsed: ParsedArgs, io: CliIo): Promise<number> {
 }
 
 function formatItemList(items: MarketplaceItem[]): string {
-  return items.map((item, index) => {
-    const installs = item.kind === 'package' ? ` | installs ${formatCount(item.installs)}` : '';
-    return [
-      `${index + 1}. ${item.id} [${item.category}]`,
-      `   ${item.name}`,
-      `   ${truncate(item.description, 88)}`,
-      `   stars ${formatCount(item.stars)}${installs} | by ${item.author}`
-    ].join('\n');
-  }).join('\n\n');
+  return items
+    .map((item, index) => {
+      const installs = item.kind === 'package' ? ` | installs ${formatCount(item.installs)}` : '';
+      return [
+        `${index + 1}. ${item.id} [${item.category}]`,
+        `   ${item.name}`,
+        `   ${truncate(item.description, 88)}`,
+        `   stars ${formatCount(item.stars)}${installs} | by ${item.author}`
+      ].join('\n');
+    })
+    .join('\n\n');
 }
 
 function formatItemDetail(item: MarketplaceItem): string {
@@ -905,31 +976,35 @@ function formatItemDetail(item: MarketplaceItem): string {
 }
 
 function formatSavedList(items: ResolvedSavedItem[]): string {
-  return items.map((entry, index) => {
-    if (!entry.item) {
+  return items
+    .map((entry, index) => {
+      if (!entry.item) {
+        return [
+          `${index + 1}. ${entry.saved.id} [missing]`,
+          `   saved ${formatDate(entry.saved.savedAt)}`
+        ].join('\n');
+      }
+
       return [
-        `${index + 1}. ${entry.saved.id} [missing]`,
+        `${index + 1}. ${entry.item.id} [${entry.item.category}]`,
+        `   ${entry.item.name}`,
+        `   ${truncate(entry.item.description, 88)}`,
         `   saved ${formatDate(entry.saved.savedAt)}`
       ].join('\n');
-    }
-
-    return [
-      `${index + 1}. ${entry.item.id} [${entry.item.category}]`,
-      `   ${entry.item.name}`,
-      `   ${truncate(entry.item.description, 88)}`,
-      `   saved ${formatDate(entry.saved.savedAt)}`
-    ].join('\n');
-  }).join('\n\n');
+    })
+    .join('\n\n');
 }
 
 function formatReviewList(reviews: ApiReview[]): string {
-  return reviews.map((review, index) => {
-    return [
-      `${index + 1}. ${review.itemId} [${review.itemType}]`,
-      `   rating ${review.rating}/5 by ${review.author}`,
-      `   ${truncate(review.content, 88)}`
-    ].join('\n');
-  }).join('\n\n');
+  return reviews
+    .map((review, index) => {
+      return [
+        `${index + 1}. ${review.itemId} [${review.itemType}]`,
+        `   rating ${review.rating}/5 by ${review.author}`,
+        `   ${truncate(review.content, 88)}`
+      ].join('\n');
+    })
+    .join('\n\n');
 }
 
 function formatProfileDetail(profile: ApiProfile): string {
@@ -949,14 +1024,16 @@ function formatProfileDetail(profile: ApiProfile): string {
 }
 
 function formatTutorialList(tutorials: Tutorial[]): string {
-  return tutorials.map((tutorial, index) => {
-    return [
-      `${index + 1}. ${tutorial.id} [${tutorial.level}]`,
-      `   ${tutorial.title}`,
-      `   ${truncate(tutorial.description, 88)}`,
-      `   ${tutorial.duration} | ${tutorial.steps.length} steps`
-    ].join('\n');
-  }).join('\n\n');
+  return tutorials
+    .map((tutorial, index) => {
+      return [
+        `${index + 1}. ${tutorial.id} [${tutorial.level}]`,
+        `   ${tutorial.title}`,
+        `   ${truncate(tutorial.description, 88)}`,
+        `   ${tutorial.duration} | ${tutorial.steps.length} steps`
+      ].join('\n');
+    })
+    .join('\n\n');
 }
 
 function formatTutorialStep(tutorial: Tutorial, stepNumber: number): string {
@@ -1055,7 +1132,11 @@ function stringFlag(parsed: ParsedArgs, longName: string, shortName?: string): s
   return typeof value === 'string' ? value : undefined;
 }
 
-function requiredStringFlag(parsed: ParsedArgs, longName: string, shortName?: string): string | undefined {
+function requiredStringFlag(
+  parsed: ParsedArgs,
+  longName: string,
+  shortName?: string
+): string | undefined {
   const value = stringFlag(parsed, longName, shortName);
   return value?.trim() || undefined;
 }
@@ -1068,9 +1149,11 @@ function numberFlag(parsed: ParsedArgs, longName: string, shortName?: string): n
 }
 
 function authTokenInput(parsed: ParsedArgs, io: CliIo): string | undefined {
-  return requiredStringFlag(parsed, 'token') ||
+  return (
+    requiredStringFlag(parsed, 'token') ||
     envString(io, 'AGORA_TOKEN') ||
-    envString(io, 'AGORA_API_TOKEN');
+    envString(io, 'AGORA_API_TOKEN')
+  );
 }
 
 function envString(io: CliIo, name: string): string | undefined {
@@ -1102,14 +1185,16 @@ function sourceOptions(parsed: ParsedArgs, io: CliIo): SourceOptions {
   const storedAuth = getAuthState(loadAgoraState(detectDataDir(parsed, io)));
   const storedApiUrl = storedAuth?.apiUrl;
   const apiUrl = explicitApiUrl || envApiUrl || storedApiUrl || '';
-  const useApi = !parsed.flags.offline && Boolean(
-    parsed.flags.api ||
-    parsed.flags.live ||
-    explicitApiUrl ||
-    envApiUrl ||
-    storedApiUrl ||
-    io.env?.AGORA_USE_API === 'true'
-  );
+  const useApi =
+    !parsed.flags.offline &&
+    Boolean(
+      parsed.flags.api ||
+      parsed.flags.live ||
+      explicitApiUrl ||
+      envApiUrl ||
+      storedApiUrl ||
+      io.env?.AGORA_USE_API === 'true'
+    );
 
   return {
     useApi,
@@ -1120,15 +1205,24 @@ function sourceOptions(parsed: ParsedArgs, io: CliIo): SourceOptions {
   };
 }
 
-function writeSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options: SourceOptions } | { ok: false; error: string } {
+function writeSourceOptions(
+  parsed: ParsedArgs,
+  io: CliIo
+): { ok: true; options: SourceOptions } | { ok: false; error: string } {
   const options = sourceOptions(parsed, io);
 
   if (!options.apiUrl) {
-    return { ok: false, error: 'This command requires --api-url, AGORA_API_URL, or an auth login API URL' };
+    return {
+      ok: false,
+      error: 'This command requires --api-url, AGORA_API_URL, or an auth login API URL'
+    };
   }
 
   if (!options.token) {
-    return { ok: false, error: 'This command requires --token, AGORA_TOKEN, AGORA_API_TOKEN, or agora auth login' };
+    return {
+      ok: false,
+      error: 'This command requires --token, AGORA_TOKEN, AGORA_API_TOKEN, or agora auth login'
+    };
   }
 
   return {
@@ -1140,10 +1234,16 @@ function writeSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options:
   };
 }
 
-function readSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options: SourceOptions } | { ok: false; error: string } {
+function readSourceOptions(
+  parsed: ParsedArgs,
+  io: CliIo
+): { ok: true; options: SourceOptions } | { ok: false; error: string } {
   const options = sourceOptions(parsed, io);
   if (!options.apiUrl) {
-    return { ok: false, error: 'This command requires --api-url, AGORA_API_URL, or an auth login API URL' };
+    return {
+      ok: false,
+      error: 'This command requires --api-url, AGORA_API_URL, or an auth login API URL'
+    };
   }
   return { ok: true, options: { ...options, useApi: true } };
 }
@@ -1151,7 +1251,10 @@ function readSourceOptions(parsed: ParsedArgs, io: CliIo): { ok: true; options: 
 function tagsFlag(parsed: ParsedArgs): string[] {
   const value = stringFlag(parsed, 'tags');
   if (!value) return [];
-  return value.split(',').map((tag) => tag.trim()).filter(Boolean);
+  return value
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
 }
 
 function promptInput(parsed: ParsedArgs): string | undefined {
@@ -1180,15 +1283,27 @@ function itemTypeFlag(parsed: ParsedArgs, itemId: string): 'package' | 'workflow
   return 'package';
 }
 
-function discussionCategoryFlag(parsed: ParsedArgs): { ok: true; value: string } | { ok: false; error: string } {
+function discussionCategoryFlag(
+  parsed: ParsedArgs
+): { ok: true; value: string } | { ok: false; error: string } {
   const category = stringFlag(parsed, 'category', 'c') || 'discussion';
-  if (category === 'question' || category === 'idea' || category === 'showcase' || category === 'discussion') {
+  if (
+    category === 'question' ||
+    category === 'idea' ||
+    category === 'showcase' ||
+    category === 'discussion'
+  ) {
     return { ok: true, value: category };
   }
-  return { ok: false, error: 'discussion category must be question, idea, showcase, or discussion' };
+  return {
+    ok: false,
+    error: 'discussion category must be question, idea, showcase, or discussion'
+  };
 }
 
-function tutorialLevelFlag(parsed: ParsedArgs): { ok: true; value: string } | { ok: false; error: string } {
+function tutorialLevelFlag(
+  parsed: ParsedArgs
+): { ok: true; value: string } | { ok: false; error: string } {
   const level = stringFlag(parsed, 'level') || 'all';
   if (level === 'all' || level === 'beginner' || level === 'intermediate' || level === 'advanced') {
     return { ok: true, value: level };
@@ -1196,7 +1311,9 @@ function tutorialLevelFlag(parsed: ParsedArgs): { ok: true; value: string } | { 
   return { ok: false, error: 'tutorial level must be beginner, intermediate, advanced, or all' };
 }
 
-function tutorialStepNumber(parsed: ParsedArgs): { ok: true; value: number } | { ok: false; error: string } {
+function tutorialStepNumber(
+  parsed: ParsedArgs
+): { ok: true; value: number } | { ok: false; error: string } {
   const rawStep = parsed.args[1] || stringFlag(parsed, 'step');
   if (!rawStep) return { ok: true, value: 1 };
 
@@ -1208,7 +1325,10 @@ function tutorialStepNumber(parsed: ParsedArgs): { ok: true; value: number } | {
   return { ok: true, value: step };
 }
 
-function tutorialStepPayload(tutorial: Tutorial, stepNumber: number): {
+function tutorialStepPayload(
+  tutorial: Tutorial,
+  stepNumber: number
+): {
   stepNumber: number;
   totalSteps: number;
   completed: boolean;
@@ -1230,11 +1350,17 @@ function tutorialStepPayload(tutorial: Tutorial, stepNumber: number): {
 
 function warnFallback<T>(result: SourceResult<T>, io: CliIo): void {
   if (result.fallbackReason) {
-    writeLine(io.stderr, `API unavailable, using offline data (refreshed ${dataRefreshedAt}): ${result.fallbackReason}`);
+    writeLine(
+      io.stderr,
+      `API unavailable, using offline data (refreshed ${dataRefreshedAt}): ${result.fallbackReason}`
+    );
   }
 }
 
-function sourcePayload<T extends object, TValue>(result: SourceResult<TValue>, payload: T): T & {
+function sourcePayload<T extends object, TValue>(
+  result: SourceResult<TValue>,
+  payload: T
+): T & {
   source: string;
   apiUrl?: string;
   fallbackReason?: string;
@@ -1247,7 +1373,10 @@ function sourcePayload<T extends object, TValue>(result: SourceResult<TValue>, p
   };
 }
 
-function authStatusPayload(dataDir: string, auth: ReturnType<typeof getAuthState>): {
+function authStatusPayload(
+  dataDir: string,
+  auth: ReturnType<typeof getAuthState>
+): {
   dataDir: string;
   statePath: string;
   authenticated: boolean;
@@ -1277,13 +1406,13 @@ function matchesSavedQuery(entry: ResolvedSavedItem, query: string): boolean {
 
   const searchable = entry.item
     ? [
-      entry.item.id,
-      entry.item.name,
-      entry.item.description,
-      entry.item.author,
-      entry.item.category,
-      ...entry.item.tags
-    ].join(' ')
+        entry.item.id,
+        entry.item.name,
+        entry.item.description,
+        entry.item.author,
+        entry.item.category,
+        ...entry.item.tags
+      ].join(' ')
     : entry.saved.id;
 
   return searchable.toLowerCase().includes(query);

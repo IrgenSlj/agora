@@ -3,11 +3,15 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs, runCli } from '../src/cli/app';
+import type { FetchLike } from '../src/live';
 
-function createIo(cwd = process.cwd(), options: {
-  env?: Record<string, string | undefined>;
-  fetcher?: typeof fetch;
-} = {}) {
+function createIo(
+  cwd = process.cwd(),
+  options: {
+    env?: Record<string, string | undefined>;
+    fetcher?: FetchLike;
+  } = {}
+) {
   const stdout: string[] = [];
   const stderr: string[] = [];
 
@@ -232,16 +236,19 @@ describe('CLI commands', () => {
     const { io, stdout } = createIo(temp);
 
     try {
-      const code = await runCli([
-        'auth',
-        'login',
-        '--token',
-        token,
-        '--api-url',
-        'https://api.example.test',
-        '--data-dir',
-        dataDir
-      ], io);
+      const code = await runCli(
+        [
+          'auth',
+          'login',
+          '--token',
+          token,
+          '--api-url',
+          'https://api.example.test',
+          '--data-dir',
+          dataDir
+        ],
+        io
+      );
       const state = JSON.parse(readFileSync(join(dataDir, 'state.json'), 'utf8'));
 
       expect(code).toBe(0);
@@ -261,16 +268,19 @@ describe('CLI commands', () => {
     const setup = createIo(temp);
 
     try {
-      await runCli([
-        'auth',
-        'login',
-        '--token',
-        token,
-        '--api-url',
-        'https://api.example.test',
-        '--data-dir',
-        dataDir
-      ], setup.io);
+      await runCli(
+        [
+          'auth',
+          'login',
+          '--token',
+          token,
+          '--api-url',
+          'https://api.example.test',
+          '--data-dir',
+          dataDir
+        ],
+        setup.io
+      );
 
       const { io, stdout } = createIo(temp);
       const code = await runCli(['auth', 'status', '--data-dir', dataDir, '--json'], io);
@@ -292,16 +302,19 @@ describe('CLI commands', () => {
     const setup = createIo(temp);
 
     try {
-      await runCli([
-        'auth',
-        'login',
-        '--token',
-        'stored-token',
-        '--api-url',
-        'https://api.example.test',
-        '--data-dir',
-        dataDir
-      ], setup.io);
+      await runCli(
+        [
+          'auth',
+          'login',
+          '--token',
+          'stored-token',
+          '--api-url',
+          'https://api.example.test',
+          '--data-dir',
+          dataDir
+        ],
+        setup.io
+      );
 
       const { io, stdout } = createIo(temp);
       const code = await runCli(['auth', 'logout', '--data-dir', dataDir, '--json'], io);
@@ -321,26 +334,31 @@ describe('CLI commands', () => {
       const url = new URL(String(input));
       if (url.pathname === '/api/packages') {
         return jsonResponse({
-          packages: [{
-            id: 'remote-mcp',
-            name: '@remote/server',
-            description: 'Remote MCP server',
-            author: 'remote-dev',
-            version: '1.2.3',
-            category: 'mcp',
-            tags: 'remote,mcp',
-            stars: 99,
-            installs: 1000,
-            npm_package: '@remote/server',
-            created_at: '2026-01-01'
-          }]
+          packages: [
+            {
+              id: 'remote-mcp',
+              name: '@remote/server',
+              description: 'Remote MCP server',
+              author: 'remote-dev',
+              version: '1.2.3',
+              category: 'mcp',
+              tags: 'remote,mcp',
+              stars: 99,
+              installs: 1000,
+              npm_package: '@remote/server',
+              created_at: '2026-01-01'
+            }
+          ]
         });
       }
       return jsonResponse({ workflows: [] });
     };
     const { io, stdout, stderr } = createIo(process.cwd(), { fetcher });
 
-    const code = await runCli(['search', 'remote', '--api', '--api-url', 'https://api.example.test'], io);
+    const code = await runCli(
+      ['search', 'remote', '--api', '--api-url', 'https://api.example.test'],
+      io
+    );
 
     expect(code).toBe(0);
     expect(stderr.join('')).toBe('');
@@ -354,7 +372,10 @@ describe('CLI commands', () => {
     };
     const { io, stdout, stderr } = createIo(process.cwd(), { fetcher });
 
-    const code = await runCli(['search', 'filesystem', '--api', '--api-url', 'https://api.example.test'], io);
+    const code = await runCli(
+      ['search', 'filesystem', '--api', '--api-url', 'https://api.example.test'],
+      io
+    );
 
     expect(code).toBe(0);
     expect(stdout.join('')).toContain('source: offline');
@@ -389,15 +410,18 @@ describe('CLI commands', () => {
     const { io, stdout } = createIo(temp, { fetcher });
 
     try {
-      const code = await runCli([
-        'install',
-        'remote-mcp',
-        '--api',
-        '--api-url',
-        'https://api.example.test',
-        '--config',
-        configPath
-      ], io);
+      const code = await runCli(
+        [
+          'install',
+          'remote-mcp',
+          '--api',
+          '--api-url',
+          'https://api.example.test',
+          '--config',
+          configPath
+        ],
+        io
+      );
 
       expect(code).toBe(0);
       expect(stdout.join('')).toContain('@remote/server');
@@ -434,15 +458,18 @@ describe('CLI commands', () => {
     const setup = createIo(temp, { fetcher });
 
     try {
-      await runCli([
-        'save',
-        'remote-mcp',
-        '--api',
-        '--api-url',
-        'https://api.example.test',
-        '--data-dir',
-        dataDir
-      ], setup.io);
+      await runCli(
+        [
+          'save',
+          'remote-mcp',
+          '--api',
+          '--api-url',
+          'https://api.example.test',
+          '--data-dir',
+          dataDir
+        ],
+        setup.io
+      );
 
       const { io, stdout } = createIo(temp);
       const code = await runCli(['saved', '--data-dir', dataDir, '--json'], io);
@@ -480,20 +507,23 @@ describe('CLI commands', () => {
     };
     const { io, stdout } = createIo(process.cwd(), { fetcher });
 
-    const code = await runCli([
-      'discuss',
-      '--title',
-      'MCP composition',
-      '--content',
-      'How are you composing servers?',
-      '--category',
-      'question',
-      '--api-url',
-      'https://api.example.test',
-      '--token',
-      'test-token',
-      '--json'
-    ], io);
+    const code = await runCli(
+      [
+        'discuss',
+        '--title',
+        'MCP composition',
+        '--content',
+        'How are you composing servers?',
+        '--category',
+        'question',
+        '--api-url',
+        'https://api.example.test',
+        '--token',
+        'test-token',
+        '--json'
+      ],
+      io
+    );
     const payload = JSON.parse(stdout.join(''));
 
     expect(code).toBe(0);
@@ -532,29 +562,35 @@ describe('CLI commands', () => {
     };
 
     try {
-      await runCli([
-        'auth',
-        'login',
-        '--token',
-        'stored-token',
-        '--api-url',
-        'https://api.example.test',
-        '--data-dir',
-        dataDir
-      ], setup.io);
+      await runCli(
+        [
+          'auth',
+          'login',
+          '--token',
+          'stored-token',
+          '--api-url',
+          'https://api.example.test',
+          '--data-dir',
+          dataDir
+        ],
+        setup.io
+      );
 
       const { io, stdout } = createIo(temp, { fetcher });
-      const code = await runCli([
-        'discuss',
-        '--title',
-        'Workflow review patterns',
-        '--content-file',
-        contentPath,
-        '--category',
-        'idea',
-        '--data-dir',
-        dataDir
-      ], io);
+      const code = await runCli(
+        [
+          'discuss',
+          '--title',
+          'Workflow review patterns',
+          '--content-file',
+          contentPath,
+          '--category',
+          'idea',
+          '--data-dir',
+          dataDir
+        ],
+        io
+      );
 
       expect(code).toBe(0);
       expect(stdout.join('')).toContain('Created discussion disc-file');
@@ -592,20 +628,23 @@ describe('CLI commands', () => {
     };
     const { io, stdout } = createIo(process.cwd(), { fetcher });
 
-    const code = await runCli([
-      'publish',
-      'package',
-      '--name',
-      '@remote/server',
-      '--description',
-      'Remote MCP server',
-      '--npm',
-      '@remote/server',
-      '--api-url',
-      'https://api.example.test',
-      '--token',
-      'test-token'
-    ], io);
+    const code = await runCli(
+      [
+        'publish',
+        'package',
+        '--name',
+        '@remote/server',
+        '--description',
+        'Remote MCP server',
+        '--npm',
+        '@remote/server',
+        '--api-url',
+        'https://api.example.test',
+        '--token',
+        'test-token'
+      ],
+      io
+    );
 
     expect(code).toBe(0);
     expect(stdout.join('')).toContain('Published package remote-mcp');
@@ -642,30 +681,36 @@ describe('CLI commands', () => {
     };
 
     try {
-      await runCli([
-        'auth',
-        'login',
-        '--token',
-        'stored-token',
-        '--api-url',
-        'https://api.example.test',
-        '--data-dir',
-        dataDir
-      ], setup.io);
+      await runCli(
+        [
+          'auth',
+          'login',
+          '--token',
+          'stored-token',
+          '--api-url',
+          'https://api.example.test',
+          '--data-dir',
+          dataDir
+        ],
+        setup.io
+      );
 
       const { io, stdout } = createIo(temp, { fetcher });
-      const code = await runCli([
-        'publish',
-        'package',
-        '--name',
-        '@remote/server',
-        '--description',
-        'Remote MCP server',
-        '--npm',
-        '@remote/server',
-        '--data-dir',
-        dataDir
-      ], io);
+      const code = await runCli(
+        [
+          'publish',
+          'package',
+          '--name',
+          '@remote/server',
+          '--description',
+          'Remote MCP server',
+          '--npm',
+          '@remote/server',
+          '--data-dir',
+          dataDir
+        ],
+        io
+      );
 
       expect(code).toBe(0);
       expect(stdout.join('')).toContain('Published package remote-mcp');
@@ -701,20 +746,23 @@ describe('CLI commands', () => {
     const { io, stdout } = createIo(temp, { fetcher });
 
     try {
-      const code = await runCli([
-        'publish',
-        'workflow',
-        '--name',
-        'Remote Review',
-        '--description',
-        'Review workflow',
-        '--prompt-file',
-        promptPath,
-        '--api-url',
-        'https://api.example.test',
-        '--token',
-        'test-token'
-      ], io);
+      const code = await runCli(
+        [
+          'publish',
+          'workflow',
+          '--name',
+          'Remote Review',
+          '--description',
+          'Review workflow',
+          '--prompt-file',
+          promptPath,
+          '--api-url',
+          'https://api.example.test',
+          '--token',
+          'test-token'
+        ],
+        io
+      );
 
       expect(code).toBe(0);
       expect(stdout.join('')).toContain('Published workflow wf-remote-review');
@@ -745,18 +793,21 @@ describe('CLI commands', () => {
     };
     const { io, stdout } = createIo(process.cwd(), { fetcher });
 
-    const code = await runCli([
-      'review',
-      'mcp-github',
-      '--rating',
-      '5',
-      '--content',
-      'Works well',
-      '--api-url',
-      'https://api.example.test',
-      '--token',
-      'test-token'
-    ], io);
+    const code = await runCli(
+      [
+        'review',
+        'mcp-github',
+        '--rating',
+        '5',
+        '--content',
+        'Works well',
+        '--api-url',
+        'https://api.example.test',
+        '--token',
+        'test-token'
+      ],
+      io
+    );
 
     expect(code).toBe(0);
     expect(stdout.join('')).toContain('Reviewed mcp-github');
@@ -770,20 +821,25 @@ describe('CLI commands', () => {
       expect(url.pathname).toBe('/api/reviews');
       expect(url.searchParams.get('item_id')).toBe('mcp-github');
       return jsonResponse({
-        reviews: [{
-          id: 'review-1',
-          item_id: 'mcp-github',
-          item_type: 'package',
-          author: 'tester',
-          rating: 5,
-          content: 'Works well',
-          created_at: '2026-01-01'
-        }]
+        reviews: [
+          {
+            id: 'review-1',
+            item_id: 'mcp-github',
+            item_type: 'package',
+            author: 'tester',
+            rating: 5,
+            content: 'Works well',
+            created_at: '2026-01-01'
+          }
+        ]
       });
     };
     const { io, stdout } = createIo(process.cwd(), { fetcher });
 
-    const code = await runCli(['reviews', 'mcp-github', '--api-url', 'https://api.example.test'], io);
+    const code = await runCli(
+      ['reviews', 'mcp-github', '--api-url', 'https://api.example.test'],
+      io
+    );
 
     expect(code).toBe(0);
     expect(stdout.join('')).toContain('Agora reviews');
@@ -841,16 +897,19 @@ describe('CLI commands', () => {
     };
 
     try {
-      await runCli([
-        'auth',
-        'login',
-        '--token',
-        'stored-token',
-        '--api-url',
-        'https://api.example.test',
-        '--data-dir',
-        dataDir
-      ], setup.io);
+      await runCli(
+        [
+          'auth',
+          'login',
+          '--token',
+          'stored-token',
+          '--api-url',
+          'https://api.example.test',
+          '--data-dir',
+          dataDir
+        ],
+        setup.io
+      );
 
       const { io, stdout } = createIo(temp, { fetcher });
       const code = await runCli(['profile', 'bob', '--data-dir', dataDir, '--json'], io);
@@ -878,18 +937,21 @@ describe('CLI commands', () => {
   test('publish requires an auth token', async () => {
     const { io, stderr } = createIo();
 
-    const code = await runCli([
-      'publish',
-      'package',
-      '--name',
-      '@remote/server',
-      '--description',
-      'Remote MCP server',
-      '--npm',
-      '@remote/server',
-      '--api-url',
-      'https://api.example.test'
-    ], io);
+    const code = await runCli(
+      [
+        'publish',
+        'package',
+        '--name',
+        '@remote/server',
+        '--description',
+        'Remote MCP server',
+        '--npm',
+        '@remote/server',
+        '--api-url',
+        'https://api.example.test'
+      ],
+      io
+    );
 
     expect(code).toBe(1);
     expect(stderr.join('')).toContain('requires --token');
@@ -901,7 +963,10 @@ describe('CLI commands', () => {
     };
     const { io, stderr } = createIo(process.cwd(), { fetcher });
 
-    const code = await runCli(['reviews', 'mcp-github', '--api-url', 'https://api.example.test'], io);
+    const code = await runCli(
+      ['reviews', 'mcp-github', '--api-url', 'https://api.example.test'],
+      io
+    );
 
     expect(code).toBe(1);
     expect(stderr.join('')).toContain('reviews unavailable');

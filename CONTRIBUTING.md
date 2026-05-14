@@ -27,8 +27,10 @@ Open an issue with the "enhancement" label describing:
 3. Make your changes
 4. Run tests: `bun test`
 5. Run typecheck: `bun run typecheck`
-6. Commit using conventional commits (see below)
-7. Push and open a Pull Request
+6. Run linting: `bun run lint`
+7. Check formatting: `bun run format:check` (or auto-fix with `bun run format`)
+8. Commit using conventional commits (see below)
+9. Push and open a Pull Request
 
 ### Commit Convention
 
@@ -111,7 +113,9 @@ test/      # Tests
 ## Code Style
 
 - TypeScript strict mode
-- No semicolons (Prettier default)
-- 2-space indentation
+- **Prettier** for formatting: 2-space indentation, single quotes, semicolons, 100-char line width
+- **ESLint** with `typescript-eslint` recommended rules for static analysis
 - Descriptive variable names
-- No unused imports or variables
+- No unused imports or variables (enforced by tsconfig `noUnusedLocals`/`noUnusedParameters`)
+
+Run `bun run format` to auto-format all files. Run `bun run lint` to check for lint errors.

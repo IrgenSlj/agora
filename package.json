@@ -29,10 +29,14 @@
     "build": "tsc",
     "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
     "hub:dev": "bun hub/server.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.check.json",
     "test": "bun test",
     "prepublishOnly": "bun run build",
-    "refresh:data": "bun scripts/refresh-data.ts"
+    "refresh:data": "bun scripts/refresh-data.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [
     "opencode",
@@ -48,10 +52,15 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
     "@opencode-ai/plugin": "^1.0.0",
     "@types/bun": "^1.2.0",
     "@types/node": "^22.0.0",
+    "bun-types": "^1.2.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.0.0",
+    "prettier": "^3.0.0",
     "typescript": "^5.7.0",
-    "bun-types": "^1.2.0"
+    "typescript-eslint": "^8.0.0"
   }
 }

@@ -80,7 +80,9 @@ const tasks = candidates.map((pkg) => async (): Promise<FetchResult> => {
   return { id: pkg.id, npmPackage, newVersion: fetched, status: 'updated' };
 });
 
-console.log(`Fetching npm metadata for ${candidates.length} packages (concurrency: ${CONCURRENCY})…`);
+console.log(
+  `Fetching npm metadata for ${candidates.length} packages (concurrency: ${CONCURRENCY})…`
+);
 const results = await runWithConcurrency(tasks, CONCURRENCY);
 
 // Build a map of id -> new version (only for 'updated' results)
@@ -118,10 +120,7 @@ for (const [id, newVersion] of updates) {
   const block = content.slice(blockStart, blockEnd);
 
   // Replace the version line within the block
-  const updatedBlock = block.replace(
-    /version: '([^']+)'/,
-    `version: '${newVersion}'`
-  );
+  const updatedBlock = block.replace(/version: '([^']+)'/, `version: '${newVersion}'`);
 
   if (updatedBlock === block) {
     // No change — either version already matches or pattern not found

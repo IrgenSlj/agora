@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "bun run src/index.ts",
     "deploy": "wrangler deploy",
-    "build": "bun build src/index.ts --target=browser --outfile=dist/index.js"
+    "build": "bun build src/index.ts --target=browser --outfile=dist/index.js",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.0.0",

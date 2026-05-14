@@ -7,7 +7,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-filesystem',
     name: '@modelcontextprotocol/server-filesystem',
-    description: 'Secure file read/write, directory operations, search, and metadata access with configurable access control',
+    description:
+      'Secure file read/write, directory operations, search, and metadata access with configurable access control',
     author: 'modelcontextprotocol',
     version: '2026.1.14',
     category: 'mcp',
@@ -21,7 +22,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-github',
     name: '@modelcontextprotocol/server-github',
-    description: 'Full GitHub API integration — issues, PRs, repos, search, file contents, and releases',
+    description:
+      'Full GitHub API integration — issues, PRs, repos, search, file contents, and releases',
     author: 'modelcontextprotocol',
     version: '2025.4.8',
     category: 'mcp',
@@ -65,7 +67,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-postgres',
     name: '@modelcontextprotocol/server-postgres',
-    description: 'Read/write PostgreSQL databases — schema inspection, queries, and transaction support',
+    description:
+      'Read/write PostgreSQL databases — schema inspection, queries, and transaction support',
     author: 'modelcontextprotocol',
     version: '0.6.2',
     category: 'mcp',
@@ -139,7 +142,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-puppeteer',
     name: '@modelcontextprotocol/server-puppeteer',
-    description: 'Headless Chrome browser automation — navigation, screenshots, PDF generation, and JavaScript evaluation',
+    description:
+      'Headless Chrome browser automation — navigation, screenshots, PDF generation, and JavaScript evaluation',
     author: 'modelcontextprotocol',
     version: '2025.5.12',
     category: 'mcp',
@@ -153,7 +157,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-playwright',
     name: '@modelcontextprotocol/server-playwright',
-    description: 'Cross-browser automation with Playwright — multi-page, mobile emulation, and network interception',
+    description:
+      'Cross-browser automation with Playwright — multi-page, mobile emulation, and network interception',
     author: 'modelcontextprotocol',
     version: '2026.1.14',
     category: 'mcp',
@@ -169,7 +174,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-slack',
     name: '@modelcontextprotocol/server-slack',
-    description: 'Slack workspace integration — messaging, channel management, search, and user presence',
+    description:
+      'Slack workspace integration — messaging, channel management, search, and user presence',
     author: 'modelcontextprotocol',
     version: '2025.4.25',
     category: 'mcp',
@@ -185,7 +191,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-sentry',
     name: '@modelcontextprotocol/server-sentry',
-    description: 'Sentry error tracking and performance monitoring — issue management, events, and metrics',
+    description:
+      'Sentry error tracking and performance monitoring — issue management, events, and metrics',
     author: 'modelcontextprotocol',
     version: '2026.1.14',
     category: 'mcp',
@@ -215,7 +222,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-docker',
     name: '@anthropic/server-docker',
-    description: 'Docker container lifecycle management — build, run, stop, logs, and compose operations',
+    description:
+      'Docker container lifecycle management — build, run, stop, logs, and compose operations',
     author: 'anthropic',
     version: '1.2.0',
     category: 'mcp',
@@ -313,7 +321,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-figma',
     name: '@figma/mcp-server',
-    description: 'Figma file access — read components, styles, and design tokens for design-to-code',
+    description:
+      'Figma file access — read components, styles, and design tokens for design-to-code',
     author: 'figma',
     version: '0.2.0',
     category: 'mcp',
@@ -439,7 +448,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-grafana',
     name: '@grafana/mcp-server',
-    description: 'Grafana dashboards and alerts — query metrics, manage dashboards, investigate incidents',
+    description:
+      'Grafana dashboards and alerts — query metrics, manage dashboards, investigate incidents',
     author: 'grafana',
     version: '0.3.0',
     category: 'mcp',
@@ -593,7 +603,8 @@ export const samplePackages: Package[] = [
   {
     id: 'mcp-s3',
     name: '@anthropic/server-s3',
-    description: 'Amazon S3 — bucket management, object operations, presigned URLs, and multipart uploads',
+    description:
+      'Amazon S3 — bucket management, object operations, presigned URLs, and multipart uploads',
     author: 'anthropic',
     version: '0.4.0',
     category: 'mcp',
@@ -623,7 +634,8 @@ export const samplePackages: Package[] = [
   {
     id: 'prompt-code-review',
     name: 'Comprehensive Code Review',
-    description: 'Multi-faceted code review covering security, performance, correctness, and best practices',
+    description:
+      'Multi-faceted code review covering security, performance, correctness, and best practices',
     author: 'agora-community',
     version: '2.0.0',
     category: 'prompt',
@@ -635,7 +647,8 @@ export const samplePackages: Package[] = [
   {
     id: 'prompt-api-design',
     name: 'API Design Review',
-    description: 'Review REST/GraphQL API designs for consistency, scalability, and developer experience',
+    description:
+      'Review REST/GraphQL API designs for consistency, scalability, and developer experience',
     author: 'agora-community',
     version: '1.1.0',
     category: 'prompt',
@@ -655,9 +668,7 @@ export const samplePackages: Package[] = [
     stars: 780,
     installs: 4500,
     createdAt: '2025-03-01'
-  },
-
-
+  }
 ];
 
 export const sampleWorkflows: Workflow[] = [
@@ -681,7 +692,8 @@ Always start by understanding the requirements and writing tests that describe e
   {
     id: 'wf-security-audit',
     name: 'Security Audit Workflow',
-    description: 'Thorough security analysis covering OWASP Top 10, secrets, and dependency vulnerabilities',
+    description:
+      'Thorough security analysis covering OWASP Top 10, secrets, and dependency vulnerabilities',
     author: 'security-first',
     prompt: `Perform a thorough security audit of the codebase:
 1. Check for OWASP Top 10 vulnerabilities
@@ -700,7 +712,8 @@ Report findings with severity levels (Critical/High/Medium/Low) and suggested fi
   {
     id: 'wf-api-design',
     name: 'API Design Review',
-    description: 'Review API endpoints for RESTful best practices, consistency, and developer experience',
+    description:
+      'Review API endpoints for RESTful best practices, consistency, and developer experience',
     author: 'api-craft',
     prompt: `Review the API design against these criteria:
 1. RESTful resource naming consistency
@@ -866,7 +879,8 @@ export const sampleDiscussions: Discussion[] = [
     id: 'disc-mcp-vs-openai',
     title: 'MCP Servers vs OpenAI Function Calling — When to use which?',
     author: 'devarchitect',
-    content: 'I have been experimenting with both approaches. MCP seems more flexible for tool-based workflows since any client can use any server, but function calling is simpler to set up for single-provider apps. What is your experience and when do you reach for each?',
+    content:
+      'I have been experimenting with both approaches. MCP seems more flexible for tool-based workflows since any client can use any server, but function calling is simpler to set up for single-provider apps. What is your experience and when do you reach for each?',
     category: 'question',
     replies: 23,
     stars: 45,
@@ -876,7 +890,8 @@ export const sampleDiscussions: Discussion[] = [
     id: 'disc-best-coder-model',
     title: 'Best model for coding in 2026?',
     author: 'local-llm-fan',
-    content: 'With Claude Opus 4.5, Gemini 2.5 Pro, GPT-5, DeepSeek V4, and Qwen4 all available — what are you using for daily development? Any standout for agentic coding workflows?',
+    content:
+      'With Claude Opus 4.5, Gemini 2.5 Pro, GPT-5, DeepSeek V4, and Qwen4 all available — what are you using for daily development? Any standout for agentic coding workflows?',
     category: 'discussion',
     replies: 67,
     stars: 89,
@@ -886,7 +901,8 @@ export const sampleDiscussions: Discussion[] = [
     id: 'disc-agora-init',
     title: 'Showcase: Zero-to-productive OpenCode setup in one command',
     author: 'agora-core',
-    content: 'Just built an init flow that scans your project and generates the perfect opencode.json automatically. Node project? Gets the npm MCP servers. Python? Gets the right tools. Try `agora init` in your project!',
+    content:
+      'Just built an init flow that scans your project and generates the perfect opencode.json automatically. Node project? Gets the npm MCP servers. Python? Gets the right tools. Try `agora init` in your project!',
     category: 'showcase',
     replies: 12,
     stars: 34,
@@ -896,7 +912,8 @@ export const sampleDiscussions: Discussion[] = [
     id: 'disc-mcp-security',
     title: 'Security considerations for MCP servers in production',
     author: 'sec-ops',
-    content: 'What are people doing to secure MCP servers in production? I am particularly concerned about filesystem access scope, credential management, and rate limiting. Curious to hear what patterns the community has settled on.',
+    content:
+      'What are people doing to secure MCP servers in production? I am particularly concerned about filesystem access scope, credential management, and rate limiting. Curious to hear what patterns the community has settled on.',
     category: 'question',
     replies: 31,
     stars: 56,
@@ -906,7 +923,8 @@ export const sampleDiscussions: Discussion[] = [
     id: 'disc-workflow-sharing',
     title: 'Idea: Community workflow registry with versioning',
     author: 'wf-creator',
-    content: 'What if we could version-control and share workflows like npm packages? Publish a workflow, others can install it with `agora use`, fork it, improve it, and contribute back. Think npm for agent workflows.',
+    content:
+      'What if we could version-control and share workflows like npm packages? Publish a workflow, others can install it with `agora use`, fork it, improve it, and contribute back. Think npm for agent workflows.',
     category: 'idea',
     replies: 18,
     stars: 42,
@@ -916,7 +934,8 @@ export const sampleDiscussions: Discussion[] = [
     id: 'disc-local-vs-remote',
     title: 'Local models catching up — is 2026 the year of local coding?',
     author: 'offline-first',
-    content: 'With Qwen4-72B and DeepSeek V4 running on consumer hardware, are we finally at the point where local models can replace cloud API for everyday coding? What is your local setup looking like?',
+    content:
+      'With Qwen4-72B and DeepSeek V4 running on consumer hardware, are we finally at the point where local models can replace cloud API for everyday coding? What is your local setup looking like?',
     category: 'discussion',
     replies: 45,
     stars: 78,
@@ -926,7 +945,8 @@ export const sampleDiscussions: Discussion[] = [
     id: 'disc-mcp-server-list',
     title: 'What is your must-have MCP server stack?',
     author: 'stack-builder',
-    content: 'Mine: filesystem (obvious), GitHub (dev workflow), sequential-thinking (complex reasoning), memory (context retention), and postgres (data access). What are your non-negotiables?',
+    content:
+      'Mine: filesystem (obvious), GitHub (dev workflow), sequential-thinking (complex reasoning), memory (context retention), and postgres (data access). What are your non-negotiables?',
     category: 'discussion',
     replies: 38,
     stars: 63,
@@ -944,16 +964,19 @@ export const sampleTutorials: Tutorial[] = [
     steps: [
       {
         title: 'What is MCP?',
-        content: 'The Model Context Protocol (MCP) is an open standard that lets AI models connect with external tools and data sources. Think of it as a USB-C port for AI — a universal way to plug any AI into any tool. MCP was created by Anthropic and is now governed by the Linux Foundation\'s Agentic AI Foundation.',
+        content:
+          "The Model Context Protocol (MCP) is an open standard that lets AI models connect with external tools and data sources. Think of it as a USB-C port for AI — a universal way to plug any AI into any tool. MCP was created by Anthropic and is now governed by the Linux Foundation's Agentic AI Foundation."
       },
       {
         title: 'Installing Your First MCP Server',
-        content: 'Let\'s install the filesystem MCP server. OpenCode uses MCP servers to access your files, run commands, and interact with APIs.',
-        code: `npm install -g @modelcontextprotocol/server-filesystem`,
+        content:
+          "Let's install the filesystem MCP server. OpenCode uses MCP servers to access your files, run commands, and interact with APIs.",
+        code: `npm install -g @modelcontextprotocol/server-filesystem`
       },
       {
         title: 'Configure in OpenCode',
-        content: 'Add the MCP server to your OpenCode configuration and restart opencode to pick it up:',
+        content:
+          'Add the MCP server to your OpenCode configuration and restart opencode to pick it up:',
         code: `{
   "mcpServers": {
     "filesystem": {
@@ -964,11 +987,12 @@ export const sampleTutorials: Tutorial[] = [
       ]
     }
   }
-}`,
+}`
       },
       {
         title: 'Test It Out',
-        content: 'Now in OpenCode, try asking: "List the files in the current directory" or "Read the package.json file". The AI will use the filesystem MCP server to access your files safely.',
+        content:
+          'Now in OpenCode, try asking: "List the files in the current directory" or "Read the package.json file". The AI will use the filesystem MCP server to access your files safely.'
       }
     ]
   },
@@ -981,7 +1005,8 @@ export const sampleTutorials: Tutorial[] = [
     steps: [
       {
         title: 'Skills — Lightweight Prompts',
-        content: 'Skills are markdown files with frontmatter that define agent behavior. They\'re the lightest form of customization. Create a file called `.opencode/skills/reviewer.md` and OpenCode will load it automatically.',
+        content:
+          "Skills are markdown files with frontmatter that define agent behavior. They're the lightest form of customization. Create a file called `.opencode/skills/reviewer.md` and OpenCode will load it automatically.",
         code: `---
 name: code-reviewer
 description: Reviews code for quality and security
@@ -990,15 +1015,17 @@ description: Reviews code for quality and security
 You are a senior code reviewer. Focus on:
 - Security vulnerabilities
 - Performance issues
-- Code style and maintainability`,
+- Code style and maintainability`
       },
       {
         title: 'Agents — Specialized Workers',
-        content: 'Agents are specialized workers with their own system prompt and tool permissions. You can define them in your opencode.json or using the `opencode agent create` command. Each agent can have different model, permissions, and behavior.',
+        content:
+          'Agents are specialized workers with their own system prompt and tool permissions. You can define them in your opencode.json or using the `opencode agent create` command. Each agent can have different model, permissions, and behavior.'
       },
       {
         title: 'Plugins — Full Integration',
-        content: 'Plugins are npm packages that provide full TypeScript integration with hooks, tools, and event handlers. Agora itself runs as a plugin. Plugins can add custom tools, respond to events, and integrate deeply with OpenCode.',
+        content:
+          'Plugins are npm packages that provide full TypeScript integration with hooks, tools, and event handlers. Agora itself runs as a plugin. Plugins can add custom tools, respond to events, and integrate deeply with OpenCode.'
       }
     ]
   },
@@ -1012,16 +1039,17 @@ You are a senior code reviewer. Focus on:
       {
         title: 'Install the TDD Workflow',
         content: 'Agora comes with a TDD workflow. View it first:',
-        code: `agora browse wf-tdd-cycle`,
+        code: `agora browse wf-tdd-cycle`
       },
       {
         title: 'Apply the Workflow',
         content: 'Apply the workflow as an OpenCode skill to use it during development:',
-        code: `agora use wf-tdd-cycle`,
+        code: `agora use wf-tdd-cycle`
       },
       {
         title: 'Start Coding',
-        content: 'Now when you ask OpenCode to implement a feature, it will automatically follow TDD — write the test first, implement, then refactor. The structured thinking MCP server helps with the planning phase.',
+        content:
+          'Now when you ask OpenCode to implement a feature, it will automatically follow TDD — write the test first, implement, then refactor. The structured thinking MCP server helps with the planning phase.'
       }
     ]
   },
@@ -1036,15 +1064,17 @@ You are a senior code reviewer. Focus on:
         title: 'Install Security Tools',
         content: 'First, install the security audit workflow and the necessary MCP servers:',
         code: `agora use wf-security-audit
-agora install mcp-github`,
+agora install mcp-github`
       },
       {
         title: 'Run an Audit',
-        content: 'In OpenCode, use the security workflow: "Run a security audit on this project". The agent will check for OWASP Top 10 vulnerabilities, hardcoded secrets, dependency vulnerabilities, and more.',
+        content:
+          'In OpenCode, use the security workflow: "Run a security audit on this project". The agent will check for OWASP Top 10 vulnerabilities, hardcoded secrets, dependency vulnerabilities, and more.'
       },
       {
         title: 'Review Findings',
-        content: 'The audit produces a prioritized report with severity levels and suggested fixes. Each finding includes a clear remediation step you can ask OpenCode to implement.',
+        content:
+          'The audit produces a prioritized report with severity levels and suggested fixes. Each finding includes a clear remediation step you can ask OpenCode to implement.'
       }
     ]
   },
@@ -1057,12 +1087,14 @@ agora install mcp-github`,
     steps: [
       {
         title: 'Prerequisites',
-        content: 'Make sure you have the MCP SDK installed and a basic understanding of TypeScript.',
-        code: `npm install @modelcontextprotocol/sdk zod`,
+        content:
+          'Make sure you have the MCP SDK installed and a basic understanding of TypeScript.',
+        code: `npm install @modelcontextprotocol/sdk zod`
       },
       {
         title: 'Create a Basic Server',
-        content: 'An MCP server exposes tools, resources, and prompts. Here is a minimal server with one tool:',
+        content:
+          'An MCP server exposes tools, resources, and prompts. Here is a minimal server with one tool:',
         code: `import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
@@ -1075,7 +1107,7 @@ server.tool("greet", { name: z.string() }, async ({ name }) => ({
 // Start with stdio transport
 const { StdioServerTransport } = await import("@modelcontextprotocol/sdk/server/stdio.js");
 const transport = new StdioServerTransport();
-await server.connect(transport);`,
+await server.connect(transport);`
       },
       {
         title: 'Test Your Server',
@@ -1091,7 +1123,7 @@ npx tsx src/my-server.ts
       "args": ["tsx", "src/my-server.ts"]
     }
   }
-}`,
+}`
       }
     ]
   },
@@ -1104,16 +1136,19 @@ npx tsx src/my-server.ts
     steps: [
       {
         title: 'Keyboard Shortcuts',
-        content: 'Learn the essential keybindings: Tab switches between agents, Ctrl+C interrupts the current action, Ctrl+L clears the conversation, / lists all available commands.',
+        content:
+          'Learn the essential keybindings: Tab switches between agents, Ctrl+C interrupts the current action, Ctrl+L clears the conversation, / lists all available commands.'
       },
       {
         title: 'Custom Agents',
-        content: 'Create specialized agents for different tasks. For example, a "reviewer" agent with read-only permissions for code review, or a "deploy" agent with access to deployment tools.',
-        code: `opencode agent create --name reviewer --mode primary --permissions read,glob,grep`,
+        content:
+          'Create specialized agents for different tasks. For example, a "reviewer" agent with read-only permissions for code review, or a "deploy" agent with access to deployment tools.',
+        code: `opencode agent create --name reviewer --mode primary --permissions read,glob,grep`
       },
       {
         title: 'Session Management',
-        content: 'Continue previous sessions with `opencode -c`, fork them with `opencode --fork`, or start a specific agent with `opencode --agent reviewer`. Sessions persist across restarts.',
+        content:
+          'Continue previous sessions with `opencode -c`, fork them with `opencode --fork`, or start a specific agent with `opencode --agent reviewer`. Sessions persist across restarts.'
       }
     ]
   }
@@ -1136,5 +1171,3 @@ export const trendingTags = [
   'api',
   'observability'
 ];
-
-

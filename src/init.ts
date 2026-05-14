@@ -29,7 +29,7 @@ const CATEGORY_SERVERS: Record<string, string[]> = {
   rust: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-sequential-thinking'],
   go: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-sequential-thinking'],
   ruby: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-sequential-thinking'],
-  java: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-sequential-thinking'],
+  java: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-sequential-thinking']
 };
 
 const FRAMEWORK_SERVERS: Record<string, string[]> = {
@@ -40,7 +40,7 @@ const FRAMEWORK_SERVERS: Record<string, string[]> = {
   django: ['mcp-postgres', 'mcp-python-repl'],
   flask: ['mcp-postgres', 'mcp-python-repl'],
   rails: ['mcp-postgres', 'mcp-redis'],
-  spring: ['mcp-postgres', 'mcp-redis', 'mcp-mysql'],
+  spring: ['mcp-postgres', 'mcp-redis', 'mcp-mysql']
 };
 
 export function scanProject(dir: string): ProjectScan {
@@ -60,7 +60,11 @@ export function scanProject(dir: string): ProjectScan {
     if (deps.includes('next') || deps.includes('next/dist')) frameworks.push('nextjs');
     if (deps.includes('vue')) frameworks.push('vue');
     if (deps.includes('express')) frameworks.push('express');
-  } else if (files.has('pyproject.toml') || files.has('setup.py') || files.has('requirements.txt')) {
+  } else if (
+    files.has('pyproject.toml') ||
+    files.has('setup.py') ||
+    files.has('requirements.txt')
+  ) {
     type = 'python';
     if (deps.includes('django')) frameworks.push('django');
     if (deps.includes('flask')) frameworks.push('flask');
@@ -76,10 +80,13 @@ export function scanProject(dir: string): ProjectScan {
     if (deps.includes('spring')) frameworks.push('spring');
   }
 
-  hasDocker = files.has('Dockerfile') || files.has('docker-compose.yml') || files.has('.dockerignore');
+  hasDocker =
+    files.has('Dockerfile') || files.has('docker-compose.yml') || files.has('.dockerignore');
   hasCI = files.has('.github/workflows') || files.has('.gitlab-ci.yml') || files.has('Jenkinsfile');
   hasTests = files.has('test') || files.has('tests') || files.has('__tests__') || files.has('spec');
-  hasDatabase = deps.some((d) => ['postgres', 'pg', 'mysql', 'sqlite', 'mongodb', 'redis'].includes(d));
+  hasDatabase = deps.some((d) =>
+    ['postgres', 'pg', 'mysql', 'sqlite', 'mongodb', 'redis'].includes(d)
+  );
 
   return { type, frameworks, hasDocker, hasCI, hasTests, hasDatabase, dependencies: deps };
 }
@@ -118,13 +125,14 @@ export function generateInitPlan(scan: ProjectScan): InitPlan {
   workflowIds.add('wf-code-review-arch');
 
   if (scan.hasTests) workflowIds.add('wf-tdd-cycle');
-  if (scan.type === 'node') notes.push('Node.js project detected — added npm info, filesystem, and GitHub MCP servers.');
+  if (scan.type === 'node')
+    notes.push('Node.js project detected — added npm info, filesystem, and GitHub MCP servers.');
 
   const notesList = [
     scan.hasTests ? 'Tests detected — TDD workflow recommended.' : '',
     scan.hasDocker ? 'Docker detected — added Docker MCP server.' : '',
     scan.hasDatabase ? 'Database dependencies detected — added relevant database MCP servers.' : '',
-    scan.frameworks.length > 0 ? `Framework(s) detected: ${scan.frameworks.join(', ')}.` : '',
+    scan.frameworks.length > 0 ? `Framework(s) detected: ${scan.frameworks.join(', ')}.` : ''
   ].filter(Boolean);
 
   const servers = resolveServers(Array.from(serverIds));
@@ -141,7 +149,7 @@ export function generateInitPlan(scan: ProjectScan): InitPlan {
       mcpServers[server.id] = {
         command: 'npx',
         args: [server.npmPackage],
-        env: {},
+        env: {}
       };
     }
   }
@@ -152,12 +160,12 @@ export function generateInitPlan(scan: ProjectScan): InitPlan {
     config: {
       $schema: 'https://opencode.ai/config.json',
       mcpServers,
-      plugins: ['opencode-agora'],
+      plugins: ['opencode-agora']
     },
     servers: Array.from(serverIds),
     workflows: Array.from(workflowIds),
     commands,
-    notes,
+    notes
   };
 }
 
@@ -179,13 +187,20 @@ function listFiles(dir: string): Set<string> {
   const files = new Set<string>();
   const candidates = [
     'package.json',
-    'pyproject.toml', 'setup.py', 'requirements.txt',
+    'pyproject.toml',
+    'setup.py',
+    'requirements.txt',
     'Cargo.toml',
     'go.mod',
     'Gemfile',
-    'pom.xml', 'build.gradle',
-    'Dockerfile', 'docker-compose.yml', '.dockerignore',
-    '.github/workflows', '.gitlab-ci.yml', 'Jenkinsfile',
+    'pom.xml',
+    'build.gradle',
+    'Dockerfile',
+    'docker-compose.yml',
+    '.dockerignore',
+    '.github/workflows',
+    '.gitlab-ci.yml',
+    'Jenkinsfile'
   ];
   for (const file of candidates) {
     if (existsSync(join(dir, file))) {
@@ -218,5 +233,3 @@ function resolveServers(ids: string[]) {
     .map((id) => samplePackages.find((p) => p.id === id && p.category === 'mcp'))
     .filter(Boolean) as typeof samplePackages;
 }
-
-

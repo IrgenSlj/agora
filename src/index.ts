@@ -1,10 +1,7 @@
 import type { Plugin } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
 import type { Discussion } from './types.js';
-import {
-  sampleDiscussions,
-  sampleTutorials
-} from './data.js';
+import { sampleDiscussions, sampleTutorials } from './data.js';
 import {
   createInstallPlan,
   findMarketplaceItem,
@@ -23,7 +20,10 @@ export const Agora: Plugin = async (_ctx) => {
         description: 'Search Agora marketplace for packages, workflows, and prompts',
         args: {
           query: tool.schema.string().describe('Search query'),
-          category: tool.schema.string().optional().describe('Filter by category: mcp, prompt, workflow, all')
+          category: tool.schema
+            .string()
+            .optional()
+            .describe('Filter by category: mcp, prompt, workflow, all')
         },
         async execute(args, _context) {
           const query = args.query;
@@ -36,13 +36,16 @@ export const Agora: Plugin = async (_ctx) => {
 
           return `🔍 **Search Results** for "${query}" (${filtered.length} found)
 
-${filtered.map((item, i) => {
-            const shortDesc = (item.description || '').slice(0, 60) + (item.description?.length > 60 ? '...' : '');
-            const icon = item.kind === 'package' ? '📦' : '🔄';
-            return `${i + 1}. **${item.name}** ${icon}
+${filtered
+  .map((item, i) => {
+    const shortDesc =
+      (item.description || '').slice(0, 60) + (item.description?.length > 60 ? '...' : '');
+    const icon = item.kind === 'package' ? '📦' : '🔄';
+    return `${i + 1}. **${item.name}** ${icon}
    ${shortDesc}
    ⭐ ${item.stars || 0} · 📥 ${item.installs || 0} · by ${item.author}`;
-          }).join('\n\n')}
+  })
+  .join('\n\n')}
 
 ---
 Run \`/agora browse <name>\` for details or \`/agora install <id>\` to install.`;
@@ -59,9 +62,14 @@ Run \`/agora browse <name>\` for details or \`/agora install <id>\` to install.`
           const category = args.category || 'all';
           const limit = args.limit || 10;
           const items = searchMarketplaceItems({ category, limit });
-          const title = category === 'workflow' ? '🔄 Workflows' :
-            category === 'prompt' ? '💬 Prompts' :
-              category === 'all' ? '🏛️ Marketplace' : '📦 Packages';
+          const title =
+            category === 'workflow'
+              ? '🔄 Workflows'
+              : category === 'prompt'
+                ? '💬 Prompts'
+                : category === 'all'
+                  ? '🏛️ Marketplace'
+                  : '📦 Packages';
 
           if (items.length === 0) {
             return `No items in category "${category}". Try: mcp, workflow, prompt`;
@@ -79,7 +87,10 @@ Run \`/agora browse <id>\` for details.`;
       agora_trending: tool({
         description: 'Show trending packages and workflows in Agora',
         args: {
-          category: tool.schema.string().optional().describe('Category to show: packages, workflows, all')
+          category: tool.schema
+            .string()
+            .optional()
+            .describe('Category to show: packages, workflows, all')
         },
         async execute(args) {
           const category = args.category || 'all';
@@ -89,18 +100,14 @@ Run \`/agora browse <id>\` for details.`;
           if (category === 'all' || category === 'packages' || category === 'package') {
             output += `**Top Packages**\n`;
             const topPackages = getTrendingItems({ category: 'package', limit: 5 });
-            output += topPackages.map((p, i) =>
-              `${i + 1}. ${p.name} - ⭐ ${p.stars}`
-            ).join('\n');
+            output += topPackages.map((p, i) => `${i + 1}. ${p.name} - ⭐ ${p.stars}`).join('\n');
             output += '\n\n';
           }
 
           if (category === 'all' || category === 'workflows' || category === 'workflow') {
             output += `**Top Workflows**\n`;
             const topWorkflows = getTrendingItems({ category: 'workflow', limit: 5 });
-            output += topWorkflows.map((w, i) =>
-              `${i + 1}. ${w.name} - ⭐ ${w.stars}`
-            ).join('\n');
+            output += topWorkflows.map((w, i) => `${i + 1}. ${w.name} - ⭐ ${w.stars}`).join('\n');
           }
 
           output += `\n\n🏷️ **Trending Tags**: ${getTrendingTags(8).join(', ')}`;
@@ -112,7 +119,10 @@ Run \`/agora browse <id>\` for details.`;
       agora_tutorial: tool({
         description: 'Learn about AI/MCP with interactive tutorials',
         args: {
-          tutorial: tool.schema.string().optional().describe('Tutorial ID or "list" to see available tutorials'),
+          tutorial: tool.schema
+            .string()
+            .optional()
+            .describe('Tutorial ID or "list" to see available tutorials'),
           step: tool.schema.number().optional().describe('Step number (1-based)')
         },
         async execute(args) {
@@ -128,7 +138,7 @@ Run \`/agora browse <id>\` for details.`;
 Run \`/agora tutorial <id>\` to start a tutorial.`;
           }
 
-          const tut = sampleTutorials.find(t => t.id === tutorial);
+          const tut = sampleTutorials.find((t) => t.id === tutorial);
           if (!tut) {
             return `Tutorial "${tutorial}" not found. Run \`/agora tutorial list\` to see available tutorials.`;
           }
@@ -153,7 +163,10 @@ Run \`/agora tutorial ${tutorial} ${step + 1}\` for next step.`;
       agora_discussions: tool({
         description: 'Show community discussions or create new',
         args: {
-          action: tool.schema.string().optional().describe('Action: list, view, create, reply (default: list)'),
+          action: tool.schema
+            .string()
+            .optional()
+            .describe('Action: list, view, create, reply (default: list)'),
           id: tool.schema.string().optional().describe('Discussion ID'),
           category: tool.schema.string().optional().describe('Filter or category for new post'),
           title: tool.schema.string().optional().describe('Title for new post'),
@@ -194,13 +207,18 @@ Run \`/agora discussions view ${newDisc.id}\` to view.`;
           }
 
           if (action === 'view') {
-            const disc = sampleDiscussions.find(d => d.id === args.id);
+            const disc = sampleDiscussions.find((d) => d.id === args.id);
             if (!disc) {
               return `Discussion not found. Run \`/agora discussions list\` for all discussions.`;
             }
-            const icon = disc.category === 'question' ? '❓' :
-              disc.category === 'idea' ? '💡' :
-                disc.category === 'showcase' ? '🎉' : '💬';
+            const icon =
+              disc.category === 'question'
+                ? '❓'
+                : disc.category === 'idea'
+                  ? '💡'
+                  : disc.category === 'showcase'
+                    ? '🎉'
+                    : '💬';
             return `${icon} **${disc.title}**
 
 ${disc.content}
@@ -220,20 +238,29 @@ Run \`/agora discussions view ${args.id}\` to see all replies.`;
           }
 
           const category = args.category || 'all';
-          const filtered = category === 'all'
-            ? sampleDiscussions
-            : sampleDiscussions.filter(d => d.category === category);
+          const filtered =
+            category === 'all'
+              ? sampleDiscussions
+              : sampleDiscussions.filter((d) => d.category === category);
 
           return `💬 **Discussions** (${filtered.length})
 
-${filtered.slice(0, 10).map(d => {
-            const icon = d.category === 'question' ? '❓' :
-              d.category === 'idea' ? '💡' :
-                d.category === 'showcase' ? '🎉' : '💬';
-            return `${icon} **${d.title}**
+${filtered
+  .slice(0, 10)
+  .map((d) => {
+    const icon =
+      d.category === 'question'
+        ? '❓'
+        : d.category === 'idea'
+          ? '💡'
+          : d.category === 'showcase'
+            ? '🎉'
+            : '💬';
+    return `${icon} **${d.title}**
    ${d.content.slice(0, 80)}...
    💬 ${d.replies} replies | ⭐ ${d.stars} | by ${d.author}`;
-          }).join('\n\n')}
+  })
+  .join('\n\n')}
 
 ---
 Run \`/agora discussions create --title "..." --content "..." --category question\` to start a discussion.`;
@@ -244,7 +271,10 @@ Run \`/agora discussions create --title "..." --content "..." --category questio
         description: 'Browse an individual package or workflow with full details',
         args: {
           id: tool.schema.string().describe('Package or workflow ID'),
-          type: tool.schema.string().optional().describe('Type: package, workflow (default: auto-detect)')
+          type: tool.schema
+            .string()
+            .optional()
+            .describe('Type: package, workflow (default: auto-detect)')
         },
         async execute(args, _ctx) {
           const id = args.id;
@@ -262,7 +292,7 @@ by ${w.author} | ⭐ ${w.stars} | 🍴 ${w.forks}
 
 ${w.description}
 
-**Tags**: ${w.tags.map(t => `\`${t}\``).join(', ')}
+**Tags**: ${w.tags.map((t) => `\`${t}\``).join(', ')}
 
 **Prompt**:
 \`\`\`
@@ -278,7 +308,7 @@ v${p.version} by ${p.author} | ⭐ ${p.stars} | 📥 ${p.installs}
 
 ${p.description}
 
-**Tags**: ${p.tags.map(t => `\`${t}\``).join(', ')}
+**Tags**: ${p.tags.map((t) => `\`${t}\``).join(', ')}
 **Category**: ${p.category}
 **Added**: ${p.createdAt}
 ${p.repository ? `**Repo**: ${p.repository}` : ''}
@@ -361,7 +391,10 @@ Run \`agora install ${item.id} --write\` in your terminal to auto-write to confi
       agora_review: tool({
         description: 'Rate and review packages or workflows',
         args: {
-          action: tool.schema.string().optional().describe('Action: list, view, create (default: list)'),
+          action: tool.schema
+            .string()
+            .optional()
+            .describe('Action: list, view, create (default: list)'),
           id: tool.schema.string().optional().describe('Package or workflow ID'),
           rating: tool.schema.number().optional().describe('Rating 1-5 stars'),
           content: tool.schema.string().optional().describe('Review content')
@@ -444,8 +477,8 @@ Bio: ${args.bio || '(none)'}`;
           const username = args.username || 'agora-community';
           const profiles: Record<string, any> = {
             'agora-community': { packages: 3, workflows: 2, discussions: 5 },
-            'modelcontextprotocol': { packages: 12, workflows: 0, discussions: 8 },
-            'devarchitect': { packages: 1, workflows: 3, discussions: 12 }
+            modelcontextprotocol: { packages: 12, workflows: 0, discussions: 8 },
+            devarchitect: { packages: 1, workflows: 3, discussions: 12 }
           };
           const p = profiles[username] || { packages: 0, workflows: 0, discussions: 0 };
 

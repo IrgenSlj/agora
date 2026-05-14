@@ -1,5 +1,11 @@
 import type { Package, Workflow, Discussion, Tutorial } from './types.js';
-import { samplePackages, sampleWorkflows, sampleDiscussions, sampleTutorials, trendingTags } from './data.js';
+import {
+  samplePackages,
+  sampleWorkflows,
+  sampleDiscussions,
+  sampleTutorials,
+  trendingTags
+} from './data.js';
 import type { OpenCodeConfig } from './config.js';
 
 export type MarketplaceCategory = 'all' | 'package' | 'mcp' | 'prompt' | 'workflow' | 'skill';
@@ -104,10 +110,14 @@ export function getDiscussions(category = 'all', query = ''): Discussion[] {
   const normalizedQuery = normalize(query);
 
   return sampleDiscussions
-    .filter((discussion) => normalizedCategory === 'all' || discussion.category === normalizedCategory)
+    .filter(
+      (discussion) => normalizedCategory === 'all' || discussion.category === normalizedCategory
+    )
     .filter((discussion) => {
       if (!normalizedQuery) return true;
-      return normalize(`${discussion.title} ${discussion.content} ${discussion.author}`).includes(normalizedQuery);
+      return normalize(`${discussion.title} ${discussion.content} ${discussion.author}`).includes(
+        normalizedQuery
+      );
     })
     .sort((a, b) => b.stars - a.stars);
 }
@@ -158,12 +168,16 @@ export function createInstallPlan(
   }
 
   const config = buildOpenCodeConfig([item], existingConfig);
-  const commands = installKind === 'mcp' && item.kind === 'package' && item.npmPackage
-    ? [`npm install -g ${item.npmPackage}`]
-    : [];
-  const notes = installKind === 'workflow'
-    ? [`Workflow will be registered as plugin ${workflowPluginName(item as WorkflowMarketplaceItem)}.`]
-    : ['MCP server will be added to mcpServers.'];
+  const commands =
+    installKind === 'mcp' && item.kind === 'package' && item.npmPackage
+      ? [`npm install -g ${item.npmPackage}`]
+      : [];
+  const notes =
+    installKind === 'workflow'
+      ? [
+          `Workflow will be registered as plugin ${workflowPluginName(item as WorkflowMarketplaceItem)}.`
+        ]
+      : ['MCP server will be added to mcpServers.'];
 
   return {
     item,

@@ -174,19 +174,21 @@ function normalizeState(state: Partial<AgoraState>): AgoraState {
   const seen = new Set<string>();
   const savedItems = Array.isArray(state.savedItems)
     ? state.savedItems
-      .filter((saved): saved is SavedItem => {
-        return Boolean(saved && typeof saved.id === 'string' && typeof saved.savedAt === 'string');
-      })
-      .map((saved) => ({
-        id: saved.id,
-        savedAt: saved.savedAt,
-        item: isMarketplaceItem(saved.item) ? saved.item : undefined
-      }))
-      .filter((saved) => {
-        if (seen.has(saved.id)) return false;
-        seen.add(saved.id);
-        return true;
-      })
+        .filter((saved): saved is SavedItem => {
+          return Boolean(
+            saved && typeof saved.id === 'string' && typeof saved.savedAt === 'string'
+          );
+        })
+        .map((saved) => ({
+          id: saved.id,
+          savedAt: saved.savedAt,
+          item: isMarketplaceItem(saved.item) ? saved.item : undefined
+        }))
+        .filter((saved) => {
+          if (seen.has(saved.id)) return false;
+          seen.add(saved.id);
+          return true;
+        })
     : [];
 
   return {
@@ -203,12 +205,14 @@ function normalizeAuthState(auth: unknown): AuthState | undefined {
   const token = typeof candidate.token === 'string' ? candidate.token.trim() : '';
   if (!token) return undefined;
 
-  const apiUrl = typeof candidate.apiUrl === 'string' && candidate.apiUrl.trim()
-    ? candidate.apiUrl.trim()
-    : undefined;
-  const savedAt = typeof candidate.savedAt === 'string' && candidate.savedAt
-    ? candidate.savedAt
-    : new Date(0).toISOString();
+  const apiUrl =
+    typeof candidate.apiUrl === 'string' && candidate.apiUrl.trim()
+      ? candidate.apiUrl.trim()
+      : undefined;
+  const savedAt =
+    typeof candidate.savedAt === 'string' && candidate.savedAt
+      ? candidate.savedAt
+      : new Date(0).toISOString();
 
   return {
     token,
@@ -218,9 +222,8 @@ function normalizeAuthState(auth: unknown): AuthState | undefined {
 }
 
 function resolvePath(filePath: string, cwd: string, home: string): string {
-  const expanded = filePath === '~' || filePath.startsWith('~/')
-    ? join(home, filePath.slice(2))
-    : filePath;
+  const expanded =
+    filePath === '~' || filePath.startsWith('~/') ? join(home, filePath.slice(2)) : filePath;
 
   return isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
 }

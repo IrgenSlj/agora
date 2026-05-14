@@ -110,9 +110,8 @@ export function doctorOpenCodeConfig(configPath: string): ConfigDoctorReport {
 }
 
 function resolvePath(filePath: string, cwd: string, home: string): string {
-  const expanded = filePath === '~' || filePath.startsWith('~/')
-    ? join(home, filePath.slice(2))
-    : filePath;
+  const expanded =
+    filePath === '~' || filePath.startsWith('~/') ? join(home, filePath.slice(2)) : filePath;
 
   return isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
 }
