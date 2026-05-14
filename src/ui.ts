@@ -103,9 +103,6 @@ export const AGORA_WORDMARK_OUTLINE: string[] = [
   ' ▀   ▀   ▀▄▄▄▀   ▀▄▄▄▀   ▀   ▀   ▀   ▀ '
 ];
 
-/** Default banner art. */
-export const AGORA_WORDMARK = AGORA_WORDMARK_SOLID;
-
 /**
  * BANNER_GRADIENT — 3 stops sampled across the wordmark's columns.
  * "agora at golden hour": Aegean blue → marble warm → terracotta. Neither
