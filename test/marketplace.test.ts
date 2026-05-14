@@ -67,10 +67,10 @@ describe('searchMarketplaceItems', () => {
     expect(results.length).toBe(0);
   });
 
-  test('results sorted by stars descending for empty query', () => {
+  test('results sorted by popularity (installs) descending for empty query', () => {
     const results = searchMarketplaceItems();
     for (let i = 0; i < results.length - 1; i++) {
-      expect(results[i].stars).toBeGreaterThanOrEqual(results[i + 1].stars);
+      expect(results[i].installs).toBeGreaterThanOrEqual(results[i + 1].installs);
     }
   });
 });
@@ -140,10 +140,10 @@ describe('getTrendingItems', () => {
     expect(items.length).toBe(3);
   });
 
-  test('returned items are sorted by stars descending', () => {
+  test('returned items are sorted by popularity (installs) descending', () => {
     const items = getTrendingItems({ limit: 10 });
     for (let i = 0; i < items.length - 1; i++) {
-      expect(items[i].stars).toBeGreaterThanOrEqual(items[i + 1].stars);
+      expect(items[i].installs).toBeGreaterThanOrEqual(items[i + 1].installs);
     }
   });
 

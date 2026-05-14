@@ -1,11 +1,11 @@
-# Agora — Instant OpenCode Setup & Marketplace
+# Agora — The Developer's Terminal Marketplace
 
 <p align="center">
-  <strong>One command from zero to a perfectly configured OpenCode environment.</strong>
+  <strong>A standalone terminal hub for discovering, installing, and (soon) trading agent tooling.</strong>
 </p>
 
 <p align="center">
-  Project scanner, MCP marketplace, workflow manager, and community hub — all in one CLI.
+  Project scanner, MCP marketplace, and workflow manager — a standalone CLI, with a thin OpenCode plugin as one of its surfaces.
 </p>
 
 <p align="center">
@@ -23,9 +23,19 @@ _A terminal recording is in the works — see ROADMAP.md._
 
 ## What is Agora?
 
-Agora is a **zero-config OpenCode setup tool** and terminal marketplace. Run `npx opencode-agora init` in any project and it automatically scans your stack, generates the perfect `opencode.json`, installs MCP servers, and registers the plugin.
+Agora is a **standalone terminal marketplace** for the agentic-coding ecosystem — MCP servers, workflows, and tutorials, browsable and installable from your shell with no login and no backend. Run `npx opencode-agora init` in any project and it scans your stack, generates the right `opencode.json`, and installs matched MCP servers.
 
-It also bundles **36+ MCP servers**, **10 production workflows**, **6 tutorials**, and a full community discussion system — all usable offline.
+It bundles **36+ MCP servers**, **10 production workflows**, and **6 tutorials**, all usable offline.
+
+**Where it's headed:** Agora is evolving into an **open, self-regulating marketplace** where third-party developers publish and sell advanced skills, tools, and kits — with Agora providing the square and the rules (discovery, trust, delivery), not the goods. See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the direction and [`ROADMAP.md`](./ROADMAP.md) for the plan.
+
+### Surfaces
+
+Agora is one core marketplace engine behind three surfaces:
+
+- **`agora` CLI** — the primary, standalone experience. Browse, install, manage from any terminal.
+- **OpenCode plugin** — a thin bridge that surfaces the catalog *inside* OpenCode and installs into the current project. ([details](#opencode-plugin-commands))
+- **`hub/`** — an optional local web console for browsing.
 
 ## Features
 
@@ -53,14 +63,14 @@ It also bundles **36+ MCP servers**, **10 production workflows**, **6 tutorials*
 - Merge MCP servers into existing config
 - Inspect config health with `agora config doctor`
 
-### Community
-- Discussion threads on tools and patterns
-- Trending prompts and workflows
-- Browse and create discussions from the terminal
+### Community (CLI + backend)
+- Profiles, reviews, discussions, and publishing live in the `agora` CLI
+- These need a connected backend — the bundled offline build does not ship community data
+- The OpenCode plugin deliberately ships only the offline-capable marketplace tools
 
 ### OpenCode Plugin
-- Search, browse, install-preview, review, profile, discussion, and tutorial tools from inside OpenCode
-- Uses the same marketplace core as the CLI
+- Search, browse, trending, install-preview, and tutorial tools from inside OpenCode
+- Uses the same marketplace core as the CLI — fully offline, no login required
 
 ### Local Hub
 - Optional browser console for browsing the marketplace
@@ -174,20 +184,23 @@ The CLI uses bundled offline marketplace data (36+ MCP servers, 10 workflows) by
 
 ### OpenCode Plugin Commands
 
-Once registered (via `agora init` or manually), use inside OpenCode:
+The plugin itself registers **tools** (`agora_search`, `agora_browse`, `agora_install`, …) that the OpenCode assistant calls — OpenCode plugins cannot register slash commands directly.
+
+To get a typed `/agora` slash command, `agora init` also writes `.opencode/command/agora.md` into your project. That command forwards whatever you type to the matching tool, so these all work inside OpenCode:
 
 | Command | Description |
 |---|---|
 | `/agora search <query> [category]` | Search marketplace |
-| `/agora browse_category <category>` | Browse by category |
-| `/agora browse <id>` | View package details |
+| `/agora browse <id>` | View package or workflow details |
+| `/agora browse_category <category>` | Browse a category |
 | `/agora trending [type]` | See trending |
-| `/agora install <id> [--write]` | Install to config |
-| `/agora review [action] [...]` | Reviews/ratings |
-| `/agora discussions [action] [...]` | Community |
-| `/agora profile [action] [--username]` | User profiles |
-| `/agora tutorial [id] [step]` | Interactive tutorials |
+| `/agora install <id>` | Install steps / config for a package |
+| `/agora tutorial <id> [step]` | Interactive tutorials |
 | `/agora info` | Help |
+
+Community features — profiles, reviews, discussions, publishing — are **CLI-only** (`agora profile`, `agora reviews`, `agora discuss`, `agora publish`) and need a connected backend. The plugin deliberately ships only the offline-capable marketplace tools.
+
+If you didn't run `agora init`, copy `.opencode/command/agora.md` from this repo into your project's (or `~/.config/opencode/command/agora.md` for a global command). Without the command file the `agora_*` tools still work — just ask the assistant in chat.
 
 **Categories:** mcp, prompt, workflow, skill `|` **Data sources:** offline (default), `--api`
 

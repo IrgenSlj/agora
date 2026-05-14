@@ -1,35 +1,81 @@
 # Roadmap
 
-A snapshot of where Agora is headed. Issues labeled `good-first-issue` and `help-wanted` on GitHub are the easiest places to jump in.
+Where Agora is headed. For the *why* behind this — the three-surface model, the
+open-marketplace vision, the inference question — see [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 
-## Near term (0.3.x)
+## The direction
 
-- **Demo recording.** Asciinema/VHS recording of `agora init` for the README.
-- **Dependabot enabled.** Weekly bump of npm + GitHub Actions.
-- **Marketplace data refresh script.** Re-pulls latest npm metadata (version, downloads) for every MCP server in `src/data.ts` so the offline snapshot stays current.
+Agora is a **standalone terminal marketplace hub**. The OpenCode plugin is one
+surface, not the product. The destination is an **open, self-regulating
+marketplace** where third-party developers publish and sell advanced skills,
+tools, and kits — Agora provides discovery, trust, and delivery; the developers
+bring the goods.
+
+**Payments are deliberately deferred.** Phases 1–2 below focus entirely on the
+content and the standalone experience. Commerce comes after the hub is good on
+its own.
+
+## Phase 1 — The standalone hub experience (current)
+
+- **Flat-minimal CLI restyle.** A cohesive look across every command — accent
+  identifiers, dim metadata, plain body text. _In progress (`src/ui.ts`)._
+- **Gradient wordmark banner** shown on `agora` with no arguments. _Done — placeholder art; final wordmark + palette pending design handoff (`docs/claude-design-brief.md`)._
+- **Catalog growth.** More MCP servers, more workflows, more tutorials in the
+  offline data.
+- **Demo recording.** Asciinema/VHS recording of the standalone CLI.
 - **"Last refreshed" stamp** on bundled data so users know how fresh it is.
-- **Manual plugin registration docs.** A short guide for users who skip `agora init`.
 
-## Mid term (0.4 – 1.0)
+## Phase 2 — Backend & accounts
 
-- **Hosted backend.** Deploy `backend/` to a public Cloudflare Workers endpoint so `--api`, publish, reviews, and discussions work out of the box. **Prerequisite:** rework auth before any deployment — the current backend uses the raw GitHub OAuth token as the API bearer credential (stored in plaintext, implicit account creation). Replace with short-lived Agora-issued JWTs, hashed token storage, and explicit registration. See the `// SECURITY:` note in `backend/src/index.ts`.
-- **Docs site.** Move long-form docs out of README into a small Starlight/VitePress site under `docs/`.
-- **Hub deploy.** Public web Hub for browsing the marketplace.
-- **Tutorial expansion.** Add tutorials for more common MCP setups (Postgres, Playwright, S3).
-- **Contributor guide for data.** Step-by-step for adding an MCP server, workflow, or tutorial to the offline data.
+- **Hosted backend.** Deploy `backend/` so profiles, reviews, discussions, and
+  publishing work out of the box. **Prerequisite:** rework auth first — the
+  current backend uses the raw GitHub OAuth token as the API bearer credential
+  (plaintext storage, implicit account creation). Replace with short-lived
+  Agora-issued JWTs, hashed token storage, explicit registration, and a
+  device-code login flow (`agora login`, not token paste). See the
+  `// SECURITY:` note in `backend/src/index.ts`.
+- **Catalog as a service.** The catalog becomes a real API; the bundled JSON
+  stays as the offline fallback — a genuine strength, kept on purpose.
+- **Real reviews & ratings** — verified-purchase only, replacing the fabricated
+  plugin tools that were removed in 0.3.x.
 
-## Ideas / exploring
+## Phase 3 — Commerce (deferred)
 
-- Plugin auto-update channel.
-- Telemetry (opt-in) for which MCP servers people actually install — informs ranking.
-- VS Code / JetBrains extension that surfaces Agora marketplace from the IDE.
-- `agora doctor` for full-environment diagnostics, not just config.
+- Stripe Connect (Agora as marketplace operator), `agora buy`, `agora library`,
+  entitlement-aware `install`, seller-side `publish --price` / `earnings` /
+  `payouts`. Browse stays free and login-free; the wall goes up only at purchase.
+
+## Phase 4 — Trust & self-regulation
+
+The actual product. An open marketplace of executable code is a supply-chain
+surface — mechanism design does the policing, not a gatekeeper:
+
+- Permission manifests per item (fs / network / exec), shown at install like an
+  app-store prompt
+- Automated scan on publish — does the code match its declared permissions?
+- Verified-purchase reviews, install counts, earned (not granted) reputation
+- Flag/report, and a kill switch for confirmed malware
+
+## Phase 5 — Reach & optional agentic polish
+
+- Public web hub for discovery/SEO, seller dashboards
+- VS Code / JetBrains surface
+- _Optional:_ a conversational layer (smart `init`, interactive tutorials) via
+  the Claude Agent SDK — opt-in, not a foundation. The hub does not own
+  inference; see `docs/ARCHITECTURE.md`.
+
+## Open decisions
+
+1. **TUI shape** — styled one-shot commands (scriptable, what we have) vs. a
+   full-screen interactive TUI (Ink, a real build) vs. hybrid (`agora` alone
+   launches a browse mode).
+2. **Sellable unit** — skills/workflows only, or also proprietary MCP servers?
+3. **Payment model** — per-item Checkout vs. prepaid credits/wallet.
 
 ## How to help
 
-- **Add an MCP server to the offline marketplace.** See [CONTRIBUTING.md](./CONTRIBUTING.md).
-- **Write a tutorial.** New tutorials live in `src/data.ts` under `sampleTutorials`.
+- **Add an MCP server, workflow, or tutorial to the offline catalog.** See [CONTRIBUTING.md](./CONTRIBUTING.md).
 - **Report a setup that `agora init` misses.** Open an issue with your project's manifest files.
-- **Try the live API mode against a self-hosted backend.** Feedback on rough edges welcomed.
+- **Polish the standalone CLI experience.** Phase 1 is wide open.
 
-_Last updated: 2026-05-13_
+_Last updated: 2026-05-14_

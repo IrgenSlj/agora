@@ -1,8 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { Plugin } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
-import type { Discussion } from './types.js';
-import { sampleDiscussions, sampleTutorials } from './data.js';
+import { sampleTutorials } from './data.js';
 import {
   createInstallPlan,
   findMarketplaceItem,
@@ -11,6 +10,7 @@ import {
   searchMarketplaceItems
 } from './marketplace.js';
 import { formatConfigJson } from './config.js';
+import { formatInstalls, formatStars } from './format.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -43,21 +43,21 @@ export const Agora: Plugin = async (_ctx) => {
 
 ${filtered
   .map((item, i) => {
-    const shortDesc = item.description.slice(0, 60) + (item.description.length > 60 ? '...' : '');
+    const shortDesc = item.description.slice(0, 72) + (item.description.length > 72 ? '...' : '');
     const icon = item.kind === 'package' ? '📦' : '🔄';
-    return `${i + 1}. **${item.name}** ${icon}
+    return `${i + 1}. ${icon} **${item.id}** — ${item.name}
    ${shortDesc}
-   ⭐ ${item.stars || 0} · 📥 ${item.installs || 0} · by ${item.author}`;
+   📥 ${formatInstalls(item.installs)} installs · ⭐ ${formatStars(item.stars)} · by ${item.author}`;
   })
   .join('\n\n')}
 
 ---
-Run \`/agora browse <name>\` for details or \`/agora install <id>\` to install.`;
+Run \`/agora browse <id>\` for details or \`/agora install <id>\` to install.`;
         }
       }),
 
       agora_browse_category: tool({
-        description: 'Browse packages by category',
+        description: 'Browse packages and workflows by category',
         args: {
           category: tool.schema.string().describe('Category: mcp, prompt, workflow, all'),
           limit: tool.schema.number().optional().describe('Number to show (default: 10)')
@@ -76,12 +76,19 @@ Run \`/agora browse <name>\` for details or \`/agora install <id>\` to install.`
                   : '📦 Packages';
 
           if (items.length === 0) {
-            return `No items in category "${category}". Try: mcp, workflow, prompt`;
+            return `No items in category "${category}". Try: mcp, workflow, prompt, all`;
           }
 
-          return `${title} (${items.length} shown)
+          return `${title} (${items.length} shown, ranked by installs)
 
-${items.map((item, i) => `${i + 1}. **${item.name}** ⭐ ${item.stars}`).join('\n')}
+${items
+  .map((item, i) => {
+    const shortDesc = item.description.slice(0, 72) + (item.description.length > 72 ? '...' : '');
+    return `${i + 1}. **${item.id}** — ${item.name}
+   ${shortDesc}
+   📥 ${formatInstalls(item.installs)} installs · ⭐ ${formatStars(item.stars)}`;
+  })
+  .join('\n\n')}
 
 ---
 Run \`/agora browse <id>\` for details.`;
@@ -104,14 +111,20 @@ Run \`/agora browse <id>\` for details.`;
           if (category === 'all' || category === 'packages' || category === 'package') {
             output += `**Top Packages**\n`;
             const topPackages = getTrendingItems({ category: 'package', limit: 5 });
-            output += topPackages.map((p, i) => `${i + 1}. ${p.name} - ⭐ ${p.stars}`).join('\n');
+            // Rank and display by installs — stars are repo-level and tie
+            // across the modelcontextprotocol/servers monorepo.
+            output += topPackages
+              .map((p, i) => `${i + 1}. ${p.id} — 📥 ${formatInstalls(p.installs)} installs`)
+              .join('\n');
             output += '\n\n';
           }
 
           if (category === 'all' || category === 'workflows' || category === 'workflow') {
             output += `**Top Workflows**\n`;
             const topWorkflows = getTrendingItems({ category: 'workflow', limit: 5 });
-            output += topWorkflows.map((w, i) => `${i + 1}. ${w.name} - ⭐ ${w.stars}`).join('\n');
+            output += topWorkflows
+              .map((w, i) => `${i + 1}. ${w.id} — ${w.name} (⭐ ${formatStars(w.stars)})`)
+              .join('\n');
           }
 
           output += `\n\n🏷️ **Trending Tags**: ${getTrendingTags(8).join(', ')}`;
@@ -162,113 +175,6 @@ Run \`/agora tutorial ${tutorial} ${step + 1}\` for next step.`;
         }
       }),
 
-      agora_discussions: tool({
-        description: 'Show community discussions or create new',
-        args: {
-          action: tool.schema
-            .string()
-            .optional()
-            .describe('Action: list, view, create, reply (default: list)'),
-          id: tool.schema.string().optional().describe('Discussion ID'),
-          category: tool.schema.string().optional().describe('Filter or category for new post'),
-          title: tool.schema.string().optional().describe('Title for new post'),
-          content: tool.schema.string().optional().describe('Content for new post/reply')
-        },
-        async execute(args) {
-          const action = args.action || 'list';
-
-          if (action === 'create') {
-            if (!args.title || !args.content) {
-              return `📝 **Create Discussion**
-
-Required: title, content
-
-/options: category (question, idea, showcase, discussion)
-
-Example:
-\`/agora discussions create --title "How to use MCP?" --content "Looking for best practices..." --category question`;
-            }
-            const newDisc: Discussion = {
-              id: `disc-${Date.now()}`,
-              title: args.title,
-              author: 'you',
-              content: args.content,
-              category: (args.category as any) || 'discussion',
-              replies: 0,
-              stars: 0,
-              createdAt: new Date().toISOString().split('T')[0]
-            };
-            return `✅ **Discussion Created**
-
-**${newDisc.title}**
-${newDisc.content}
-
-by ${newDisc.author} | ${newDisc.category}
-
-Run \`/agora discussions view ${newDisc.id}\` to view.`;
-          }
-
-          if (action === 'view') {
-            const disc = sampleDiscussions.find((d) => d.id === args.id);
-            if (!disc) {
-              return `Discussion not found. Run \`/agora discussions list\` for all discussions.`;
-            }
-            const icon =
-              disc.category === 'question'
-                ? '❓'
-                : disc.category === 'idea'
-                  ? '💡'
-                  : disc.category === 'showcase'
-                    ? '🎉'
-                    : '💬';
-            return `${icon} **${disc.title}**
-
-${disc.content}
-
----
-💬 ${disc.replies} replies | ⭐ ${disc.stars} | by ${disc.author} | ${disc.createdAt}
-
-Run \`/agora discussions reply ${disc.id} --content "Your reply..."\` to respond.`;
-          }
-
-          if (action === 'reply' && args.id && args.content) {
-            return `💬 **Reply added** to ${args.id}
-
-"${args.content}"
-
-Run \`/agora discussions view ${args.id}\` to see all replies.`;
-          }
-
-          const category = args.category || 'all';
-          const filtered =
-            category === 'all'
-              ? sampleDiscussions
-              : sampleDiscussions.filter((d) => d.category === category);
-
-          return `💬 **Discussions** (${filtered.length})
-
-${filtered
-  .slice(0, 10)
-  .map((d) => {
-    const icon =
-      d.category === 'question'
-        ? '❓'
-        : d.category === 'idea'
-          ? '💡'
-          : d.category === 'showcase'
-            ? '🎉'
-            : '💬';
-    return `${icon} **${d.title}**
-   ${d.content.slice(0, 80)}...
-   💬 ${d.replies} replies | ⭐ ${d.stars} | by ${d.author}`;
-  })
-  .join('\n\n')}
-
----
-Run \`/agora discussions create --title "..." --content "..." --category question\` to start a discussion.`;
-        }
-      }),
-
       agora_browse: tool({
         description: 'Browse an individual package or workflow with full details',
         args: {
@@ -289,8 +195,8 @@ Run \`/agora discussions create --title "..." --content "..." --category questio
 
           if (item.kind === 'workflow') {
             const w = item;
-            return `🔄 **${w.name}**
-by ${w.author} | ⭐ ${w.stars} | 🍴 ${w.forks}
+            return `🔄 **${w.name}** (\`${w.id}\`)
+by ${w.author} | ⭐ ${formatStars(w.stars)} | 🍴 ${w.forks}
 
 ${w.description}
 
@@ -301,12 +207,12 @@ ${w.description}
 ${w.prompt}
 \`\`\`
 
-Run \`/agora install workflow ${w.id}\` to use this workflow.`;
+Run \`/agora install ${w.id}\` to use this workflow.`;
           }
 
           const p = item;
-          return `📦 **${p.name}**
-v${p.version} by ${p.author} | ⭐ ${p.stars} | 📥 ${p.installs}
+          return `📦 **${p.name}** (\`${p.id}\`)
+v${p.version} by ${p.author} | 📥 ${formatInstalls(p.installs)} installs | ⭐ ${formatStars(p.stars)}
 
 ${p.description}
 
@@ -339,16 +245,19 @@ Run \`/agora install ${p.id}\` to install to your OpenCode config.`;
 
           if (item.kind === 'workflow') {
             const w = item;
-            return `🔄 **Workflow installed**: ${w.name}
+            return `🔄 **Workflow**: ${w.name}
 
-This workflow is now active. To use it:
+To use this workflow as an OpenCode skill, run in your terminal:
 
-1. Copy the prompt to a skill file:
-   \`\`\`
-   ${w.prompt}
-   \`\`\`
+\`\`\`bash
+agora use ${w.id}
+\`\`\`
 
-2. Or run \`/agora info\` to see all installed workflows.`;
+That writes \`.opencode/skills/\` and registers it. Or copy the prompt:
+
+\`\`\`
+${w.prompt}
+\`\`\``;
           }
 
           const plan = createInstallPlan(item);
@@ -367,130 +276,29 @@ ${formatConfigJson(plan.config)}
 \`\`\`
 
 Use the standalone CLI for safe file writes:
-\`agora install ${item.id} --write\``;
+
+\`\`\`bash
+agora install ${item.id} --write
+\`\`\``;
           }
 
           const command = plan.commands[0];
 
           return `📦 **Installing**: ${item.name}
 
-To install this MCP server to your OpenCode config:
-
 1. Install the package:
-   \`\`\`bash
-   ${command}
-   \`\`\`
 
-2. Add to your \`opencode.json\`:
-   \`\`\`json
-   ${formatConfigJson(plan.config)}
-   \`\`\`
+\`\`\`bash
+${command}
+\`\`\`
 
-Run \`agora install ${item.id} --write\` in your terminal to auto-write to config.`;
-        }
-      }),
+2. Add this to your \`opencode.json\`:
 
-      agora_review: tool({
-        description: 'Rate and review packages or workflows',
-        args: {
-          action: tool.schema
-            .string()
-            .optional()
-            .describe('Action: list, view, create (default: list)'),
-          id: tool.schema.string().optional().describe('Package or workflow ID'),
-          rating: tool.schema.number().optional().describe('Rating 1-5 stars'),
-          content: tool.schema.string().optional().describe('Review content')
-        },
-        async execute(args) {
-          const action = args.action || 'list';
+\`\`\`json
+${formatConfigJson(plan.config)}
+\`\`\`
 
-          if (action === 'create') {
-            if (!args.id || !args.rating || !args.content) {
-              return `⭐ **Create Review**
-
-Required: id, rating (1-5), content
-
-Example:
-\`/agora review create --id mcp-filesystem --rating 5 --content "Essential tool!"\``;
-            }
-            if (args.rating < 1 || args.rating > 5) {
-              return `Rating must be 1-5 stars.`;
-            }
-            return `✅ **Review Added**
-
-**${args.id}** - ${'⭐'.repeat(args.rating)}
-
-${args.content}
-
-Run \`/agora review view ${args.id}\` to see all reviews.`;
-          }
-
-          if (action === 'view' && args.id) {
-            return `⭐ **Reviews** for ${args.id}
-
-★ 5 - "Essential for any project!" - devarchitect
-★ 4 - "Works well, easy setup" - nodemaster
-
-Overall: 4.5/5 (12 reviews)
-
-Run \`/agora review create --id ${args.id} --rating 5 --content "Your review..."\` to add your review.`;
-          }
-
-          return `⭐ **Recent Reviews**
-
-1. @modelcontextprotocol/server-filesystem - ⭐⭐⭐⭐⭐ (45)
-2. @modelcontextprotocol/server-github - ⭐⭐⭐⭐ (23)
-3. @modelcontextprotocol/server-brave-search - ⭐⭐⭐⭐⭐ (12)
-
-Run \`/agora review view <id>\` to see reviews for a specific package.`;
-        }
-      }),
-
-      agora_profile: tool({
-        description: 'View and manage user profiles',
-        args: {
-          action: tool.schema.string().optional().describe('Action: view, me (default: list)'),
-          username: tool.schema.string().optional().describe('Username'),
-          displayName: tool.schema.string().optional().describe('Display name for profile'),
-          bio: tool.schema.string().optional().describe('Bio for profile')
-        },
-        async execute(args) {
-          const action = args.action || 'list';
-
-          if (action === 'me' || (action === 'view' && !args.username)) {
-            return `👤 **Your Profile**
-
-- **Username**: you
-- **Packages**: 0 published
-- **Workflows**: 1 saved
-- **Discussions**: 0 started
-- **Reviews**: 0 written
-
-Run \`/agora profile update --displayName "Your Name" --bio "Your bio"\` to update.`;
-          }
-
-          if (action === 'update') {
-            return `✅ **Profile Updated**
-
-Display name: ${args.displayName || 'you'}
-Bio: ${args.bio || '(none)'}`;
-          }
-
-          const username = args.username || 'agora-community';
-          const profiles: Record<string, any> = {
-            'agora-community': { packages: 3, workflows: 2, discussions: 5 },
-            modelcontextprotocol: { packages: 12, workflows: 0, discussions: 8 },
-            devarchitect: { packages: 1, workflows: 3, discussions: 12 }
-          };
-          const p = profiles[username] || { packages: 0, workflows: 0, discussions: 0 };
-
-          return `👤 **${username}**
-
-- **Packages**: ${p.packages} published
-- **Workflows**: ${p.workflows} shared
-- **Discussions**: ${p.discussions} started
-
-Run \`/agora discussions list --author ${username}\` to see their discussions.`;
+Or run \`agora install ${item.id} --write\` in your terminal to do both automatically.`;
         }
       }),
 
@@ -500,23 +308,25 @@ Run \`/agora discussions list --author ${username}\` to see their discussions.`;
         async execute() {
           return `🏛️ **Agora** v${AGORA_VERSION}
 
-The Developer's Terminal Marketplace & Community
+The Developer's Terminal Marketplace for OpenCode.
 
-**Commands:**
-- \`/agora search <query> [category]\` - Search marketplace
-- \`/agora browse_category <category>\` - Browse by category
-- \`/agora trending [type]\` - See trending
-- \`/agora browse <id>\` - View package details
-- \`/agora install <id> [--write]\` - Install to config
-- \`/agora review [action] [--id] [--rating] [--content]\` - Reviews/ratings
-- \`/agora discussions [action] [--id] [--title] [--content]\` - Community
-- \`/agora profile [action] [--username]\` - User profiles
-- \`/agora tutorial [id] [step]\` - Interactive tutorials
+Type \`/agora <request>\` in OpenCode and it routes to the right tool:
+- \`/agora search <query> [category]\` - Search the marketplace
+- \`/agora browse <id>\` - View package or workflow details
+- \`/agora browse_category <category>\` - Browse a category
+- \`/agora trending [type]\` - See trending packages and workflows
+- \`/agora install <id>\` - Install steps / config for a package
+- \`/agora tutorial <id> [step]\` - Interactive tutorials
 - \`/agora info\` - This help
 
-**Categories:** mcp, prompt, workflow, skill
+The \`/agora\` slash command is installed by \`agora init\` (or copy
+\`.opencode/command/agora.md\` into your project). Without it, the
+\`agora_*\` tools are still callable directly by the assistant.
 
-Built with ❤️ for the developer community.`;
+Community features — profiles, reviews, discussions, publishing — live
+in the \`agora\` CLI and need a connected backend.
+
+**Categories:** mcp, prompt, workflow, skill`;
         }
       })
     }

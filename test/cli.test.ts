@@ -845,7 +845,7 @@ describe('CLI commands', () => {
     );
 
     expect(code).toBe(0);
-    expect(stdout.join('')).toContain('Agora reviews');
+    expect(stdout.join('')).toContain('agora reviews');
     expect(stdout.join('')).toContain('rating 5/5');
   });
 

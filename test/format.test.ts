@@ -26,7 +26,7 @@ describe('Formatting Utilities', () => {
 
   describe('formatStars', () => {
     test('formats thousands', () => {
-      expect(formatStars(1500)).toBe('1.5k');
+      expect(formatStars(1500)).toBe('1.5K');
     });
 
     test('formats hundreds', () => {
