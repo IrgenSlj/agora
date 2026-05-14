@@ -88,10 +88,8 @@ src/
 ├── index.ts        # OpenCode plugin — thin bridge, 7 offline marketplace tools
 ├── data.ts         # 36+ MCP servers, 10 workflows, 6 tutorials
 ├── types.ts        # TypeScript types
-├── api.ts          # Backend API client
 ├── config.ts       # Config generation helpers
-├── format.ts       # Count/date/string formatting helpers
-└── logger.ts       # Logging utilities
+└── format.ts       # Count formatting helpers (formatStars, formatInstalls)
 backend/   # Cloudflare Workers API (Hono + D1)
 hub/       # Optional local web Hub
 docs/      # ARCHITECTURE.md and design briefs
