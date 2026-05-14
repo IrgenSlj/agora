@@ -601,7 +601,7 @@ async function fetchWithTimeout(
     return await fetcher(url, { ...init, headers, signal: controller.signal });
   } catch (error) {
     if (controller.signal.aborted) {
-      throw new Error(`API request timed out after ${timeoutMs}ms`);
+      throw new Error(`API request timed out after ${timeoutMs}ms`, { cause: error });
     }
     throw error;
   } finally {

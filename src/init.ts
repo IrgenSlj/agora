@@ -50,10 +50,6 @@ export function scanProject(dir: string): ProjectScan {
 
   let type: ProjectScan['type'] = 'unknown';
   const frameworks: string[] = [];
-  let hasDocker = false;
-  let hasCI = false;
-  let hasTests = false;
-  let hasDatabase = false;
 
   if (files.has('package.json')) {
     type = 'node';
@@ -81,11 +77,13 @@ export function scanProject(dir: string): ProjectScan {
     if (deps.includes('spring')) frameworks.push('spring');
   }
 
-  hasDocker =
+  const hasDocker =
     files.has('Dockerfile') || files.has('docker-compose.yml') || files.has('.dockerignore');
-  hasCI = files.has('.github/workflows') || files.has('.gitlab-ci.yml') || files.has('Jenkinsfile');
-  hasTests = files.has('test') || files.has('tests') || files.has('__tests__') || files.has('spec');
-  hasDatabase = deps.some((d) =>
+  const hasCI =
+    files.has('.github/workflows') || files.has('.gitlab-ci.yml') || files.has('Jenkinsfile');
+  const hasTests =
+    files.has('test') || files.has('tests') || files.has('__tests__') || files.has('spec');
+  const hasDatabase = deps.some((d) =>
     ['postgres', 'pg', 'mysql', 'sqlite', 'mongodb', 'redis'].includes(d)
   );
 
