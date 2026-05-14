@@ -45,21 +45,20 @@ describe('TypeScript Types', () => {
     expect(typed.prompt).toBeDefined();
   });
 
-  test('Discussion type matches sample data', () => {
-    const disc = sampleDiscussions[0];
-
+  test('Discussion type is well-formed', () => {
     const typed: Discussion = {
-      id: disc.id,
-      title: disc.title,
-      author: disc.author,
-      content: disc.content,
-      category: disc.category,
-      replies: disc.replies,
-      stars: disc.stars,
-      createdAt: disc.createdAt
+      id: 'disc-1',
+      title: 'Example discussion',
+      author: 'user1',
+      content: 'Body text',
+      category: 'question',
+      replies: 0,
+      stars: 0,
+      createdAt: '2026-01-01'
     };
 
     expect(typed.id).toBeDefined();
+    expect(typed.category).toBe('question');
   });
 
   test('Tutorial type matches sample data', () => {
@@ -137,7 +136,16 @@ describe('Type Compatibility', () => {
   });
 
   test('Discussion can be converted to JSON', () => {
-    const disc = sampleDiscussions[0];
+    const disc: Discussion = {
+      id: 'disc-1',
+      title: 'Example discussion',
+      author: 'user1',
+      content: 'Body text',
+      category: 'question',
+      replies: 0,
+      stars: 0,
+      createdAt: '2026-01-01'
+    };
     const json = JSON.stringify(disc);
     const parsed = JSON.parse(json);
 

@@ -12,7 +12,7 @@ A snapshot of where Agora is headed. Issues labeled `good-first-issue` and `help
 
 ## Mid term (0.4 – 1.0)
 
-- **Hosted backend.** Deploy `backend/` to a public Cloudflare Workers endpoint so `--api`, publish, reviews, and discussions work out of the box.
+- **Hosted backend.** Deploy `backend/` to a public Cloudflare Workers endpoint so `--api`, publish, reviews, and discussions work out of the box. **Prerequisite:** rework auth before any deployment — the current backend uses the raw GitHub OAuth token as the API bearer credential (stored in plaintext, implicit account creation). Replace with short-lived Agora-issued JWTs, hashed token storage, and explicit registration. See the `// SECURITY:` note in `backend/src/index.ts`.
 - **Docs site.** Move long-form docs out of README into a small Starlight/VitePress site under `docs/`.
 - **Hub deploy.** Public web Hub for browsing the marketplace.
 - **Tutorial expansion.** Add tutorials for more common MCP setups (Postgres, Playwright, S3).

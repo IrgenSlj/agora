@@ -48,7 +48,10 @@ export function detectOpenCodeConfigPath(options: ConfigPathOptions = {}): strin
     join(home, '.opencode.json')
   ];
 
-  return candidates.find((candidate) => existsSync(candidate)) || candidates[1];
+  // Prefer an existing config wherever it lives; otherwise fall back to a
+  // project-local opencode.json so `init`/`use` never silently mutate the
+  // user's global config.
+  return candidates.find((candidate) => existsSync(candidate)) || candidates[0];
 }
 
 export function loadOpenCodeConfig(configPath: string): LoadedConfig {
@@ -97,8 +100,8 @@ export function writeOpenCodeConfig(configPath: string, config: OpenCodeConfig):
 
 export function doctorOpenCodeConfig(configPath: string): ConfigDoctorReport {
   const loaded = loadOpenCodeConfig(configPath);
-  const mcpServers = Object.keys(loaded.config.mcpServers || {}).length;
-  const plugins = loaded.config.plugins?.length || 0;
+  const mcpServers = Object.keys(loaded.config.mcp || {}).length;
+  const plugins = loaded.config.plugin?.length || 0;
 
   return {
     path: loaded.path,

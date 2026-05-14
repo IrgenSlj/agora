@@ -2,15 +2,17 @@ import type { Package, Workflow } from './types.js';
 
 export interface OpenCodeConfig {
   $schema?: string;
-  mcpServers?: Record<
+  mcp?: Record<
     string,
     {
-      command: string;
-      args?: string[];
-      env?: Record<string, string>;
+      type: 'local';
+      command: string[];
+      environment?: Record<string, string>;
+      enabled?: boolean;
+      timeout?: number;
     }
   >;
-  plugins?: string[];
+  plugin?: string[];
 }
 
 export interface ConfigWriterOptions {
@@ -27,15 +29,15 @@ export function generateMcpConfig(
 
   const newConfig: OpenCodeConfig = {
     $schema: 'https://opencode.ai/config.json',
-    mcpServers: {
-      ...(existingConfig.mcpServers || {}),
+    mcp: {
+      ...(existingConfig.mcp || {}),
       [pkg.id]: {
-        command: 'npx',
-        args: [pkg.npmPackage],
-        env: {}
+        type: 'local',
+        command: ['npx', pkg.npmPackage],
+        enabled: true
       }
     },
-    plugins: existingConfig.plugins || []
+    plugin: existingConfig.plugin || []
   };
 
   return newConfig;
@@ -49,8 +51,8 @@ export function generateWorkflowConfig(
 
   return {
     $schema: 'https://opencode.ai/config.json',
-    mcpServers: existingConfig.mcpServers || {},
-    plugins: [...(existingConfig.plugins || []), skillName]
+    mcp: existingConfig.mcp || {},
+    plugin: [...(existingConfig.plugin || []), skillName]
   };
 }
 
@@ -66,13 +68,19 @@ export function parseOpenCodeConfig(content: string): OpenCodeConfig | null {
   }
 }
 
+const SKIP_EXECUTABLES = new Set(['npx', 'tsx', 'node', 'bun', 'deno']);
+
 export function extractPackageFromConfig(config: OpenCodeConfig): string[] {
   const packages: string[] = [];
 
-  if (config.mcpServers) {
-    for (const [_name, server] of Object.entries(config.mcpServers)) {
-      if (server.args?.[0]?.startsWith('@')) {
-        packages.push(server.args[0]);
+  if (config.mcp) {
+    for (const [_name, server] of Object.entries(config.mcp)) {
+      for (const part of server.command) {
+        if (SKIP_EXECUTABLES.has(part)) continue;
+        if (part.startsWith('@') || /^[a-z0-9][\w.-]*$/i.test(part)) {
+          packages.push(part);
+          break;
+        }
       }
     }
   }

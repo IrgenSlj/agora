@@ -1,5 +1,51 @@
 # Changelog
 
+## [0.3.0] - 2026-05-14
+
+A production-hardening release. The marketplace data is now real, the
+codebase has quality gates, and the headline bugs are fixed.
+
+### Added
+
+- ESLint + Prettier with a one-time format pass; `lint`/`format` scripts
+- Full-tree typecheck (`src` + `scripts` + `test` + `backend`) and an
+  expanded CI workflow (format:check + lint + typecheck + test + backend)
+- Contract test suite — 98 → 229 tests exercising the real functions
+- `.github/dependabot.yml` for weekly dependency updates
+
+### Changed
+
+- **Marketplace data is now real.** The fictional package set was
+  replaced with 31 verified MCP servers — every `npmPackage` resolves on
+  the registry, with real version/repository/author/downloads/stars
+- `agora init` / `agora use` now fall back to a project-local
+  `opencode.json` instead of silently writing the user's global config
+- Discussions are backend-only — the offline build no longer ships
+  fabricated community activity
+
+### Fixed
+
+- **Generated configs now use OpenCode's real schema.** Agora was writing
+  `mcpServers`/`plugins` with the wrong MCP entry shape — OpenCode's
+  schema uses `mcp`/`plugin` with `{ type: "local", command: [...] }`
+  entries, so `init`/`use`/`install --write` output was silently ignored
+- `agora init` crashed on unrecognized project types
+- `runCommands` validated install commands and switched to `execFileSync`
+  (no shell injection); `init` reports real install success/failure
+- Non-Node framework/database detection in `init` (was dead code)
+- Atomic writes for `state.json` and `opencode.json` (temp + rename)
+- `agora use` no longer overwrites an unparseable config
+- `parseArgs` accepts negative-number flag values
+- `findMarketplaceItem` no longer silently resolves the wrong package
+- Backend: input validation, no internal error leakage, guarded JSON
+  parsing; plugin reads its version from `package.json`
+
+### Security
+
+- Backend `requireUser` flagged (`// SECURITY:`) — uses the raw GitHub
+  OAuth token as the API bearer credential. Backend deployment is
+  deferred until this is reworked; see ROADMAP.md.
+
 ## [0.2.2] - 2026-05-13
 
 ### Fixed

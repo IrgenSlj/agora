@@ -145,13 +145,13 @@ export function generateInitPlan(scan: ProjectScan): InitPlan {
     }
   }
 
-  const mcpServers: OpenCodeConfig['mcpServers'] = {};
+  const mcp: OpenCodeConfig['mcp'] = {};
   for (const server of servers) {
     if (server.npmPackage) {
-      mcpServers[server.id] = {
-        command: 'npx',
-        args: [server.npmPackage],
-        env: {}
+      mcp[server.id] = {
+        type: 'local',
+        command: ['npx', server.npmPackage],
+        enabled: true
       };
     }
   }
@@ -161,8 +161,8 @@ export function generateInitPlan(scan: ProjectScan): InitPlan {
   return {
     config: {
       $schema: 'https://opencode.ai/config.json',
-      mcpServers,
-      plugins: ['opencode-agora']
+      mcp,
+      plugin: ['opencode-agora']
     },
     servers: servers.map((s) => s.id),
     workflows: Array.from(workflowIds),

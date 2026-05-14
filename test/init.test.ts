@@ -87,8 +87,8 @@ describe('generateInitPlan', () => {
       dependencies: []
     });
     expect(plan.config.$schema).toBe('https://opencode.ai/config.json');
-    expect(plan.config.mcpServers).toBeDefined();
-    expect(Array.isArray(plan.config.plugins)).toBe(true);
+    expect(plan.config.mcp).toBeDefined();
+    expect(Array.isArray(plan.config.plugin)).toBe(true);
   });
 
   test('config always contains the opencode-agora plugin', () => {
@@ -102,14 +102,14 @@ describe('generateInitPlan', () => {
         hasDatabase: false,
         dependencies: []
       });
-      expect(plan.config.plugins).toContain('opencode-agora');
+      expect(plan.config.plugin).toContain('opencode-agora');
     }
   });
 
-  test('servers array matches the ids actually in config.mcpServers (no ghost servers)', () => {
+  test('servers array matches the ids actually in config.mcp (no ghost servers)', () => {
     const scan = scanProject(join(FIXTURES, 'node-project'));
     const plan = generateInitPlan(scan);
-    const configuredIds = Object.keys(plan.config.mcpServers ?? {});
+    const configuredIds = Object.keys(plan.config.mcp ?? {});
 
     // Every id in plan.servers that corresponds to a known MCP package must
     // be present in plan.config.mcpServers.

@@ -612,12 +612,12 @@ ${workflow.prompt}
   const configPath = detectOpenCodeConfigPath({ cwd, env: io.env });
   const loaded = loadOpenCodeConfig(configPath);
   if (loaded.error) return usageError(io, `${loaded.path}: ${loaded.error}`);
-  const plugins = new Set(loaded.config.plugins || []);
+  const plugins = new Set(loaded.config.plugin || []);
   plugins.add(skillId);
 
   const updatedConfig = {
     ...loaded.config,
-    plugins: Array.from(plugins)
+    plugin: Array.from(plugins)
   };
   writeOpenCodeConfig(configPath, updatedConfig);
 

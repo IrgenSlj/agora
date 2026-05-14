@@ -221,45 +221,45 @@ describe('getInstallKind', () => {
 });
 
 describe('buildOpenCodeConfig', () => {
-  test('adds package to mcpServers', () => {
+  test('adds package to mcp', () => {
     const pkg = findMarketplaceItem('mcp-github') as PackageMarketplaceItem;
     const config = buildOpenCodeConfig([pkg]);
     expect(config.$schema).toBe('https://opencode.ai/config.json');
-    expect(config.mcpServers).toBeDefined();
-    expect(config.mcpServers!['mcp-github']).toBeDefined();
-    expect(config.mcpServers!['mcp-github'].command).toBe('npx');
-    expect(config.mcpServers!['mcp-github'].args![0]).toBe('@modelcontextprotocol/server-github');
+    expect(config.mcp).toBeDefined();
+    expect(config.mcp!['mcp-github']).toBeDefined();
+    expect(config.mcp!['mcp-github'].command[0]).toBe('npx');
+    expect(config.mcp!['mcp-github'].command[1]).toBe('@modelcontextprotocol/server-github');
   });
 
   test('merges with existing config without overwriting other servers', () => {
     const existing = {
-      mcpServers: {
-        'my-existing-server': { command: 'node', args: ['server.js'], env: {} }
+      mcp: {
+        'my-existing-server': { type: 'local' as const, command: ['node', 'server.js'] }
       },
-      plugins: ['some-plugin']
+      plugin: ['some-plugin']
     };
     const pkg = findMarketplaceItem('mcp-filesystem') as PackageMarketplaceItem;
     const config = buildOpenCodeConfig([pkg], existing);
 
-    expect(config.mcpServers!['my-existing-server']).toBeDefined();
-    expect(config.mcpServers!['mcp-filesystem']).toBeDefined();
-    expect(config.plugins).toContain('some-plugin');
+    expect(config.mcp!['my-existing-server']).toBeDefined();
+    expect(config.mcp!['mcp-filesystem']).toBeDefined();
+    expect(config.plugin).toContain('some-plugin');
   });
 
   test('adds workflow plugin name for workflow items', () => {
     const wf = findMarketplaceItem('wf-tdd-cycle')!;
     const config = buildOpenCodeConfig([wf]);
-    expect(config.plugins).toContain('skill-tdd-cycle');
-    expect(config.mcpServers).toBeDefined();
-    expect(Object.keys(config.mcpServers!).length).toBe(0);
+    expect(config.plugin).toContain('skill-tdd-cycle');
+    expect(config.mcp).toBeDefined();
+    expect(Object.keys(config.mcp!).length).toBe(0);
   });
 
   test('handles multiple items in one call', () => {
     const github = findMarketplaceItem('mcp-github') as MarketplaceItem;
     const postgres = findMarketplaceItem('mcp-postgres') as MarketplaceItem;
     const config = buildOpenCodeConfig([github, postgres]);
-    expect(config.mcpServers!['mcp-github']).toBeDefined();
-    expect(config.mcpServers!['mcp-postgres']).toBeDefined();
+    expect(config.mcp!['mcp-github']).toBeDefined();
+    expect(config.mcp!['mcp-postgres']).toBeDefined();
   });
 });
 
@@ -270,7 +270,7 @@ describe('createInstallPlan', () => {
     expect(plan.installable).toBe(true);
     expect(plan.commands).toHaveLength(1);
     expect(plan.commands[0]).toBe('npm install -g @modelcontextprotocol/server-github');
-    expect(plan.config.mcpServers!['mcp-github']).toBeDefined();
+    expect(plan.config.mcp!['mcp-github']).toBeDefined();
     expect(plan.notes.length).toBeGreaterThan(0);
   });
 
@@ -288,16 +288,16 @@ describe('createInstallPlan', () => {
     const plan = createInstallPlan(wf);
     expect(plan.installable).toBe(true);
     expect(plan.commands).toHaveLength(0);
-    expect(plan.config.plugins).toContain('skill-tdd-cycle');
+    expect(plan.config.plugin).toContain('skill-tdd-cycle');
   });
 
   test('merges with existing config', () => {
     const pkg = findMarketplaceItem('mcp-filesystem') as PackageMarketplaceItem;
     const existing = {
-      mcpServers: { 'other-server': { command: 'npx', args: ['other'], env: {} } }
+      mcp: { 'other-server': { type: 'local' as const, command: ['npx', 'other'] } }
     };
     const plan = createInstallPlan(pkg, existing);
-    expect(plan.config.mcpServers!['other-server']).toBeDefined();
-    expect(plan.config.mcpServers!['mcp-filesystem']).toBeDefined();
+    expect(plan.config.mcp!['other-server']).toBeDefined();
+    expect(plan.config.mcp!['mcp-filesystem']).toBeDefined();
   });
 });

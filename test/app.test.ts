@@ -120,8 +120,8 @@ describe('agora init --dry-run', () => {
       await runCli(['init', '--json', '--dry-run'], io);
       const payload = JSON.parse(stdout.join(''));
       expect(payload.config.$schema).toBe('https://opencode.ai/config.json');
-      expect(Array.isArray(payload.config.plugins)).toBe(true);
-      expect(payload.config.plugins).toContain('opencode-agora');
+      expect(Array.isArray(payload.config.plugin)).toBe(true);
+      expect(payload.config.plugin).toContain('opencode-agora');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -166,7 +166,7 @@ describe('agora use', () => {
     try {
       await runCli(['use', 'wf-tdd-cycle'], io);
       const config = JSON.parse(readFileSync(configPath, 'utf8'));
-      expect(config.plugins).toContain('skill-tdd-cycle');
+      expect(config.plugin).toContain('skill-tdd-cycle');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -219,9 +219,7 @@ describe('agora use', () => {
       const io2 = createIo(dir).io;
       await runCli(['use', 'wf-tdd-cycle'], io2);
       const config = JSON.parse(readFileSync(configPath, 'utf8'));
-      const occurrences = (config.plugins as string[]).filter(
-        (p) => p === 'skill-tdd-cycle'
-      ).length;
+      const occurrences = (config.plugin as string[]).filter((p) => p === 'skill-tdd-cycle').length;
       expect(occurrences).toBe(1);
     } finally {
       rmSync(dir, { recursive: true, force: true });

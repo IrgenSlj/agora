@@ -109,7 +109,10 @@ describe('CLI commands', () => {
 
       expect(code).toBe(0);
       expect(stdout.join('')).toContain('Updated');
-      expect(config.mcpServers['mcp-github'].args).toEqual(['@modelcontextprotocol/server-github']);
+      expect(config.mcp['mcp-github'].command).toEqual([
+        'npx',
+        '@modelcontextprotocol/server-github'
+      ]);
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }

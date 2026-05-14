@@ -28,13 +28,9 @@ describe('Agora Data Validation', () => {
     expect(wf.author).toBeDefined();
   });
 
-  test('sampleDiscussions has required fields', () => {
-    const disc = sampleDiscussions[0];
-    expect(disc).toBeDefined();
-    expect(disc.id).toBeDefined();
-    expect(disc.title).toBeDefined();
-    expect(disc.content).toBeDefined();
-    expect(disc.category).toBeDefined();
+  test('sampleDiscussions is empty offline (discussions are backend-only)', () => {
+    expect(Array.isArray(sampleDiscussions)).toBe(true);
+    expect(sampleDiscussions).toHaveLength(0);
   });
 
   test('sampleTutorials has steps', () => {

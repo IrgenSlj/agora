@@ -748,85 +748,10 @@ Ask about the project type first, then generate a complete scaffold.`,
   }
 ];
 
-export const sampleDiscussions: Discussion[] = [
-  {
-    id: 'disc-mcp-vs-openai',
-    title: 'MCP Servers vs OpenAI Function Calling — When to use which?',
-    author: 'devarchitect',
-    content:
-      'I have been experimenting with both approaches. MCP seems more flexible for tool-based workflows since any client can use any server, but function calling is simpler to set up for single-provider apps. What is your experience and when do you reach for each?',
-    category: 'question',
-    replies: 23,
-    stars: 45,
-    createdAt: '2025-03-01'
-  },
-  {
-    id: 'disc-best-coder-model',
-    title: 'Best model for coding in 2026?',
-    author: 'local-llm-fan',
-    content:
-      'With Claude Opus 4.5, Gemini 2.5 Pro, GPT-5, DeepSeek V4, and Qwen4 all available — what are you using for daily development? Any standout for agentic coding workflows?',
-    category: 'discussion',
-    replies: 67,
-    stars: 89,
-    createdAt: '2025-03-10'
-  },
-  {
-    id: 'disc-agora-init',
-    title: 'Showcase: Zero-to-productive OpenCode setup in one command',
-    author: 'agora-core',
-    content:
-      'Just built an init flow that scans your project and generates the perfect opencode.json automatically. Node project? Gets the npm MCP servers. Python? Gets the right tools. Try `agora init` in your project!',
-    category: 'showcase',
-    replies: 12,
-    stars: 34,
-    createdAt: '2025-04-01'
-  },
-  {
-    id: 'disc-mcp-security',
-    title: 'Security considerations for MCP servers in production',
-    author: 'sec-ops',
-    content:
-      'What are people doing to secure MCP servers in production? I am particularly concerned about filesystem access scope, credential management, and rate limiting. Curious to hear what patterns the community has settled on.',
-    category: 'question',
-    replies: 31,
-    stars: 56,
-    createdAt: '2025-03-15'
-  },
-  {
-    id: 'disc-workflow-sharing',
-    title: 'Idea: Community workflow registry with versioning',
-    author: 'wf-creator',
-    content:
-      'What if we could version-control and share workflows like npm packages? Publish a workflow, others can install it with `agora use`, fork it, improve it, and contribute back. Think npm for agent workflows.',
-    category: 'idea',
-    replies: 18,
-    stars: 42,
-    createdAt: '2025-04-05'
-  },
-  {
-    id: 'disc-local-vs-remote',
-    title: 'Local models catching up — is 2026 the year of local coding?',
-    author: 'offline-first',
-    content:
-      'With Qwen4-72B and DeepSeek V4 running on consumer hardware, are we finally at the point where local models can replace cloud API for everyday coding? What is your local setup looking like?',
-    category: 'discussion',
-    replies: 45,
-    stars: 78,
-    createdAt: '2025-04-10'
-  },
-  {
-    id: 'disc-mcp-server-list',
-    title: 'What is your must-have MCP server stack?',
-    author: 'stack-builder',
-    content:
-      'Mine: filesystem (obvious), GitHub (dev workflow), sequential-thinking (complex reasoning), memory (context retention), and postgres (data access). What are your non-negotiables?',
-    category: 'discussion',
-    replies: 38,
-    stars: 63,
-    createdAt: '2025-04-15'
-  }
-];
+// Discussions are backend-only. The offline build ships none rather than
+// fabricated community activity — real threads are served live when
+// AGORA_API_URL points at a deployed backend.
+export const sampleDiscussions: Discussion[] = [];
 
 export const sampleTutorials: Tutorial[] = [
   {
@@ -852,13 +777,10 @@ export const sampleTutorials: Tutorial[] = [
         content:
           'Add the MCP server to your OpenCode configuration and restart opencode to pick it up:',
         code: `{
-  "mcpServers": {
+  "mcp": {
     "filesystem": {
-      "command": "npx",
-      "args": [
-        "@modelcontextprotocol/server-filesystem",
-        "./"
-      ]
+      "type": "local",
+      "command": ["npx", "@modelcontextprotocol/server-filesystem", "./"]
     }
   }
 }`
@@ -991,10 +913,10 @@ npx tsx src/my-server.ts
 
 # Add to opencode.json
 {
-  "mcpServers": {
+  "mcp": {
     "my-server": {
-      "command": "npx",
-      "args": ["tsx", "src/my-server.ts"]
+      "type": "local",
+      "command": ["npx", "tsx", "src/my-server.ts"]
     }
   }
 }`

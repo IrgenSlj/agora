@@ -170,10 +170,14 @@ describe('writeOpenCodeConfig / loadOpenCodeConfig', () => {
     try {
       const config = {
         $schema: 'https://opencode.ai/config.json',
-        mcpServers: {
-          'mcp-github': { command: 'npx', args: ['@modelcontextprotocol/server-github'], env: {} }
+        mcp: {
+          'mcp-github': {
+            type: 'local' as const,
+            command: ['npx', '@modelcontextprotocol/server-github'],
+            enabled: true
+          }
         },
-        plugins: ['opencode-agora']
+        plugin: ['opencode-agora']
       };
       writeOpenCodeConfig(configPath, config);
 
@@ -181,8 +185,8 @@ describe('writeOpenCodeConfig / loadOpenCodeConfig', () => {
       expect(loaded.exists).toBe(true);
       expect(loaded.error).toBeUndefined();
       expect(loaded.config.$schema).toBe('https://opencode.ai/config.json');
-      expect(loaded.config.mcpServers!['mcp-github']).toBeDefined();
-      expect(loaded.config.plugins).toContain('opencode-agora');
+      expect(loaded.config.mcp!['mcp-github']).toBeDefined();
+      expect(loaded.config.plugin).toContain('opencode-agora');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -238,14 +242,16 @@ describe('detectOpenCodeConfigPath', () => {
     expect(path).toBe('/tmp/explicit.json');
   });
 
-  test('returns a default path when no env set and no local file exists', () => {
+  test('falls back to a project-local opencode.json when nothing exists', () => {
+    const cwd = '/tmp/no-such-dir-' + Date.now();
     const path = detectOpenCodeConfigPath({
-      cwd: '/tmp/no-such-dir-' + Date.now(),
+      cwd,
       home: '/home/testuser',
       env: {}
     });
-    // Should be the ~/.config/opencode/opencode.json fallback
-    expect(path).toBe('/home/testuser/.config/opencode/opencode.json');
+    // Falls back to the project-local path, not the user's global config,
+    // so init/use never silently mutate ~/.config/opencode/opencode.json.
+    expect(path).toBe(join(cwd, 'opencode.json'));
   });
 
   test('prefers local opencode.json when it exists', () => {
@@ -267,10 +273,14 @@ describe('doctorOpenCodeConfig', () => {
     const configPath = join(dir, 'opencode.json');
     try {
       writeOpenCodeConfig(configPath, {
-        mcpServers: {
-          'mcp-github': { command: 'npx', args: ['@modelcontextprotocol/server-github'], env: {} }
+        mcp: {
+          'mcp-github': {
+            type: 'local',
+            command: ['npx', '@modelcontextprotocol/server-github'],
+            enabled: true
+          }
         },
-        plugins: ['opencode-agora']
+        plugin: ['opencode-agora']
       });
       const report = doctorOpenCodeConfig(configPath);
       expect(report.valid).toBe(true);
@@ -309,11 +319,11 @@ describe('doctorOpenCodeConfig', () => {
     const configPath = join(dir, 'opencode.json');
     try {
       writeOpenCodeConfig(configPath, {
-        mcpServers: {
+        mcp: {
           'mcp-github': {
-            command: 'npx',
-            args: ['@modelcontextprotocol/server-github'],
-            env: {}
+            type: 'local',
+            command: ['npx', '@modelcontextprotocol/server-github'],
+            enabled: true
           }
         }
       });

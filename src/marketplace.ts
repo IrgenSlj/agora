@@ -180,7 +180,7 @@ export function createInstallPlan(
       ? [
           `Workflow will be registered as plugin ${workflowPluginName(item as WorkflowMarketplaceItem)}.`
         ]
-      : ['MCP server will be added to mcpServers.'];
+      : ['MCP server will be added to the mcp config.'];
 
   return {
     item,
@@ -196,27 +196,27 @@ export function buildOpenCodeConfig(
   existingConfig: OpenCodeConfig = {}
 ): OpenCodeConfig {
   const normalized = normalizeConfig(existingConfig);
-  const mcpServers = { ...(normalized.mcpServers || {}) };
-  const plugins = new Set(normalized.plugins || []);
+  const mcp = { ...(normalized.mcp || {}) };
+  const plugin = new Set(normalized.plugin || []);
 
   for (const item of items) {
     if (item.kind === 'package' && item.npmPackage) {
-      mcpServers[item.id] = {
-        command: 'npx',
-        args: [item.npmPackage],
-        env: {}
+      mcp[item.id] = {
+        type: 'local',
+        command: ['npx', item.npmPackage],
+        enabled: true
       };
     }
 
     if (item.kind === 'workflow') {
-      plugins.add(workflowPluginName(item));
+      plugin.add(workflowPluginName(item));
     }
   }
 
   return {
     $schema: normalized.$schema || CONFIG_SCHEMA,
-    mcpServers,
-    plugins: Array.from(plugins)
+    mcp,
+    plugin: Array.from(plugin)
   };
 }
 
@@ -300,8 +300,8 @@ function sortByRelevance(query: string) {
 function normalizeConfig(config: OpenCodeConfig): OpenCodeConfig {
   return {
     $schema: config.$schema || CONFIG_SCHEMA,
-    mcpServers: config.mcpServers || {},
-    plugins: config.plugins || []
+    mcp: config.mcp || {},
+    plugin: config.plugin || []
   };
 }
 
