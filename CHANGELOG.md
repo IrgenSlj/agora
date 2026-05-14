@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **`/agora` slash command.** OpenCode plugins can only register tools, not
+  slash commands — so `agora init` now also writes `.opencode/command/agora.md`,
+  a command that forwards your input to the matching `agora_*` tool. Type
+  `/agora search ...`, `/agora install ...`, etc. inside OpenCode.
+
+### Changed
+
+- README and the `agora_info` tool now explain the tool-vs-slash-command
+  distinction instead of implying the plugin registers `/agora` itself
+
 ## [0.3.0] - 2026-05-14
 
 A production-hardening release. The marketplace data is now real, the

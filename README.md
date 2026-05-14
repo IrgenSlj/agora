@@ -174,20 +174,21 @@ The CLI uses bundled offline marketplace data (36+ MCP servers, 10 workflows) by
 
 ### OpenCode Plugin Commands
 
-Once registered (via `agora init` or manually), use inside OpenCode:
+The plugin itself registers **tools** (`agora_search`, `agora_browse`, `agora_install`, …) that the OpenCode assistant calls — OpenCode plugins cannot register slash commands directly.
+
+To get a typed `/agora` slash command, `agora init` also writes `.opencode/command/agora.md` into your project. That command forwards whatever you type to the matching tool, so these all work inside OpenCode:
 
 | Command | Description |
 |---|---|
 | `/agora search <query> [category]` | Search marketplace |
-| `/agora browse_category <category>` | Browse by category |
-| `/agora browse <id>` | View package details |
+| `/agora browse <id>` | View package or workflow details |
 | `/agora trending [type]` | See trending |
-| `/agora install <id> [--write]` | Install to config |
-| `/agora review [action] [...]` | Reviews/ratings |
-| `/agora discussions [action] [...]` | Community |
-| `/agora profile [action] [--username]` | User profiles |
-| `/agora tutorial [id] [step]` | Interactive tutorials |
+| `/agora install <id>` | Install steps / config for a package |
+| `/agora review <id>` | List or add reviews |
+| `/agora tutorial <id> [step]` | Interactive tutorials |
 | `/agora info` | Help |
+
+If you didn't run `agora init`, copy `.opencode/command/agora.md` from this repo into your project's (or `~/.config/opencode/command/agora.md` for a global command). Without the command file the `agora_*` tools still work — just ask the assistant in chat.
 
 **Categories:** mcp, prompt, workflow, skill `|` **Data sources:** offline (default), `--api`
 

@@ -502,21 +502,20 @@ Run \`/agora discussions list --author ${username}\` to see their discussions.`;
 
 The Developer's Terminal Marketplace & Community
 
-**Commands:**
+Type \`/agora <request>\` in OpenCode and it routes to the right tool:
 - \`/agora search <query> [category]\` - Search marketplace
-- \`/agora browse_category <category>\` - Browse by category
-- \`/agora trending [type]\` - See trending
-- \`/agora browse <id>\` - View package details
-- \`/agora install <id> [--write]\` - Install to config
-- \`/agora review [action] [--id] [--rating] [--content]\` - Reviews/ratings
-- \`/agora discussions [action] [--id] [--title] [--content]\` - Community
-- \`/agora profile [action] [--username]\` - User profiles
-- \`/agora tutorial [id] [step]\` - Interactive tutorials
+- \`/agora browse <id>\` - View package or workflow details
+- \`/agora trending [type]\` - See trending packages and workflows
+- \`/agora install <id>\` - Install steps / config for a package
+- \`/agora review <id>\` - List or add reviews
+- \`/agora tutorial <id> [step]\` - Interactive tutorials
 - \`/agora info\` - This help
 
-**Categories:** mcp, prompt, workflow, skill
+The \`/agora\` slash command is installed by \`agora init\` (or copy
+\`.opencode/command/agora.md\` into your project). Without it, the
+\`agora_*\` tools are still callable directly by the assistant.
 
-Built with ❤️ for the developer community.`;
+**Categories:** mcp, prompt, workflow, skill`;
         }
       })
     }

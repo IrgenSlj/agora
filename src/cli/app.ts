@@ -16,6 +16,7 @@ import {
   type MarketplaceItem
 } from '../marketplace.js';
 import { scanProject, generateInitPlan, applyInitPlan, runCommands } from '../init.js';
+import { installAgoraCommand } from '../commands.js';
 import { sampleWorkflows, dataRefreshedAt } from '../data.js';
 import {
   createDiscussionSource,
@@ -518,12 +519,14 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
         config: plan.config,
         servers: plan.servers,
         commands: plan.commands,
+        slashCommand: join(cwd, '.opencode', 'command', 'agora.md'),
         dryRun: true
       });
       return 0;
     }
 
     applyInitPlan(plan, configPath);
+    const commandPath = installAgoraCommand(cwd);
     const installResults = plan.commands.length ? runCommands(plan.commands) : [];
     const installed = installResults.filter((r) => r.ok).length;
     const failed = installResults.filter((r) => !r.ok).length;
@@ -534,6 +537,7 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
       config: plan.config,
       servers: plan.servers,
       commands: plan.commands,
+      slashCommand: commandPath,
       installResults,
       installed,
       failed
@@ -552,6 +556,9 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
     applyInitPlan(plan, configPath);
     writeLine(io.stdout, `\nWrote config to ${configPath}`);
 
+    const commandPath = installAgoraCommand(cwd);
+    writeLine(io.stdout, `Installed /agora slash command at ${commandPath}`);
+
     if (plan.commands.length) {
       writeLine(io.stdout, '\nInstalling MCP server packages...');
       const installResults = runCommands(plan.commands);
@@ -565,6 +572,7 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
     writeLine(io.stdout, '\n✓ Agora initialized! Restart OpenCode to pick up the changes.');
     writeLine(io.stdout, '  Plugin "opencode-agora" is now registered in your config.');
+    writeLine(io.stdout, '  Type `/agora` in OpenCode to use the marketplace.');
     writeLine(io.stdout, `  ${plan.servers.length} MCP servers configured.`);
     if (plan.workflows.length)
       writeLine(io.stdout, `  ${plan.workflows.length} workflows available via \`agora use\`.`);
@@ -573,6 +581,7 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
     writeLine(io.stdout, '\n--- Dry run ---');
     writeLine(io.stdout, `Target config: ${configPath}`);
     writeLine(io.stdout, formatConfigJson(plan.config));
+    writeLine(io.stdout, `\nSlash command: ${join(cwd, '.opencode', 'command', 'agora.md')}`);
     writeLine(io.stdout, '\nPackages to install:');
     for (const cmd of plan.commands) writeLine(io.stdout, `  ${cmd}`);
     writeLine(io.stdout, '\nRun without --dry-run to apply.');
