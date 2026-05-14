@@ -14,6 +14,13 @@
 - README and the `agora_info` tool now explain the tool-vs-slash-command
   distinction instead of implying the plugin registers `/agora` itself
 
+### Fixed
+
+- **Trending no longer ties on stars.** Every package in the
+  modelcontextprotocol/servers monorepo shares one repo-level star count, so
+  trending and empty-query search now rank by `installs` (npm downloads) — a
+  real per-package signal. `agora_trending` shows install counts for packages.
+
 ## [0.3.0] - 2026-05-14
 
 A production-hardening release. The marketplace data is now real, the

@@ -104,7 +104,11 @@ Run \`/agora browse <id>\` for details.`;
           if (category === 'all' || category === 'packages' || category === 'package') {
             output += `**Top Packages**\n`;
             const topPackages = getTrendingItems({ category: 'package', limit: 5 });
-            output += topPackages.map((p, i) => `${i + 1}. ${p.name} - ⭐ ${p.stars}`).join('\n');
+            // Rank by installs — stars are repo-level and tie across the
+            // modelcontextprotocol/servers monorepo.
+            output += topPackages
+              .map((p, i) => `${i + 1}. ${p.name} - 📥 ${p.installs} installs`)
+              .join('\n');
             output += '\n\n';
           }
 

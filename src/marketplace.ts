@@ -104,7 +104,7 @@ export function getTrendingItems(options: SearchOptions = {}): MarketplaceItem[]
 
   return getMarketplaceItems()
     .filter((item) => matchesCategory(item, category))
-    .sort((a, b) => b.stars - a.stars)
+    .sort(compareByPopularity)
     .slice(0, limit);
 }
 
@@ -287,14 +287,26 @@ function matchesTutorialQuery(tutorial: Tutorial, query: string): boolean {
 
 function sortByRelevance(query: string) {
   return (a: MarketplaceItem, b: MarketplaceItem) => {
-    if (!query) return b.stars - a.stars;
+    if (!query) return compareByPopularity(a, b);
 
     const aName = normalize(a.name).includes(query) ? 1 : 0;
     const bName = normalize(b.name).includes(query) ? 1 : 0;
 
     if (aName !== bName) return bName - aName;
-    return b.stars - a.stars;
+    return compareByPopularity(a, b);
   };
+}
+
+/**
+ * Ranks items by real per-item popularity. `installs` (npm downloads / workflow
+ * forks) is the primary signal because `stars` is repo-level — every package in
+ * the modelcontextprotocol/servers monorepo shares one star count, which would
+ * otherwise tie the entire official set.
+ */
+function compareByPopularity(a: MarketplaceItem, b: MarketplaceItem): number {
+  if (b.installs !== a.installs) return b.installs - a.installs;
+  if (b.stars !== a.stars) return b.stars - a.stars;
+  return a.name.localeCompare(b.name);
 }
 
 function normalizeConfig(config: OpenCodeConfig): OpenCodeConfig {
