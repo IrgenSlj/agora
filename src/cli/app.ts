@@ -2,7 +2,8 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { formatConfigJson } from '../config.js';
-import { COMMANDS } from './commands-meta.js';
+import { COMMANDS, renderManual } from './commands-meta.js';
+import { runInteractiveMenu } from './menu.js';
 import {
   detectOpenCodeConfigPath,
   doctorOpenCodeConfig,
@@ -99,6 +100,20 @@ const booleanFlags = new Set([
   'write'
 ]);
 
+/**
+ * Returns true only when both stdout and stdin are real interactive TTYs AND the
+ * environment supports colour (i.e. not NO_COLOR or TERM=dumb). The gate keeps
+ * the interactive menu away from pipes, CI, and the test harness, all of which
+ * use non-TTY mock streams.
+ */
+function isInteractive(io: CliIo, env: Record<string, string | undefined>): boolean {
+  if (env.NO_COLOR != null) return false;
+  if (env.TERM === 'dumb') return false;
+  const stdoutTTY = Boolean((io.stdout as { isTTY?: boolean }).isTTY);
+  const stdinTTY = Boolean((process.stdin as { isTTY?: boolean }).isTTY);
+  return stdoutTTY && stdinTTY;
+}
+
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
   const env = io.env ?? {};
@@ -124,6 +139,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   }
 
   if (!parsed.command) {
+    if (isInteractive(io, env)) return runInteractiveMenu(io, style);
     writeLine(io.stdout, welcome(useColor, supportsTrueColor(env)));
     return 0;
   }
@@ -1227,41 +1243,10 @@ function usage(): string {
   return lines.join('\n');
 }
 
-function commandManual(name: string): string {
+export function commandManual(name: string): string {
   const meta = COMMANDS.find((c) => c.name === name);
   if (!meta) return '';
-
-  const lines: string[] = [
-    style.accent(meta.name),
-    meta.summary,
-    '',
-    `${style.dim('Usage:')}`,
-    ...meta.usage.split('\n').map((line) => `  ${line}`)
-  ];
-
-  if (meta.flags && meta.flags.length > 0) {
-    const flagWidth = Math.max(...meta.flags.map((f) => f.flag.length));
-    lines.push('');
-    lines.push(style.dim('Flags:'));
-    for (const f of meta.flags) {
-      lines.push(`  ${f.flag.padEnd(flagWidth)}  ${style.dim(f.description)}`);
-    }
-  }
-
-  if (meta.examples && meta.examples.length > 0) {
-    lines.push('');
-    lines.push(style.dim('Examples:'));
-    for (const ex of meta.examples) {
-      lines.push(`  ${ex}`);
-    }
-  }
-
-  if (meta.details) {
-    lines.push('');
-    lines.push(meta.details);
-  }
-
-  return lines.join('\n');
+  return renderManual(meta, style);
 }
 
 function usageError(io: CliIo, message: string): number {

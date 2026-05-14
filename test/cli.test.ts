@@ -976,6 +976,18 @@ describe('CLI commands', () => {
   });
 });
 
+describe('TTY gate — no-command path', () => {
+  test('runCli([]) with non-TTY io returns 0 and prints static welcome, does not hang', async () => {
+    const { io, stdout } = createIo();
+    // io.stdout has no isTTY property (mock stream) → isInteractive returns false
+    const code = await runCli([], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).toContain('Welcome to Agora');
+  });
+});
+
 describe('help system', () => {
   test('agora help outputs all group labels and a sampling of command names', async () => {
     const { io, stdout } = createIo();
