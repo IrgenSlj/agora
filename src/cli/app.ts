@@ -54,6 +54,7 @@ import type { Tutorial } from '../types.js';
 import {
   createStyler,
   renderBanner,
+  renderBox,
   shouldUseColor,
   supportsTrueColor,
   type Styler
@@ -105,7 +106,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     env,
     Boolean(parsed.flags.json)
   );
-  style = createStyler(useColor);
+  style = createStyler(useColor, supportsTrueColor(env));
 
   if (parsed.flags.version) {
     writeLine(io.stdout, VERSION);
@@ -1165,17 +1166,20 @@ function formatTutorialStep(tutorial: Tutorial, stepNumber: number): string {
 }
 
 function welcome(color: boolean, trueColor: boolean): string {
-  const banner = renderBanner({
-    color,
-    trueColor,
-    subtitle: `The developer's terminal marketplace for OpenCode · v${VERSION}`
-  });
+  const banner = renderBanner({ color, trueColor });
+  const box = renderBox(
+    'Welcome to Agora',
+    [
+      "The developer's terminal marketplace for OpenCode",
+      `v${VERSION} · run \`agora help\` to get started`
+    ],
+    { color, trueColor }
+  );
   const hint = [
     `${style.dim('Browse')}   agora search <query> · agora trending · agora browse <id>`,
-    `${style.dim('Set up')}   agora init · agora use <workflow>`,
-    `${style.dim('Help')}     agora help`
+    `${style.dim('Set up')}   agora init · agora use <workflow>`
   ].join('\n');
-  return `\n${banner}\n\n${hint}\n`;
+  return `\n${banner}\n\n${box}\n\n${hint}\n`;
 }
 
 /** Flat-minimal section header: accent title, dim ` · `-joined metadata. */

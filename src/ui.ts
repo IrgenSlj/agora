@@ -1,17 +1,19 @@
 /**
  * Terminal styling for the agora CLI — a flat, minimal look: one accent colour
  * for identifiers, dim for everything secondary, plain foreground for body text,
- * plus a gradient wordmark banner for the standalone hub experience.
+ * plus a gradient wordmark banner and a rounded header frame for the standalone
+ * hub experience.
  *
  * Colour is opt-in. It is emitted only to an interactive TTY, and never under
  * `NO_COLOR`, `TERM=dumb`, or `--json`. Non-TTY callers (pipes, the test
  * harness) get plain strings, so output stays assertable.
  *
- * NOTE: the banner art below is a PLACEHOLDER. The final wordmark + palette are
- * being designed separately — see docs/claude-design-brief.md. The render
- * pipeline (gradient, truecolor/256 fallback, no-colour degradation) is final;
- * only the `AGORA_WORDMARK` lines and `BANNER_GRADIENT` stops get swapped.
+ * The wordmark art, gradient, and accent colour below come from the Claude
+ * Design handoff (docs/claude-design-brief.md → `agora-wordmark.ts`). Palette:
+ * "agora at golden hour" — Aegean blue → marble warm → terracotta.
  */
+
+export type RGB = [number, number, number];
 
 export interface Styler {
   accent(value: string): string;
@@ -19,13 +21,18 @@ export interface Styler {
   bold(value: string): string;
 }
 
-type RGB = [number, number, number];
-
 const RESET = '\x1b[0m';
-const CODES = {
-  accent: '36', // cyan
-  dim: '2',
-  bold: '1'
+
+/**
+ * ACCENT — used for package identifiers in list output. A desaturated amber:
+ * high contrast on both light and dark terminals, and distinct from the
+ * gradient stops so ids never blend into the banner.
+ */
+export const ACCENT = {
+  hex: '#D4A85A',
+  rgb: [212, 168, 90] as RGB,
+  ansi256: 179, // xterm-256 warm gold
+  ansiBasic: 33 // ANSI yellow (fg) — 16-colour fallback
 } as const;
 
 const plain: Styler = {
@@ -34,13 +41,20 @@ const plain: Styler = {
   bold: (value) => value
 };
 
-export function createStyler(useColor: boolean): Styler {
+/**
+ * Builds a styler. The accent colour is emitted as 24-bit when the terminal
+ * advertises truecolor, otherwise as the nearest xterm-256 cube colour.
+ */
+export function createStyler(useColor: boolean, trueColor = false): Styler {
   if (!useColor) return plain;
+  const accentCode = trueColor
+    ? `38;2;${ACCENT.rgb[0]};${ACCENT.rgb[1]};${ACCENT.rgb[2]}`
+    : `38;5;${ACCENT.ansi256}`;
   const wrap = (code: string) => (value: string) => `\x1b[${code}m${value}${RESET}`;
   return {
-    accent: wrap(CODES.accent),
-    dim: wrap(CODES.dim),
-    bold: wrap(CODES.bold)
+    accent: wrap(accentCode),
+    dim: wrap('2'),
+    bold: wrap('1')
   };
 }
 
@@ -61,22 +75,47 @@ export function supportsTrueColor(env: Record<string, string | undefined>): bool
   return colorterm === 'truecolor' || colorterm === '24bit';
 }
 
-// ── Banner ──────────────────────────────────────────────────────────────────
+// ── Wordmark + banner ───────────────────────────────────────────────────────
 
-/** PLACEHOLDER wordmark — fixed-width (39 cols) block letters, 5 rows. */
-const AGORA_WORDMARK = [
-  ' █████   ██████  █████  ██████   █████ ',
+/**
+ * Filled-block letterforms (Gemini-style), 5 rows × 39 cols. Tuned to stay
+ * legible uncoloured: the G's inner spur reads as G (not C), the R's diagonal
+ * leg is offset from its bowl so it doesn't read as P.
+ */
+export const AGORA_WORDMARK_SOLID: string[] = [
+  ' █████   █████   █████  ██████   █████ ',
   '██   ██ ██      ██   ██ ██   ██ ██   ██',
   '███████ ██  ███ ██   ██ ██████  ███████',
   '██   ██ ██   ██ ██   ██ ██  ██  ██   ██',
-  '██   ██  ██████  █████  ██   ██ ██   ██'
+  '██   ██  █████   █████  ██   ██ ██   ██'
 ];
 
-/** PLACEHOLDER gradient — indigo → violet → pink, left to right. */
-const BANNER_GRADIENT: RGB[] = [
-  [99, 102, 241],
-  [168, 85, 247],
-  [236, 72, 153]
+/**
+ * Outlined / hairline letterforms (Claude Code-style), 5 rows × 39 cols.
+ * A thinner, more architectural wordmark — good for a quieter banner over a
+ * single accent colour rather than a gradient.
+ */
+export const AGORA_WORDMARK_OUTLINE: string[] = [
+  ' ▄▀▀▀▄   ▄▀▀▀▄   ▄▀▀▀▄   █▀▀▀▄   ▄▀▀▀▄ ',
+  ' █   █   █       █   █   █   █   █   █ ',
+  ' █▀▀▀█   █  ▀▄   █   █   █▀▀▄    █▀▀▀█ ',
+  ' █   █   █   █   █   █   █   █   █   █ ',
+  ' ▀   ▀   ▀▄▄▄▀   ▀▄▄▄▀   ▀   ▀   ▀   ▀ '
+];
+
+/** Default banner art. */
+export const AGORA_WORDMARK = AGORA_WORDMARK_SOLID;
+
+/**
+ * BANNER_GRADIENT — 3 stops sampled across the wordmark's columns.
+ * "agora at golden hour": Aegean blue → marble warm → terracotta. Neither
+ * endpoint touches pure black or white, so it holds contrast on either
+ * terminal background.
+ */
+export const BANNER_GRADIENT: RGB[] = [
+  [92, 142, 170], // #5C8EAA  Aegean blue
+  [212, 184, 134], // #D4B886  marble warm
+  [199, 116, 82] // #C77452  terracotta
 ];
 
 function lerp(a: number, b: number, t: number): number {
@@ -109,6 +148,8 @@ function colorize(char: string, rgb: RGB, trueColor: boolean): string {
 export interface BannerOptions {
   color: boolean;
   trueColor: boolean;
+  /** Which wordmark to render (default: solid). */
+  variant?: 'solid' | 'outline';
   /** Dim line printed under the wordmark. */
   subtitle?: string;
 }
@@ -119,9 +160,10 @@ export interface BannerOptions {
  * dim subtitle. Degrades to plain block letters when colour is off.
  */
 export function renderBanner(opts: BannerOptions): string {
-  const width = Math.max(...AGORA_WORDMARK.map((line) => line.length));
+  const rows = opts.variant === 'outline' ? AGORA_WORDMARK_OUTLINE : AGORA_WORDMARK_SOLID;
+  const width = Math.max(...rows.map((line) => line.length));
 
-  const lines = AGORA_WORDMARK.map((line) => {
+  const lines = rows.map((line) => {
     if (!opts.color) return line;
     let out = '';
     for (let col = 0; col < line.length; col += 1) {
@@ -142,4 +184,40 @@ export function renderBanner(opts: BannerOptions): string {
   }
 
   return lines.join('\n');
+}
+
+// ── Header frame ────────────────────────────────────────────────────────────
+
+export interface BoxOptions {
+  color: boolean;
+  trueColor: boolean;
+}
+
+/**
+ * A calm rounded-corner frame for the welcome header — rounded corners, single
+ * sides, a half-block "pillar" prefix on each content line (the pillar reads as
+ * a small column — fitting for the agora). The first line is the bold accent
+ * title; the rest are dim body text. Border and pillar are accent-tinted; body
+ * text is left uncoloured per the design spec.
+ */
+export function renderBox(title: string, body: string[], opts: BoxOptions): string {
+  const styler = createStyler(opts.color, opts.trueColor);
+  const contentLines = [title, ...body];
+  const textWidth = Math.max(...contentLines.map((line) => line.length));
+  // layout per row: │ + 2 pad + "▍ " + text(textWidth) + 2 pad + │
+  const inner = 2 + 2 + textWidth + 2;
+
+  const top = styler.accent(`╭${'─'.repeat(inner)}╮`);
+  const bottom = styler.accent(`╰${'─'.repeat(inner)}╯`);
+  const blank = `${styler.accent('│')}${' '.repeat(inner)}${styler.accent('│')}`;
+
+  const row = (text: string, isTitle: boolean) => {
+    const trailing = ' '.repeat(textWidth - text.length);
+    const styledText = isTitle ? styler.bold(text) : styler.dim(text);
+    return `${styler.accent('│')}  ${styler.accent('▍')} ${styledText}${trailing}  ${styler.accent('│')}`;
+  };
+
+  return [top, blank, ...contentLines.map((line, i) => row(line, i === 0)), blank, bottom].join(
+    '\n'
+  );
 }

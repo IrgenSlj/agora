@@ -5,10 +5,13 @@
 ### Added
 
 - **Standalone hub experience.** `agora` with no arguments now shows a gradient
-  wordmark banner and quick-start hints. The CLI got a flat-minimal restyle —
-  accent identifiers, dim metadata — with truecolor + 256-colour fallback and
-  clean degradation under `NO_COLOR` / non-TTY. Banner art is a placeholder
-  pending a design pass (`docs/claude-design-brief.md`).
+  wordmark banner inside a rounded header frame, plus quick-start hints. The CLI
+  got a flat-minimal restyle — accent identifiers, dim metadata — with truecolor
+  + 256-colour fallback and clean degradation under `NO_COLOR` / non-TTY.
+- **Design pass landed.** The wordmark letterforms (`AGORA_WORDMARK_SOLID` /
+  `_OUTLINE`), the "agora at golden hour" gradient (Aegean blue → marble →
+  terracotta), the amber accent, and the `renderBox` header frame come from the
+  Claude Design handoff (`docs/claude-design-brief.md`).
 - **`docs/ARCHITECTURE.md`** — the three-surface model, the open-marketplace
   direction, and the inference question, written down.
 - **`/agora` slash command.** OpenCode plugins can only register tools, not

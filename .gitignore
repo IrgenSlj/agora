@@ -8,3 +8,5 @@ dist/
 .envrc
 .direnv/
 .agora/
+.idea/
+.vscode/
