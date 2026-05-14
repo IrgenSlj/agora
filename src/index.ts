@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import type { Plugin } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
 import type { Discussion } from './types.js';
@@ -10,7 +11,10 @@ import {
   searchMarketplaceItems
 } from './marketplace.js';
 import { formatConfigJson } from './config.js';
-import pkg from '../package.json';
+
+const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+  version: string;
+};
 
 const AGORA_VERSION = pkg.version;
 

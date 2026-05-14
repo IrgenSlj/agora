@@ -1,7 +1,6 @@
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import pkg from '../../package.json';
 import { formatConfigJson } from '../config.js';
 import {
   detectOpenCodeConfigPath,
@@ -52,6 +51,9 @@ import {
 } from '../state.js';
 import type { Tutorial } from '../types.js';
 
+const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
+  version: string;
+};
 const VERSION = pkg.version;
 
 type OutputStream = {
