@@ -114,7 +114,7 @@ Run \`/agora browse <id>\` for details.`;
             // Rank and display by installs — stars are repo-level and tie
             // across the modelcontextprotocol/servers monorepo.
             output += topPackages
-              .map((p, i) => `${i + 1}. ${p.id} — 📥 ${formatInstalls(p.installs)} installs`)
+              .map((p, i) => `${i + 1}. ${p.id} — 📥 ${formatInstalls(p.installs)} installs · ⭐ ${formatStars(p.stars)}`)
               .join('\n');
             output += '\n\n';
           }
@@ -302,6 +302,62 @@ Or run \`agora install ${item.id} --write\` in your terminal to do both automati
         }
       }),
 
+      agora_chat: tool({
+        description: 'Chat with an AI assistant about the Agora marketplace',
+        args: {
+          message: tool.schema.string().describe('Question or message'),
+          model: tool.schema
+            .string()
+            .optional()
+            .describe('Model override (default: deepseek-v4-flash-free)')
+        },
+        async execute(args) {
+          const message = args.message;
+          const model = args.model || 'deepseek-v4-flash-free';
+          const modelArg = model.includes('/') ? model : `opencode/${model}`;
+
+          const { spawn } = await import('node:child_process');
+          return new Promise<string>((resolve) => {
+            const child = spawn(
+              'opencode',
+              ['run', '--format', 'json', '--model', modelArg, message],
+              { stdio: ['ignore', 'pipe', 'pipe'], shell: false }
+            );
+
+            let stdout = '';
+            let response = '';
+
+            child.stdout.on('data', (chunk: Buffer) => {
+              stdout += chunk.toString();
+            });
+
+            child.stderr.on('data', () => {});
+
+            child.on('close', (code) => {
+              if (code !== 0) {
+                resolve(`Error: opencode exited with code ${code}. Try a different model with \`/agora chat model:anthropic/claude-sonnet-4-20250514 "${message}"\``);
+                return;
+              }
+
+              for (const line of stdout.split('\n').filter(Boolean)) {
+                try {
+                  const ev = JSON.parse(line);
+                  if (ev.type === 'text' && ev.part?.text) {
+                    response += ev.part.text;
+                  }
+                } catch { /* skip */ }
+              }
+
+              resolve(response || 'No response generated. Try a different question.');
+            });
+
+            child.on('error', (err) => {
+              resolve(`Failed to run opencode: ${err.message}. Is opencode installed and in your PATH?`);
+            });
+          });
+        }
+      }),
+
       agora_info: tool({
         description: 'Show information about Agora plugin',
         args: {},
@@ -317,14 +373,19 @@ Type \`/agora <request>\` in OpenCode and it routes to the right tool:
 - \`/agora trending [type]\` - See trending packages and workflows
 - \`/agora install <id>\` - Install steps / config for a package
 - \`/agora tutorial <id> [step]\` - Interactive tutorials
+- \`/agora chat <message>\` - Free AI chat via opencode run
 - \`/agora info\` - This help
 
 The \`/agora\` slash command is installed by \`agora init\` (or copy
 \`.opencode/command/agora.md\` into your project). Without it, the
 \`agora_*\` tools are still callable directly by the assistant.
 
-Community features — profiles, reviews, discussions, publishing — live
-in the \`agora\` CLI and need a connected backend.
+**CLI-only features** (not plugin tools):
+- \`agora mcp\` — Run an MCP server exposing marketplace tools
+- \`agora review\`, \`agora discuss\`, \`agora profile\`, \`agora publish\`
+- \`agora init\`, \`agora use\`, \`agora config doctor\`
+
+Community features need a connected backend (\`AGORA_API_URL\` + token).
 
 **Categories:** mcp, prompt, workflow, skill`;
         }

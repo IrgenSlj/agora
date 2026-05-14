@@ -1,4 +1,4 @@
-import type { Package, Workflow } from './types.js';
+import type { Package } from './types.js';
 
 export interface OpenCodeConfig {
   $schema?: string;
@@ -41,19 +41,6 @@ export function generateMcpConfig(
   };
 
   return newConfig;
-}
-
-export function generateWorkflowConfig(
-  wf: Workflow,
-  existingConfig: OpenCodeConfig = {}
-): OpenCodeConfig {
-  const skillName = wf.id.replace('wf-', 'skill-');
-
-  return {
-    $schema: 'https://opencode.ai/config.json',
-    mcp: existingConfig.mcp || {},
-    plugin: [...(existingConfig.plugin || []), skillName]
-  };
 }
 
 export function formatConfigJson(config: OpenCodeConfig): string {
@@ -105,15 +92,4 @@ export function validatePackageName(name: string): { valid: boolean; error?: str
   return { valid: true };
 }
 
-export function getInstallInstructions(pkg: Package): string[] {
-  const instructions: string[] = [];
 
-  if (pkg.npmPackage) {
-    instructions.push(`npm install -g ${pkg.npmPackage}`);
-  }
-
-  const config = generateMcpConfig(pkg);
-  instructions.push(`\nAdd to opencode.json:\n${formatConfigJson(config)}`);
-
-  return instructions;
-}

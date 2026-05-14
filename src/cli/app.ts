@@ -1,7 +1,9 @@
 import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { spawn } from 'node:child_process';
 import { formatConfigJson } from '../config.js';
+import { formatNumber } from '../format.js';
 import { COMMANDS, renderManual } from './commands-meta.js';
 import { runInteractiveMenu } from './menu.js';
 import {
@@ -91,9 +93,12 @@ export interface ParsedArgs {
 
 const booleanFlags = new Set([
   'api',
+  'continue',
+  'dryRun',
   'help',
   'json',
   'live',
+  'mcp',
   'offline',
   'version',
   'verbose',
@@ -182,6 +187,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return commandAuth(parsed, io);
       case 'config':
         return await commandConfig(parsed, io);
+      case 'mcp':
+        return await commandMcp(parsed, io);
+      case 'chat':
+        return await commandChat(parsed, io);
       case 'init':
         return await commandInit(parsed, io);
       case 'use':
@@ -361,7 +370,7 @@ async function commandWorkflows(parsed: ParsedArgs, io: CliIo): Promise<number> 
     category: 'workflow',
     limit
   });
-  const workflows = result.data.filter((item) => item.kind === 'workflow');
+  const workflows = result.data;
   warnFallback(result, io);
 
   if (parsed.flags.json) {
@@ -580,11 +589,196 @@ async function commandInstall(parsed: ParsedArgs, io: CliIo): Promise<number> {
   return 0;
 }
 
+async function commandMcp(_parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const { runMcpServer } = await import('./mcp-server.js');
+  try {
+    await runMcpServer();
+  } catch (error) {
+    writeLine(io.stderr, error instanceof Error ? error.message : String(error));
+    return 1;
+  }
+  return 0;
+}
+
+const FREE_MODELS = [
+  'deepseek-v4-flash-free',
+  'minimax-m2.5-free',
+  'nemotron-3-super-free',
+];
+
+/** Regexp to extract session ID from a JSON opencode event line. */
+function extractSessionId(line: string): string | null {
+  try {
+    const ev = JSON.parse(line);
+    if (ev.sessionID && typeof ev.sessionID === 'string') return ev.sessionID;
+  } catch { /* not JSON, skip */ }
+  return null;
+}
+
+/**
+ * Persist the most recent chat session ID to the Agora state file so
+ * `--continue` can pick it up.
+ */
+function persistChatSession(dataDir: string, sessionId: string): void {
+  try {
+    const state = loadAgoraState(dataDir);
+    const updated = {
+      ...state,
+      _meta: { ...((state as any)._meta || {}), lastChatSession: sessionId },
+    };
+    writeAgoraState(dataDir, updated);
+  } catch {
+    // best-effort
+  }
+}
+
+function loadLastChatSession(dataDir: string): string | undefined {
+  try {
+    const state = loadAgoraState(dataDir);
+    return (state as any)._meta?.lastChatSession;
+  } catch {
+    return undefined;
+  }
+}
+
+async function commandChat(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const message = parsed.args.join(' ');
+  const model = stringFlag(parsed, 'model', 'm') || FREE_MODELS[0];
+  const continueMode = parsed.flags.continue === true;
+  const explicitSession = stringFlag(parsed, 'session', 's');
+  const rawJson = parsed.flags.json === true;
+  const modelArg = model.includes('/') ? model : `opencode/${model}`;
+
+  if (!message) {
+    // TUI mode — hand off to opencode with inherit stdio
+    process.stderr.write(`Agora Chat (${model}) — press Ctrl+C to exit.\n`);
+
+    const child = spawn('opencode', ['--model', modelArg], {
+      env: io.env as Record<string, string>,
+      stdio: 'inherit',
+      shell: false,
+    });
+    return new Promise((resolve) => {
+      child.on('close', (code) => resolve(code ?? 0));
+      child.on('error', (err) => {
+        writeLine(io.stderr, `Failed to run opencode: ${err.message}`);
+        resolve(1);
+      });
+    });
+  }
+
+  // One-shot mode — single message via opencode run
+  return new Promise<number>((resolve) => {
+    const args = ['run', '--format', 'json'];
+    args.push('--model', modelArg);
+
+    if (explicitSession) {
+      args.push('--session', explicitSession);
+    } else if (continueMode) {
+      const dataDir = detectDataDir(parsed, io);
+      const lastSession = loadLastChatSession(dataDir);
+      if (lastSession) {
+        args.push('--session', lastSession);
+      } else {
+        args.push('--continue');
+      }
+    }
+
+    args.push(message);
+
+    const stderrChunks: string[] = [];
+    let sessionId: string | null = null;
+    let wroteNewline = false;
+
+    const child = spawn('opencode', args, {
+      env: io.env as Record<string, string>,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: false,
+    });
+
+    child.stdout?.on('data', (chunk: Buffer) => {
+      const text = chunk.toString();
+      for (const line of text.split('\n').filter(Boolean)) {
+        if (!sessionId) sessionId = extractSessionId(line);
+
+        if (rawJson) {
+          process.stdout.write(line + '\n');
+          continue;
+        }
+
+        try {
+          const ev = JSON.parse(line);
+          if (ev.type === 'text' && ev.part?.text) {
+            process.stdout.write(ev.part.text);
+            wroteNewline = false;
+          }
+          if (ev.type === 'step_finish') {
+            const tokens = ev.part?.tokens;
+            if (tokens && !rawJson) {
+              const cost = typeof tokens.cost === 'number' ? ` · $${tokens.cost.toFixed(6)}` : '';
+              process.stdout.write(`\n\x1b[2m[${tokens.output} tokens${cost}]\x1b[0m\n`);
+              wroteNewline = true;
+            }
+          }
+        } catch { /* skip malformed lines */ }
+      }
+    });
+
+    child.stderr?.on('data', (chunk: Buffer) => {
+      stderrChunks.push(chunk.toString());
+    });
+
+    child.on('close', (code) => {
+      if (!wroteNewline) process.stdout.write('\n');
+
+      if (sessionId) {
+        const dataDir = detectDataDir(parsed, io);
+        persistChatSession(dataDir, sessionId);
+        if (!rawJson) {
+          process.stdout.write(`\x1b[2mSession: ${sessionId.slice(0, 24)}…  `);
+          process.stdout.write(`Continue: agora chat --session ${sessionId} "..."\x1b[0m\n`);
+        }
+      }
+
+      if (code !== 0) {
+        const errText = stderrChunks.join('');
+        const modelError = errText.match(/Model not found:.*?Did you mean:\s*(.+?)\?/);
+        if (modelError) {
+          const suggestions = modelError[1];
+          writeLine(io.stderr, `\nModel not available. Try: ${suggestions}`);
+          writeLine(io.stderr, `Example: agora chat -m deepseek-v4-flash-free "your question"`);
+        } else if (errText.includes('not found')) {
+          writeLine(io.stderr, '\n' + errText.replace(/^.*?ERROR\s+/gm, '').trim());
+        }
+      }
+      resolve(code ?? 0);
+    });
+
+    child.on('error', (err) => {
+      writeLine(io.stderr, `Failed to run opencode: ${err.message}`);
+      writeLine(io.stderr, 'Is opencode installed and in your PATH?');
+      resolve(1);
+    });
+  });
+}
+
 async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const cwd = io.cwd || process.cwd();
   const scan = scanProject(cwd);
   const plan = generateInitPlan(scan);
   const configPath = detectOpenCodeConfigPath({ cwd, env: io.env });
+  const withMcp = parsed.flags.mcp === true;
+
+  if (withMcp) {
+    plan.config.mcp = plan.config.mcp || {};
+    plan.config.mcp.agora = {
+      type: 'local',
+      command: ['agora', 'mcp'],
+      enabled: true
+    };
+    plan.servers.push('agora');
+    plan.notes.push('Agora MCP server registered — OpenCode can discover marketplace tools.');
+  }
 
   if (parsed.flags.json) {
     if (parsed.flags.dryRun) {
@@ -649,6 +843,7 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
     writeLine(io.stdout, '  Plugin "opencode-agora" is now registered in your config.');
     writeLine(io.stdout, '  Type `/agora` in OpenCode to use the marketplace.');
     writeLine(io.stdout, `  ${plan.servers.length} MCP servers configured.`);
+    if (withMcp) writeLine(io.stdout, '  Agora MCP server registered — `agora mcp` is available as an MCP tool.');
     if (plan.workflows.length)
       writeLine(io.stdout, `  ${plan.workflows.length} workflows available via \`agora use\`.`);
     for (const note of plan.notes) writeLine(io.stdout, `  ${note}`);
@@ -1065,8 +1260,8 @@ function formatItemList(items: MarketplaceItem[]): string {
     .map((item) => {
       const metrics =
         item.kind === 'package'
-          ? `${formatCount(item.installs)} installs · ${formatCount(item.stars)} ★`
-          : `${formatCount(item.stars)} ★`;
+          ? `${formatNumber(item.installs)} installs · ${formatNumber(item.stars)} ★`
+          : `${formatNumber(item.stars)} ★`;
       return [
         `${style.accent(item.id.padEnd(idWidth))}  ${style.dim(metrics)}`,
         style.dim(item.name),
@@ -1084,7 +1279,7 @@ function formatItemDetail(item: MarketplaceItem): string {
     `${style.dim('type')}      ${item.kind}`,
     `${style.dim('category')}  ${item.category}`,
     `${style.dim('author')}    ${item.author}`,
-    `${style.dim('stars')}     ${formatCount(item.stars)}`,
+    `${style.dim('stars')}     ${formatNumber(item.stars)}`,
     `${style.dim('install')}   ${getInstallKind(item)}`,
     '',
     item.description,
@@ -1094,7 +1289,7 @@ function formatItemDetail(item: MarketplaceItem): string {
 
   if (item.kind === 'package') {
     lines.splice(5, 0, `${style.dim('version')}   ${item.version}`);
-    lines.push(`${style.dim('installs')}  ${formatCount(item.installs)}`);
+    lines.push(`${style.dim('installs')}  ${formatNumber(item.installs)}`);
     if (item.repository) lines.push(`${style.dim('repo')}      ${item.repository}`);
     if (item.npmPackage) lines.push(`${style.dim('npm')}       ${item.npmPackage}`);
   }
@@ -1144,9 +1339,9 @@ function formatProfileDetail(profile: ApiProfile): string {
   const lines = [
     profile.displayName,
     `username: ${profile.username}`,
-    `packages: ${formatCount(profile.packages)}`,
-    `workflows: ${formatCount(profile.workflows)}`,
-    `discussions: ${formatCount(profile.discussions)}`
+    `packages: ${formatNumber(profile.packages)}`,
+    `workflows: ${formatNumber(profile.workflows)}`,
+    `discussions: ${formatNumber(profile.discussions)}`
   ];
 
   if (profile.bio) lines.splice(2, 0, `bio: ${profile.bio}`);
@@ -1292,6 +1487,7 @@ function shortFlag(arg: string): string {
   const flag = arg.slice(1);
   if (flag === 'h') return 'help';
   if (flag === 'j') return 'json';
+  if (flag === 'm') return 'model';
   if (flag === 'c') return 'c';
   if (flag === 'n') return 'n';
   if (flag === 't') return 't';
@@ -1570,12 +1766,6 @@ function writeLine(stream: OutputStream, value = ''): void {
 function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
   return `${value.slice(0, max - 3)}...`;
-}
-
-function formatCount(value: number): string {
-  if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}K`;
-  return String(value);
 }
 
 function formatDate(value: string): string {

@@ -117,6 +117,28 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora workflows', 'agora workflows tdd', 'agora workflows security --json']
   },
   {
+    name: 'chat',
+    group: 'Marketplace',
+    summary: 'Chat with an AI assistant about the Agora marketplace',
+    usage: 'agora chat [message] [--continue] [--session <id>] [--model <model>]',
+    details:
+      'Starts an interactive OpenCode TUI session with a free model. ' +
+      'Pass a message for one-shot mode (scriptable). ' +
+      'The TUI gives you a full REPL with conversation history, editing, and /agora commands.',
+    flags: [
+      { flag: '--model, -m', description: 'Model to use (default: deepseek-v4-flash-free)' },
+      { flag: '--continue', description: 'Continue the last conversation' },
+      { flag: '--session, -s', description: 'Continue a specific session by ID' },
+      { flag: '--json', description: 'Output raw JSON events (one-shot mode only)' }
+    ],
+    examples: [
+      'agora chat',
+      'agora chat "what MCP servers are for postgres?"',
+      'agora chat --continue "follow up question"',
+      'agora chat -m nemotron-3-super-free'
+    ]
+  },
+  {
     name: 'install',
     group: 'Marketplace',
     summary: 'Install a package into your OpenCode config',
@@ -142,15 +164,16 @@ export const COMMANDS: CommandMeta[] = [
     name: 'init',
     group: 'Setup',
     summary: 'Scaffold Agora into the current project',
-    usage: 'agora init [--dry-run] [--json]',
+    usage: 'agora init [--dry-run] [--json] [--mcp]',
     details:
       'Scans the current directory, generates an opencode.json with recommended MCP servers, ' +
       'and installs the /agora slash command. Use --dry-run to preview without writing.',
     flags: [
       { flag: '--dry-run', description: 'Preview what would be written without applying changes' },
-      { flag: '--json', description: 'Output the generated config as JSON' }
+      { flag: '--json', description: 'Output the generated config as JSON' },
+      { flag: '--mcp', description: 'Also register the Agora MCP server in the config' }
     ],
-    examples: ['agora init', 'agora init --dry-run']
+    examples: ['agora init', 'agora init --dry-run', 'agora init --mcp']
   },
   {
     name: 'use',

@@ -611,7 +611,7 @@ async function fetchWithTimeout(
 
 async function responseError(response: Response, path: string): Promise<string> {
   try {
-    const body = (await response.json()) as any;
+    const body = (await response.json()) as Record<string, unknown>;
     if (body?.error) return `API returned ${response.status} for ${path}: ${body.error}`;
   } catch {
     // Use generic status message.
@@ -690,8 +690,8 @@ function mapTutorial(tutorial: ApiTutorial): Tutorial {
 }
 
 function mapReview(value: unknown): ApiReview {
-  const review = value as any;
-  const itemType = review.itemType || review.item_type || 'package';
+  const review = value as Record<string, unknown>;
+  const itemType = String(review.itemType || review.item_type || 'package');
 
   return {
     id: String(review.id || ''),

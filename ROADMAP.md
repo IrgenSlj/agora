@@ -60,15 +60,16 @@ surface — mechanism design does the policing, not a gatekeeper:
 
 - Public web hub for discovery/SEO, seller dashboards
 - VS Code / JetBrains surface
-- _Optional:_ a conversational layer (smart `init`, interactive tutorials) via
-  the Claude Agent SDK — opt-in, not a foundation. The hub does not own
-  inference; see `docs/ARCHITECTURE.md`.
-
-## Open decisions
-
-1. **TUI shape** — styled one-shot commands (scriptable, what we have) vs. a
-   full-screen interactive TUI (Ink, a real build) vs. hybrid (`agora` alone
-   launches a browse mode).
+- **MCP server mode** (`agora mcp`) — All marketplace tools available as
+  standard MCP tools. Add to opencode.json for conversational marketplace
+  queries from any OpenCode session. _Done in 0.4.0._
+- **Free inference chat** (`agora chat`) — Delegates to `opencode` in two modes:
+  - **TUI mode** (`agora chat`): Full `opencode` TUI with `inherit` stdio —
+    persistent REPL, conversation history, editing, `/agora` commands.
+    Zero per-message latency.
+  - **One-shot mode** (`agora chat "question"`): Single query via `opencode run`.
+  - Plugin tool (`/agora chat "question"`) available from inside OpenCode.
+  _Done in 0.4.0._
 2. **Sellable unit** — skills/workflows only, or also proprietary MCP servers?
 3. **Payment model** — per-item Checkout vs. prepaid credits/wallet.
 

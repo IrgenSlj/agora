@@ -43,23 +43,46 @@ command file into the project — the plugin itself cannot create it.
 A recurring question: should Agora be a full agentic terminal app like Claude
 Code or OpenCode, borrowing their LLM/harness?
 
-**Decision: the hub does not own inference.** A marketplace is a marketplace —
-browsing, buying, installing, and publishing want no LLM. `brew` is an excellent
-terminal experience with zero AI. The agentic work happens *after*, inside
-OpenCode or Claude Code, on the skills and tools Agora delivered. Agora feeds the
-harness; it does not compete with it.
+**Decision: Agora borrows inference from OpenCode, not from a separate provider.**
+Since Agora is built for OpenCode, and OpenCode is already installed and
+configured on the user's machine — with its own model, providers, and free-tier
+gateway models — the chat layer delegates to `opencode run` rather than requiring
+its own API key.
 
-**If** a conversational layer is wanted later (smart `init`, interactive
-tutorials), it is an opt-in Phase 5 dependency, not a foundation. Options, in
-order of preference:
+Two surfaces deliver this:
 
-1. **Claude Agent SDK** — Claude Code's harness available as a library (TS +
-   Python): agentic loop, tool use, MCP, permissions. The user brings their own
-   API key or existing auth.
-2. **OpenCode headless** — OpenCode is MIT-licensed; it can be scripted as a
-   subprocess. More DIY.
-3. **Direct Anthropic API** — for one-shot, non-agentic tasks (e.g. "summarize
-   this tool"); no harness needed.
+1. **`agora mcp`** — An MCP (Model Context Protocol) server that exposes the
+   marketplace engine (search, browse, trending, install-plan, tutorials) as
+   standard MCP tools. Users configure it in their `opencode.json`:
+
+   ```json
+   {
+     "mcp": {
+       "agora": {
+         "type": "local",
+         "command": ["agora", "mcp"]
+       }
+     }
+   }
+   ```
+
+   Once registered, any OpenCode session can answer marketplace queries
+   conversationally — "find me a postgres MCP server" — by calling Agora's tools
+   through the model's tool-use loop. Free inference, no separate auth, and the
+   MCP server is useful independently of the chat feature.
+
+2. **`agora chat [message]`** — Two modes:
+   - **TUI mode** (`agora chat`): Hands off to the `opencode` TUI with `inherit`
+     stdio, giving a persistent read-eval-print loop with conversation history,
+     editing, and `/agora` slash commands. Zero per-message latency.
+   - **One-shot mode** (`agora chat "question"`): Wraps `opencode run --format json`,
+     streams the response back, and persists the session ID for `--continue`.
+   - A plugin tool `agora_chat` is also available via `/agora chat <message>`
+     inside OpenCode for conversational marketplace Q&A.
+
+Agora still does not *own* inference — it borrows OpenCode's. The marketplace
+core (browse, search, install) works fully offline with zero AI. The
+conversational layer is an optional convenience, not a foundation.
 
 ## Trust is the product
 

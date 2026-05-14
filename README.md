@@ -63,6 +63,20 @@ Agora is one core marketplace engine behind three surfaces:
 - Merge MCP servers into existing config
 - Inspect config health with `agora config doctor`
 
+### `agora mcp` — Marketplace as an MCP Server
+- Exposes all marketplace tools (search, browse, trending, install) as standard MCP tools
+- Add to `opencode.json` for conversational queries: "find a postgres MCP server"
+- Also usable from any MCP client — Claude Desktop, Cursor, etc.
+- Register with `agora init --mcp` to auto-add to your OpenCode config
+
+### `agora chat` — Free AI + TUI
+- **TUI mode** (`agora chat`): Launches the full `opencode` TUI with your chosen model.
+  Zero per-message latency, conversation history, editing, and `/agora` commands.
+- **One-shot mode** (`agora chat "question"`): Single query via `opencode run`,
+  streams the response, persists session for `--continue`.
+- **Plugin tool** (`/agora chat "question"`): Chat from inside OpenCode using the
+  `agora_chat` plugin tool — no separate API key needed.
+
 ### Community (CLI + backend)
 - Profiles, reviews, discussions, and publishing live in the `agora` CLI
 - These need a connected backend — the bundled offline build does not ship community data
@@ -169,6 +183,38 @@ agora reviews mcp-github --api
 agora profile alice
 ```
 
+### MCP Server & AI Chat
+
+```bash
+# Run the MCP server (add to opencode.json MCP config)
+agora mcp
+
+# Auto-register the MCP server in your OpenCode config
+agora init --mcp
+
+# Free AI chat — TUI mode (persistent REPL, zero per-message latency)
+agora chat
+
+# Free AI chat — one-shot mode (scriptable)
+agora chat "what MCP servers are available for postgres?"
+agora chat -m deepseek-v4-flash-free "find me a web search MCP server"
+
+# Continue the last conversation
+agora chat --continue "follow up question"
+```
+
+Add to `opencode.json`:
+```json
+{
+  "mcp": {
+    "agora": {
+      "type": "local",
+      "command": ["agora", "mcp"]
+    }
+  }
+}
+```
+
 ### Diagnostics
 
 ```bash
@@ -189,14 +235,18 @@ The plugin itself registers **tools** (`agora_search`, `agora_browse`, `agora_in
 To get a typed `/agora` slash command, `agora init` also writes `.opencode/command/agora.md` into your project. That command forwards whatever you type to the matching tool, so these all work inside OpenCode:
 
 | Command | Description |
-|---|---|
+|---|---|---|
 | `/agora search <query> [category]` | Search marketplace |
 | `/agora browse <id>` | View package or workflow details |
 | `/agora browse_category <category>` | Browse a category |
 | `/agora trending [type]` | See trending |
 | `/agora install <id>` | Install steps / config for a package |
 | `/agora tutorial <id> [step]` | Interactive tutorials |
+| `/agora chat <message>` | Free AI chat via opencode run |
+| `/agora info` | Plugin help |
 | `/agora info` | Help |
+| `/agora mcp` | Run MCP server (CLI only) |
+| `/agora chat <message>` | Free AI chat (CLI only) |
 
 Community features — profiles, reviews, discussions, publishing — are **CLI-only** (`agora profile`, `agora reviews`, `agora discuss`, `agora publish`) and need a connected backend. The plugin deliberately ships only the offline-capable marketplace tools.
 
@@ -260,6 +310,7 @@ agora/
 ├── src/
 │   ├── cli.ts        # CLI entrypoint
 │   ├── cli/app.ts    # CLI command parser and handlers
+│   ├── cli/mcp-server.ts # MCP server (agora mcp)
 │   ├── init.ts       # Project scanner + init plan generator
 │   ├── live.ts       # Live API source with offline fallback
 │   ├── marketplace.ts # Shared search, browse, trending, install-plan core
@@ -290,7 +341,7 @@ agora/
 | `agora init` | ✅ **New** | Project scanning, config generation, auto-install, plugin registration |
 | `agora use` | ✅ **New** | Apply workflows as OpenCode skills in one command |
 | `agora install --write` | ✅ **Improved** | Now auto-installs npm packages |
-| CLI | Ready | 20 commands: `init`, `use`, `search`, `browse`, `trending`, `workflows`, `tutorials`, `tutorial`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `auth`, `publish`, `review`, `reviews`, `profile`, `config doctor` |
+| CLI | Ready | 22 commands: `init`, `use`, `mcp`, `chat`, `search`, `browse`, `trending`, `workflows`, `tutorials`, `tutorial`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `auth`, `publish`, `review`, `reviews`, `profile`, `config doctor` |
 | Offline data | ✅ **Expanded** | 36 MCP servers, 10 workflows, 7 discussions, 6 tutorials |
 | Live API mode | Ready | Opt-in via `--api`, `AGORA_API_URL`; falls back offline |
 | Shared core | Ready | CLI and plugin share marketplace logic |

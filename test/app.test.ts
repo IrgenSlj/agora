@@ -128,6 +128,26 @@ describe('agora init --dry-run', () => {
   });
 });
 
+describe('agora init --mcp', () => {
+  test('--json --dry-run --mcp includes the Agora MCP server in the plan', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-init-mcp-'));
+    const { io, stdout } = createIo(dir);
+    try {
+      const code = await runCli(['init', '--json', '--dry-run', '--mcp'], io);
+      expect(code).toBe(0);
+      const payload = JSON.parse(stdout.join(''));
+      expect(payload.config.mcp.agora).toEqual({
+        type: 'local',
+        command: ['agora', 'mcp'],
+        enabled: true
+      });
+      expect(payload.servers).toContain('agora');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 // ── agora use ────────────────────────────────────────────────────────────────
 
 describe('agora use', () => {
