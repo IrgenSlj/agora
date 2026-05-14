@@ -21,7 +21,8 @@ export async function fetchNpmPackage(name: string): Promise<NpmPackage | null> 
     const latest = data['dist-tags']?.latest;
     if (!latest) return null;
 
-    const pkg = data.versions[latest];
+    const pkg = data.versions?.[latest];
+    if (!pkg) return null;
 
     return {
       name: data.name,

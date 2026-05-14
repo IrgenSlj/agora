@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { writeOpenCodeConfig } from './config-files.js';
 import type { OpenCodeConfig } from './config.js';
 import { samplePackages } from './data.js';
@@ -24,23 +24,24 @@ export interface InitPlan {
 }
 
 const CATEGORY_SERVERS: Record<string, string[]> = {
-  node: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-npm-info', 'mcp-sequential-thinking'],
-  python: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-python-repl', 'mcp-sequential-thinking'],
-  rust: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-sequential-thinking'],
-  go: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-sequential-thinking'],
-  ruby: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-sequential-thinking'],
-  java: ['mcp-filesystem', 'mcp-github', 'mcp-git', 'mcp-sequential-thinking']
+  node: ['mcp-filesystem', 'mcp-github', 'mcp-context7', 'mcp-sequential-thinking'],
+  python: ['mcp-filesystem', 'mcp-github', 'mcp-context7', 'mcp-sequential-thinking'],
+  rust: ['mcp-filesystem', 'mcp-github', 'mcp-sequential-thinking'],
+  go: ['mcp-filesystem', 'mcp-github', 'mcp-sequential-thinking'],
+  ruby: ['mcp-filesystem', 'mcp-github', 'mcp-sequential-thinking'],
+  java: ['mcp-filesystem', 'mcp-github', 'mcp-sequential-thinking'],
+  unknown: ['mcp-filesystem', 'mcp-github', 'mcp-sequential-thinking']
 };
 
 const FRAMEWORK_SERVERS: Record<string, string[]> = {
-  react: ['mcp-shadcn', 'mcp-tailwind', 'mcp-figma'],
-  nextjs: ['mcp-shadcn', 'mcp-tailwind', 'mcp-figma', 'mcp-supabase'],
-  vue: ['mcp-tailwind', 'mcp-figma'],
+  react: ['mcp-figma', 'mcp-magic', 'mcp-context7'],
+  nextjs: ['mcp-figma', 'mcp-magic', 'mcp-context7', 'mcp-supabase'],
+  vue: ['mcp-figma', 'mcp-context7'],
   express: ['mcp-postgres', 'mcp-redis'],
-  django: ['mcp-postgres', 'mcp-python-repl'],
-  flask: ['mcp-postgres', 'mcp-python-repl'],
+  django: ['mcp-postgres'],
+  flask: ['mcp-postgres'],
   rails: ['mcp-postgres', 'mcp-redis'],
-  spring: ['mcp-postgres', 'mcp-redis', 'mcp-mysql']
+  spring: ['mcp-postgres']
 };
 
 export function scanProject(dir: string): ProjectScan {
@@ -57,7 +58,7 @@ export function scanProject(dir: string): ProjectScan {
   if (files.has('package.json')) {
     type = 'node';
     if (deps.includes('react') || deps.includes('next')) frameworks.push('react');
-    if (deps.includes('next') || deps.includes('next/dist')) frameworks.push('nextjs');
+    if (deps.includes('next')) frameworks.push('nextjs');
     if (deps.includes('vue')) frameworks.push('vue');
     if (deps.includes('express')) frameworks.push('express');
   } else if (
@@ -109,28 +110,29 @@ export function generateInitPlan(scan: ProjectScan): InitPlan {
     if (scan.dependencies.includes('pg') || scan.dependencies.includes('postgres')) {
       serverIds.add('mcp-postgres');
     }
-    if (scan.dependencies.includes('mysql')) serverIds.add('mcp-mysql');
-    if (scan.dependencies.includes('sqlite') || scan.dependencies.includes('better-sqlite3')) {
-      serverIds.add('mcp-sqlite');
-    }
     if (scan.dependencies.includes('mongodb') || scan.dependencies.includes('mongoose')) {
       serverIds.add('mcp-mongodb');
     }
     if (scan.dependencies.includes('redis') || scan.dependencies.includes('ioredis')) {
       serverIds.add('mcp-redis');
     }
+    if (
+      scan.dependencies.includes('elasticsearch') ||
+      scan.dependencies.includes('@elastic/elasticsearch')
+    ) {
+      serverIds.add('mcp-elasticsearch');
+    }
   }
 
-  if (scan.hasDocker) serverIds.add('mcp-docker');
   workflowIds.add('wf-code-review-arch');
 
   if (scan.hasTests) workflowIds.add('wf-tdd-cycle');
   if (scan.type === 'node')
-    notes.push('Node.js project detected — added npm info, filesystem, and GitHub MCP servers.');
+    notes.push('Node.js project detected — added filesystem, GitHub, and docs MCP servers.');
 
   const notesList = [
     scan.hasTests ? 'Tests detected — TDD workflow recommended.' : '',
-    scan.hasDocker ? 'Docker detected — added Docker MCP server.' : '',
+    scan.hasDocker ? 'Docker detected — containerized project.' : '',
     scan.hasDatabase ? 'Database dependencies detected — added relevant database MCP servers.' : '',
     scan.frameworks.length > 0 ? `Framework(s) detected: ${scan.frameworks.join(', ')}.` : ''
   ].filter(Boolean);
@@ -162,7 +164,7 @@ export function generateInitPlan(scan: ProjectScan): InitPlan {
       mcpServers,
       plugins: ['opencode-agora']
     },
-    servers: Array.from(serverIds),
+    servers: servers.map((s) => s.id),
     workflows: Array.from(workflowIds),
     commands,
     notes
@@ -173,14 +175,24 @@ export function applyInitPlan(plan: InitPlan, configPath: string): void {
   writeOpenCodeConfig(configPath, plan.config);
 }
 
-export function runCommands(commands: string[]): void {
-  for (const cmd of commands) {
+export function runCommands(commands: string[]): { command: string; ok: boolean }[] {
+  const results: { command: string; ok: boolean }[] = [];
+  const pattern = /^npm install -g (@?[a-z0-9][\w.-]*(?:\/[\w.-]+)?)$/;
+  for (const command of commands) {
+    const match = pattern.exec(command);
+    if (!match) {
+      results.push({ command, ok: false });
+      continue;
+    }
+    const pkg = match[1];
     try {
-      execSync(cmd, { stdio: 'pipe', timeout: 120000 });
+      execFileSync('npm', ['install', '-g', pkg], { stdio: 'pipe', timeout: 120000 });
+      results.push({ command, ok: true });
     } catch {
-      // Best effort — some packages may already be installed
+      results.push({ command, ok: false });
     }
   }
+  return results;
 }
 
 function listFiles(dir: string): Set<string> {
@@ -215,17 +227,55 @@ function listFiles(dir: string): Set<string> {
 }
 
 function readDependencies(dir: string): string[] {
+  const deps = new Set<string>();
+
   const pkgPath = join(dir, 'package.json');
   if (existsSync(pkgPath)) {
     try {
       const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
       const all = { ...pkg.dependencies, ...pkg.devDependencies };
-      return Object.keys(all || {});
+      for (const name of Object.keys(all || {})) deps.add(name);
     } catch {
       // ignore
     }
   }
-  return [];
+
+  const manifestFiles = [
+    'requirements.txt',
+    'pyproject.toml',
+    'Gemfile',
+    'pom.xml',
+    'build.gradle'
+  ];
+  const keywords = [
+    'django',
+    'flask',
+    'rails',
+    'spring',
+    'postgres',
+    'pg',
+    'mysql',
+    'sqlite',
+    'mongodb',
+    'mongoose',
+    'redis',
+    'ioredis',
+    'elasticsearch'
+  ];
+  for (const file of manifestFiles) {
+    const filePath = join(dir, file);
+    if (!existsSync(filePath)) continue;
+    try {
+      const content = readFileSync(filePath, 'utf8').toLowerCase();
+      for (const keyword of keywords) {
+        if (content.includes(keyword)) deps.add(keyword);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  return Array.from(deps);
 }
 
 function resolveServers(ids: string[]) {

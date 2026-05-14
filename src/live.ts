@@ -281,6 +281,19 @@ export async function createDiscussionSource(
   options: SourceOptions,
   input: DiscussionInput
 ): Promise<SourceResult<Discussion>> {
+  if (!shouldUseApi(options)) {
+    return offline({
+      id: `disc-${Date.now()}`,
+      title: input.title,
+      content: input.content,
+      author: 'you',
+      category: normalizeDiscussionCategory(input.category),
+      replies: 0,
+      stars: 0,
+      createdAt: new Date().toISOString().slice(0, 10)
+    });
+  }
+
   const payload = await requestJson<{ discussion?: ApiDiscussion } & Partial<ApiDiscussion>>(
     options,
     '/api/discussions',
@@ -302,6 +315,21 @@ export async function publishPackageSource(
   options: SourceOptions,
   input: PublishPackageInput
 ): Promise<SourceResult<MarketplaceItem>> {
+  if (!shouldUseApi(options)) {
+    return offline(
+      mapPackage({
+        id: input.id || `pkg-${Date.now()}`,
+        name: input.name,
+        description: input.description,
+        version: input.version || '0.0.0',
+        category: input.category,
+        tags: input.tags,
+        repository: input.repository,
+        npmPackage: input.npmPackage
+      })
+    );
+  }
+
   const payload = await requestJson<{ package?: ApiPackage }>(options, '/api/packages', {
     method: 'POST',
     body: JSON.stringify({
@@ -321,6 +349,19 @@ export async function publishWorkflowSource(
   options: SourceOptions,
   input: PublishWorkflowInput
 ): Promise<SourceResult<MarketplaceItem>> {
+  if (!shouldUseApi(options)) {
+    return offline(
+      mapWorkflow({
+        id: input.id || `wf-${Date.now()}`,
+        name: input.name,
+        description: input.description,
+        prompt: input.prompt,
+        model: input.model,
+        tags: input.tags
+      })
+    );
+  }
+
   const payload = await requestJson<{ workflow?: ApiWorkflow }>(options, '/api/workflows', {
     method: 'POST',
     body: JSON.stringify(input)
@@ -337,6 +378,18 @@ export async function createReviewSource(
   options: SourceOptions,
   input: ReviewInput
 ): Promise<SourceResult<ApiReview>> {
+  if (!shouldUseApi(options)) {
+    return offline({
+      id: `rev-${Date.now()}`,
+      itemId: input.itemId,
+      itemType: input.itemType,
+      author: 'you',
+      rating: input.rating,
+      content: input.content,
+      createdAt: new Date().toISOString().slice(0, 10)
+    });
+  }
+
   const payload = await requestJson<{ review?: unknown }>(options, '/api/reviews', {
     method: 'POST',
     body: JSON.stringify(input)
@@ -354,6 +407,10 @@ export async function listReviewsSource(
   itemId?: string,
   itemType?: string
 ): Promise<SourceResult<ApiReview[]>> {
+  if (!shouldUseApi(options)) {
+    return offline([]);
+  }
+
   const params = new URLSearchParams();
   if (itemId) params.set('item_id', itemId);
   if (itemType) params.set('item_type', itemType);

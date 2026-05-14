@@ -138,7 +138,8 @@ app.get('/auth/callback', async (c) => {
 
     return c.redirect('/');
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('Auth callback error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -147,6 +148,12 @@ app.post('/auth/logout', (c) => {
   return c.json({ success: true });
 });
 
+// SECURITY: requireUser uses the raw GitHub OAuth access token as the Agora API
+// bearer credential. Tokens are stored in plaintext in D1. There is no Agora-issued
+// token — any valid GitHub token is accepted and will implicitly create an Agora
+// account on first use. This architecture should be reviewed before production
+// exposure: consider issuing short-lived Agora-specific tokens, hashing stored
+// tokens, and requiring an explicit registration step.
 async function requireUser(c: any): Promise<AuthUser | Response> {
   const authHeader = c.req.header('authorization') || '';
   const bearer = authHeader.match(/^Bearer\s+(.+)$/i)?.[1];
@@ -274,11 +281,21 @@ function normalizeDiscussionCategory(category: unknown): string {
     : 'discussion';
 }
 
+/**
+ * Parse a limit query parameter. Defaults to `defaultVal` when missing, NaN,
+ * or less than 1. Clamps to a maximum of 100.
+ */
+function parseLimit(raw: string | undefined, defaultVal = 50): number {
+  const n = parseInt(raw ?? '', 10);
+  if (!Number.isFinite(n) || n < 1) return defaultVal;
+  return Math.min(n, 100);
+}
+
 // Packages
 app.get('/api/packages', async (c) => {
   const search = c.req.query('q');
   const category = c.req.query('category');
-  const limit = c.req.query('limit') || '20';
+  const limit = parseLimit(c.req.query('limit'));
 
   let query = 'SELECT * FROM packages';
   const params: any[] = [];
@@ -297,7 +314,7 @@ app.get('/api/packages', async (c) => {
     query += ' WHERE ' + conditions.join(' AND ');
   }
   query += ' ORDER BY stars DESC LIMIT ?';
-  params.push(parseInt(limit));
+  params.push(limit);
 
   try {
     const { results } = await c.env.DB.prepare(query)
@@ -305,7 +322,8 @@ app.get('/api/packages', async (c) => {
       .all();
     return c.json({ packages: results || [] });
   } catch (e) {
-    return c.json({ error: 'Database error', details: String(e) }, 500);
+    console.error('GET /api/packages error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -313,7 +331,13 @@ app.post('/api/packages', async (c) => {
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
-  const body = (await c.req.json()) as any;
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
   const name = String(body.name || '').trim();
   const description = String(body.description || '').trim();
   const id = String(body.id || slugify(name)).trim();
@@ -376,7 +400,8 @@ app.post('/api/packages', async (c) => {
 
     return c.json({ package: pkg, created: !existing });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('POST /api/packages error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -384,23 +409,22 @@ app.get('/api/packages/:id', async (c) => {
   const id = c.req.param('id');
 
   try {
-    const pkg = await c.env.DB.prepare('SELECT * FROM packages WHERE id = ? OR name = ?')
-      .bind(id, id)
-      .first();
+    const pkg = await c.env.DB.prepare('SELECT * FROM packages WHERE id = ?').bind(id).first();
 
     if (!pkg) {
       return c.json({ error: 'Package not found' }, 404);
     }
     return c.json({ package: pkg });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('GET /api/packages/:id error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
 // Workflows
 app.get('/api/workflows', async (c) => {
   const search = c.req.query('q');
-  const limit = c.req.query('limit') || '20';
+  const limit = parseLimit(c.req.query('limit'));
 
   let query = 'SELECT * FROM workflows';
   const params: any[] = [];
@@ -410,7 +434,7 @@ app.get('/api/workflows', async (c) => {
     params.push(`%${search}%`, `%${search}%`);
   }
   query += ' ORDER BY stars DESC LIMIT ?';
-  params.push(parseInt(limit));
+  params.push(limit);
 
   try {
     const { results } = await c.env.DB.prepare(query)
@@ -418,7 +442,8 @@ app.get('/api/workflows', async (c) => {
       .all();
     return c.json({ workflows: results || [] });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('GET /api/workflows error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -426,7 +451,13 @@ app.post('/api/workflows', async (c) => {
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
-  const body = (await c.req.json()) as any;
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
   const name = String(body.name || '').trim();
   const description = String(body.description || '').trim();
   const prompt = String(body.prompt || '').trim();
@@ -470,7 +501,8 @@ app.post('/api/workflows', async (c) => {
 
     return c.json({ workflow, created: !existing });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('POST /api/workflows error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -487,14 +519,15 @@ app.get('/api/workflows/:id', async (c) => {
     }
     return c.json({ workflow });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('GET /api/workflows/:id error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
 // Discussions
 app.get('/api/discussions', async (c) => {
   const category = c.req.query('category');
-  const limit = c.req.query('limit') || '20';
+  const limit = parseLimit(c.req.query('limit'));
 
   let query = 'SELECT * FROM discussions';
   const params: any[] = [];
@@ -504,7 +537,7 @@ app.get('/api/discussions', async (c) => {
     params.push(category);
   }
   query += ' ORDER BY created_at DESC LIMIT ?';
-  params.push(parseInt(limit));
+  params.push(limit);
 
   try {
     const { results } = await c.env.DB.prepare(query)
@@ -512,7 +545,8 @@ app.get('/api/discussions', async (c) => {
       .all();
     return c.json({ discussions: results || [] });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('GET /api/discussions error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -520,7 +554,13 @@ app.post('/api/discussions', async (c) => {
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
-  const body = (await c.req.json()) as any;
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
   const title = String(body.title || '').trim();
   const content = String(body.content || '').trim();
   const category = normalizeDiscussionCategory(body.category);
@@ -555,14 +595,15 @@ app.post('/api/discussions', async (c) => {
       }
     });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('POST /api/discussions error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
 app.get('/api/reviews', async (c) => {
   const itemId = c.req.query('item_id') || c.req.query('itemId');
   const itemType = c.req.query('item_type') || c.req.query('itemType');
-  const limit = c.req.query('limit') || '20';
+  const limit = parseLimit(c.req.query('limit'));
   const params: any[] = [];
   const conditions: string[] = [];
   let query = 'SELECT * FROM reviews';
@@ -582,7 +623,7 @@ app.get('/api/reviews', async (c) => {
   }
 
   query += ' ORDER BY created_at DESC LIMIT ?';
-  params.push(parseInt(limit));
+  params.push(limit);
 
   try {
     const { results } = await c.env.DB.prepare(query)
@@ -590,7 +631,8 @@ app.get('/api/reviews', async (c) => {
       .all();
     return c.json({ reviews: results || [] });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('GET /api/reviews error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -598,7 +640,13 @@ app.post('/api/reviews', async (c) => {
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
-  const body = (await c.req.json()) as any;
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
   const itemId = String(body.itemId || body.item_id || '').trim();
   const itemType = String(body.itemType || body.item_type || 'package').trim();
   const rating = Number(body.rating);
@@ -629,7 +677,8 @@ app.post('/api/reviews', async (c) => {
 
     return c.json({ review });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('POST /api/reviews error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -639,7 +688,8 @@ app.get('/api/tutorials', async (c) => {
     const { results } = await c.env.DB.prepare('SELECT * FROM tutorials ORDER BY id').all();
     return c.json({ tutorials: results || [] });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('GET /api/tutorials error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -692,7 +742,8 @@ app.get('/api/users/:username', async (c) => {
       }
     });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('GET /api/users/:username error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -712,7 +763,8 @@ app.get('/api/trending', async (c) => {
       workflows: topWorkflows.results || []
     });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('GET /api/trending error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -750,7 +802,8 @@ app.get('/api/search', async (c) => {
       workflows: workflows.results || []
     });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('GET /api/search error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 
@@ -761,7 +814,7 @@ import { fetchGitHubRepo, getGitHubReleases } from './services/github';
 // Aggregation - npm/GitHub data
 app.get('/api/aggregate/packages', async (c) => {
   const query = c.req.query('q');
-  const limit = parseInt(c.req.query('limit') || '20');
+  const limit = parseLimit(c.req.query('limit'));
 
   if (!query) {
     return c.json({ error: 'Query required' }, 400);
@@ -777,7 +830,8 @@ app.get('/api/aggregate/packages', async (c) => {
       mcp: mcpPackages
     });
   } catch (e) {
-    return c.json({ error: String(e) }, 500);
+    console.error('GET /api/aggregate/packages error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
   }
 });
 

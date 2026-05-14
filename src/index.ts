@@ -10,8 +10,9 @@ import {
   searchMarketplaceItems
 } from './marketplace.js';
 import { formatConfigJson } from './config.js';
+import pkg from '../package.json';
 
-const AGORA_VERSION = '0.1.0';
+const AGORA_VERSION = pkg.version;
 
 export const Agora: Plugin = async (_ctx) => {
   return {
@@ -38,8 +39,7 @@ export const Agora: Plugin = async (_ctx) => {
 
 ${filtered
   .map((item, i) => {
-    const shortDesc =
-      (item.description || '').slice(0, 60) + (item.description?.length > 60 ? '...' : '');
+    const shortDesc = item.description.slice(0, 60) + (item.description.length > 60 ? '...' : '');
     const icon = item.kind === 'package' ? '📦' : '🔄';
     return `${i + 1}. **${item.name}** ${icon}
    ${shortDesc}
@@ -130,12 +130,10 @@ Run \`/agora browse <id>\` for details.`;
           const step = args.step || 1;
 
           if (!tutorial || tutorial === 'list') {
-            return `📚 **Available Tutorials**
-
-1. **mcp-basics** - MCP Servers 101 (Beginner, 15 min)
-2. **agents-skills** - OpenCode Agents & Skills (Intermediate, 30 min)
-
-Run \`/agora tutorial <id>\` to start a tutorial.`;
+            const tutorialList = sampleTutorials
+              .map((t, i) => `${i + 1}. **${t.id}** - ${t.title} (${t.level}, ${t.duration})`)
+              .join('\n');
+            return `📚 **Available Tutorials**\n\n${tutorialList}\n\nRun \`/agora tutorial <id>\` to start a tutorial.`;
           }
 
           const tut = sampleTutorials.find((t) => t.id === tutorial);

@@ -24,7 +24,7 @@ interface NpmLatestResponse {
 }
 
 async function fetchLatestVersion(npmPackage: string): Promise<string | null> {
-  const url = `https://registry.npmjs.org/${encodeURIComponent(npmPackage).replace('%40', '@').replace('%2F', '/')}/latest`;
+  const url = `https://registry.npmjs.org/${npmPackage}/latest`;
   try {
     const res = await fetch(url, {
       headers: { Accept: 'application/json' },
@@ -108,15 +108,22 @@ for (const [id, newVersion] of updates) {
   }
 
   // Find the end of this package's block: next occurrence of `  },` or `  }` at top level
-  const blockEndIndex = content.indexOf('\n  },', idIndex);
+  const commaEnd = content.indexOf('\n  },', idIndex);
+  const noCommaEnd = content.indexOf('\n  }', idIndex);
+  const blockEndIndex =
+    commaEnd === -1 ? noCommaEnd : noCommaEnd === -1 ? commaEnd : Math.min(commaEnd, noCommaEnd);
   if (blockEndIndex === -1) {
     console.warn(`  [warn] Could not locate block end for ${id}, skipping text update`);
     continue;
   }
 
+  // Determine the actual terminator length (with or without trailing comma)
+  const hasTrailingComma = content.startsWith('\n  },', blockEndIndex);
+  const terminatorLength = hasTrailingComma ? '\n  },'.length : '\n  }'.length;
+
   // Extract the block
   const blockStart = idIndex;
-  const blockEnd = blockEndIndex + '\n  },'.length;
+  const blockEnd = blockEndIndex + terminatorLength;
   const block = content.slice(blockStart, blockEnd);
 
   // Replace the version line within the block

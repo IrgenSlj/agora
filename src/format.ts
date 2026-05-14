@@ -63,7 +63,7 @@ export function formatTable(
 
   const colWidths = headers.map((h, i) => {
     const maxCell = Math.max(h.length, ...rows.map((r) => (r[i] || '').length));
-    return Math.min(maxCell, Math.floor(maxWidth / headers.length) - 2);
+    return Math.max(1, Math.min(maxCell, Math.floor(maxWidth / headers.length) - 2));
   });
 
   const formatRow = (cells: string[]) =>

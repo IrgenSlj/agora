@@ -112,21 +112,10 @@ export function isMcpServer(pkg: any): boolean {
   );
 }
 
-export function extractNpmFromRepo(repo: GitHubRepo): string | null {
-  const readme = ''; // Would fetch readme in real implementation
-
-  const npmPatterns = [
-    /npm\s+install\s+([@a-z0-9\/.-]+)/i,
-    /npm\s+i\s+([@a-z0-9\/.-]+)/i,
-    /(@[a-z0-9-]+)\/([a-z0-9-]+)/gi
-  ];
-
-  // Check repo URL for npm organization
-  const url = repo.html_url;
-  const match = url.match(/github\.com\/([^\/]+)\/([^\/]+)/);
-  if (match) {
-    return `@${match[1]}/${match[2].replace('server-', '')}`;
-  }
-
+export function extractNpmFromRepo(_repo: GitHubRepo): string | null {
+  // Cannot reliably determine a real npm package name from a GitHub repo URL alone.
+  // Without parsing a readme or package.json that explicitly declares the npm name,
+  // any derived name would be fabricated. Return null until a verified source is
+  // available (e.g., readme content fetched separately).
   return null;
 }
