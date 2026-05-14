@@ -104,15 +104,28 @@ export const AGORA_WORDMARK_OUTLINE: string[] = [
 ];
 
 /**
+ * Shaded-ramp letterforms (5 rows × 34 cols). Each row steps down the
+ * ░▒▓ shade ramp — dense at the cap, sparse at the baseline — giving the
+ * wordmark a dithered, marble-carved texture. The default banner.
+ */
+export const AGORA_WORDMARK_SHADED: string[] = [
+  ' ▓▓▓▓   ▓▓▓▓▓  ▓▓▓▓  ▓▓▓▓▓   ▓▓▓▓ ',
+  '▒▒  ▒▒ ▒▒     ▒▒  ▒▒ ▒▒  ▒▒ ▒▒  ▒▒',
+  '▒▒▒▒▒▒ ▒▒ ▒▒▒ ▒▒  ▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒',
+  '░░  ░░ ░░  ░░ ░░  ░░ ░░ ░░  ░░  ░░',
+  '░░  ░░  ░░░░░  ░░░░  ░░  ░░ ░░  ░░'
+];
+
+/**
  * BANNER_GRADIENT — 3 stops sampled across the wordmark's columns.
- * "agora at golden hour": Aegean blue → marble warm → terracotta. Neither
- * endpoint touches pure black or white, so it holds contrast on either
- * terminal background.
+ * "Marble & terracotta": warm cream → terracotta → deep brick. A purely
+ * warm Mediterranean sweep; neither endpoint touches pure black or white,
+ * so it holds contrast on either terminal background.
  */
 export const BANNER_GRADIENT: RGB[] = [
-  [92, 142, 170], // #5C8EAA  Aegean blue
-  [212, 184, 134], // #D4B886  marble warm
-  [199, 116, 82] // #C77452  terracotta
+  [220, 196, 158], // #DCC49E  warm cream
+  [198, 106, 74], // #C66A4A  terracotta
+  [148, 64, 56] // #944038  deep brick
 ];
 
 function lerp(a: number, b: number, t: number): number {
@@ -145,11 +158,17 @@ function colorize(char: string, rgb: RGB, trueColor: boolean): string {
 export interface BannerOptions {
   color: boolean;
   trueColor: boolean;
-  /** Which wordmark to render (default: solid). */
-  variant?: 'solid' | 'outline';
+  /** Which wordmark to render (default: shaded). */
+  variant?: 'solid' | 'outline' | 'shaded';
   /** Dim line printed under the wordmark. */
   subtitle?: string;
 }
+
+const WORDMARKS: Record<NonNullable<BannerOptions['variant']>, string[]> = {
+  solid: AGORA_WORDMARK_SOLID,
+  outline: AGORA_WORDMARK_OUTLINE,
+  shaded: AGORA_WORDMARK_SHADED
+};
 
 /**
  * Renders the AGORA wordmark with a left-to-right gradient applied per column
@@ -157,7 +176,7 @@ export interface BannerOptions {
  * dim subtitle. Degrades to plain block letters when colour is off.
  */
 export function renderBanner(opts: BannerOptions): string {
-  const rows = opts.variant === 'outline' ? AGORA_WORDMARK_OUTLINE : AGORA_WORDMARK_SOLID;
+  const rows = WORDMARKS[opts.variant ?? 'shaded'];
   const width = Math.max(...rows.map((line) => line.length));
 
   const lines = rows.map((line) => {
