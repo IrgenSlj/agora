@@ -2,6 +2,8 @@
 
 Thank you for your interest in contributing to Agora! We welcome contributions from everyone.
 
+Agora is a **standalone terminal marketplace** — the `agora` CLI is the product; the OpenCode plugin is a thin bridge. Most contribution lands in the CLI or the offline catalog. See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the direction and [`ROADMAP.md`](./ROADMAP.md) for what's next.
+
 ## How to Contribute
 
 ### Reporting Bugs
@@ -75,21 +77,24 @@ bun src/cli.ts search database     # Search rich offline data
 ```
 src/
 ├── cli.ts          # CLI entrypoint
-├── cli/app.ts      # CLI command parser and handlers (20 commands)
+├── cli/app.ts      # CLI command parser and handlers (the standalone hub)
+├── ui.ts           # Terminal styling: styler, gradient banner, colour detection
 ├── init.ts         # Project scanner + init plan generator
 ├── marketplace.ts  # Search, browse, trending, install logic
 ├── config-files.ts # OpenCode config detection and writes
+├── commands.ts     # /agora slash-command template installed by `agora init`
 ├── live.ts         # API client with offline fallback
 ├── state.ts        # Local saved-item and auth state
-├── index.ts        # OpenCode plugin
+├── index.ts        # OpenCode plugin — thin bridge, 7 offline marketplace tools
 ├── data.ts         # 36+ MCP servers, 10 workflows, 6 tutorials
 ├── types.ts        # TypeScript types
 ├── api.ts          # Backend API client
 ├── config.ts       # Config generation helpers
-├── format.ts       # Output formatting
+├── format.ts       # Count/date/string formatting helpers
 └── logger.ts       # Logging utilities
 backend/   # Cloudflare Workers API (Hono + D1)
 hub/       # Optional local web Hub
+docs/      # ARCHITECTURE.md and design briefs
 test/      # Tests
 ```
 

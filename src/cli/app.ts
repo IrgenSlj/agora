@@ -51,11 +51,22 @@ import {
   type ResolvedSavedItem
 } from '../state.js';
 import type { Tutorial } from '../types.js';
+import {
+  createStyler,
+  renderBanner,
+  shouldUseColor,
+  supportsTrueColor,
+  type Styler
+} from '../ui.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
 };
 const VERSION = pkg.version;
+
+// Active terminal styler. Reassigned once per `runCli` invocation from the
+// caller's stream + env; defaults to plain so any direct formatter use is safe.
+let style: Styler = createStyler(false);
 
 type OutputStream = {
   write(chunk: string): unknown;
@@ -88,14 +99,26 @@ const booleanFlags = new Set([
 
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
+  const env = io.env ?? {};
+  const useColor = shouldUseColor(
+    io.stdout as { isTTY?: boolean },
+    env,
+    Boolean(parsed.flags.json)
+  );
+  style = createStyler(useColor);
 
   if (parsed.flags.version) {
     writeLine(io.stdout, VERSION);
     return 0;
   }
 
-  if (!parsed.command || parsed.flags.help) {
+  if (parsed.flags.help) {
     writeLine(io.stdout, usage());
+    return 0;
+  }
+
+  if (!parsed.command) {
+    writeLine(io.stdout, welcome(useColor, supportsTrueColor(env)));
     return 0;
   }
 
@@ -239,9 +262,13 @@ async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
   const sourceLabel =
     result.source === 'offline'
-      ? `source: offline, refreshed ${dataRefreshedAt}`
+      ? `source: offline · refreshed ${dataRefreshedAt}`
       : `source: ${result.source}`;
-  writeLine(io.stdout, `Agora search: ${query || 'all'} (${results.length} shown, ${sourceLabel})`);
+  writeLine(
+    io.stdout,
+    header('agora search', [`"${query || 'all'}"`, `${results.length} results`, sourceLabel])
+  );
+  writeLine(io.stdout, '');
   writeLine(io.stdout, formatItemList(results));
   return 0;
 }
@@ -283,9 +310,11 @@ async function commandTrending(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  writeLine(io.stdout, `Trending in Agora (${category}, source: ${result.source})`);
+  writeLine(io.stdout, header('agora trending', [category, `source: ${result.source}`]));
+  writeLine(io.stdout, '');
   writeLine(io.stdout, formatItemList(items));
-  writeLine(io.stdout, `Tags: ${getTrendingTags().join(', ')}`);
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, `${style.dim('tags')}  ${getTrendingTags().join(', ')}`);
   return 0;
 }
 
@@ -306,7 +335,11 @@ async function commandWorkflows(parsed: ParsedArgs, io: CliIo): Promise<number> 
     return 0;
   }
 
-  writeLine(io.stdout, `Agora workflows (${workflows.length} shown, source: ${result.source})`);
+  writeLine(
+    io.stdout,
+    header('agora workflows', [`${workflows.length} results`, `source: ${result.source}`])
+  );
+  writeLine(io.stdout, '');
   writeLine(io.stdout, formatItemList(workflows));
   return 0;
 }
@@ -339,7 +372,11 @@ async function commandTutorials(parsed: ParsedArgs, io: CliIo): Promise<number> 
     return 0;
   }
 
-  writeLine(io.stdout, `Agora tutorials (${tutorials.length} shown, source: ${result.source})`);
+  writeLine(
+    io.stdout,
+    header('agora tutorials', [`${tutorials.length} results`, `source: ${result.source}`])
+  );
+  writeLine(io.stdout, '');
   writeLine(io.stdout, formatTutorialList(tutorials));
   return 0;
 }
@@ -391,7 +428,11 @@ async function commandDiscussions(parsed: ParsedArgs, io: CliIo): Promise<number
     return 0;
   }
 
-  writeLine(io.stdout, `Agora discussions (${discussions.length}, source: ${result.source})`);
+  writeLine(
+    io.stdout,
+    header('agora discussions', [`${discussions.length} results`, `source: ${result.source}`])
+  );
+  writeLine(io.stdout, '');
   writeLine(
     io.stdout,
     discussions
@@ -956,7 +997,11 @@ async function commandReviews(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  writeLine(io.stdout, `Agora reviews (${result.data.length}, source: ${result.source})`);
+  writeLine(
+    io.stdout,
+    header('agora reviews', [`${result.data.length} results`, `source: ${result.source}`])
+  );
+  writeLine(io.stdout, '');
   writeLine(io.stdout, formatReviewList(result.data));
   return 0;
 }
@@ -981,14 +1026,18 @@ async function commandProfile(parsed: ParsedArgs, io: CliIo): Promise<number> {
 }
 
 function formatItemList(items: MarketplaceItem[]): string {
+  const idWidth = Math.max(...items.map((item) => item.id.length));
   return items
-    .map((item, index) => {
-      const installs = item.kind === 'package' ? ` | installs ${formatCount(item.installs)}` : '';
+    .map((item) => {
+      const metrics =
+        item.kind === 'package'
+          ? `${formatCount(item.installs)} installs · ${formatCount(item.stars)} ★`
+          : `${formatCount(item.stars)} ★`;
       return [
-        `${index + 1}. ${item.id} [${item.category}]`,
-        `   ${item.name}`,
-        `   ${truncate(item.description, 88)}`,
-        `   stars ${formatCount(item.stars)}${installs} | by ${item.author}`
+        `${style.accent(item.id.padEnd(idWidth))}  ${style.dim(metrics)}`,
+        style.dim(item.name),
+        truncate(item.description, 88),
+        style.dim(`${item.category} · by ${item.author}`)
       ].join('\n');
     })
     .join('\n\n');
@@ -996,30 +1045,30 @@ function formatItemList(items: MarketplaceItem[]): string {
 
 function formatItemDetail(item: MarketplaceItem): string {
   const lines = [
-    `${item.name}`,
-    `id: ${item.id}`,
-    `type: ${item.kind}`,
-    `category: ${item.category}`,
-    `author: ${item.author}`,
-    `stars: ${formatCount(item.stars)}`,
-    `install: ${getInstallKind(item)}`,
+    style.bold(item.name),
+    `${style.dim('id')}        ${style.accent(item.id)}`,
+    `${style.dim('type')}      ${item.kind}`,
+    `${style.dim('category')}  ${item.category}`,
+    `${style.dim('author')}    ${item.author}`,
+    `${style.dim('stars')}     ${formatCount(item.stars)}`,
+    `${style.dim('install')}   ${getInstallKind(item)}`,
     '',
     item.description,
     '',
-    `tags: ${item.tags.join(', ')}`
+    `${style.dim('tags')}      ${item.tags.join(', ')}`
   ];
 
   if (item.kind === 'package') {
-    lines.splice(5, 0, `version: ${item.version}`);
-    lines.push(`installs: ${formatCount(item.installs)}`);
-    if (item.repository) lines.push(`repository: ${item.repository}`);
-    if (item.npmPackage) lines.push(`npm: ${item.npmPackage}`);
+    lines.splice(5, 0, `${style.dim('version')}   ${item.version}`);
+    lines.push(`${style.dim('installs')}  ${formatCount(item.installs)}`);
+    if (item.repository) lines.push(`${style.dim('repo')}      ${item.repository}`);
+    if (item.npmPackage) lines.push(`${style.dim('npm')}       ${item.npmPackage}`);
   }
 
   if (item.kind === 'workflow') {
-    lines.push(`forks: ${item.forks}`);
-    if (item.model) lines.push(`model: ${item.model}`);
-    lines.push('', 'prompt:', item.prompt);
+    lines.push(`${style.dim('forks')}     ${item.forks}`);
+    if (item.model) lines.push(`${style.dim('model')}     ${item.model}`);
+    lines.push('', style.dim('prompt'), item.prompt);
   }
 
   return lines.join('\n');
@@ -1113,6 +1162,25 @@ function formatTutorialStep(tutorial: Tutorial, stepNumber: number): string {
   }
 
   return lines.join('\n');
+}
+
+function welcome(color: boolean, trueColor: boolean): string {
+  const banner = renderBanner({
+    color,
+    trueColor,
+    subtitle: `The developer's terminal marketplace for OpenCode · v${VERSION}`
+  });
+  const hint = [
+    `${style.dim('Browse')}   agora search <query> · agora trending · agora browse <id>`,
+    `${style.dim('Set up')}   agora init · agora use <workflow>`,
+    `${style.dim('Help')}     agora help`
+  ].join('\n');
+  return `\n${banner}\n\n${hint}\n`;
+}
+
+/** Flat-minimal section header: accent title, dim ` · `-joined metadata. */
+function header(title: string, meta: string[]): string {
+  return [style.accent(title), ...meta.map((part) => style.dim(part))].join(style.dim(' · '));
 }
 
 function usage(): string {

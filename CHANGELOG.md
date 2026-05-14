@@ -4,6 +4,13 @@
 
 ### Added
 
+- **Standalone hub experience.** `agora` with no arguments now shows a gradient
+  wordmark banner and quick-start hints. The CLI got a flat-minimal restyle —
+  accent identifiers, dim metadata — with truecolor + 256-colour fallback and
+  clean degradation under `NO_COLOR` / non-TTY. Banner art is a placeholder
+  pending a design pass (`docs/claude-design-brief.md`).
+- **`docs/ARCHITECTURE.md`** — the three-surface model, the open-marketplace
+  direction, and the inference question, written down.
 - **`/agora` slash command.** OpenCode plugins can only register tools, not
   slash commands — so `agora init` now also writes `.opencode/command/agora.md`,
   a command that forwards your input to the matching `agora_*` tool. Type

@@ -43,8 +43,7 @@ export const Agora: Plugin = async (_ctx) => {
 
 ${filtered
   .map((item, i) => {
-    const shortDesc =
-      item.description.slice(0, 72) + (item.description.length > 72 ? '...' : '');
+    const shortDesc = item.description.slice(0, 72) + (item.description.length > 72 ? '...' : '');
     const icon = item.kind === 'package' ? '📦' : '🔄';
     return `${i + 1}. ${icon} **${item.id}** — ${item.name}
    ${shortDesc}
@@ -84,8 +83,7 @@ Run \`/agora browse <id>\` for details or \`/agora install <id>\` to install.`;
 
 ${items
   .map((item, i) => {
-    const shortDesc =
-      item.description.slice(0, 72) + (item.description.length > 72 ? '...' : '');
+    const shortDesc = item.description.slice(0, 72) + (item.description.length > 72 ? '...' : '');
     return `${i + 1}. **${item.id}** — ${item.name}
    ${shortDesc}
    📥 ${formatInstalls(item.installs)} installs · ⭐ ${formatStars(item.stars)}`;
