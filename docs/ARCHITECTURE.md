@@ -97,9 +97,12 @@ making a stranger's tool feel safe to install is not.
 
 ## Open decisions
 
-1. **TUI shape** — styled one-shot commands (scriptable, current) vs. a
-   full-screen interactive TUI (Ink — a real build) vs. hybrid (`agora` with no
-   args launches a browse mode).
+1. **TUI shape** — **Decision: hybrid.** Scriptable one-shot commands remain
+   the default (all named commands, `--json`, pipes, CI all work as before).
+   In addition, `agora` with no command in an interactive TTY launches an
+   interactive command browser powered by `@clack/prompts` — pick a command,
+   read its manual, repeat. A full-screen Ink TUI is deferred; the hybrid
+   covers the browsing use-case without the build complexity.
 2. **Sellable unit** — skills/workflows only, or also proprietary MCP servers?
    This shapes `install` and the permission manifest.
 3. **Payment model** — per-item Stripe Checkout vs. prepaid credits/wallet.

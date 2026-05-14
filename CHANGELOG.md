@@ -4,6 +4,13 @@
 
 ### Added
 
+- **Interactive command browser.** Running `agora` with no command in an
+  interactive terminal now opens a `@clack/prompts`-powered browser: pick a
+  command from a grouped list, read its manual, then choose to view another or
+  quit. Non-TTY invocations (pipes, CI, scripts) keep the static welcome screen
+  and remain fully scriptable. The browser reuses the Level 1 command registry
+  (`COMMANDS`) and a new shared `renderManual` function so the output is
+  identical to `agora help <command>`.
 - **Standalone hub experience.** `agora` with no arguments now shows a gradient
   wordmark banner inside a rounded header frame, plus quick-start hints. The CLI
   got a flat-minimal restyle — accent identifiers, dim metadata — with truecolor

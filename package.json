@@ -26,7 +26,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "rm -rf dist && tsc && chmod +x dist/cli.js",
     "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
     "hub:dev": "bun hub/server.ts",
     "typecheck": "tsc -p tsconfig.check.json",
@@ -49,18 +49,19 @@
   "author": "IrgenSlj",
   "license": "MIT",
   "dependencies": {
-    "zod": "^4.4.3"
+    "@clack/prompts": "^1.4.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
+    "@eslint/js": "^9.0.0",
     "@opencode-ai/plugin": "^1.0.0",
     "@types/bun": "^1.2.0",
-    "@types/node": "^25.8.0",
+    "@types/node": "^22.0.0",
     "bun-types": "^1.2.0",
-    "eslint": "^10.3.0",
+    "eslint": "^9.0.0",
     "eslint-config-prettier": "^10.0.0",
     "prettier": "^3.0.0",
-    "typescript": "^6.0.3",
+    "typescript": "^5.7.0",
     "typescript-eslint": "^8.0.0"
   }
 }

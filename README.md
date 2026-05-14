@@ -266,8 +266,8 @@ agora/
 │   ├── config-files.ts # OpenCode config detection, doctor, and write helpers
 │   ├── state.ts      # Local Agora saved-item state
 │   ├── index.ts      # OpenCode plugin
-│   ├── api.ts        # API client with fallback
-│   ├── format.ts     # Output formatting
+│   ├── ui.ts         # Terminal styling: styler, gradient banner, header frame
+│   ├── format.ts     # Count formatting helpers
 │   ├── config.ts     # MCP config generation
 │   ├── data.ts       # 36+ MCP servers, 10 workflows, 6 tutorials
 │   └── types.ts      # TypeScript types

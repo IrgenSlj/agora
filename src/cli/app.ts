@@ -2,6 +2,8 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { formatConfigJson } from '../config.js';
+import { COMMANDS, renderManual } from './commands-meta.js';
+import { runInteractiveMenu } from './menu.js';
 import {
   detectOpenCodeConfigPath,
   doctorOpenCodeConfig,
@@ -98,6 +100,20 @@ const booleanFlags = new Set([
   'write'
 ]);
 
+/**
+ * Returns true only when both stdout and stdin are real interactive TTYs AND the
+ * environment supports colour (i.e. not NO_COLOR or TERM=dumb). The gate keeps
+ * the interactive menu away from pipes, CI, and the test harness, all of which
+ * use non-TTY mock streams.
+ */
+function isInteractive(io: CliIo, env: Record<string, string | undefined>): boolean {
+  if (env.NO_COLOR != null) return false;
+  if (env.TERM === 'dumb') return false;
+  const stdoutTTY = Boolean((io.stdout as { isTTY?: boolean }).isTTY);
+  const stdinTTY = Boolean((process.stdin as { isTTY?: boolean }).isTTY);
+  return stdoutTTY && stdinTTY;
+}
+
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
   const env = io.env ?? {};
@@ -114,11 +130,16 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   }
 
   if (parsed.flags.help) {
-    writeLine(io.stdout, usage());
+    if (parsed.command && COMMANDS.some((c) => c.name === parsed.command)) {
+      writeLine(io.stdout, commandManual(parsed.command));
+    } else {
+      writeLine(io.stdout, usage());
+    }
     return 0;
   }
 
   if (!parsed.command) {
+    if (isInteractive(io, env)) return runInteractiveMenu(io, style);
     writeLine(io.stdout, welcome(useColor, supportsTrueColor(env)));
     return 0;
   }
@@ -165,9 +186,21 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return await commandInit(parsed, io);
       case 'use':
         return await commandUse(parsed, io);
-      case 'help':
-        writeLine(io.stdout, usage());
+      case 'help': {
+        const helpTarget = parsed.args[0];
+        if (helpTarget) {
+          const meta = COMMANDS.find((c) => c.name === helpTarget);
+          if (!meta) {
+            writeLine(io.stderr, `Unknown command: ${helpTarget}`);
+            writeLine(io.stderr, 'Run `agora help` for a list of commands.');
+            return 1;
+          }
+          writeLine(io.stdout, commandManual(helpTarget));
+        } else {
+          writeLine(io.stdout, usage());
+        }
         return 0;
+      }
       default:
         writeLine(io.stderr, `Unknown command: ${parsed.command}`);
         writeLine(io.stderr, 'Run agora help for usage.');
@@ -1188,60 +1221,32 @@ function header(title: string, meta: string[]): string {
 }
 
 function usage(): string {
-  return [
-    'Agora CLI',
-    '',
-    'Usage:',
-    '  agora init [--dry-run] [--json]',
-    '  agora use <workflow-id> [--json]',
-    '  agora search <query> [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
-    '  agora browse <id> [--type package|workflow] [--json]',
-    '  agora trending [all|packages|workflows] [--limit 5] [--json]',
-    '  agora workflows [query] [--limit 10] [--json]',
-    '  agora tutorials [query] [--level beginner|intermediate|advanced] [--limit 20] [--json]',
-    '  agora tutorial <id> [step] [--json]',
-    '  agora discussions [query] [--category question|idea|showcase|discussion] [--json]',
-    '  agora discuss --title <title> (--content <text>|--content-file path) [--category question|idea|showcase|discussion]',
-    '  agora install <id> [--write] [--config path] [--json]',
-    '  agora save <id> [--data-dir path] [--json]',
-    '  agora saved [query] [--data-dir path] [--json]',
-    '  agora remove <id> [--data-dir path] [--json]',
-    '  agora auth login --token <token> [--api-url url] [--data-dir path]',
-    '  agora auth status [--data-dir path] [--json]',
-    '  agora auth logout [--data-dir path]',
-    '  agora publish package --name <name> --description <text> --npm <package> [--token token]',
-    '  agora publish workflow --name <name> --description <text> --prompt-file <path> [--token token]',
-    '  agora review <id> --rating 5 --content <text> [--token token]',
-    '  agora reviews [id] [--type package|workflow]',
-    '  agora profile <username> [--json]',
-    '  agora config doctor [--config path] [--json]',
-    '',
-    'Data source:',
-    '  --api                 Use the live Agora API',
-    '  --api-url <url>       Override AGORA_API_URL',
-    '  --api-timeout <ms>    API timeout before offline fallback',
-    '  --token <token>       API auth token, defaults to env vars or agora auth login',
-    '  --offline             Force local bundled marketplace data',
-    '',
-    'Examples:',
-    '  agora init',
-    '  agora init --dry-run',
-    '  agora use wf-tdd-cycle',
-    '  agora search filesystem',
-    '  agora search filesystem --api',
-    '  agora browse mcp-github',
-    '  agora tutorials mcp',
-    '  agora tutorial tut-mcp-basics 2',
-    '  agora install mcp-github',
-    '  agora install mcp-github --write',
-    '  agora save wf-security-audit',
-    '  agora saved',
-    '  agora auth login --token $AGORA_TOKEN --api-url https://agora.example.com',
-    '  agora discuss --title "MCP question" --content "How are you composing servers?" --category question',
-    '  agora profile alice',
-    '  agora publish package --name @you/server --description "MCP server" --npm @you/server',
-    '  agora review mcp-github --rating 5 --content "Works well"'
-  ].join('\n');
+  const nameWidth = Math.max(...COMMANDS.map((c) => c.name.length));
+  const groups = ['Marketplace', 'Setup', 'Library', 'Learn', 'Community'] as const;
+
+  const lines: string[] = [
+    `${style.accent('agora')}${style.dim(` · terminal marketplace for OpenCode · v${VERSION}`)}`,
+    ''
+  ];
+
+  for (const group of groups) {
+    const groupCmds = COMMANDS.filter((c) => c.group === group);
+    lines.push(style.dim(group));
+    for (const cmd of groupCmds) {
+      lines.push(`  ${style.accent(cmd.name.padEnd(nameWidth))}  ${style.dim(cmd.summary)}`);
+    }
+    lines.push('');
+  }
+
+  lines.push(style.dim('Run `agora help <command>` for details on any command.'));
+
+  return lines.join('\n');
+}
+
+export function commandManual(name: string): string {
+  const meta = COMMANDS.find((c) => c.name === name);
+  if (!meta) return '';
+  return renderManual(meta, style);
 }
 
 function usageError(io: CliIo, message: string): number {
