@@ -145,3 +145,18 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   requests INTEGER NOT NULL DEFAULT 0,
   reset_at TEXT NOT NULL
 );
+
+-- Device codes for OAuth device-code login flow
+CREATE TABLE IF NOT EXISTS device_codes (
+  device_code TEXT PRIMARY KEY,
+  user_code TEXT UNIQUE NOT NULL,
+  client_id TEXT NOT NULL DEFAULT 'agora-cli',
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'authorized', 'expired', 'completed')),
+  github_token TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  expires_at TEXT NOT NULL,
+  verified_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_device_codes_user_code ON device_codes(user_code);
+CREATE INDEX IF NOT EXISTS idx_device_codes_status ON device_codes(status);

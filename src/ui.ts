@@ -212,7 +212,7 @@ export function renderBox(title: string, body: string[], opts: BoxOptions): stri
 
   const row = (text: string, isTitle: boolean) => {
     const trailing = ' '.repeat(textWidth - text.length);
-    const styledText = isTitle ? styler.bold(text) : styler.dim(text);
+    const styledText = isTitle ? styler.bold(text) : text;
     return `${styler.accent('│')}  ${styler.accent('▍')} ${styledText}${trailing}  ${styler.accent('│')}`;
   };
 

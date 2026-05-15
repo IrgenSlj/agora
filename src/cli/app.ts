@@ -68,7 +68,8 @@ import {
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
 };
-const VERSION = pkg.version;
+export const AGORA_VERSION = pkg.version;
+const VERSION = AGORA_VERSION;
 
 // Active terminal styler. Reassigned once per `runCli` invocation from the
 // caller's stream + env; defaults to plain so any direct formatter use is safe.
@@ -188,7 +189,13 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       case 'profile':
         return await commandProfile(parsed, io);
       case 'auth':
-        return commandAuth(parsed, io);
+        return await commandAuth(parsed, io);
+      case 'login':
+        return await commandAuth({ ...parsed, args: ['login', ...parsed.args], command: 'auth' }, io);
+      case 'logout':
+        return await commandAuth({ ...parsed, args: ['logout'], command: 'auth' }, io);
+      case 'whoami':
+        return await commandAuth({ ...parsed, args: ['status'], command: 'auth', flags: { ...parsed.flags, json: true } }, io);
       case 'config':
         return await commandConfig(parsed, io);
       case 'mcp':
@@ -309,13 +316,9 @@ async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  const sourceLabel =
-    result.source === 'offline'
-      ? `source: offline · refreshed ${dataRefreshedAt}`
-      : `source: ${result.source}`;
   writeLine(
     io.stdout,
-    header('agora search', [`"${query || 'all'}"`, `${results.length} results`, sourceLabel])
+    header('agora search', [`"${query || 'all'}"`, `${results.length} results`, sourceLabel(result)])
   );
   writeLine(io.stdout, '');
   writeLine(io.stdout, formatItemList(results));
@@ -359,7 +362,7 @@ async function commandTrending(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  writeLine(io.stdout, header('agora trending', [category, `source: ${result.source}`]));
+  writeLine(io.stdout, header('agora trending', [category, sourceLabel(result)]));
   writeLine(io.stdout, '');
   writeLine(io.stdout, formatItemList(items));
   writeLine(io.stdout, '');
@@ -386,7 +389,7 @@ async function commandWorkflows(parsed: ParsedArgs, io: CliIo): Promise<number> 
 
   writeLine(
     io.stdout,
-    header('agora workflows', [`${workflows.length} results`, `source: ${result.source}`])
+    header('agora workflows', [`${workflows.length} results`, sourceLabel(result)])
   );
   writeLine(io.stdout, '');
   writeLine(io.stdout, formatItemList(workflows));
@@ -423,7 +426,7 @@ async function commandTutorials(parsed: ParsedArgs, io: CliIo): Promise<number> 
 
   writeLine(
     io.stdout,
-    header('agora tutorials', [`${tutorials.length} results`, `source: ${result.source}`])
+    header('agora tutorials', [`${tutorials.length} results`, sourceLabel(result)])
   );
   writeLine(io.stdout, '');
   writeLine(io.stdout, formatTutorialList(tutorials));
@@ -479,7 +482,7 @@ async function commandDiscussions(parsed: ParsedArgs, io: CliIo): Promise<number
 
   writeLine(
     io.stdout,
-    header('agora discussions', [`${discussions.length} results`, `source: ${result.source}`])
+    header('agora discussions', [`${discussions.length} results`, sourceLabel(result)])
   );
   writeLine(io.stdout, '');
   writeLine(
@@ -487,9 +490,9 @@ async function commandDiscussions(parsed: ParsedArgs, io: CliIo): Promise<number
     discussions
       .map((discussion, index) => {
         return [
-          `${index + 1}. ${discussion.title} [${discussion.category}]`,
+          `${index + 1}. ${style.accent(discussion.title)} ${style.dim('[' + discussion.category + ']')}`,
           `   ${truncate(discussion.content, 88)}`,
-          `   replies ${discussion.replies} | stars ${discussion.stars} | by ${discussion.author}`
+          `   ${style.dim('replies ' + discussion.replies + ' · stars ' + discussion.stars + ' · by ' + discussion.author)}`
         ].join('\n');
       })
       .join('\n\n')
@@ -521,8 +524,8 @@ async function commandDiscuss(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  writeLine(io.stdout, `Created discussion ${result.data.id}`);
-  writeLine(io.stdout, `${result.data.title} (${result.source})`);
+  writeLine(io.stdout, `Created discussion ${style.accent(result.data.id)}`);
+  writeLine(io.stdout, `${result.data.title} (${sourceLabel(result)})`);
   return 0;
 }
 
@@ -567,8 +570,8 @@ async function commandInstall(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
   if (parsed.flags.write) {
     writeOpenCodeConfig(configPath, plan.config);
-    writeLine(io.stdout, `Installed ${item.name}`);
-    writeLine(io.stdout, `Updated ${configPath}`);
+    writeLine(io.stdout, `Installed ${style.accent(item.name)}`);
+    writeLine(io.stdout, `${style.dim('Config')} ${configPath}`);
     if (plan.commands.length) {
       writeLine(io.stdout, 'Installing packages...');
       for (const cmd of plan.commands) {
@@ -821,11 +824,11 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
   }
 
   writeLine(io.stdout, `Scanning ${cwd}...`);
-  writeLine(io.stdout, `  Project type: ${scan.type}`);
-  if (scan.frameworks.length) writeLine(io.stdout, `  Frameworks: ${scan.frameworks.join(', ')}`);
-  if (scan.hasDocker) writeLine(io.stdout, '  Docker: detected');
-  if (scan.hasTests) writeLine(io.stdout, '  Tests: detected');
-  if (scan.hasDatabase) writeLine(io.stdout, '  Database: detected');
+  writeLine(io.stdout, `  ${style.dim('Project type')} ${scan.type}`);
+  if (scan.frameworks.length) writeLine(io.stdout, `  ${style.dim('Frameworks')} ${scan.frameworks.join(', ')}`);
+  if (scan.hasDocker) writeLine(io.stdout, `  ${style.dim('Docker')} detected`);
+  if (scan.hasTests) writeLine(io.stdout, `  ${style.dim('Tests')} detected`);
+  if (scan.hasDatabase) writeLine(io.stdout, `  ${style.dim('Database')} detected`);
 
   if (!parsed.flags.dryRun) {
     applyInitPlan(plan, configPath);
@@ -963,43 +966,141 @@ function commandConfig(parsed: ParsedArgs, io: CliIo): number {
     return report.valid ? 0 : 1;
   }
 
-  writeLine(io.stdout, `Config path: ${report.path}`);
-  writeLine(io.stdout, `Exists: ${report.exists ? 'yes' : 'no'}`);
-  writeLine(io.stdout, `Valid: ${report.valid ? 'yes' : 'no'}`);
-  if (report.error) writeLine(io.stdout, `Error: ${report.error}`);
-  writeLine(io.stdout, `MCP servers: ${report.mcpServers}`);
-  writeLine(io.stdout, `Plugins: ${report.plugins}`);
-  writeLine(io.stdout, `Packages: ${report.packages.length ? report.packages.join(', ') : 'none'}`);
+  writeLine(io.stdout, `${style.dim('Config path')} ${report.path}`);
+  writeLine(io.stdout, `${style.dim('Exists')} ${report.exists ? 'yes' : 'no'}`);
+  writeLine(io.stdout, `${style.dim('Valid')} ${report.valid ? 'yes' : 'no'}`);
+  if (report.error) writeLine(io.stdout, `${style.dim('Error')} ${report.error}`);
+  writeLine(io.stdout, `${style.dim('MCP servers')} ${report.mcpServers}`);
+  writeLine(io.stdout, `${style.dim('Plugins')} ${report.plugins}`);
+  writeLine(io.stdout, `${style.dim('Packages')} ${report.packages.length ? report.packages.join(', ') : 'none'}`);
   return report.valid ? 0 : 1;
 }
 
-function commandAuth(parsed: ParsedArgs, io: CliIo): number {
+async function commandAuth(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const subcommand = parsed.args[0] || 'status';
   const dataDir = detectDataDir(parsed, io);
   const state = loadAgoraState(dataDir);
   const existingAuth = getAuthState(state);
 
   if (subcommand === 'login') {
-    const token = authTokenInput(parsed, io);
-    if (!token) {
-      return usageError(io, 'auth login requires --token, AGORA_TOKEN, or AGORA_API_TOKEN');
-    }
+    const explicitToken = authTokenInput(parsed, io);
 
-    const apiUrl =
-      stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
-    const nextState = setAuthState(state, { token, apiUrl });
-    const auth = getAuthState(nextState);
-    writeAgoraState(dataDir, nextState);
+    if (explicitToken) {
+      // Token-paste flow (existing behaviour, for CI/automation)
+      const apiUrl =
+        stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
+      const nextState = setAuthState(state, { token: explicitToken, apiUrl });
+      const auth = getAuthState(nextState);
+      writeAgoraState(dataDir, nextState);
 
-    if (parsed.flags.json) {
-      writeJson(io.stdout, authStatusPayload(dataDir, auth));
+      if (parsed.flags.json) {
+        writeJson(io.stdout, authStatusPayload(dataDir, auth));
+        return 0;
+      }
+
+      writeLine(io.stdout, 'Stored Agora API token');
+      writeLine(io.stdout, `${style.dim('API URL')} ${auth?.apiUrl || 'not stored'}`);
+      writeLine(io.stdout, `${style.dim('State')} ${getAgoraStatePath(dataDir)}`);
       return 0;
     }
 
-    writeLine(io.stdout, 'Stored Agora API token');
-    writeLine(io.stdout, `API URL: ${auth?.apiUrl || 'not stored'}`);
-    writeLine(io.stdout, `State: ${getAgoraStatePath(dataDir)}`);
-    return 0;
+    // ── Device-code flow ─────────────────────────────────────────────────
+    const apiUrl =
+      stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
+
+    if (!apiUrl) {
+      return usageError(io, 'auth login requires --api-url, AGORA_API_URL, or stored apiUrl');
+    }
+
+    const baseUrl = apiUrl.replace(/\/+$/, '');
+
+    process.stdout.write(`\n${style.accent('Agora Login')}\n`);
+    process.stdout.write(`${style.dim('Connecting to')} ${baseUrl}...\n`);
+
+    try {
+      const codeRes = await fetch(`${baseUrl}/auth/device/code`, { method: 'POST' });
+      if (!codeRes.ok) {
+        const err = await codeRes.json().catch(() => ({ error: 'request failed' }));
+        return usageError(io, `Device code request failed: ${err.error || codeRes.status}`);
+      }
+      const codeData = (await codeRes.json()) as any;
+
+      const verificationUri = codeData.verification_uri;
+      const userCode = codeData.user_code;
+      const deviceCode = codeData.device_code;
+      const interval = (codeData.interval || 5) * 1000;
+
+      process.stdout.write(`\n${style.accent(userCode.slice(0, 4) + ' ' + userCode.slice(4))}\n\n`);
+      process.stdout.write(`  ${style.dim('Open in your browser:')} ${verificationUri}\n`);
+      process.stdout.write(`  ${style.dim('Enter code:')}         ${userCode}\n\n`);
+
+      // Try to open browser automatically
+      try {
+        const url = `${verificationUri}`;
+        if (process.platform === 'darwin') {
+          execSync(`open '${url}'`, { timeout: 3000 });
+        } else if (process.platform === 'linux') {
+          execSync(`xdg-open '${url}'`, { timeout: 3000 });
+        }
+        process.stdout.write(`  ${style.dim('Browser opened.')}\n\n`);
+      } catch {
+        process.stdout.write(`  ${style.dim('Open the URL manually.')}\n\n`);
+      }
+
+      // Poll for token
+      const pollStart = Date.now();
+      const pollTimeout = 15 * 60 * 1000; // 15 minutes
+
+      for (;;) {
+        await new Promise((r) => setTimeout(r, interval));
+
+        if (Date.now() - pollStart > pollTimeout) {
+          return usageError(io, 'Login timed out. Run `agora auth login` to try again.');
+        }
+
+        process.stdout.write(`\r\x1b[K${style.dim('Waiting for browser authorization...')}`);
+
+        try {
+          const tokenRes = await fetch(`${baseUrl}/auth/device/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ device_code: deviceCode })
+          });
+
+          if (tokenRes.ok) {
+            const tokenData = (await tokenRes.json()) as any;
+            const jwt = tokenData.access_token;
+
+            process.stdout.write(`\r\x1b[K${style.dim('Authorization received.')}\n`);
+
+            const nextState = setAuthState(state, { token: jwt, apiUrl });
+            writeAgoraState(dataDir, nextState);
+
+            if (parsed.flags.json) {
+              writeJson(io.stdout, authStatusPayload(dataDir, getAuthState(nextState)));
+              return 0;
+            }
+
+            process.stdout.write(`\n${style.accent('✓ Authenticated')}\n`);
+            process.stdout.write(`${style.dim('API URL')} ${baseUrl}\n`);
+            process.stdout.write(`${style.dim('Token expires')} in 1 hour\n`);
+            process.stdout.write(`${style.dim('State')} ${getAgoraStatePath(dataDir)}\n`);
+            return 0;
+          }
+
+          const errData = await tokenRes.json().catch(() => ({ error: 'unknown' }));
+          if (errData.error === 'expired') {
+            process.stdout.write(`\r\x1b[K`);
+            return usageError(io, 'Code expired. Run `agora auth login` again.');
+          }
+          // "authorization_pending" is expected — keep polling
+        } catch {
+          // Network error, retry
+        }
+      }
+    } catch (e: any) {
+      return usageError(io, `Login failed: ${e.message || 'connection error'}`);
+    }
   }
 
   if (subcommand === 'status') {
@@ -1008,13 +1109,13 @@ function commandAuth(parsed: ParsedArgs, io: CliIo): number {
       return 0;
     }
 
-    writeLine(io.stdout, `Authenticated: ${existingAuth ? 'yes' : 'no'}`);
+    writeLine(io.stdout, `${style.dim('Authenticated')} ${existingAuth ? 'yes' : 'no'}`);
     if (existingAuth) {
-      writeLine(io.stdout, `Token: ${maskToken(existingAuth.token)}`);
-      writeLine(io.stdout, `API URL: ${existingAuth.apiUrl || 'not stored'}`);
-      writeLine(io.stdout, `Saved: ${formatDate(existingAuth.savedAt)}`);
+      writeLine(io.stdout, `${style.dim('Token')} ${maskToken(existingAuth.token)}`);
+      writeLine(io.stdout, `${style.dim('API URL')} ${existingAuth.apiUrl || 'not stored'}`);
+      writeLine(io.stdout, `${style.dim('Saved')} ${formatDate(existingAuth.savedAt)}`);
     }
-    writeLine(io.stdout, `State: ${getAgoraStatePath(dataDir)}`);
+    writeLine(io.stdout, `${style.dim('State')} ${getAgoraStatePath(dataDir)}`);
     return 0;
   }
 
@@ -1074,8 +1175,8 @@ async function commandSave(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  writeLine(io.stdout, result.added ? `Saved ${item.id}` : `${item.id} is already saved`);
-  writeLine(io.stdout, `State: ${getAgoraStatePath(dataDir)}`);
+  writeLine(io.stdout, result.added ? `Saved ${style.accent(item.id)}` : `${style.accent(item.id)} is already saved`);
+  writeLine(io.stdout, `${style.dim('State')} ${getAgoraStatePath(dataDir)}`);
   return 0;
 }
 
@@ -1101,7 +1202,7 @@ function commandSaved(parsed: ParsedArgs, io: CliIo): number {
     return 0;
   }
 
-  writeLine(io.stdout, `Saved Agora items (${saved.length})`);
+  writeLine(io.stdout, header('agora saved', [`${saved.length} items`]));
   writeLine(io.stdout, formatSavedList(saved));
   return 0;
 }
@@ -1133,7 +1234,7 @@ function commandRemove(parsed: ParsedArgs, io: CliIo): number {
     return usageError(io, `Saved item not found: ${id}`);
   }
 
-  writeLine(io.stdout, `Removed ${targetId}`);
+  writeLine(io.stdout, `Removed ${style.accent(targetId)}`);
   return 0;
 }
 
@@ -1177,8 +1278,8 @@ async function commandPublish(parsed: ParsedArgs, io: CliIo): Promise<number> {
       return 0;
     }
 
-    writeLine(io.stdout, `Published package ${result.data.id}`);
-    writeLine(io.stdout, `${result.data.name} (${result.source})`);
+    writeLine(io.stdout, `Published package ${style.accent(result.data.id)}`);
+    writeLine(io.stdout, `${result.data.name} (${sourceLabel(result)})`);
     return 0;
   }
 
@@ -1201,8 +1302,8 @@ async function commandPublish(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  writeLine(io.stdout, `Published workflow ${result.data.id}`);
-  writeLine(io.stdout, `${result.data.name} (${result.source})`);
+  writeLine(io.stdout, `Published workflow ${style.accent(result.data.id)}`);
+  writeLine(io.stdout, `${result.data.name} (${sourceLabel(result)})`);
   return 0;
 }
 
@@ -1231,8 +1332,8 @@ async function commandReview(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  writeLine(io.stdout, `Reviewed ${result.data.itemId}`);
-  writeLine(io.stdout, `${result.data.rating}/5 by ${result.data.author}`);
+  writeLine(io.stdout, `Reviewed ${style.accent(result.data.itemId)}`);
+  writeLine(io.stdout, `${style.dim(result.data.rating + '/5 by ' + result.data.author)}`);
   return 0;
 }
 
@@ -1258,7 +1359,7 @@ async function commandReviews(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
   writeLine(
     io.stdout,
-    header('agora reviews', [`${result.data.length} results`, `source: ${result.source}`])
+    header('agora reviews', [`${result.data.length} results`, sourceLabel(result)])
   );
   writeLine(io.stdout, '');
   writeLine(io.stdout, formatReviewList(result.data));
@@ -1338,16 +1439,16 @@ function formatSavedList(items: ResolvedSavedItem[]): string {
     .map((entry, index) => {
       if (!entry.item) {
         return [
-          `${index + 1}. ${entry.saved.id} [missing]`,
-          `   saved ${formatDate(entry.saved.savedAt)}`
+          `${index + 1}. ${style.accent(entry.saved.id)} ${style.dim('[missing]')}`,
+          `   ${style.dim('saved ' + formatDate(entry.saved.savedAt))}`
         ].join('\n');
       }
 
       return [
-        `${index + 1}. ${entry.item.id} [${entry.item.category}]`,
-        `   ${entry.item.name}`,
+        `${index + 1}. ${style.accent(entry.item.id)} ${style.dim('[' + entry.item.category + ']')}`,
+        `   ${style.dim(entry.item.name)}`,
         `   ${truncate(entry.item.description, 88)}`,
-        `   saved ${formatDate(entry.saved.savedAt)}`
+        `   ${style.dim('saved ' + formatDate(entry.saved.savedAt))}`
       ].join('\n');
     })
     .join('\n\n');
@@ -1357,8 +1458,8 @@ function formatReviewList(reviews: ApiReview[]): string {
   return reviews
     .map((review, index) => {
       return [
-        `${index + 1}. ${review.itemId} [${review.itemType}]`,
-        `   rating ${review.rating}/5 by ${review.author}`,
+        `${index + 1}. ${style.accent(review.itemId)} ${style.dim('[' + review.itemType + ']')}`,
+        `   ${style.dim('rating ' + review.rating + '/5 by ' + review.author)}`,
         `   ${truncate(review.content, 88)}`
       ].join('\n');
     })
@@ -1367,16 +1468,16 @@ function formatReviewList(reviews: ApiReview[]): string {
 
 function formatProfileDetail(profile: ApiProfile): string {
   const lines = [
-    profile.displayName,
-    `username: ${profile.username}`,
-    `packages: ${formatNumber(profile.packages)}`,
-    `workflows: ${formatNumber(profile.workflows)}`,
-    `discussions: ${formatNumber(profile.discussions)}`
+    style.bold(profile.displayName),
+    `${style.dim('username')} ${style.accent(profile.username)}`,
+    `${style.dim('packages')} ${formatNumber(profile.packages)}`,
+    `${style.dim('workflows')} ${formatNumber(profile.workflows)}`,
+    `${style.dim('discussions')} ${formatNumber(profile.discussions)}`
   ];
 
-  if (profile.bio) lines.splice(2, 0, `bio: ${profile.bio}`);
-  if (profile.avatarUrl) lines.push(`avatar: ${profile.avatarUrl}`);
-  if (profile.joinedAt) lines.push(`joined: ${formatDate(profile.joinedAt)}`);
+  if (profile.bio) lines.splice(2, 0, `${style.dim('bio')} ${profile.bio}`);
+  if (profile.avatarUrl) lines.push(`${style.dim('avatar')} ${profile.avatarUrl}`);
+  if (profile.joinedAt) lines.push(`${style.dim('joined')} ${formatDate(profile.joinedAt)}`);
 
   return lines.join('\n');
 }
@@ -1385,10 +1486,10 @@ function formatTutorialList(tutorials: Tutorial[]): string {
   return tutorials
     .map((tutorial, index) => {
       return [
-        `${index + 1}. ${tutorial.id} [${tutorial.level}]`,
-        `   ${tutorial.title}`,
+        `${index + 1}. ${style.accent(tutorial.id)} ${style.dim('[' + tutorial.level + ']')}`,
+        `   ${style.dim(tutorial.title)}`,
         `   ${truncate(tutorial.description, 88)}`,
-        `   ${tutorial.duration} | ${tutorial.steps.length} steps`
+        `   ${style.dim(tutorial.duration + ' | ' + tutorial.steps.length + ' steps')}`
       ].join('\n');
     })
     .join('\n\n');
@@ -1399,31 +1500,45 @@ function formatTutorialStep(tutorial: Tutorial, stepNumber: number): string {
 
   if (payload.completed) {
     return [
-      `${tutorial.title}`,
-      `Completed ${tutorial.steps.length}/${tutorial.steps.length} steps.`,
+      style.bold(tutorial.title),
+      style.dim(`Completed ${tutorial.steps.length}/${tutorial.steps.length} steps.`),
       'Run agora tutorials for more tutorials.'
     ].join('\n');
   }
 
   const lines = [
-    `${tutorial.title}`,
-    `id: ${tutorial.id}`,
-    `level: ${tutorial.level}`,
-    `duration: ${tutorial.duration}`,
-    `step: ${payload.stepNumber}/${tutorial.steps.length}`,
+    style.bold(tutorial.title),
+    `${style.dim('id')} ${style.accent(tutorial.id)}`,
+    `${style.dim('level')} ${tutorial.level}`,
+    `${style.dim('duration')} ${tutorial.duration}`,
+    `${style.dim('step')} ${payload.stepNumber}/${tutorial.steps.length}`,
     '',
     payload.title || '',
     payload.content || ''
   ];
 
   if (payload.code) {
-    lines.push('', 'code:', payload.code);
+    lines.push('', style.dim('code:'), payload.code);
   }
 
   return lines.join('\n');
 }
 
 function welcome(color: boolean, trueColor: boolean): string {
+  if (!color) {
+    return [
+      '',
+      `agora · terminal marketplace for OpenCode · v${VERSION}`,
+      '',
+      '  Search    agora search <query>',
+      '  Browse    agora trending · agora browse <id>',
+      '  Learn     agora tutorials · agora tutorial <id>',
+      '  Install   agora install <id> [--write]',
+      '  Setup     agora init [--mcp] · agora use <workflow>',
+      '  Auth      agora login [--api-url <url>]',
+      ''
+    ].join('\n');
+  }
   const banner = renderBanner({ color, trueColor });
   const box = renderBox(
     'Welcome to Agora',
@@ -1434,8 +1549,12 @@ function welcome(color: boolean, trueColor: boolean): string {
     { color, trueColor }
   );
   const hint = [
-    `${style.dim('Browse')}   agora search <query> · agora trending · agora browse <id>`,
-    `${style.dim('Set up')}   agora init · agora use <workflow>`
+    `${style.dim('Search')}    agora search <query>`,
+    `${style.dim('Browse')}    agora trending · agora browse <id>`,
+    `${style.dim('Learn')}     agora tutorials · agora tutorial <id>`,
+    `${style.dim('Install')}   agora install <id> [--write]`,
+    `${style.dim('Setup')}     agora init [--mcp] · agora use <workflow>`,
+    `${style.dim('Auth')}      agora login [--api-url <url>]`
   ].join('\n');
   return `\n${banner}\n\n${box}\n\n${hint}\n`;
 }
@@ -1709,6 +1828,12 @@ function tutorialStepPayload(
     content: step?.content,
     code: step?.code
   };
+}
+
+function sourceLabel(result: { source: string }): string {
+  return result.source === 'offline'
+    ? `source: offline · refreshed ${dataRefreshedAt}`
+    : `source: ${result.source}`;
 }
 
 function warnFallback<T>(result: SourceResult<T>, io: CliIo): void {

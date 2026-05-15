@@ -519,16 +519,10 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       if (seq === '\x1b') return dispatchEvent({ kind: 'esc' });
     }
 
-    // Number of footer rows in the last redraw; cleared on cleanup / before completions
+    // Number of footer rows in the last redraw; cleared on cleanup
     let footerRows = 0;
-
-    function clearFooterRows(): string {
-      if (footerRows <= 0) return '';
-      let seq = '';
-      for (let i = 0; i < footerRows; i++) seq += '\n\r\x1b[K';
-      seq += `\x1b[${footerRows}A`;
-      return seq;
-    }
+    // Completion hints to show in the footer area on next redraw
+    let pendingCompletions: string[] | null = null;
 
     function dispatchEvent(event: KeyEvent): void {
       const result = applyKeyEvent(state, event, {
@@ -542,9 +536,7 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       }
 
       if (result.sideEffect === 'show-completions' && result.completionsToShow) {
-        if (footerRows > 0) out.write(clearFooterRows());
-        const list = result.completionsToShow.join(', ');
-        out.write(`\n\x1b[2m${list}\x1b[0m\n`);
+        pendingCompletions = result.completionsToShow;
       }
 
       redraw();
@@ -558,10 +550,17 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
     function redraw(): void {
       if (state.mode === 'reverse-search') {
         footerRows = 0;
+        pendingCompletions = null;
         out.write(renderSearch(state, opts.prompt));
       } else {
         const suffix = opts.promptSuffix ? opts.promptSuffix(state.line) : '';
-        const footer = opts.footer ? opts.footer(state.line) : '';
+        const footerBase = opts.footer ? opts.footer(state.line) : '';
+        const parts = [footerBase];
+        if (pendingCompletions && pendingCompletions.length > 0) {
+          parts.push(`\x1b[2m${pendingCompletions.slice(0, 6).join(' · ')}\x1b[0m`);
+          pendingCompletions = null;
+        }
+        const footer = parts.filter(Boolean).join('\n');
         footerRows = footer ? footer.split('\n').length : 0;
         out.write(renderPromptFrame(state, opts.prompt + suffix, footer));
       }

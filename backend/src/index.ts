@@ -148,12 +148,320 @@ app.post('/auth/logout', (c) => {
   return c.json({ success: true });
 });
 
-// SECURITY: requireUser uses the raw GitHub OAuth access token as the Agora API
-// bearer credential. Tokens are stored in plaintext in D1. There is no Agora-issued
-// token — any valid GitHub token is accepted and will implicitly create an Agora
-// account on first use. This architecture should be reviewed before production
-// exposure: consider issuing short-lived Agora-specific tokens, hashing stored
-// tokens, and requiring an explicit registration step.
+// ── JWT utilities (HS256 via Web Crypto API) ────────────────────────────────
+
+async function jwtSecret(secret: string): Promise<CryptoKey> {
+  const enc = new TextEncoder().encode(secret);
+  return crypto.subtle.importKey('raw', enc, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+}
+
+function base64Url(buf: ArrayBuffer): string {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function base64UrlDecode(s: string): Uint8Array {
+  s = s.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  return Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+}
+
+async function signJwt(payload: Record<string, unknown>, secret: string): Promise<string> {
+  const header = { alg: 'HS256', typ: 'JWT' };
+  const enc = new TextEncoder();
+  const headerB64 = base64Url(enc.encode(JSON.stringify(header)));
+  const payloadB64 = base64Url(enc.encode(JSON.stringify(payload)));
+  const key = await jwtSecret(secret);
+  const sig = await crypto.subtle.sign('HMAC', key, enc.encode(`${headerB64}.${payloadB64}`));
+  return `${headerB64}.${payloadB64}.${base64Url(sig)}`;
+}
+
+async function verifyJwt(token: string, secret: string): Promise<Record<string, unknown> | null> {
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+  const [headerB64, payloadB64, sigB64] = parts;
+  try {
+    const key = await jwtSecret(secret);
+    const enc = new TextEncoder();
+    const valid = await crypto.subtle.verify(
+      'HMAC', key, base64UrlDecode(sigB64), enc.encode(`${headerB64}.${payloadB64}`)
+    );
+    if (!valid) return null;
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadB64)));
+    if (payload.exp && Date.now() / 1000 > payload.exp) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+// ── Token hashing ────────────────────────────────────────────────────────────
+
+async function hashToken(token: string): Promise<string> {
+  const enc = new TextEncoder();
+  const hash = await crypto.subtle.digest('SHA-256', enc.encode(token));
+  return base64Url(hash);
+}
+
+// ── Device-code flow ────────────────────────────────────────────────────────
+
+const DEVICE_CODE_EXPIRY = 900; // 15 minutes
+const USER_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const POLL_INTERVAL_MS = 5000;
+
+function generateUserCode(): string {
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += USER_CODE_CHARS[Math.floor(Math.random() * USER_CODE_CHARS.length)];
+  }
+  return code;
+}
+
+function generateDeviceCode(): string {
+  return crypto.randomUUID();
+}
+
+/**
+ * POST /auth/device/code — Mint a new device-code pair.
+ * Returns user_code, device_code, verification_uri, and expires_in.
+ */
+app.post('/auth/device/code', async (c) => {
+  const clientId = c.req.query('client_id') || 'agora-cli';
+  const deviceCode = generateDeviceCode();
+  const userCode = generateUserCode();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + DEVICE_CODE_EXPIRY * 1000).toISOString();
+
+  try {
+    await c.env.DB.prepare(
+      `INSERT INTO device_codes (device_code, user_code, client_id, created_at, expires_at)
+       VALUES (?, ?, ?, ?, ?)`
+    )
+      .bind(deviceCode, userCode, clientId, now.toISOString(), expiresAt)
+      .run();
+
+    const baseUrl = `${c.req.url.split('/auth')[0]}`;
+    return c.json({
+      device_code: deviceCode,
+      user_code: userCode,
+      verification_uri: `${baseUrl}/auth/device`,
+      expires_in: DEVICE_CODE_EXPIRY,
+      interval: 5
+    });
+  } catch (e) {
+    console.error('POST /auth/device/code error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+/**
+ * GET /auth/device — Render a simple HTML page where the user enters their code.
+ */
+app.get('/auth/device', (c) => {
+  return c.html(`<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>Agora — Device Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:500px;margin:40px auto;padding:0 20px}
+  h1{color:#D4A85A;font-size:1.5rem}
+  input{font-size:1.2rem;padding:8px 12px;width:100%;box-sizing:border-box;letter-spacing:4px;text-align:center;font-family:monospace}
+  button{background:#D4A85A;color:#1a1a1a;border:none;padding:10px 24px;font-size:1rem;border-radius:6px;cursor:pointer;margin-top:12px}
+  button:hover{background:#c4994a}
+  .error{color:#e74c3c;margin-top:8px}
+  .success{color:#2ecc71;margin-top:8px}
+</style></head>
+<body>
+<h1>Agora — Device Login</h1>
+<p>Enter the code shown in your terminal:</p>
+<input type="text" id="code" maxlength="8" autofocus placeholder="XXXXXXXX"
+  oninput="this.value=this.value.toUpperCase().replace(/[^A-Z2-9]/g,'')">
+<button onclick="verify()">Verify</button>
+<div id="status"></div>
+<script>
+async function verify(){
+  const code=document.getElementById('code').value;
+  const status=document.getElementById('status');
+  if(code.length<8){status.className='error';status.textContent='Enter the 8-character code';return}
+  status.textContent='Verifying...';status.className='';
+  try{
+    const r=await fetch('/auth/device/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_code:code})});
+    const d=await r.json();
+    if(r.ok){status.className='success';status.textContent='✓ Authorized! Return to your terminal.'}
+    else{status.className='error';status.textContent=d.error||'Verification failed'}
+  }catch(e){status.className='error';status.textContent='Network error';}
+}
+</script>
+</body></html>`);
+});
+
+/**
+ * POST /auth/device/verify — Browser submits the user code to link it with a
+ * GitHub OAuth session. The browser is redirected here via GitHub OAuth.
+ * This triggers a redirect to GitHub OAuth, then back to complete.
+ */
+app.post('/auth/device/verify', async (c) => {
+  let body: any;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON' }, 400); }
+
+  const userCode = String(body.user_code || '').trim().toUpperCase();
+  if (!userCode || userCode.length < 8) {
+    return c.json({ error: 'Invalid code' }, 400);
+  }
+
+  try {
+    const record = (await c.env.DB.prepare(
+      `SELECT device_code, status, expires_at FROM device_codes WHERE user_code = ?`
+    ).bind(userCode).first()) as any;
+
+    if (!record) return c.json({ error: 'Invalid code' }, 404);
+    if (record.status !== 'pending') return c.json({ error: 'Code already used' }, 400);
+    if (new Date(record.expires_at) < new Date()) {
+      await c.env.DB.prepare(`UPDATE device_codes SET status = 'expired' WHERE device_code = ?`)
+        .bind(record.device_code).run();
+      return c.json({ error: 'Code expired. Generate a new one.' }, 400);
+    }
+
+    // Redirect to GitHub OAuth with the device_code as state to link back
+    const clientId = c.env.GITHUB_CLIENT_ID;
+    const callbackUrl = `${c.req.url.split('/auth')[0]}/auth/device/callback?device_code=${record.device_code}`;
+    const state = record.device_code;
+    const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&scope=read:user&state=${state}`;
+
+    return c.json({ redirect_url: url, device_code: record.device_code });
+  } catch (e) {
+    console.error('POST /auth/device/verify error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+/**
+ * GET /auth/device/callback — GitHub OAuth callback for the device flow.
+ * Stores the GitHub token and marks the device_code as authorized.
+ */
+app.get('/auth/device/callback', async (c) => {
+  const code = c.req.query('code');
+  const state = c.req.query('state');
+  const deviceCode = c.req.query('device_code') || state;
+
+  if (!code || !deviceCode) {
+    return c.html('<html><body><h1>Authentication failed</h1><p>Missing code or state.</p></body></html>');
+  }
+
+  try {
+    const record = (await c.env.DB.prepare(
+      `SELECT status, expires_at FROM device_codes WHERE device_code = ?`
+    ).bind(deviceCode).first()) as any;
+
+    if (!record || record.status !== 'pending' || new Date(record.expires_at) < new Date()) {
+      return c.html('<html><body><h1>Expired or invalid session</h1><p>Please generate a new code.</p></body></html>');
+    }
+
+    // Exchange code for GitHub access token
+    const clientId = c.env.GITHUB_CLIENT_ID;
+    const clientSecret = c.env.GITHUB_CLIENT_SECRET;
+    const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code })
+    });
+    const tokenData = (await tokenRes.json()) as any;
+    if (tokenData.error) {
+      return c.html(`<html><body><h1>GitHub auth failed</h1><p>${tokenData.error_description || tokenData.error}</p></body></html>`);
+    }
+
+    const accessToken = tokenData.access_token;
+    const hashedToken = await hashToken(accessToken);
+
+    // Fetch GitHub user
+    const userRes = await fetch('https://api.github.com/user', {
+      headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/vnd.github.v3+json' }
+    });
+    const userData = (await userRes.json()) as any;
+    const username = userData.login;
+    const githubId = String(userData.id);
+    const now = new Date().toISOString();
+
+    // Upsert user with hashed token
+    await c.env.DB.prepare(
+      `INSERT INTO users (id, username, display_name, avatar_url, github_id, github_access_token, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(github_id) DO UPDATE SET
+         github_access_token = excluded.github_access_token,
+         updated_at = excluded.updated_at`
+    ).bind(githubId, username, userData.name || username, userData.avatar_url, githubId, hashedToken, now, now).run();
+
+    // Mark device code as authorized
+    await c.env.DB.prepare(`UPDATE device_codes SET status = 'authorized', github_token = ? WHERE device_code = ?`)
+      .bind(hashedToken, deviceCode).run();
+
+    return c.html(`<html><body style="font-family:sans-serif;text-align:center;padding:60px 20px">
+      <h1 style="color:#D4A85A">✓ Authorized!</h1>
+      <p>Signed in as <strong>${username}</strong>.</p>
+      <p>Return to your terminal to continue.</p>
+    </body></html>`);
+  } catch (e) {
+    console.error('GET /auth/device/callback error:', e);
+    return c.html('<html><body><h1>Internal error</h1><p>Please try again.</p></body></html>');
+  }
+});
+
+/**
+ * POST /auth/device/token — Polled by the CLI to exchange a device_code for a
+ * JWT once the user authorizes in the browser.
+ */
+app.post('/auth/device/token', async (c) => {
+  let body: any;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON' }, 400); }
+
+  const deviceCode = String(body.device_code || '').trim();
+  if (!deviceCode) return c.json({ error: 'device_code required' }, 400);
+
+  try {
+    const record = (await c.env.DB.prepare(
+      `SELECT status, github_token, expires_at FROM device_codes WHERE device_code = ?`
+    ).bind(deviceCode).first()) as any;
+
+    if (!record) return c.json({ error: 'Invalid device_code' }, 404);
+
+    if (new Date(record.expires_at) < new Date()) {
+      await c.env.DB.prepare(`UPDATE device_codes SET status = 'expired' WHERE device_code = ?`)
+        .bind(deviceCode).run();
+      return c.json({ error: 'expired' }, 400);
+    }
+
+    if (record.status === 'pending') {
+      return c.json({ error: 'authorization_pending' }, 400);
+    }
+
+    if (record.status === 'authorized' && record.github_token) {
+      // Issue a short-lived JWT
+      const now = Math.floor(Date.now() / 1000);
+      const jwt = await signJwt({
+        sub: record.github_token,
+        iat: now,
+        exp: now + 3600, // 1 hour
+        iss: 'agora-api'
+      }, c.env.AUTH_SECRET);
+
+      // Mark as completed (one-time use)
+      await c.env.DB.prepare(`UPDATE device_codes SET status = 'completed' WHERE device_code = ?`)
+        .bind(deviceCode).run();
+
+      return c.json({ access_token: jwt, token_type: 'Bearer', expires_in: 3600 });
+    }
+
+    return c.json({ error: 'authorization_pending' }, 400);
+  } catch (e) {
+    console.error('POST /auth/device/token error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+// ── Require user middleware (JWT-first, with legacy token fallback) ──────────
+
 async function requireUser(c: any): Promise<AuthUser | Response> {
   const authHeader = c.req.header('authorization') || '';
   const bearer = authHeader.match(/^Bearer\s+(.+)$/i)?.[1];
@@ -163,11 +471,28 @@ async function requireUser(c: any): Promise<AuthUser | Response> {
     return c.json({ error: 'Authentication required' }, 401);
   }
 
+  // Try JWT first
+  const jwtPayload = await verifyJwt(token, c.env.AUTH_SECRET);
+  if (jwtPayload && jwtPayload.sub) {
+    const hashedToken = String(jwtPayload.sub);
+    const existing = (await c.env.DB.prepare(
+      'SELECT id, username, display_name, avatar_url FROM users WHERE github_access_token = ?'
+    ).bind(hashedToken).first()) as any;
+
+    if (existing) {
+      return {
+        id: existing.id,
+        username: existing.username,
+        displayName: existing.display_name,
+        avatarUrl: existing.avatar_url
+      };
+    }
+  }
+
+  // Legacy: try raw GitHub token (plaintext lookup, then GitHub API)
   const existing = (await c.env.DB.prepare(
     'SELECT id, username, display_name, avatar_url FROM users WHERE github_access_token = ?'
-  )
-    .bind(token)
-    .first()) as any;
+  ).bind(token).first()) as any;
 
   if (existing) {
     return {
@@ -183,30 +508,22 @@ async function requireUser(c: any): Promise<AuthUser | Response> {
     return c.json({ error: 'Invalid token' }, 401);
   }
 
+  const hashedToken = await hashToken(token);
   const now = new Date().toISOString();
   await c.env.DB.prepare(
-    `
-    INSERT INTO users (id, username, display_name, avatar_url, github_id, github_access_token, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    ON CONFLICT(github_id) DO UPDATE SET
-      username = excluded.username,
-      display_name = excluded.display_name,
-      avatar_url = excluded.avatar_url,
-      github_access_token = excluded.github_access_token,
-      updated_at = excluded.updated_at
-  `
-  )
-    .bind(
-      String(githubUser.id),
-      githubUser.login,
-      githubUser.name || githubUser.login,
-      githubUser.avatar_url,
-      String(githubUser.id),
-      token,
-      now,
-      now
-    )
-    .run();
+    `INSERT INTO users (id, username, display_name, avatar_url, github_id, github_access_token, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(github_id) DO UPDATE SET
+       username = excluded.username,
+       display_name = excluded.display_name,
+       avatar_url = excluded.avatar_url,
+       github_access_token = excluded.github_access_token,
+       updated_at = excluded.updated_at`
+  ).bind(
+    String(githubUser.id), githubUser.login,
+    githubUser.name || githubUser.login, githubUser.avatar_url,
+    String(githubUser.id), hashedToken, now, now
+  ).run();
 
   return {
     id: String(githubUser.id),

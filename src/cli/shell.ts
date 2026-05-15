@@ -4,7 +4,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { COMMANDS } from './commands-meta.js';
 import { runInteractiveMenu } from './menu.js';
-import { FREE_MODELS } from './app.js';
+import { AGORA_VERSION, FREE_MODELS } from './app.js';
 import { detectAgoraDataDir, loadAgoraState, resolveSavedItems } from '../state.js';
 import {
   appendTranscript,
@@ -16,7 +16,6 @@ import {
 import {
   gradientText,
   renderBanner,
-  renderMeander,
   supportsTrueColor,
   type Styler
 } from '../ui.js';
@@ -254,14 +253,11 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const banner = renderBanner({ color: true, trueColor });
   const motto = "Developers' CLI marketplace and community hub - type a command, bash or chat:";
   const mottoLine = gradientText(motto, { trueColor });
-  // Static Greek-key frieze sitting between the wordmark and the motto — same
-  // width as the banner (52 cells), dim at idle. Same constant doubles as a
-  // determinate progress bar during installs. On entry it reads as ornament.
-  const meanderLine = renderMeander({ trueColor, mode: 'idle' });
+  const versionLine = style.dim(`v${AGORA_VERSION}`);
   const slashLine = style.dim(
     '/help · /menu · /transcript · /verbose · /medium · /quiet · /clear · /quit'
   );
-  process.stdout.write(`\n${banner}\n\n${meanderLine}\n\n${mottoLine}\n\n${slashLine}\n\n`);
+  process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${versionLine}\n${slashLine}\n\n`);
 
   const opencodeAvailable = checkOpencodeAvailable();
   if (!opencodeAvailable) {
@@ -367,11 +363,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   }
 
   function buildContextLine(): string {
-    const model = FREE_MODELS[0];
-    const costStr = totalCost > 0 ? `$${totalCost.toFixed(4)}` : '$0';
     const turns = meta?.turnCount ?? 0;
-    const cwd = shortCwd(currentCwd);
-    return style.dim(`${cwd} · opencode/${model} · ${verbosity} · ${turns} turns · ${costStr}`);
+    return style.dim(shortCwd(currentCwd) + (turns > 0 ? ` · ${turns} turn${turns === 1 ? '' : 's'}` : ''));
   }
 
   const sigintHandler = () => {
@@ -793,6 +786,9 @@ function printHelp(style: Styler): void {
     style.dim('Verbosity:'),
     '  /verbose  /medium  /quiet',
     '',
+    style.dim('Free AI models:'),
+    ...FREE_MODELS.map((m) => `  ${m}`),
+    '',
     style.dim('Agora commands:')
   ];
 
@@ -804,6 +800,8 @@ function printHelp(style: Styler): void {
       lines.push(`    ${style.accent(c.name.padEnd(14))}  ${c.summary}`);
     }
   }
+
+  lines.push('', style.dim(`agora v${AGORA_VERSION} · run \`agora help <command>\` for details`));
 
   process.stdout.write(lines.join('\n') + '\n\n');
 }

@@ -77,6 +77,25 @@ describe('samplePackages — data integrity', () => {
   test('dataset contains at least 31 entries', () => {
     expect(samplePackages.length).toBeGreaterThanOrEqual(31);
   });
+
+  test('MCP package ids are prefixed with mcp-', () => {
+    for (const pkg of samplePackages.filter((p) => p.category === 'mcp')) {
+      expect(pkg.id.startsWith('mcp-')).toBe(true);
+    }
+  });
+
+  test('prompt package ids are prefixed with prompt-', () => {
+    for (const pkg of samplePackages.filter((p) => p.category === 'prompt')) {
+      expect(pkg.id.startsWith('prompt-')).toBe(true);
+    }
+  });
+
+  test('createdAt values are valid ISO date strings', () => {
+    const isoDate = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/;
+    for (const pkg of samplePackages) {
+      expect(pkg.createdAt).toMatch(isoDate);
+    }
+  });
 });
 
 describe('sampleWorkflows — data integrity', () => {
@@ -106,6 +125,25 @@ describe('sampleWorkflows — data integrity', () => {
     for (const wf of sampleWorkflows) {
       expect(Array.isArray(wf.tags)).toBe(true);
       expect(wf.tags.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('workflow ids are prefixed with wf-', () => {
+    for (const wf of sampleWorkflows) {
+      expect(wf.id.startsWith('wf-')).toBe(true);
+    }
+  });
+
+  test('createdAt values are valid ISO date strings', () => {
+    const isoDate = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/;
+    for (const wf of sampleWorkflows) {
+      expect(wf.createdAt).toMatch(isoDate);
+    }
+  });
+
+  test('prompt field is non-empty for every workflow', () => {
+    for (const wf of sampleWorkflows) {
+      expect(wf.prompt.length).toBeGreaterThan(50);
     }
   });
 });
@@ -145,6 +183,19 @@ describe('sampleTutorials — data integrity', () => {
         expect(step.title.length).toBeGreaterThan(0);
         expect(step.content.length).toBeGreaterThan(0);
       }
+    }
+  });
+
+  test('tutorial ids are prefixed with tut-', () => {
+    for (const tut of sampleTutorials) {
+      expect(tut.id.startsWith('tut-')).toBe(true);
+    }
+  });
+
+  test('duration follows the pattern "N min"', () => {
+    const durRe = /^\d+\s+min$/;
+    for (const tut of sampleTutorials) {
+      expect(tut.duration).toMatch(durRe);
     }
   });
 });

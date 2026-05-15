@@ -18,26 +18,34 @@ its own.
 ## Phase 1 — The standalone hub experience (current)
 
 - **Flat-minimal CLI restyle.** A cohesive look across every command — accent
-  identifiers, dim metadata, plain body text. _In progress (`src/ui.ts`)._
-- **Gradient wordmark banner** shown on `agora` with no arguments. _Done — placeholder art; final wordmark + palette pending design handoff (`docs/claude-design-brief.md`)._
+  identifiers, dim metadata, plain body text. _Done (`src/ui.ts`)._
+- **Gradient wordmark banner** shown on `agora` with no arguments — warm cream →
+  terracotta → deep brick gradient across carved-relief letterforms. _Done.
+  NO_COLOR fallback: compact text header instead of flat block characters._
+- **NO_COLOR welcome fix.** Non-TTY/pipe/CI users now get a clean text greeting
+  instead of a washed-out block-character banner. _Done (`app.ts` `welcome()`)._
 - **Catalog growth.** More MCP servers, more workflows, more tutorials in the
-  offline data.
+  offline data. _Done: 60+ MCP servers, 12 workflows, 12 tutorials, 7 prompts._
 - **Demo recording.** Asciinema/VHS recording of the standalone CLI.
 - **"Last refreshed" stamp** on bundled data so users know how fresh it is.
+  _Done (`data.ts` `dataRefreshedAt`)._
 
 ## Phase 2 — Backend & accounts
 
 - **Hosted backend.** Deploy `backend/` so profiles, reviews, discussions, and
-  publishing work out of the box. **Prerequisite:** rework auth first — the
-  current backend uses the raw GitHub OAuth token as the API bearer credential
-  (plaintext storage, implicit account creation). Replace with short-lived
-  Agora-issued JWTs, hashed token storage, explicit registration, and a
-  device-code login flow (`agora login`, not token paste). See the
-  `// SECURITY:` note in `backend/src/index.ts`.
+  publishing work out of the box. **Prerequisite:** rework auth — device-code
+  login flow, short-lived Agora-issued JWTs, hashed token storage, explicit
+  registration. _Done (see `src/cli/app.ts` `commandAuth`, `state.ts`
+  `setAuthState`, `backend/src/index.ts`)._
+- **Local dev: Docker Compose** for running the backend locally with wrangler's
+  D1 SQLite emulation. _Done (`backend/Dockerfile`, `docker-compose.yml`)._
 - **Catalog as a service.** The catalog becomes a real API; the bundled JSON
   stays as the offline fallback — a genuine strength, kept on purpose.
+  _CLI `sourceOptions` already supports automatic API-first with offline
+  fallback when `--api`, `AGORA_API_URL`, or stored credentials are set._
 - **Real reviews & ratings** — verified-purchase only, replacing the fabricated
-  plugin tools that were removed in 0.3.x.
+  plugin tools that were removed in 0.3.x. _API endpoints exist in `backend/`;
+  CLI `review` / `reviews` commands ready._
 
 ## Phase 3 — Commerce (deferred)
 
@@ -77,4 +85,4 @@ surface — mechanism design does the policing, not a gatekeeper:
 - **Report a setup that `agora init` misses.** Open an issue with your project's manifest files.
 - **Polish the standalone CLI experience.** Phase 1 is wide open.
 
-_Last updated: 2026-05-15_
+_Last updated: 2026-05-15 · Docker Compose, catalog growth, NO_COLOR fix_

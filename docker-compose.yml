@@ -1,0 +1,16 @@
+services:
+  agora-api:
+    build: ./backend
+    ports:
+      - "8787:8787"
+    environment:
+      - AGORA_ENV=development
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+      - AUTH_SECRET=${AUTH_SECRET:-dev-secret-change-in-production}
+    volumes:
+      - ./backend/src:/app/src
+      - wrangler-state:/app/.wrangler
+
+volumes:
+  wrangler-state:

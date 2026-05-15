@@ -108,7 +108,8 @@ describe('CLI commands', () => {
       const config = JSON.parse(readFileSync(configPath, 'utf8'));
 
       expect(code).toBe(0);
-      expect(stdout.join('')).toContain('Updated');
+      expect(stdout.join('')).toContain('Installed');
+      expect(stdout.join('')).toContain('Config');
       expect(config.mcp['mcp-github'].command).toEqual([
         'npx',
         '@modelcontextprotocol/server-github'
@@ -874,8 +875,8 @@ describe('CLI commands', () => {
 
     expect(code).toBe(0);
     expect(stdout.join('')).toContain('Alice Doe');
-    expect(stdout.join('')).toContain('packages: 2');
-    expect(stdout.join('')).toContain('discussions: 4');
+    expect(stdout.join('')).toContain('packages 2');
+    expect(stdout.join('')).toContain('discussions 4');
     expect(stdout.join('')).not.toContain('should-not-render');
   });
 
@@ -984,7 +985,7 @@ describe('TTY gate — no-command path', () => {
     const out = stdout.join('');
 
     expect(code).toBe(0);
-    expect(out).toContain('Welcome to Agora');
+    expect(out).toContain('agora · terminal marketplace for OpenCode');
   });
 });
 
