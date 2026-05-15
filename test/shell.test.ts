@@ -210,6 +210,57 @@ describe('classifyInput — new power commands', () => {
   });
 });
 
+describe('classifyInput — slash forwarding to agora CLI', () => {
+  // Bug seen in the shell: `/agora help` fell through to bash because the
+  // executable check resolved `/agora` against PATH (Node `path.join` strips
+  // a leading slash on the second arg, so `/agora` matched the real binary).
+  // Slash-prefixed inputs that aren't an exact meta match must route to the
+  // `agora` CLI, never to bash.
+
+  test('/agora help → bash: agora help', () => {
+    expect(classifyInput('/agora help', alwaysExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'agora help'
+    });
+  });
+
+  test('/agora help tutorials → bash: agora help tutorials', () => {
+    expect(classifyInput('/agora help tutorials', alwaysExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'agora help tutorials'
+    });
+  });
+
+  test('/agora alone → bash: agora help (no empty invocation)', () => {
+    expect(classifyInput('/agora', alwaysExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'agora help'
+    });
+  });
+
+  test('/help tutorials (slash-help with arg) → bash: agora help tutorials', () => {
+    // /help exact match handled earlier; /help <arg> forwards to CLI.
+    expect(classifyInput('/help tutorials', neverExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'agora help tutorials'
+    });
+  });
+
+  test('/search filesystem → bash: agora search filesystem', () => {
+    expect(classifyInput('/search filesystem', neverExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'agora search filesystem'
+    });
+  });
+
+  test('/unknown-cmd → bash: agora unknown-cmd (CLI surfaces the error)', () => {
+    expect(classifyInput('/unknown-cmd', neverExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'agora unknown-cmd'
+    });
+  });
+});
+
 // ── B.4 error-line helpers (pure logic extracted for testing) ─────────────────
 
 describe('bash exit-code line', () => {

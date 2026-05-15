@@ -128,6 +128,19 @@ export function classifyInput(line: string, isExecutable: (name: string) => bool
   if (trimmed.startsWith('!')) return { kind: 'bash', cmd: trimmed.slice(1).trim() };
   if (trimmed.startsWith('?')) return { kind: 'chat', msg: trimmed.slice(1).trim() };
 
+  // Slash-prefixed inputs that weren't an exact meta match are forwarded to the
+  // `agora` CLI itself: `/agora help`, `/agora search foo`, `/help tutorials`,
+  // `/foo` all become `agora <args>`. Never let `/anything` fall through to bash —
+  // PATH-joining an absolute name like `/agora` historically matched the real
+  // binary on disk and bash then tried to exec `/agora` literally.
+  if (trimmed.startsWith('/')) {
+    let rest = trimmed.slice(1).trim();
+    if (rest === 'agora' || rest.startsWith('agora ')) {
+      rest = rest === 'agora' ? '' : rest.slice('agora '.length).trim();
+    }
+    return { kind: 'bash', cmd: rest ? `agora ${rest}` : 'agora help' };
+  }
+
   if (looksLikeQuestion(trimmed)) return { kind: 'chat', msg: trimmed };
 
   const firstToken = trimmed.split(/\s+/)[0];
@@ -146,6 +159,14 @@ function makeExecutableChecker(pathEnv: string | undefined): (name: string) => b
 
   return function isExecutable(name: string): boolean {
     if (cache.has(name)) return cache.get(name)!;
+    // PATH lookup is for bare command names only. An absolute or relative path
+    // (`/agora`, `./run`, `bin/agora`) is the caller's literal request — Node's
+    // `path.join('/usr/bin', '/agora')` discards the leading slash and would
+    // falsely match the real `agora` on PATH otherwise.
+    if (name.includes('/')) {
+      cache.set(name, false);
+      return false;
+    }
     for (const dir of dirs) {
       const full = join(dir, name);
       try {
