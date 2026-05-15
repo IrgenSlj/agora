@@ -465,26 +465,107 @@ export function visibleWidth(s: string): number {
   return Array.from(s.replace(/\x1b\[[0-9;]*m/g, '')).length;
 }
 
-export function renderPromptFrame(state: EditorState, prompt: string, footer: string): string {
-  const ghost = state.ghost ? `\x1b[2m${state.ghost}\x1b[0m` : '';
+/**
+ * Position of a rendered frame relative to its top-left corner. Threaded
+ * through successive `renderPromptFrame` calls so the renderer can clear
+ * the previous frame correctly even when content wrapped across multiple
+ * physical rows.
+ */
+export interface FramePosition {
+  /** Physical rows the entire frame (prompt + wrapped + footer) occupies. */
+  totalRows: number;
+  /** Physical row (0-indexed from top) where the cursor sits at end of render. */
+  cursorRow: number;
+  /** Physical rows the prompt block alone occupies. */
+  promptRows: number;
+}
+
+const EMPTY_FRAME_POSITION: FramePosition = { totalRows: 0, cursorRow: 0, promptRows: 0 };
+
+/**
+ * Returns the ANSI bytes that paint a fresh prompt frame and the position
+ * the new frame occupies. Pass `width` (terminal columns) and `prev` (the
+ * previous frame's position) so the renderer can erase exactly the rows
+ * that were previously drawn — including any that wrapped past the
+ * declared width. With `width=Infinity` (default) the wrapping math
+ * collapses to legacy single-row behaviour and the only redraw side-effect
+ * is the leading `\r\x1b[K` that clears the current row.
+ */
+export function renderPromptFrame(
+  state: EditorState,
+  prompt: string,
+  footer: string,
+  width: number = Infinity,
+  prev: FramePosition = EMPTY_FRAME_POSITION
+): { frame: string; position: FramePosition } {
+  const safeWidth = Number.isFinite(width) && width > 0 ? width : Infinity;
+  const wrapRows = (text: string): number => {
+    if (!Number.isFinite(safeWidth)) return 1;
+    const w = visibleWidth(text);
+    return Math.max(1, Math.ceil(Math.max(1, w) / safeWidth));
+  };
+
   const chars = Array.from(state.line);
   const before = chars.slice(0, state.cursor).join('');
   const after = chars.slice(state.cursor).join('');
-  const suffix = after + ghost;
+  const ghostAnsi = state.ghost ? `\x1b[2m${state.ghost}\x1b[0m` : '';
+  const suffix = after + ghostAnsi;
 
-  if (!footer) {
-    return `\r\x1b[K${prompt}${before}${suffix}\x1b[${Array.from(suffix).length}D`;
+  const promptVisible = visibleWidth(prompt);
+  const beforeLen = Array.from(before).length;
+  const afterLen = Array.from(after).length;
+  const ghostLen = Array.from(state.ghost ?? '').length;
+  const promptTotalVisible = promptVisible + beforeLen + afterLen + ghostLen;
+
+  const promptRows = Number.isFinite(safeWidth)
+    ? Math.max(1, Math.ceil(Math.max(1, promptTotalVisible) / safeWidth))
+    : 1;
+
+  const cursorLogicalCol = promptVisible + beforeLen;
+  const cursorRow = Number.isFinite(safeWidth)
+    ? Math.floor(cursorLogicalCol / safeWidth)
+    : 0;
+  const cursorCol = Number.isFinite(safeWidth)
+    ? cursorLogicalCol % safeWidth
+    : cursorLogicalCol;
+
+  const footerLines = footer ? footer.split('\n') : [];
+  const footerRowsPhysical = footerLines.reduce((sum, line) => sum + wrapRows(line), 0);
+  const totalRows = promptRows + footerRowsPhysical;
+
+  let frame = '';
+  if (prev.totalRows > 0) {
+    // Erase the previous frame: go to its top-left corner, then clear from
+    // there to the end of the screen. This wipes any wrapped continuation
+    // rows that single-row `\r\x1b[K` would have missed.
+    frame += '\r';
+    if (prev.cursorRow > 0) frame += `\x1b[${prev.cursorRow}A`;
+    frame += '\x1b[J';
+  } else {
+    // First render: assume the row we're on may have stale content and clear it.
+    frame += '\r\x1b[K';
   }
 
-  const footerLines = footer.split('\n');
-  const cursorCol = visibleWidth(prompt) + Array.from(before).length;
-  const footerStr = footerLines.map((line) => `\n\r\x1b[K${line}`).join('');
-  return (
-    `\r\x1b[K${prompt}${before}${suffix}` +
-    footerStr +
-    `\x1b[${footerLines.length}A\r` +
-    (cursorCol > 0 ? `\x1b[${cursorCol}C` : '')
-  );
+  frame += prompt + before + suffix;
+  if (footer) {
+    for (const line of footerLines) {
+      frame += '\n\r\x1b[K' + line;
+    }
+  }
+
+  // After writing, terminal cursor sits at the end of the last printed text.
+  // `\r` brings it to col 0 of the row it ended up on (the last physical row
+  // of the last logical line). Move up to the target cursor row, then right.
+  frame += '\r';
+  const endRow = totalRows - 1;
+  const moveUp = endRow - cursorRow;
+  if (moveUp > 0) frame += `\x1b[${moveUp}A`;
+  if (cursorCol > 0) frame += `\x1b[${cursorCol}C`;
+
+  return {
+    frame,
+    position: { totalRows, cursorRow, promptRows }
+  };
 }
 
 function renderSearch(state: EditorState, _prompt: string): string {
@@ -535,8 +616,9 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       if (seq === '\x1b') return dispatchEvent({ kind: 'esc' });
     }
 
-    // Number of footer rows in the last redraw; cleared on cleanup
-    let footerRows = 0;
+    // Position of the last redraw; threaded into the next call so we can
+    // clear exactly the rows we drew (including wrapped continuations).
+    let framePos: FramePosition = EMPTY_FRAME_POSITION;
     // Completion hints to show in the footer area on next redraw
     let pendingCompletions: string[] | null = null;
 
@@ -565,7 +647,7 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
 
     function redraw(): void {
       if (state.mode === 'reverse-search') {
-        footerRows = 0;
+        framePos = EMPTY_FRAME_POSITION;
         pendingCompletions = null;
         out.write(renderSearch(state, opts.prompt));
       } else {
@@ -577,8 +659,13 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
           pendingCompletions = null;
         }
         const footer = parts.filter(Boolean).join('\n');
-        footerRows = footer ? footer.split('\n').length : 0;
-        out.write(renderPromptFrame(state, opts.prompt + suffix, footer));
+        const width =
+          typeof (out as { columns?: number }).columns === 'number'
+            ? (out as { columns?: number }).columns!
+            : Infinity;
+        const result = renderPromptFrame(state, opts.prompt + suffix, footer, width, framePos);
+        framePos = result.position;
+        out.write(result.frame);
       }
     }
 
@@ -719,16 +806,20 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       inp.removeListener('data', onData);
       inp.pause();
       if (escTimer) clearTimeout(escTimer);
-      if (footerRows > 0) {
-        // Clear every footer row, then park cursor on the first cleared row so
-        // the caller's next output flows immediately under the input.
-        let seq = '';
-        for (let i = 0; i < footerRows; i++) seq += '\n\r\x1b[K';
-        if (footerRows > 1) seq += `\x1b[${footerRows - 1}A`;
+      if (framePos.totalRows > 0) {
+        // Wipe the whole frame, re-print the prompt line without footer or
+        // ghost text so the submitted input stays visible in the scrollback,
+        // and park the cursor on the row immediately below.
+        const suffix = opts.promptSuffix ? opts.promptSuffix(state.line) : '';
+        let seq = '\r';
+        if (framePos.cursorRow > 0) seq += `\x1b[${framePos.cursorRow}A`;
+        seq += '\x1b[J';
+        seq += opts.prompt + suffix + state.line + '\r\n';
         out.write(seq);
       } else {
         out.write('\n');
       }
+      framePos = EMPTY_FRAME_POSITION;
       if ((inp as any).setRawMode) {
         try {
           (inp as any).setRawMode(false);

@@ -562,6 +562,31 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     if (cdMatch) {
       const target = cdMatch[1]?.trim() ?? homedir();
       const resolved = resolve(currentCwd, expandHome(target));
+      // Verify the target exists and is a directory before updating cwd.
+      // Without this, subsequent spawn() calls inherit a missing cwd and
+      // fail with `Error: spawn /bin/sh ENOENT`.
+      if (!existsSync(resolved)) {
+        process.stdout.write(`cd: no such file or directory: ${target}\n`);
+        appendTranscript(dataDir, cwd0, {
+          ts: new Date().toISOString(),
+          kind: 'bash',
+          input: cmd,
+          output: `cd: no such file or directory: ${target}`,
+          exitCode: 1
+        });
+        return;
+      }
+      if (!statSync(resolved).isDirectory()) {
+        process.stdout.write(`cd: not a directory: ${target}\n`);
+        appendTranscript(dataDir, cwd0, {
+          ts: new Date().toISOString(),
+          kind: 'bash',
+          input: cmd,
+          output: `cd: not a directory: ${target}`,
+          exitCode: 1
+        });
+        return;
+      }
       currentCwd = resolved;
       completionContext.cwd = resolved;
       process.stdout.write(style.dim(`→ ${resolved}`) + '\n');

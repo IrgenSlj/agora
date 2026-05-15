@@ -394,45 +394,103 @@ describe('visibleWidth', () => {
 });
 
 describe('renderPromptFrame', () => {
-  test('without footer matches the legacy single-line escape sequence', () => {
+  test('without footer clears the current row and writes the prompt line', () => {
     const s = state({ line: 'hello', cursor: 5 });
-    const out = renderPromptFrame(s, '> ', '');
-    expect(out).toBe('\r\x1b[K> hello\x1b[0D');
+    const { frame, position } = renderPromptFrame(s, '> ', '');
+    expect(frame).toContain('\r\x1b[K');
+    expect(frame).toContain('> hello');
+    expect(position).toEqual({ totalRows: 1, cursorRow: 0, promptRows: 1 });
   });
 
   test('with footer emits input row, footer row, and returns cursor to input column', () => {
     const s = state({ line: 'ls', cursor: 2 });
-    const out = renderPromptFrame(s, '> ', '[ctx]');
-    expect(out).toContain('> ls');
-    expect(out).toContain('[ctx]');
-    expect(out).toContain('\x1b[1A');
-    expect(out).toContain('\x1b[4C');
+    const { frame } = renderPromptFrame(s, '> ', '[ctx]');
+    expect(frame).toContain('> ls');
+    expect(frame).toContain('[ctx]');
+    expect(frame).toContain('\x1b[1A');
+    expect(frame).toContain('\x1b[4C');
   });
 
   test('with footer and cursor mid-line positions cursor at the cursor column', () => {
     const s = state({ line: 'hello', cursor: 2 });
-    const out = renderPromptFrame(s, '> ', '[ctx]');
-    expect(out).toContain('\x1b[4C');
+    const { frame } = renderPromptFrame(s, '> ', '[ctx]');
+    expect(frame).toContain('\x1b[4C');
   });
 
   test('strips ANSI from prompt when computing cursor column', () => {
     const s = state({ line: 'x', cursor: 1 });
-    const out = renderPromptFrame(s, '\x1b[36m> \x1b[0m', '[ctx]');
-    expect(out).toContain('\x1b[3C');
+    const { frame } = renderPromptFrame(s, '\x1b[36m> \x1b[0m', '[ctx]');
+    expect(frame).toContain('\x1b[3C');
   });
 
   test('multi-line footer moves cursor up by the footer line count', () => {
     const s = state({ line: 'x', cursor: 1 });
-    const out = renderPromptFrame(s, '> ', 'status\nhint');
-    expect(out).toContain('status');
-    expect(out).toContain('hint');
-    expect(out).toContain('\x1b[2A');
-    expect(out).toContain('\x1b[3C');
+    const { frame } = renderPromptFrame(s, '> ', 'status\nhint');
+    expect(frame).toContain('status');
+    expect(frame).toContain('hint');
+    expect(frame).toContain('\x1b[2A');
+    expect(frame).toContain('\x1b[3C');
   });
 
   test('three-line footer moves up three rows', () => {
     const s = state({ line: '', cursor: 0 });
-    const out = renderPromptFrame(s, '> ', 'a\nb\nc');
-    expect(out).toContain('\x1b[3A');
+    const { frame } = renderPromptFrame(s, '> ', 'a\nb\nc');
+    expect(frame).toContain('\x1b[3A');
+  });
+});
+
+describe('renderPromptFrame — wrap-aware redraw (narrow terminals)', () => {
+  // Regression coverage for the bug that produced one new prompt line per
+  // keystroke in narrow terminals: the renderer counted *logical* footer
+  // lines instead of *physical* rows, so the cursor-up offset landed on the
+  // wrong row and the old prompt line was never cleared.
+
+  test('counts physical rows when the footer wraps at narrow width', () => {
+    const s = state({ line: 'a', cursor: 1 });
+    // 70-col footer at width 30 wraps to ceil(70/30) = 3 physical rows.
+    const longFooter = 'x'.repeat(70);
+    const { position } = renderPromptFrame(s, '> ', longFooter, 30);
+    expect(position.promptRows).toBe(1);
+    expect(position.totalRows).toBe(4); // 1 prompt + 3 wrapped footer
+  });
+
+  test('counts physical rows when the prompt + input wraps', () => {
+    // "agora > " (8 cols) + "hello world abc" (15 cols) = 23 cols.
+    // At width 10, that wraps to ceil(23/10) = 3 physical rows.
+    const s = state({ line: 'hello world abc', cursor: 15 });
+    const { position } = renderPromptFrame(s, 'agora > ', '', 10);
+    expect(position.promptRows).toBe(3);
+    expect(position.totalRows).toBe(3);
+    expect(position.cursorRow).toBe(2);
+  });
+
+  test('clears the previous frame from its top-left when prev was wider', () => {
+    // Previous render had 3 physical rows; new render is smaller. The frame
+    // must start with cursor-up + \x1b[J to wipe everything, not just one row.
+    const s = state({ line: 'short', cursor: 5 });
+    const prev = { totalRows: 3, cursorRow: 1, promptRows: 1 };
+    const { frame } = renderPromptFrame(s, '> ', '', 80, prev);
+    expect(frame).toContain('\x1b[1A'); // up to top of prev frame
+    expect(frame).toContain('\x1b[J');  // clear from there to end of screen
+    // And critically, the legacy single-row clear is NOT what runs:
+    expect(frame.startsWith('\r\x1b[K')).toBe(false);
+  });
+
+  test('positions cursor on the correct wrapped row when input spans two rows', () => {
+    // Cursor at col 14 in "> hello world abc": at width 10 → row 1, col 4.
+    const s = state({ line: 'hello world abc', cursor: 12 });
+    const { frame, position } = renderPromptFrame(s, '> ', '', 10);
+    expect(position.cursorRow).toBe(1);
+    expect(frame).toContain('\x1b[4C');
+    // Cursor target row == end row, so no extra move-up is emitted.
+    expect(frame).not.toContain('\x1b[1A');
+  });
+
+  test('passes through unchanged when width is Infinity (legacy callers)', () => {
+    const s = state({ line: 'x'.repeat(200), cursor: 200 });
+    // No width given → no wrapping math; promptRows stays 1.
+    const { position } = renderPromptFrame(s, '> ', 'y'.repeat(500));
+    expect(position.promptRows).toBe(1);
+    expect(position.totalRows).toBe(2);
   });
 });
