@@ -74,7 +74,7 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
   let assistantText = '';
   let sessionId: string | null = null;
   let turnStart: number = Date.now();
-  let seenToolCallIds = new Set<string>();
+  const seenToolCallIds = new Set<string>();
   let pulseInterval: ReturnType<typeof setInterval> | null = null;
   let pulseStep = 0;
   const pulseStops = [0.0, 0.25, 0.5, 0.75, 1.0];
