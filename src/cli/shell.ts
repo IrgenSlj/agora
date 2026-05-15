@@ -242,6 +242,12 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   let childActive = false;
   let totalCost = 0;
 
+  // B.1 — separator state
+  let printedAnyTurn = false;
+
+  // B.2 — sticky context state
+  let lastContextSnapshot: { model: string; verbosity: string; cwd: string; turnCount: number } | null = null;
+
   // Lazy caches for completion ids
   let cachedMarketplaceIds: string[] | null = null;
   let cachedSavedIds: string[] | null = null;
@@ -285,8 +291,15 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     ? style.accent('›')
     : '\x1b[38;5;214m›\x1b[0m';
 
-  function buildPrompt(): string {
-    return style.accent('agora') + ' ' + style.dim(shortCwd(currentCwd)) + ' ' + accentChevron + ' ';
+  // B.3 — static portion of the prompt (no chevron); suffix added dynamically
+  function buildPromptBase(): string {
+    return style.accent('agora') + ' ' + style.dim(shortCwd(currentCwd)) + ' ';
+  }
+
+  function buildPromptSuffix(line: string): string {
+    const d = classifyInput(line, isExecutable);
+    const hint = d.kind === 'bash' ? style.accent('$') : d.kind === 'chat' ? style.accent('?') : '';
+    return hint + accentChevron + ' ';
   }
 
   function buildContextLine(): string {
@@ -295,6 +308,31 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const turns = meta?.turnCount ?? 0;
     const cwd = shortCwd(currentCwd);
     return style.dim(`[opencode/${model} · ${verbosity} · ${turns} turns · ${costStr} · ${cwd}]`);
+  }
+
+  // B.1 — thin dim horizontal rule between turns
+  function printSeparator(): void {
+    if (!printedAnyTurn) return;
+    const width = process.stdout.columns ?? 80;
+    process.stdout.write('\n' + style.dim('─'.repeat(width)) + '\n\n');
+  }
+
+  // B.2 — print context line only when it changed or every 10 turns
+  function maybePrintContextLine(): void {
+    const model = FREE_MODELS[0];
+    const turns = meta?.turnCount ?? 0;
+    const cwd = shortCwd(currentCwd);
+    const snap = { model, verbosity, cwd, turnCount: turns };
+    const shouldPrint =
+      lastContextSnapshot === null ||
+      snap.model !== lastContextSnapshot.model ||
+      snap.verbosity !== lastContextSnapshot.verbosity ||
+      snap.cwd !== lastContextSnapshot.cwd ||
+      turns % 10 === 0;
+    if (shouldPrint) {
+      process.stdout.write(buildContextLine() + '\n');
+      lastContextSnapshot = snap;
+    }
   }
 
   const sigintHandler = () => {
@@ -310,11 +348,15 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       // Update completionContext.cwd on each iteration in case cd changed it
       completionContext.cwd = currentCwd;
 
-      // Print context line above prompt
-      process.stdout.write(buildContextLine() + '\n');
+      // B.1 — separator after each completed turn
+      printSeparator();
+
+      // B.2 — sticky context line
+      maybePrintContextLine();
 
       const result = await readLine({
-        prompt: buildPrompt(),
+        prompt: buildPromptBase(),
+        promptSuffix: buildPromptSuffix,
         history,
         completer: (line, cursor) => completeShellLine(line, cursor, completionContext),
         ghostSuggester: (line, hist) => ghostFromHistory(line, hist),
@@ -348,6 +390,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
         if (dispatch.sub === 'clear') {
           process.stdout.write('\x1b[2J\x1b[H');
+          // B.1: do NOT print separator after clear
+          printedAnyTurn = false;
           continue;
         }
 
@@ -413,14 +457,17 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           } catch (e: any) {
             process.stdout.write((e.stdout ?? '') + (e.stderr ?? '') + '\n');
           }
+          printedAnyTurn = true;
           continue;
         }
 
+        printedAnyTurn = true;
         continue;
       }
 
       if (dispatch.kind === 'bash') {
         await runBash(dispatch.cmd);
+        printedAnyTurn = true;
         continue;
       }
 
@@ -429,9 +476,11 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           process.stdout.write(
             style.dim('opencode is not available on PATH. Install it to use chat.') + '\n'
           );
+          printedAnyTurn = true;
           continue;
         }
         await runChat(dispatch.msg);
+        printedAnyTurn = true;
       }
     }
   } finally {
@@ -505,6 +554,11 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     childActive = false;
     if (!done) childExitCode = 1;
 
+    // B.4 — show non-zero exit code
+    if (childExitCode !== 0) {
+      process.stdout.write(style.dim(`· exit ${childExitCode}`) + '\n');
+    }
+
     appendTranscript(dataDir, cwd0, {
       ts: new Date().toISOString(),
       kind: 'bash',
@@ -553,6 +607,11 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     process.on('SIGINT', abortChat);
     childActive = true;
 
+    // B.4 — accumulate last 4 KB of stderr for failure diagnosis
+    let errBuffer = '';
+    let chatExitCode = 0;
+    let spawnError: Error | null = null;
+
     await new Promise<void>((res) => {
       const child = spawn('opencode', args, {
         env: env as Record<string, string>,
@@ -568,10 +627,12 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         }
       });
 
-      child.stderr?.on('data', (_chunk: Buffer) => { /* swallow */ });
-      child.on('close', () => res());
+      child.stderr?.on('data', (chunk: Buffer) => {
+        errBuffer = tailBuffer(errBuffer + chunk.toString(), 4096);
+      });
+      child.on('close', (code) => { chatExitCode = code ?? 0; res(); });
       child.on('error', (err) => {
-        process.stderr.write(`Failed to run opencode: ${err.message}\n`);
+        spawnError = err;
         res();
       });
     });
@@ -581,6 +642,20 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
     renderer.finalize();
     totalCost += renderer.getTotalCost();
+
+    // B.4 — detect and report chat failures
+    const chatFailed = spawnError !== null || (chatExitCode !== 0 && !renderer.hasReceivedText());
+    if (chatFailed) {
+      let reason: string;
+      if (spawnError) {
+        reason = 'opencode binary not found';
+      } else if (errBuffer.includes('Model not found')) {
+        reason = '/model to pick another model (or check OPENCODE_MODEL)';
+      } else {
+        reason = 'chat failed; see /transcript for details';
+      }
+      process.stdout.write('\x1b[31m▍\x1b[0m' + style.dim(` failed · ${reason}`) + '\n');
+    }
 
     const renderedSessionId = renderer.getSessionId();
     if (!meta!.sessionId && renderedSessionId) {

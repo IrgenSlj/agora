@@ -247,6 +247,78 @@ describe('tab completion', () => {
   });
 });
 
+// ── promptSuffix dynamic dispatch hint ────────────────────────────────────────
+
+describe('promptSuffix', () => {
+  function makeSuffix(classify: (line: string) => 'bash' | 'chat' | 'noop') {
+    return (line: string): string => {
+      const k = classify(line);
+      return k === 'bash' ? '$>' : k === 'chat' ? '?>' : '>';
+    };
+  }
+
+  test('promptSuffix returns bash hint for command-like line', () => {
+    const suffix = makeSuffix((l) => (l.startsWith('ls') ? 'bash' : 'noop'));
+    expect(suffix('ls -la')).toBe('$>');
+  });
+
+  test('promptSuffix returns chat hint for question-like line', () => {
+    const suffix = makeSuffix((l) => (l.startsWith('what') ? 'chat' : 'noop'));
+    expect(suffix('what is mcp')).toBe('?>');
+  });
+
+  test('promptSuffix returns noop hint for empty line', () => {
+    const suffix = makeSuffix((_l) => 'noop');
+    expect(suffix('')).toBe('>');
+  });
+
+  test('promptSuffix records all lines it is called with', () => {
+    const calls: string[] = [];
+    const suffix = (line: string) => { calls.push(line); return '>'; };
+    suffix('abc');
+    suffix('abcd');
+    expect(calls).toEqual(['abc', 'abcd']);
+  });
+
+  test('promptSuffix switches between bash and chat indicators', () => {
+    const classify = (l: string) =>
+      l.startsWith('ls') ? 'bash' : l.startsWith('what') ? 'chat' : 'noop';
+    const suffix = makeSuffix(classify);
+    expect(suffix('ls')).toBe('$>');
+    expect(suffix('what is')).toBe('?>');
+    expect(suffix('')).toBe('>');
+  });
+});
+
+// ── B.5 slash palette ─────────────────────────────────────────────────────────
+
+describe('slash palette trigger', () => {
+  const slashCommands = ['/help', '/quit', '/clear', '/menu', '/transcript'];
+  const completer = (line: string, cursor: number) => {
+    const upTo = line.slice(0, cursor);
+    const matches = slashCommands.filter((c) => c.startsWith(upTo));
+    return { matches, replaceFrom: 0 };
+  };
+
+  test('completer returns all slash commands for "/" prefix', () => {
+    const result = completer('/', 1);
+    expect(result.matches).toEqual(slashCommands);
+  });
+
+  test('completer returns filtered commands for "/h" prefix', () => {
+    const result = completer('/h', 2);
+    expect(result.matches).toEqual(['/help']);
+  });
+
+  test('typing "/" then "h" narrows to /help only', () => {
+    let s = state({ line: '/', cursor: 1 });
+    s = apply(s, { kind: 'char', data: 'h' });
+    expect(s.line).toBe('/h');
+    const result = completer('/h', 2);
+    expect(result.matches.length).toBe(1);
+  });
+});
+
 // ── Reverse-i-search ──────────────────────────────────────────────────────
 
 describe('reverse-i-search', () => {

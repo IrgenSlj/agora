@@ -291,3 +291,47 @@ describe('createChatRenderer — verbose mode', () => {
     expect(output).toContain('category');
   });
 });
+
+describe('createChatRenderer — hasReceivedText', () => {
+  test('false initially before any events', () => {
+    const { out } = makeOut();
+    const r = createChatRenderer({ ...baseOpts, verbosity: 'medium', out });
+    expect(r.hasReceivedText()).toBe(false);
+  });
+
+  test('false after step_start only', () => {
+    const { out } = makeOut();
+    const r = createChatRenderer({ ...baseOpts, verbosity: 'medium', out });
+    r.handleLine(STEP_START);
+    expect(r.hasReceivedText()).toBe(false);
+  });
+
+  test('true after first text event', () => {
+    const { out } = makeOut();
+    const r = createChatRenderer({ ...baseOpts, verbosity: 'medium', out });
+    r.handleLine(STEP_START);
+    r.handleLine(TEXT_1);
+    expect(r.hasReceivedText()).toBe(true);
+  });
+
+  test('true after multiple text events', () => {
+    const { out } = makeOut();
+    const r = createChatRenderer({ ...baseOpts, verbosity: 'medium', out });
+    r.handleLine(STEP_START);
+    r.handleLine(TEXT_1);
+    r.handleLine(TEXT_2);
+    r.handleLine(STEP_FINISH);
+    r.finalize();
+    expect(r.hasReceivedText()).toBe(true);
+  });
+
+  test('false after tool_use only (no text)', () => {
+    const { out } = makeOut();
+    const r = createChatRenderer({ ...baseOpts, verbosity: 'medium', out });
+    r.handleLine(STEP_START);
+    r.handleLine(TOOL_USE);
+    r.handleLine(STEP_FINISH);
+    r.finalize();
+    expect(r.hasReceivedText()).toBe(false);
+  });
+});

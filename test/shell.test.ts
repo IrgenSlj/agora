@@ -176,6 +176,53 @@ describe('classifyInput — new power commands', () => {
   });
 });
 
+// ── B.4 error-line helpers (pure logic extracted for testing) ─────────────────
+
+describe('bash exit-code line', () => {
+  function exitLine(code: number): string | null {
+    if (code !== 0) return `· exit ${code}`;
+    return null;
+  }
+
+  test('exit 0 produces null', () => {
+    expect(exitLine(0)).toBeNull();
+  });
+
+  test('exit 1 produces dim line', () => {
+    expect(exitLine(1)).toBe('· exit 1');
+  });
+
+  test('exit 127 produces dim line', () => {
+    expect(exitLine(127)).toBe('· exit 127');
+  });
+});
+
+describe('chat failure reason', () => {
+  function chatReason(opts: { spawnError: boolean; errBuffer: string }): string {
+    if (opts.spawnError) return 'opencode binary not found';
+    if (opts.errBuffer.includes('Model not found')) {
+      return '/model to pick another model (or check OPENCODE_MODEL)';
+    }
+    return 'chat failed; see /transcript for details';
+  }
+
+  test('spawn error → binary not found', () => {
+    expect(chatReason({ spawnError: true, errBuffer: '' })).toBe('opencode binary not found');
+  });
+
+  test('Model not found in stderr → model suggestion', () => {
+    expect(chatReason({ spawnError: false, errBuffer: 'Model not found: foo' })).toContain('/model to pick another model');
+  });
+
+  test('other stderr → generic message', () => {
+    expect(chatReason({ spawnError: false, errBuffer: 'timeout' })).toBe('chat failed; see /transcript for details');
+  });
+
+  test('empty stderr → generic message', () => {
+    expect(chatReason({ spawnError: false, errBuffer: '' })).toBe('chat failed; see /transcript for details');
+  });
+});
+
 describe('looksLikeQuestion', () => {
   test('trailing ? returns true', () => {
     expect(looksLikeQuestion('ls files?')).toBe(true);

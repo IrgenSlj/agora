@@ -78,59 +78,61 @@ export function supportsTrueColor(env: Record<string, string | undefined>): bool
 // ── Wordmark + banner ───────────────────────────────────────────────────────
 
 /**
- * Filled-block letterforms (Gemini-style), 5 rows × 39 cols. Tuned to stay
- * legible uncoloured: the G's inner spur reads as G (not C), the R's diagonal
- * leg is offset from its bowl so it doesn't read as P.
+ * Filled-block letterforms, 7 rows × 52 cols. Two-block-thick strokes,
+ * 3-space gaps between letters A G O R A.
  */
 export const AGORA_WORDMARK_SOLID: string[] = [
-  ' █████   █████   █████  ██████   █████ ',
-  '██   ██ ██      ██   ██ ██   ██ ██   ██',
-  '███████ ██  ███ ██   ██ ██████  ███████',
-  '██   ██ ██   ██ ██   ██ ██  ██  ██   ██',
-  '██   ██  █████   █████  ██   ██ ██   ██'
+  '  ████      ██████     ██████    ███████      ████  ',
+  ' ██  ██    ██    ██   ██    ██   ██    ██    ██  ██ ',
+  '██    ██   ██         ██    ██   ██    ██   ██    ██',
+  '████████   ██  ████   ██    ██   ███████    ████████',
+  '██    ██   ██    ██   ██    ██   ██  ██     ██    ██',
+  '██    ██   ██    ██   ██    ██   ██   ██    ██    ██',
+  '██    ██    ██████     ██████    ██    ██   ██    ██',
 ];
 
 /**
- * Outlined / hairline letterforms (Claude Code-style), 5 rows × 39 cols.
- * A thinner, more architectural wordmark — good for a quieter banner over a
- * single accent colour rather than a gradient.
+ * Outlined / hairline letterforms, 7 rows × 52 cols.
+ * Uses half-block and box characters for a thinner architectural look.
  */
 export const AGORA_WORDMARK_OUTLINE: string[] = [
-  ' ▄▀▀▀▄   ▄▀▀▀▄   ▄▀▀▀▄   █▀▀▀▄   ▄▀▀▀▄ ',
-  ' █   █   █       █   █   █   █   █   █ ',
-  ' █▀▀▀█   █  ▀▄   █   █   █▀▀▄    █▀▀▀█ ',
-  ' █   █   █   █   █   █   █   █   █   █ ',
-  ' ▀   ▀   ▀▄▄▄▀   ▀▄▄▄▀   ▀   ▀   ▀   ▀ '
+  '  ▄▀▄▀      ▄▀▀▀▀▄     ▄▀▀▀▀▄    ▀▀▀▀▀▄       ▄▀▄▀  ',
+  ' ▌    ▐    ▌      ▐   ▌      ▐   ▌     ▐    ▌    ▐ ',
+  '▌      ▐   ▌            ▌      ▐   ▌      ▐   ▌      ▐',
+  '▌▀▀▀▀▀▀▐   ▌  ▐▀▀▐   ▌      ▐   ▌▀▀▀▀▐   ▌▀▀▀▀▀▀▐',
+  '▌      ▐   ▌      ▐   ▌      ▐   ▌  ▐       ▌      ▐',
+  '▌      ▐   ▌      ▐   ▌      ▐   ▌   ▐      ▌      ▐',
+  ' ▀▄▀▄      ▀▄▄▄▄▀     ▀▄▄▄▄▀    ▀    ▀      ▀▄▀▄  ',
 ];
 
 /**
- * Bayer-dithered fill of the SOLID shape (5 rows × 39 cols). Each filled cell
- * is mapped to a shade-ramp character (█ ▓ ▒ ░) determined by a 4×4 ordered
- * dither matrix and a per-row density that grades from 1.00 at the cap (row 0)
- * down to 0.25 at the baseline (row 4). Together they produce a halftone marble
- * texture: dense solid blocks at the top of every letter, dissolving to sparse
- * stipple dots at the bottom — designed to be read under the warm terracotta
- * gradient applied per column by renderBanner.
+ * Bayer-dithered fill of the SOLID shape (7 rows × 52 cols). Density schedule
+ * [1.0, 0.95, 0.92, 0.88, 0.85, 0.80, 0.75] keeps every letterform cell
+ * filled (no dropouts that would break A's crossbar or G's bottom arc); the
+ * texture comes from per-cell shade variation `█ ▓ ▒ ░` graded top-to-bottom.
  */
 export const AGORA_WORDMARK_TEXTURED: string[] = [
-  ' ██▓██   ██▓██   ██▓██  ███▓██   ██▓██ ',
-  '▓▓   ▓▒ ▓▓      ▓▓   ▓▒ ▓▓   ▓▒ ▓▓   ▓▒',
-  '▓▒▓▒▓▒▓ ▓▒  ▓▒▓ ▓▒   ▒▓ ▓▒▓▒▓▒  ▓▒▓▒▓▒▓',
-  '░░   ░░ ░░   ░░ ░░   ░░ ░░  ░░  ░░   ░░',
-  '░░   ░░  ░░ ░░   ░░ ░░  ░░   ░░ ░░   ░░'
+  '  █▓█▓      █▓█▓█▓     ▓█▓█▓█    ▓█▓█▓█▓      █▓█▓  ',
+  ' █░  █░    █▒    █░   ░█    ▒█   █░    █▒    █░  █░ ',
+  '█▒    █▓   ▓█         █▓    █▒   ▒█    ▓█   █▒    █▓',
+  ' ▓░█ ▓░█   █   █ ▓░   ░█     ▓   ▓░█ ▓░█     ▓░█ ▓░█',
+  '█▓    █▒   ▒█    ▓█   █▒    █▓   ▓█  ▓█     █▓    █▒',
+  '░▓     ▓   ▓░    ▓     ▓    ░▓   ▓     ▓    ░▓     ▓',
+  '█░    █▒    █░█▒█░     ▒█░█▒█    ░█    ▒█   █░    █▒',
 ];
 
 /**
- * Shaded-ramp letterforms (5 rows × 34 cols). Each row steps down the
- * ░▒▓ shade ramp — dense at the cap, sparse at the baseline — giving the
- * wordmark a dithered, marble-carved texture.
+ * Shaded-ramp letterforms, 7 rows × 52 cols. Rows 0–2 use ▓, rows 3–4 use ▒,
+ * rows 5–6 use ░ — a shade ramp from cap to baseline.
  */
 export const AGORA_WORDMARK_SHADED: string[] = [
-  ' ▓▓▓▓   ▓▓▓▓▓  ▓▓▓▓  ▓▓▓▓▓   ▓▓▓▓ ',
-  '▒▒  ▒▒ ▒▒     ▒▒  ▒▒ ▒▒  ▒▒ ▒▒  ▒▒',
-  '▒▒▒▒▒▒ ▒▒ ▒▒▒ ▒▒  ▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒',
-  '░░  ░░ ░░  ░░ ░░  ░░ ░░ ░░  ░░  ░░',
-  '░░  ░░  ░░░░░  ░░░░  ░░  ░░ ░░  ░░'
+  '  ▓▓▓▓      ▓▓▓▓▓▓     ▓▓▓▓▓▓    ▓▓▓▓▓▓▓      ▓▓▓▓  ',
+  ' ▓▓  ▓▓    ▓▓    ▓▓   ▓▓    ▓▓   ▓▓    ▓▓    ▓▓  ▓▓ ',
+  '▓▓    ▓▓   ▓▓         ▓▓    ▓▓   ▓▓    ▓▓   ▓▓    ▓▓',
+  '▒▒▒▒▒▒▒▒   ▒▒  ▒▒▒▒   ▒▒    ▒▒   ▒▒▒▒▒▒▒    ▒▒▒▒▒▒▒▒',
+  '▒▒    ▒▒   ▒▒    ▒▒   ▒▒    ▒▒   ▒▒  ▒▒     ▒▒    ▒▒',
+  '░░    ░░   ░░    ░░   ░░    ░░   ░░   ░░    ░░    ░░',
+  '░░    ░░    ░░░░░░     ░░░░░░    ░░    ░░   ░░    ░░',
 ];
 
 /**

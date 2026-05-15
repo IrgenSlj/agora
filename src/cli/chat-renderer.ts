@@ -8,6 +8,7 @@ export interface ChatRenderer {
   getAssistantText(): string;
   getSessionId(): string | null;
   getTotalCost(): number;
+  hasReceivedText(): boolean;
 }
 
 export interface ChatRendererOptions {
@@ -250,6 +251,10 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
 
     getSessionId(): string | null {
       return sessionId;
+    },
+
+    hasReceivedText(): boolean {
+      return firstTextSeen;
     },
   };
 }

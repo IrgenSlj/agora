@@ -9,6 +9,12 @@ export interface PromptOptions {
   history: string[];
   completer?: (line: string, cursor: number) => { matches: string[]; replaceFrom: number };
   ghostSuggester?: (line: string, history: string[]) => string | null;
+  /**
+   * Optional. Called on every redraw to compute the trailing portion of the
+   * prompt (chevron + dispatch hint). Assembled as: opts.prompt + promptSuffix(line).
+   * Returning undefined falls back to an empty string.
+   */
+  promptSuffix?: (line: string) => string;
   out?: NodeJS.WriteStream;
   in?: NodeJS.ReadStream;
 }
@@ -477,8 +483,8 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       state = { ...state, ghost: opts.ghostSuggester('', opts.history) };
     }
 
-    // Emit initial prompt
-    out.write(opts.prompt);
+    // Emit initial prompt (with suffix computed for empty initial line)
+    out.write(opts.prompt + (opts.promptSuffix ? opts.promptSuffix('') : ''));
 
     // Accumulated escape sequence buffer
     let escBuf = '';
@@ -507,7 +513,26 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       if (seq === '\x1b') return dispatchEvent({ kind: 'esc' });
     }
 
+    // B.5 — track whether we already showed the slash palette for this prompt
+    let slashPaletteShown = false;
+
+    function maybeShowSlashPalette(newLine: string): void {
+      if (!opts.completer) return;
+      if (newLine === '/' && !slashPaletteShown) {
+        slashPaletteShown = true;
+        const result = opts.completer('/', 1);
+        if (result.matches.length > 0) {
+          const list = result.matches.join('  ');
+          out.write(`\n\x1b[2m${list}\x1b[0m\n`);
+        }
+      } else if (newLine !== '/') {
+        // Allow showing again if user clears back to '/'
+        slashPaletteShown = false;
+      }
+    }
+
     function dispatchEvent(event: KeyEvent): void {
+      const prevLine = state.line;
       const result = applyKeyEvent(state, event, {
         completer: opts.completer,
         ghostSuggester: opts.ghostSuggester,
@@ -523,6 +548,11 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
         out.write(`\n\x1b[2m${list}\x1b[0m\n`);
       }
 
+      // B.5 — one-time slash palette pop when line transitions to '/'
+      if (state.line !== prevLine) {
+        maybeShowSlashPalette(state.line);
+      }
+
       redraw();
 
       if (result.output) {
@@ -535,7 +565,8 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       if (state.mode === 'reverse-search') {
         out.write(renderSearch(state, opts.prompt));
       } else {
-        out.write(renderNormal(state, opts.prompt));
+        const suffix = opts.promptSuffix ? opts.promptSuffix(state.line) : '';
+        out.write(renderNormal(state, opts.prompt + suffix));
       }
     }
 
