@@ -134,10 +134,37 @@ export function applyKeyEvent(
       const chars = Array.from(state.line);
       chars.splice(state.cursor, 0, ...Array.from(event.data));
       const newCursor = state.cursor + Array.from(event.data).length;
+      const newLine = chars.join('');
       const next = withGhost(
-        { ...state, line: chars.join(''), cursor: newCursor, tabCycle: null },
+        { ...state, line: newLine, cursor: newCursor, tabCycle: null },
         opts
       );
+      // Auto-complete: show slash-command completions as soon as '/' is typed
+      if (newLine.startsWith('/') && opts.completer) {
+        const result = opts.completer(newLine, newCursor);
+        if (result.matches.length > 0) {
+          return { state: next, sideEffect: 'show-completions', completionsToShow: result.matches.slice(0, 6) };
+        }
+      }
+      return { state: next };
+    }
+
+    case 'backspace': {
+      if (state.cursor === 0) return { state };
+      const chars = Array.from(state.line);
+      chars.splice(state.cursor - 1, 1);
+      const newLine = chars.join('');
+      const next = withGhost(
+        { ...state, line: newLine, cursor: state.cursor - 1, tabCycle: null },
+        opts
+      );
+      // Auto-complete: update slash-command completions when backspacing inside a slash prefix
+      if (newLine.startsWith('/') && opts.completer) {
+        const result = opts.completer(newLine, Math.min(newLine.length, state.cursor - 1));
+        if (result.matches.length > 0) {
+          return { state: next, sideEffect: 'show-completions', completionsToShow: result.matches.slice(0, 6) };
+        }
+      }
       return { state: next };
     }
 

@@ -326,6 +326,31 @@ describe('slash palette trigger', () => {
     const result = completer('/h', 2);
     expect(result.matches.length).toBe(1);
   });
+
+  test('typing "/" auto-shows completions', () => {
+    const r = applyResult(state(), { kind: 'char', data: '/' }, { completer });
+    expect(r.sideEffect).toBe('show-completions');
+    expect(r.completionsToShow).toEqual(slashCommands);
+  });
+
+  test('typing "/h" auto-shows narrowed completions', () => {
+    const s0 = state({ line: '/', cursor: 1 });
+    const r = applyResult(s0, { kind: 'char', data: 'h' }, { completer });
+    expect(r.sideEffect).toBe('show-completions');
+    expect(r.completionsToShow).toEqual(['/help']);
+  });
+
+  test('backspacing "/h" to "/" re-shows all completions', () => {
+    const s0 = state({ line: '/h', cursor: 2 });
+    const r = applyResult(s0, { kind: 'backspace' }, { completer });
+    expect(r.sideEffect).toBe('show-completions');
+    expect(r.completionsToShow).toEqual(slashCommands);
+  });
+
+  test('plain text does not trigger auto-completions', () => {
+    const r = applyResult(state(), { kind: 'char', data: 'a' }, { completer });
+    expect(r.sideEffect).toBeUndefined();
+  });
 });
 
 // ── Reverse-i-search ──────────────────────────────────────────────────────
