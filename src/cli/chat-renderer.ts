@@ -2,6 +2,37 @@ import { mascotFrame, movementBar, type Styler } from '../ui.js';
 
 export type Verbosity = 'quiet' | 'medium' | 'verbose';
 
+// ── Markdown → ANSI ─────────────────────────────────────────────────────────
+
+/** Inline formatting: `code` and **bold**. Order matters — code first so its
+ * contents don't get re-interpreted as bold. */
+function formatInline(text: string, style: Styler): string {
+  let out = text;
+  out = out.replace(/`([^`\n]+)`/g, (_, t) => style.accent(t));
+  out = out.replace(/\*\*([^*\n]+)\*\*/g, (_, t) => `\x1b[1m${t}\x1b[22m`);
+  return out;
+}
+
+/** Render one markdown line as ANSI. Used by the chat renderer's line buffer.
+ *  Lines inside a fenced code block bypass this entirely (caller's concern). */
+export function renderMarkdownLine(line: string, style: Styler): string {
+  if (line.startsWith('### ')) return style.accent(line.slice(4));
+  if (line.startsWith('## ')) return style.accent(line.slice(3));
+  if (line.startsWith('# ')) return style.accent(line.slice(2));
+
+  const bullet = line.match(/^(\s*)([-*])\s+(.*)$/);
+  if (bullet) {
+    return bullet[1] + style.accent('·') + ' ' + formatInline(bullet[3], style);
+  }
+
+  const numbered = line.match(/^(\s*)(\d+)\.\s+(.*)$/);
+  if (numbered) {
+    return numbered[1] + style.accent(numbered[2] + '.') + ' ' + formatInline(numbered[3], style);
+  }
+
+  return formatInline(line, style);
+}
+
 export interface ChatRenderer {
   handleLine(line: string): void;
   finalize(): void;
@@ -76,6 +107,10 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
   let turnStart: number = Date.now();
   const seenToolCallIds = new Set<string>();
   let liveTimer: ReturnType<typeof setInterval> | null = null;
+  // Markdown rendering needs whole lines + fenced-block state, so we buffer
+  // until a newline arrives.
+  let mdLineBuffer = '';
+  let mdInCodeBlock = false;
 
   function thinkingMarker(): string {
     return movementBar('thinking', { trueColor });
@@ -138,6 +173,20 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
     }
   }
 
+  function emitMdLine(line: string, withNewline: boolean): void {
+    const trailing = withNewline ? '\n' : '';
+    if (line.trim().startsWith('```')) {
+      mdInCodeBlock = !mdInCodeBlock;
+      out.write(style.dim(line) + trailing);
+      return;
+    }
+    if (mdInCodeBlock) {
+      out.write(line + trailing);
+      return;
+    }
+    out.write(renderMarkdownLine(line, style) + trailing);
+  }
+
   function handleText(ev: any): void {
     const text: string = ev.part?.text ?? '';
     if (!thinkingFinalized) finalizeThinking(Date.now());
@@ -146,7 +195,13 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
       printResponseHeader();
     }
     assistantText += text;
-    out.write(text);
+    mdLineBuffer += text;
+    let nl: number;
+    while ((nl = mdLineBuffer.indexOf('\n')) !== -1) {
+      const line = mdLineBuffer.slice(0, nl);
+      mdLineBuffer = mdLineBuffer.slice(nl + 1);
+      emitMdLine(line, true);
+    }
   }
 
   function handleToolUse(ev: any): void {
@@ -229,6 +284,10 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
       stopLive();
       if (!thinkingFinalized && thinkingStart !== null) {
         finalizeThinking(Date.now());
+      }
+      if (mdLineBuffer) {
+        emitMdLine(mdLineBuffer, false);
+        mdLineBuffer = '';
       }
       if (verbosity !== 'quiet') {
         const parts = [formatDuration(Date.now() - turnStart)];

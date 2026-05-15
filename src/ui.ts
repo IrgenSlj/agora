@@ -244,15 +244,14 @@ export function movementBar(kind: MovementKind, opts: { trueColor: boolean }): s
 // ── Meander — Greek-key frieze + loading bar ────────────────────────────────
 
 /**
- * 52-cell crenellated frieze (`▟▙` × 26). Used three ways:
- *   1. Idle ornament under the entry banner — every cell dim, reads as a
- *      static Greek-key ribbon tying the wordmark to the agora theme.
- *   2. Indeterminate loading wave during thinking — a 5-cell warm-to-hot pulse
- *      sweeps left→right with brief pauses between sweeps.
- *   3. Determinate progress bar — `agora install`, downloads, anything with a
- *      known endpoint. Filled cells use ACCENT, leading edge uses terracotta.
+ * 52-cell middle row of square teeth — `██  ` × 13. Public for use as the
+ * inline single-line progress bar in `idle/wave` modes this row is sandwiched
+ * between solid bars to form a three-row Greek-key frieze.
  */
-export const MEANDER = '▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄';
+export const MEANDER = '██  '.repeat(13);
+
+/** Solid 52-cell bar — the top and bottom of the Greek-key frieze. */
+const MEANDER_BAR = '█'.repeat(52);
 
 const MEANDER_DIM: RGB = [107, 98, 83]; // #6B6253 — brightened for dark terminal visibility
 const MEANDER_TAIL: RGB = [122, 90, 72]; // #7A5A48 — warm-dim trailing tail
@@ -288,12 +287,14 @@ function meanderProgressColor(i: number, pct: number): RGB {
   return MEANDER_DIM;
 }
 
-/** Render the meander as a single styled line. */
-export function renderMeander(opts: MeanderOptions): string {
-  const mode = opts.mode ?? 'idle';
+function renderMeanderRow(
+  row: string,
+  mode: 'idle' | 'wave' | 'progress',
+  opts: MeanderOptions
+): string {
   let out = '';
-  for (let i = 0; i < MEANDER.length; i++) {
-    const ch = MEANDER[i];
+  for (let i = 0; i < row.length; i++) {
+    const ch = row[i];
     let rgb: RGB;
     if (mode === 'wave') rgb = meanderWaveColor(i, opts.tMs ?? 0);
     else if (mode === 'progress') rgb = meanderProgressColor(i, opts.pct ?? 0);
@@ -301,6 +302,23 @@ export function renderMeander(opts: MeanderOptions): string {
     out += colorize(ch, rgb, opts.trueColor);
   }
   return out;
+}
+
+/**
+ * Render the meander. `idle` and `wave` return a 3-row Greek-key ribbon
+ * (solid bar + square teeth + solid bar). `progress` returns a single inline
+ * row of square teeth so it can be redrawn in place with `\r`.
+ */
+export function renderMeander(opts: MeanderOptions): string {
+  const mode = opts.mode ?? 'idle';
+  if (mode === 'progress') {
+    return renderMeanderRow(MEANDER, mode, opts);
+  }
+  return [
+    renderMeanderRow(MEANDER_BAR, mode, opts),
+    renderMeanderRow(MEANDER, mode, opts),
+    renderMeanderRow(MEANDER_BAR, mode, opts)
+  ].join('\n');
 }
 
 // ── Mascot — Ionic column capital that dances while the model thinks ────────

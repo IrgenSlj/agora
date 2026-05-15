@@ -25,12 +25,21 @@ describe('mascotFrame', () => {
 });
 
 describe('renderMeander', () => {
-  test('idle mode emits the meander chars (under ANSI)', () => {
+  // eslint-disable-next-line no-control-regex
+  const stripAnsi = (s: string) => s.replace(/\x1b\[[0-9;]*m/g, '');
+
+  test('idle mode renders a 3-row Greek-key frieze', () => {
     const out = renderMeander({ trueColor: false, mode: 'idle' });
-    // Strip ANSI escape sequences to get the raw glyph content
-    // eslint-disable-next-line no-control-regex
-    const plain = out.replace(/\x1b\[[0-9;]*m/g, '');
-    expect(plain).toBe(MEANDER);
+    const lines = out.split('\n');
+    expect(lines).toHaveLength(3);
+    expect(stripAnsi(lines[0])).toBe('█'.repeat(52));
+    expect(stripAnsi(lines[1])).toBe(MEANDER);
+    expect(stripAnsi(lines[2])).toBe('█'.repeat(52));
+  });
+
+  test('progress mode stays single-line for inline use', () => {
+    const out = renderMeander({ trueColor: false, mode: 'progress', pct: 50 });
+    expect(out.split('\n')).toHaveLength(1);
   });
 
   test('progress at 100% uses accent rgb (212;168;90)', () => {

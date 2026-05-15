@@ -252,7 +252,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const trueColor = supportsTrueColor(env);
 
   const banner = renderBanner({ color: true, trueColor });
-  const motto = 'An open terminal hub for MCP servers, workflows, and chat.';
+  const motto = "Developers' CLI marketplace and community hub - type a command, bash or chat:";
   const mottoLine = gradientText(motto, { trueColor });
   // Static Greek-key frieze sitting between the wordmark and the motto — same
   // width as the banner (52 cells), dim at idle. Same constant doubles as a
