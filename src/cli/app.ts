@@ -6,6 +6,7 @@ import { formatConfigJson } from '../config.js';
 import { formatNumber } from '../format.js';
 import { COMMANDS, renderManual } from './commands-meta.js';
 import { runInteractiveMenu } from './menu.js';
+import { runTui } from './tui.js';
 import {
   detectOpenCodeConfigPath,
   doctorOpenCodeConfig,
@@ -209,6 +210,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return await commandUse(parsed, io);
       case 'menu':
         return await runInteractiveMenu(io, style);
+      case 'tui':
+        return await runTui(io, { initial: 'home' });
       case 'help': {
         const helpTarget = parsed.args[0];
         if (helpTarget) {

@@ -195,6 +195,20 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora menu']
   },
   {
+    name: 'tui',
+    group: 'Setup',
+    summary: 'Open the full-screen Agora TUI (Home · Market · Comm · News · Settings)',
+    usage: 'agora tui',
+    details:
+      'Opens the keyboard-driven TUI with five pages, switched by 1-5 or Tab. ' +
+      "j/k navigates, Enter drills in, Esc backs out, ? toggles help, q quits. " +
+      'Pages: Home (recommendation engine), Marketplace (browse + install preview), ' +
+      'Community (boards/threads/reader against fixtures until backend lands), ' +
+      'News (ranked feed against fixtures until news adapters land), ' +
+      'Settings (account, display, news sources, community defaults).',
+    examples: ['agora tui']
+  },
+  {
     name: 'config',
     group: 'Setup',
     summary: 'Inspect or validate your OpenCode configuration',
