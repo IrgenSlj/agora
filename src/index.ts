@@ -114,7 +114,10 @@ Run \`/agora browse <id>\` for details.`;
             // Rank and display by installs — stars are repo-level and tie
             // across the modelcontextprotocol/servers monorepo.
             output += topPackages
-              .map((p, i) => `${i + 1}. ${p.id} — 📥 ${formatInstalls(p.installs)} installs · ⭐ ${formatStars(p.stars)}`)
+              .map(
+                (p, i) =>
+                  `${i + 1}. ${p.id} — 📥 ${formatInstalls(p.installs)} installs · ⭐ ${formatStars(p.stars)}`
+              )
               .join('\n');
             output += '\n\n';
           }
@@ -335,7 +338,9 @@ Or run \`agora install ${item.id} --write\` in your terminal to do both automati
 
             child.on('close', (code) => {
               if (code !== 0) {
-                resolve(`Error: opencode exited with code ${code}. Try a different model with \`/agora chat model:anthropic/claude-sonnet-4-20250514 "${message}"\``);
+                resolve(
+                  `Error: opencode exited with code ${code}. Try a different model with \`/agora chat model:anthropic/claude-sonnet-4-20250514 "${message}"\``
+                );
                 return;
               }
 
@@ -345,14 +350,18 @@ Or run \`agora install ${item.id} --write\` in your terminal to do both automati
                   if (ev.type === 'text' && ev.part?.text) {
                     response += ev.part.text;
                   }
-                } catch { /* skip */ }
+                } catch {
+                  /* skip */
+                }
               }
 
               resolve(response || 'No response generated. Try a different question.');
             });
 
             child.on('error', (err) => {
-              resolve(`Failed to run opencode: ${err.message}. Is opencode installed and in your PATH?`);
+              resolve(
+                `Failed to run opencode: ${err.message}. Is opencode installed and in your PATH?`
+              );
             });
           });
         }

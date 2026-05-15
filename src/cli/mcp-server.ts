@@ -6,12 +6,9 @@ import {
   findMarketplaceItem,
   getTrendingItems,
   getTrendingTags,
-  createInstallPlan,
+  createInstallPlan
 } from '../marketplace.js';
-import {
-  getTutorials,
-  findTutorial,
-} from '../marketplace.js';
+import { getTutorials, findTutorial } from '../marketplace.js';
 import { formatNumber } from '../format.js';
 import type { MarketplaceItem } from '../marketplace.js';
 
@@ -23,7 +20,7 @@ function describeItem(item: MarketplaceItem): string {
   const base = [
     `**${item.name}** (${backtick(item.id)})`,
     `${item.description}`,
-    `by ${item.author} · ${item.category}`,
+    `by ${item.author} · ${item.category}`
   ].join('\n');
 
   if (item.kind === 'package') {
@@ -39,15 +36,13 @@ function formatTags(tags: string[]): string {
 
 function formatItemList(items: MarketplaceItem[]): string {
   if (items.length === 0) return 'No results found.';
-  return items
-    .map((item, i) => `${i + 1}. ${describeItem(item)}`)
-    .join('\n\n');
+  return items.map((item, i) => `${i + 1}. ${describeItem(item)}`).join('\n\n');
 }
 
 export function createAgoraMcpServer(): McpServer {
   const server = new McpServer({
     name: 'agora-marketplace',
-    version: '0.3.0',
+    version: '0.3.0'
   });
 
   server.registerTool(
@@ -61,12 +56,8 @@ export function createAgoraMcpServer(): McpServer {
           .optional()
           .default('all')
           .describe('Category to search in'),
-        limit: z
-          .number()
-          .optional()
-          .default(10)
-          .describe('Maximum number of results'),
-      }),
+        limit: z.number().optional().default(10).describe('Maximum number of results')
+      })
     },
     async ({ query, category, limit }) => {
       const results = searchMarketplaceItems({ query, category, limit });
@@ -77,9 +68,9 @@ export function createAgoraMcpServer(): McpServer {
             text:
               results.length === 0
                 ? `No results found for "${query}".`
-                : `**Search results for "${query}"** (${results.length} found)\n\n${formatItemList(results)}`,
-          },
-        ],
+                : `**Search results for "${query}"** (${results.length} found)\n\n${formatItemList(results)}`
+          }
+        ]
       };
     }
   );
@@ -93,8 +84,8 @@ export function createAgoraMcpServer(): McpServer {
         type: z
           .enum(['package', 'workflow'])
           .optional()
-          .describe('Item type hint for disambiguation'),
-      }),
+          .describe('Item type hint for disambiguation')
+      })
     },
     async ({ id, type }) => {
       const item = findMarketplaceItem(id, type ? { type } : undefined);
@@ -103,9 +94,9 @@ export function createAgoraMcpServer(): McpServer {
           content: [
             {
               type: 'text',
-              text: `Item "${id}" not found. Try \`search\` to find it.`,
-            },
-          ],
+              text: `Item "${id}" not found. Try \`search\` to find it.`
+            }
+          ]
         };
       }
 
@@ -125,10 +116,10 @@ export function createAgoraMcpServer(): McpServer {
                 '**Prompt**:',
                 '```',
                 item.prompt,
-                '```',
-              ].join('\n'),
-            },
-          ],
+                '```'
+              ].join('\n')
+            }
+          ]
         };
       }
 
@@ -146,12 +137,12 @@ export function createAgoraMcpServer(): McpServer {
               '**Category**: ' + item.category,
               '**Added**: ' + item.createdAt,
               item.repository ? '**Repo**: ' + item.repository : '',
-              item.npmPackage ? '**npm**: ' + backtick(item.npmPackage) : '',
+              item.npmPackage ? '**npm**: ' + backtick(item.npmPackage) : ''
             ]
               .filter(Boolean)
-              .join('\n'),
-          },
-        ],
+              .join('\n')
+          }
+        ]
       };
     }
   );
@@ -166,15 +157,12 @@ export function createAgoraMcpServer(): McpServer {
           .optional()
           .default('all')
           .describe('Which category to show'),
-        limit: z
-          .number()
-          .optional()
-          .default(5)
-          .describe('Number of items to show'),
-      }),
+        limit: z.number().optional().default(5).describe('Number of items to show')
+      })
     },
     async ({ category, limit }) => {
-      const mcat = category === 'packages' ? 'package' : category === 'workflows' ? 'workflow' : 'all';
+      const mcat =
+        category === 'packages' ? 'package' : category === 'workflows' ? 'workflow' : 'all';
       const items = getTrendingItems({ category: mcat, limit });
       const tags = getTrendingTags(8);
 
@@ -182,9 +170,9 @@ export function createAgoraMcpServer(): McpServer {
         content: [
           {
             type: 'text',
-            text: `📈 **Trending in Agora**\n\n${formatItemList(items)}\n\n🏷️ **Tags**: ${tags.join(', ')}`,
-          },
-        ],
+            text: `📈 **Trending in Agora**\n\n${formatItemList(items)}\n\n🏷️ **Tags**: ${tags.join(', ')}`
+          }
+        ]
       };
     }
   );
@@ -195,11 +183,8 @@ export function createAgoraMcpServer(): McpServer {
       description: 'Get install instructions for a marketplace item',
       inputSchema: z.object({
         id: z.string().describe('Item ID to install'),
-        type: z
-          .enum(['package', 'workflow'])
-          .optional()
-          .describe('Item type hint'),
-      }),
+        type: z.enum(['package', 'workflow']).optional().describe('Item type hint')
+      })
     },
     async ({ id, type }) => {
       const item = findMarketplaceItem(id, type ? { type } : undefined);
@@ -208,9 +193,9 @@ export function createAgoraMcpServer(): McpServer {
           content: [
             {
               type: 'text',
-              text: `Item "${id}" not found.`,
-            },
-          ],
+              text: `Item "${id}" not found.`
+            }
+          ]
         };
       }
 
@@ -219,9 +204,9 @@ export function createAgoraMcpServer(): McpServer {
           content: [
             {
               type: 'text',
-              text: `🔄 **Workflow**: ${item.name}\n\nTo use this workflow, run:\n\`\`\`bash\nagora use ${item.id}\n\`\`\`\n\nThis writes it to \`.opencode/skills/\` and registers it in your config.`,
-            },
-          ],
+              text: `🔄 **Workflow**: ${item.name}\n\nTo use this workflow, run:\n\`\`\`bash\nagora use ${item.id}\n\`\`\`\n\nThis writes it to \`.opencode/skills/\` and registers it in your config.`
+            }
+          ]
         };
       }
 
@@ -231,9 +216,9 @@ export function createAgoraMcpServer(): McpServer {
           content: [
             {
               type: 'text',
-              text: `❌ ${plan.reason || 'This item cannot be installed automatically.'}`,
-            },
-          ],
+              text: `❌ ${plan.reason || 'This item cannot be installed automatically.'}`
+            }
+          ]
         };
       }
 
@@ -241,9 +226,9 @@ export function createAgoraMcpServer(): McpServer {
         content: [
           {
             type: 'text',
-            text: `📦 **Install**: ${item.name}\n\n1. Install the package:\n\`\`\`bash\n${plan.commands[0]}\n\`\`\`\n\n2. Add to \`opencode.json\`:\n\`\`\`json\n${JSON.stringify(plan.config, null, 2)}\n\`\`\`\n\nOr run:\n\`\`\`bash\nagora install ${item.id} --write\n\`\`\``,
-          },
-        ],
+            text: `📦 **Install**: ${item.name}\n\n1. Install the package:\n\`\`\`bash\n${plan.commands[0]}\n\`\`\`\n\n2. Add to \`opencode.json\`:\n\`\`\`json\n${JSON.stringify(plan.config, null, 2)}\n\`\`\`\n\nOr run:\n\`\`\`bash\nagora install ${item.id} --write\n\`\`\``
+          }
+        ]
       };
     }
   );
@@ -258,8 +243,8 @@ export function createAgoraMcpServer(): McpServer {
           .enum(['all', 'beginner', 'intermediate', 'advanced'])
           .optional()
           .default('all')
-          .describe('Filter by difficulty level'),
-      }),
+          .describe('Filter by difficulty level')
+      })
     },
     async ({ query, level }) => {
       const lvl = level === 'all' ? undefined : level;
@@ -270,11 +255,9 @@ export function createAgoraMcpServer(): McpServer {
           content: [
             {
               type: 'text',
-              text: query
-                ? `No tutorials match "${query}".`
-                : 'No tutorials available.',
-            },
-          ],
+              text: query ? `No tutorials match "${query}".` : 'No tutorials available.'
+            }
+          ]
         };
       }
 
@@ -283,13 +266,10 @@ export function createAgoraMcpServer(): McpServer {
           {
             type: 'text',
             text: tutorials
-              .map(
-                (t, i) =>
-                  `${i + 1}. **${t.id}** — ${t.title} (${t.level}, ${t.duration})`
-              )
-              .join('\n'),
-          },
-        ],
+              .map((t, i) => `${i + 1}. **${t.id}** — ${t.title} (${t.level}, ${t.duration})`)
+              .join('\n')
+          }
+        ]
       };
     }
   );
@@ -300,12 +280,8 @@ export function createAgoraMcpServer(): McpServer {
       description: 'Read a specific tutorial step by step',
       inputSchema: z.object({
         id: z.string().describe('Tutorial ID (e.g. tut-mcp-basics)'),
-        step: z
-          .number()
-          .optional()
-          .default(1)
-          .describe('Step number to read'),
-      }),
+        step: z.number().optional().default(1).describe('Step number to read')
+      })
     },
     async ({ id, step }) => {
       const tutorial = findTutorial(id);
@@ -314,9 +290,9 @@ export function createAgoraMcpServer(): McpServer {
           content: [
             {
               type: 'text',
-              text: `Tutorial "${id}" not found. Use \`tutorials\` to see available ones.`,
-            },
-          ],
+              text: `Tutorial "${id}" not found. Use \`tutorials\` to see available ones.`
+            }
+          ]
         };
       }
 
@@ -325,9 +301,9 @@ export function createAgoraMcpServer(): McpServer {
           content: [
             {
               type: 'text',
-              text: `✅ You've completed "${tutorial.title}"!`,
-            },
-          ],
+              text: `✅ You've completed "${tutorial.title}"!`
+            }
+          ]
         };
       }
 
@@ -340,9 +316,9 @@ export function createAgoraMcpServer(): McpServer {
 **Step ${step}/${tutorial.steps.length}**: ${s.title}
 
 ${s.content}
-${s.code ? `\n\`\`\`\n${s.code}\n\`\`\`` : ''}`,
-          },
-        ],
+${s.code ? `\n\`\`\`\n${s.code}\n\`\`\`` : ''}`
+          }
+        ]
       };
     }
   );

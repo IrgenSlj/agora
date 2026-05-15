@@ -144,7 +144,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   }
 
   if (!parsed.command) {
-    if (isInteractive(io, env)) return runInteractiveMenu(io, style);
+    if (isInteractive(io, env)) {
+      const { runShell } = await import('./shell.js');
+      return runShell(io, style);
+    }
     writeLine(io.stdout, welcome(useColor, supportsTrueColor(env)));
     return 0;
   }
@@ -195,6 +198,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return await commandInit(parsed, io);
       case 'use':
         return await commandUse(parsed, io);
+      case 'menu':
+        return await runInteractiveMenu(io, style);
       case 'help': {
         const helpTarget = parsed.args[0];
         if (helpTarget) {
@@ -600,18 +605,16 @@ async function commandMcp(_parsed: ParsedArgs, io: CliIo): Promise<number> {
   return 0;
 }
 
-const FREE_MODELS = [
-  'deepseek-v4-flash-free',
-  'minimax-m2.5-free',
-  'nemotron-3-super-free',
-];
+export const FREE_MODELS = ['deepseek-v4-flash-free', 'minimax-m2.5-free', 'nemotron-3-super-free'];
 
 /** Regexp to extract session ID from a JSON opencode event line. */
 function extractSessionId(line: string): string | null {
   try {
     const ev = JSON.parse(line);
     if (ev.sessionID && typeof ev.sessionID === 'string') return ev.sessionID;
-  } catch { /* not JSON, skip */ }
+  } catch {
+    /* not JSON, skip */
+  }
   return null;
 }
 
@@ -624,7 +627,7 @@ function persistChatSession(dataDir: string, sessionId: string): void {
     const state = loadAgoraState(dataDir);
     const updated = {
       ...state,
-      _meta: { ...((state as any)._meta || {}), lastChatSession: sessionId },
+      _meta: { ...((state as any)._meta || {}), lastChatSession: sessionId }
     };
     writeAgoraState(dataDir, updated);
   } catch {
@@ -656,7 +659,7 @@ async function commandChat(parsed: ParsedArgs, io: CliIo): Promise<number> {
     const child = spawn('opencode', ['--model', modelArg], {
       env: io.env as Record<string, string>,
       stdio: 'inherit',
-      shell: false,
+      shell: false
     });
     return new Promise((resolve) => {
       child.on('close', (code) => resolve(code ?? 0));
@@ -693,7 +696,7 @@ async function commandChat(parsed: ParsedArgs, io: CliIo): Promise<number> {
     const child = spawn('opencode', args, {
       env: io.env as Record<string, string>,
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: false,
+      shell: false
     });
 
     child.stdout?.on('data', (chunk: Buffer) => {
@@ -720,7 +723,9 @@ async function commandChat(parsed: ParsedArgs, io: CliIo): Promise<number> {
               wroteNewline = true;
             }
           }
-        } catch { /* skip malformed lines */ }
+        } catch {
+          /* skip malformed lines */
+        }
       }
     });
 
@@ -843,7 +848,11 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
     writeLine(io.stdout, '  Plugin "opencode-agora" is now registered in your config.');
     writeLine(io.stdout, '  Type `/agora` in OpenCode to use the marketplace.');
     writeLine(io.stdout, `  ${plan.servers.length} MCP servers configured.`);
-    if (withMcp) writeLine(io.stdout, '  Agora MCP server registered — `agora mcp` is available as an MCP tool.');
+    if (withMcp)
+      writeLine(
+        io.stdout,
+        '  Agora MCP server registered — `agora mcp` is available as an MCP tool.'
+      );
     if (plan.workflows.length)
       writeLine(io.stdout, `  ${plan.workflows.length} workflows available via \`agora use\`.`);
     for (const note of plan.notes) writeLine(io.stdout, `  ${note}`);
