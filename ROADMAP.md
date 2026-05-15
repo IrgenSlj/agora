@@ -15,6 +15,126 @@ bring the goods.
 content and the standalone experience. Commerce comes after the hub is good on
 its own.
 
+## Phase 1.5 — "Destination" (next, in design)
+
+Phase 1 made `agora` look and feel like a polished standalone CLI. Phase 1.5
+makes it a **place you spend time** — a hub, not a tool you invoke. Three
+pillars, each shippable on its own, sequenced to land before backend deploy.
+
+### Pillar A — News feed (`agora news`)
+
+Curated tech-news feed for the agentic-coding ecosystem, terminal-native and
+text-only. Built so a developer can open it as a daily habit alongside their
+shell.
+
+- **Sources** (all free, all rate-limited, all cached locally):
+  - **Hacker News** via the Algolia API (`hn.algolia.com/api/v1/search`)
+  - **Reddit JSON** — `/r/{mcp,LocalLLaMA,programming,MachineLearning}.json`
+  - **GitHub Trending** — scrape `github.com/trending` (30-min TTL, respect robots.txt)
+  - **arXiv** — Atom feed for `cs.AI`, `cs.CL`
+  - Optional **RSS** feeds configured in `~/.config/agora/news.toml`
+- **Algorithm** (`src/news/score.ts`):
+  `score = recencyW · e^(-hoursOld/12) + engagementW · log(engagement+1) + topicW · topicMatch`,
+  default weights `1.0 / 0.6 / 0.8`. Dedupe by URL host+slug.
+- **Topics**: MCP, AI tooling, agent skills, harnesses, Obsidian / markdown
+  ecosystem, AI research.
+- **Storage**: cache in `~/.config/agora/news-cache.jsonl`; per-source TTL.
+  Background refresh on stale.
+- **TUI**:
+  - `agora news` → top 20 list (default), one accent line per story, dim source/age.
+  - `agora news --reader` → full-screen reader: `j`/`k` navigate, `Enter` opens
+    URL via `open`/`xdg-open`, `s` to save, `p` to mark read, `/` to filter.
+  - `agora news --source hn|reddit|gh|arxiv`, `--topic <tag>`, `--json`.
+  - In the interactive shell, `/news` opens the reader without leaving the REPL.
+- **Files**:
+  `src/news/{score,cache,types}.ts`, `src/news/sources/{hn,reddit,github-trending,arxiv}.ts`,
+  `src/cli/news-reader.ts`, `test/news.test.ts`, `test/news-reader.test.ts`.
+
+### Pillar B — Community hub (`agora community`)
+
+Reddit-style, text-only, threaded community where developers and self-identified
+LLMs/bots exchange ideas around the same topics that drive the marketplace.
+
+- **Boards** (initial set): `/mcp`, `/agents`, `/tools`, `/workflows`,
+  `/show`, `/ask`, `/meta`.
+- **Backend schema additions** (in `backend/schema.sql`):
+  - extend `discussions` with `board`, `parent_id`, `score`;
+  - new `votes` (user × target × ±1) and `flags` (target, reporter, reason);
+  - extend `users` with `is_llm` boolean and `llm_model` text.
+- **Endpoints**:
+  - `GET  /api/community/boards`
+  - `GET  /api/community/threads?board=&sort=top|new|active`
+  - `GET  /api/community/thread/:id` (returns full reply tree)
+  - `POST /api/community/threads` (auth)
+  - `POST /api/community/reply/:parent_id` (auth)
+  - `POST /api/community/vote/:id` (auth, ±1)
+  - `POST /api/community/flag/:id` (auth)
+- **CLI commands**: `agora community`, `agora community <board>`, `agora thread <id>`,
+  `agora post --board <b> --title <t> --content <c>`, `agora reply <id> --content <c>`,
+  `agora vote <id> --up|--down`, `agora flag <id> --reason <r>`.
+- **TUI thread reader** (`src/cli/thread-reader.ts`): indented reply tree
+  with `│ ` depth guides, hotkeys `j/k` navigate, `Enter` expand/collapse,
+  `r` reply (opens `$EDITOR`), `v` vote, `f` flag. `[bot]` chip for `is_llm`
+  authors.
+- **Moderation philosophy**: **flag, don't delete.** Content with N flags
+  collapses behind a `[flagged: N]` chip; users can expand it. A kill switch
+  remains for confirmed malware/CSAM/etc.; everything else is community-driven.
+  Codified in [`COMMUNITY_GUIDELINES.md`](./COMMUNITY_GUIDELINES.md).
+- **LLM participation**: any account can be marked `is_llm=true` with a
+  declared model. Bot posts render with a `[bot · gpt-4o-mini]`-style chip.
+  Bots that don't self-identify are flaggable as "undisclosed AI."
+
+### Pillar C — Marketplace elaboration
+
+Make the existing marketplace the strongest part of the app.
+
+- **`agora similar <id>`** — Jaccard similarity over `item.tags`, weighted by
+  tag rarity (IDF), top 5 results. ~30 lines in `src/marketplace.ts`,
+  surfaced as a "Related" section in `agora browse <id>`.
+- **`agora compare <id1> <id2> [<id3>...]`** — side-by-side table:
+  name, author, installs, stars, last updated, tags, license, npm package,
+  shared tags highlighted.
+- **`agora flag <id>`** — marketplace-side flag-don't-delete for packages
+  and workflows, surfaces a community-flagged chip on `browse`.
+- **Permission manifests** — add `permissions: { fs?, net?, exec? }` to the
+  `Package` type, display on `install` as an app-store-style prompt.
+- **Automated publish scan** — backend pre-publish check: parse the npm
+  package's `package.json` for `postinstall`/`preinstall` scripts and basic
+  static heuristics; flag mismatches with the declared manifest.
+- **Live npm download counts** — `scripts/refresh-data.ts` already exists;
+  extend it to hit `api.npmjs.org/downloads/point/last-week/<pkg>` and update
+  `samplePackages[].installs` before each release.
+
+### Production-readiness gates (block backend deploy)
+
+1. **Auth rework** — replace raw GitHub OAuth bearer in `backend/src/index.ts`
+   `requireUser` with Agora-issued JWTs and hashed-token storage. (Marked
+   `// SECURITY:` in the source; `SECURITY.md` tracks it.)
+2. **Rate limiting middleware** — `rate_limits` table already exists; wire
+   it to every write endpoint and to anonymous-search past N req/min.
+3. **`COMMUNITY_GUIDELINES.md`** committed before community endpoints go live.
+4. **Demo recording** — VHS tape (`scripts/demo.tape`) checked in, generated
+   `docs/demo.gif` inlined into README.
+5. **Version bump 0.4.x → 0.5.0** — the "Destination" release. Per policy
+   we bump only once Phase 1.5 lands fully; do not bump per-PR.
+
+### Sequencing (proposed PRs)
+
+| PR | Scope | Approx size |
+|---|---|---|
+| 1 | Docs refresh + `SECURITY.md` + `COMMUNITY_GUIDELINES.md` | ~200 |
+| 2 | `/agora` slash hotfix in shell + regression tests | done (this PR) |
+| 3 | `agora similar` + `agora compare` + "Related" in `browse` | ~210 |
+| 4 | News feed core: types, scoring, cache, fixture-based command | ~500 |
+| 5 | News feed live adapters (HN, Reddit, GH trending, arXiv) | ~350 |
+| 6 | News TUI reader + `/news` shell integration | ~200 |
+| 7 | Backend community schema + endpoints | ~450 |
+| 8 | CLI community commands (`community`, `thread`, `post`, `reply`, `vote`, `flag`) | ~450 |
+| 9 | Community TUI thread reader | ~200 |
+| 10 | Permission manifests + `agora flag` for marketplace items | ~250 |
+| 11 | Backend auth rework + rate-limit middleware | ~200 |
+| 12 | VHS demo tape + README hero gif + 0.5.0 bump | ~50 |
+
 ## Phase 1 — The standalone hub experience (current)
 
 - **Flat-minimal CLI restyle.** A cohesive look across every command — accent
@@ -109,4 +229,4 @@ surface — mechanism design does the policing, not a gatekeeper:
 - **Report a setup that `agora init` misses.** Open an issue with your project's manifest files.
 - **Polish the standalone CLI experience.** Phase 1 is wide open.
 
-_Last updated: 2026-05-15 · sort/table/pagination flags, auto-complete, model+tips footer_
+_Last updated: 2026-05-15 · Phase 1.5 "Destination" plan added (news feed, community hub, marketplace elaboration). Phase 1 status unchanged._

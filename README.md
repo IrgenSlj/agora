@@ -25,7 +25,7 @@ _A terminal recording is in the works — see ROADMAP.md._
 
 Agora is a **standalone terminal marketplace** for the agentic-coding ecosystem — MCP servers, workflows, and tutorials, browsable and installable from your shell with no login and no backend. Run `npx opencode-agora init` in any project and it scans your stack, generates the right `opencode.json`, and installs matched MCP servers.
 
-It bundles **60+ MCP servers**, **12 production workflows**, **12 tutorials**, and **7 prompts**, all usable offline.
+It bundles **61 MCP servers**, **12 production workflows**, **12 tutorials**, and **6 prompts**, all usable offline.
 
 **Where it's headed:** Agora is evolving into an **open, self-regulating marketplace** where third-party developers publish and sell advanced skills, tools, and kits — with Agora providing the square and the rules (discovery, trust, delivery), not the goods. See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the direction and [`ROADMAP.md`](./ROADMAP.md) for the plan.
 
@@ -67,7 +67,7 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
 - No manual copy-pasting — one command and the workflow is live
 
 ### Rich Offline Marketplace
-- **60+ MCP servers** across 12 categories (filesystem, databases, cloud, browser automation, monitoring, etc.)
+- **61 MCP servers** across 12 categories (filesystem, databases, cloud, browser automation, monitoring, etc.) — every `npmPackage` is verified against the live npm registry
 - All official `@modelcontextprotocol/*` servers plus top community servers
 - Fully functional offline — no backend required
 - Search, browse, trending — all work with bundled data
@@ -108,6 +108,12 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
 
 ### Learn
 - 12 interactive tutorials on MCP, auth, catalog-contrib, backend deploy, and more
+
+### What's next — Phase 1.5: "Destination"
+Three pillars currently in design (see [`ROADMAP.md`](./ROADMAP.md)):
+- **`agora news`** — a curated tech news feed (HN, Reddit, GitHub trending, arXiv) ranked by recency × engagement × topic-match, rendered as a TUI reader. Text only, terminal-native.
+- **`agora community` / `agora thread` / `agora post`** — a Reddit-style, text-only community hub with boards, threaded replies, votes, and flag-don't-delete moderation. Self-identifying LLM/bot participants allowed.
+- **`agora similar <id>` / `agora compare <id1> <id2>`** — discovery polish for the marketplace, plus permission manifests and an automated publish scan for the trust layer.
 
 ## Quick Start
 
@@ -256,7 +262,7 @@ The plugin itself registers **tools** (`agora_search`, `agora_browse`, `agora_in
 To get a typed `/agora` slash command, `agora init` also writes `.opencode/command/agora.md` into your project. That command forwards whatever you type to the matching tool, so these all work inside OpenCode:
 
 | Command | Description |
-|---|---|---|
+|---|---|
 | `/agora search <query> [category]` | Search marketplace |
 | `/agora browse <id>` | View package or workflow details |
 | `/agora browse_category <category>` | Browse a category |
@@ -265,9 +271,7 @@ To get a typed `/agora` slash command, `agora init` also writes `.opencode/comma
 | `/agora tutorial <id> [step]` | Interactive tutorials |
 | `/agora chat <message>` | Free AI chat via opencode run |
 | `/agora info` | Plugin help |
-| `/agora info` | Help |
 | `/agora mcp` | Run MCP server (CLI only) |
-| `/agora chat <message>` | Free AI chat (CLI only) |
 
 Community features — profiles, reviews, discussions, publishing — are **CLI-only** (`agora profile`, `agora reviews`, `agora discuss`, `agora publish`) and need a connected backend. The plugin deliberately ships only the offline-capable marketplace tools.
 
@@ -363,19 +367,24 @@ agora/
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| `agora init` | ✅ **New** | Project scanning, config generation, auto-install, plugin registration |
-| `agora use` | ✅ **New** | Apply workflows as OpenCode skills in one command |
-| `agora install --write` | ✅ **Improved** | Now auto-installs npm packages |
-| CLI | Ready | 25 commands: `init`, `use`, `mcp`, `chat`, `search`, `browse`, `trending`, `workflows`, `tutorials`, `tutorial`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `login`, `logout`, `whoami`, `auth`, `publish`, `review`, `reviews`, `profile`, `config doctor` |
-| Offline data | ✅ **Expanded** | 60+ MCP servers, 12 workflows, 12 tutorials, 7 prompts |
+| Interactive shell (`agora`) | Ready | Persistent REPL with bash/chat dispatch, auto-complete, per-cwd transcripts |
+| `agora init` | Ready | Project scanning, config generation, auto-install, plugin registration |
+| `agora use` | Ready | Apply workflows as OpenCode skills in one command |
+| `agora install --write` | Ready | Auto-installs npm packages and writes config |
+| `agora mcp` | Ready | Marketplace exposed as a Model Context Protocol server |
+| `agora chat` | Ready | TUI + one-shot inference via `opencode run` |
+| CLI | Ready | 25 commands: `init`, `use`, `mcp`, `chat`, `menu`, `search`, `browse`, `trending`, `workflows`, `tutorials`, `tutorial`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `login`, `logout`, `whoami`, `auth`, `publish`, `review`, `reviews`, `profile`, `config doctor` |
+| Offline data | Ready | 61 MCP servers, 12 workflows, 12 tutorials, 6 prompts (npm-validated) |
 | Live API mode | Ready | Opt-in via `--api`, `AGORA_API_URL`; falls back offline |
 | Shared core | Ready | CLI and plugin share marketplace logic |
 | Local state | Ready | Saved items and auth tokens under `~/.config/agora` |
 | Plugin (offline) | Ready | Works with bundled data |
-| Backend | 🚧 Not deployed — self-host required (see backend/) | Cloudflare Workers + D1 ready for deployment |
+| Backend | 🚧 Not deployed — self-host required (see backend/) | Cloudflare Workers + D1 ready for deployment; auth rework blocks public deploy |
 | Local Hub | Ready | Static web app served by Bun |
 | CI | Ready | Typecheck + tests on push/PR |
-| Publish CI | ✅ **New** | Auto-publish to npm on release |
+| Publish CI | Ready | Auto-publish to npm on release |
+| News feed (`agora news`) | 🚧 Phase 1.5 — designed, not built | HN + Reddit + GitHub trending + arXiv, TUI reader |
+| Community hub (`agora community`) | 🚧 Phase 1.5 — designed, not built | Boards, threads, votes, flag-don't-delete, LLM participants |
 
 ## Testing
 

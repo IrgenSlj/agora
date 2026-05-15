@@ -76,24 +76,32 @@ bun src/cli.ts search database     # Search rich offline data
 
 ```
 src/
-├── cli.ts          # CLI entrypoint
-├── cli/app.ts      # CLI command parser and handlers (the standalone hub)
-├── ui.ts           # Terminal styling: styler, gradient banner, colour detection
-├── init.ts         # Project scanner + init plan generator
-├── marketplace.ts  # Search, browse, trending, install logic
-├── config-files.ts # OpenCode config detection and writes
-├── commands.ts     # /agora slash-command template installed by `agora init`
-├── live.ts         # API client with offline fallback
-├── state.ts        # Local saved-item and auth state
-├── index.ts        # OpenCode plugin — thin bridge, 7 offline marketplace tools
-├── data.ts         # 36+ MCP servers, 10 workflows, 6 tutorials
-├── types.ts        # TypeScript types
-├── config.ts       # Config generation helpers
-└── format.ts       # Count formatting helpers (formatStars, formatInstalls)
+├── cli.ts              # CLI entrypoint
+├── cli/app.ts          # CLI command parser and handlers (the standalone hub)
+├── cli/shell.ts        # Interactive REPL — bash/chat dispatch, slash meta commands
+├── cli/prompter.ts     # Raw-mode line editor — auto-complete, history, ghost text
+├── cli/completions.ts  # Completion providers (slash, path, marketplace ids)
+├── cli/menu.ts         # @clack/prompts interactive command browser
+├── cli/commands-meta.ts # Command catalog (groups, summaries, manual rendering)
+├── cli/mcp-server.ts   # MCP server mode (`agora mcp`)
+├── cli/chat-renderer.ts # Markdown chat formatter + live thinking line
+├── ui.ts               # Terminal styling: styler, gradient banner, colour detection
+├── init.ts             # Project scanner + init plan generator
+├── marketplace.ts      # Search, browse, trending, install logic
+├── config-files.ts     # OpenCode config detection and writes
+├── commands.ts         # /agora slash-command template installed by `agora init`
+├── live.ts             # API client with offline fallback (api-or-offline source layer)
+├── state.ts            # Local saved-item and auth state
+├── transcript.ts       # Per-cwd shell transcripts + session metadata
+├── index.ts            # OpenCode plugin — thin bridge, 7 offline marketplace tools
+├── data.ts             # 61 MCP servers, 12 workflows, 12 tutorials, 6 prompts
+├── types.ts            # TypeScript types
+├── config.ts           # Config generation helpers
+└── format.ts           # Count formatting helpers (formatStars, formatInstalls)
 backend/   # Cloudflare Workers API (Hono + D1)
 hub/       # Optional local web Hub
 docs/      # ARCHITECTURE.md and design briefs
-test/      # Tests
+test/      # 16 test files, ~440 tests
 ```
 
 ## Key Files for New Contributors

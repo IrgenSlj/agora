@@ -118,6 +118,61 @@ making a stranger's tool feel safe to install is not.
 - **Graceful terminal degradation.** Colour, gradients, and the banner degrade
   cleanly under `NO_COLOR`, `TERM=dumb`, non-TTY pipes, and narrow terminals.
 
+## Destination, not just a tool
+
+Phase 1 made `agora` a polished CLI. Phase 1.5 turns it into a **destination** —
+a place a developer opens daily, not a binary they invoke once. That requires
+two new surfaces alongside the marketplace, both terminal-native and text-only:
+
+### News feed
+
+The thesis: a developer's "morning read" doesn't need a browser. HN, Reddit's
+relevant AI/dev subs, GitHub trending, and arXiv together give you 95% of the
+signal in 5% of the noise. Agora aggregates those (free APIs, local cache),
+ranks by `recencyW · e^(-h/12) + engagementW · log(eng+1) + topicW · topicMatch`,
+and renders a TUI reader you can drive with `j/k/Enter/s/p/?`. Topic weighting
+biases toward the agentic-coding world the marketplace serves — MCP, agent
+skills, harnesses, Obsidian/markdown.
+
+Why this fits Agora: every story is one hop from a marketplace action. A new
+MCP server lands on HN → `agora install <id>` from the reader. The news feed
+and the marketplace share the same demographic and the same offline-first
+discipline (cache locally, work without internet, refresh on demand).
+
+### Community hub
+
+Reddit's basic shape — boards, threaded replies, votes — but reduced to text
+in a terminal. Boards mirror the topics that already drive search:
+`/mcp`, `/agents`, `/tools`, `/workflows`, `/show`, `/ask`, `/meta`.
+
+Two opinionated stances:
+
+1. **Flag, don't delete.** Mechanism over moderator. Content with N flags
+   collapses behind a chip; users can still expand it. The kill switch is
+   reserved for confirmed malware/CSAM/etc. The historical agora had
+   inspectors, not censors — the same instinct.
+2. **LLMs are welcome, if they say so.** Any account can declare itself
+   `is_llm` with a `llm_model` string; their posts render with a `[bot]`
+   chip. Undisclosed AI is flaggable. We expect bots to be useful: a
+   "what's-new-in-MCP" weekly digest bot, a "fix-this-error" responder bot,
+   a per-package release-notes bot. Pretending to be human is the foul,
+   not being a bot.
+
+### Trust as the through-line
+
+All three pillars — news, community, marketplace — are content surfaces where
+strangers' work appears in front of your eyes (and sometimes runs on your
+machine). The same trust mechanism applies:
+
+- Reputation is **earned, not granted** (install counts, post score, age).
+- Reviews are **verified-purchase only** once Phase 3 lands.
+- Permission manifests gate **executable items** at install time.
+- The community gates **public content** via flags + a narrow kill switch.
+
+Phase 1.5 is partly a content release and partly the soft launch of this
+trust layer — community moderation in particular is a dry run of the same
+flag/score/threshold logic that Phase 4 needs for marketplace items.
+
 ## Open decisions
 
 1. **TUI shape** — **Decision: hybrid.** Scriptable one-shot commands remain
@@ -132,6 +187,8 @@ making a stranger's tool feel safe to install is not.
 
 ## Status
 
-- **Phase 1 (standalone hub experience)** — in progress.
+- **Phase 1 (standalone hub experience)** — done; sculpting before the next bump.
+- **Phase 1.5 ("Destination": news feed + community hub + marketplace
+  elaboration)** — designed; sequenced into ~10 PRs in `ROADMAP.md`.
 - **Phases 2–5** — see [`../ROADMAP.md`](../ROADMAP.md). Payments (Phase 3) are
   deliberately deferred behind the content and experience work.

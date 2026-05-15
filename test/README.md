@@ -1,69 +1,60 @@
 # Agora Tests
 
-## Running Tests
+## Running
 
 ```bash
-bun test
+bun test                       # full suite
+bun test test/shell.test.ts    # one file
+bun test --watch               # watch mode
 ```
 
-## Test Suites
+At the time of writing: **16 test files, ~440 tests, 1 intentional skip.**
+Tests are written with `bun:test` (Bun's built-in `describe` / `test` /
+`expect` API).
 
-### Data Tests (`index.test.ts`)
-- Sample data validation
-- Search logic
-- Trending/sorting
-- Category filtering
-- Edge cases
+## Suites
 
-### API Tests (`api.test.ts`)
-- API client functions
-- Error handling
-- Fallback behavior
+| File | Surface under test |
+|---|---|
+| `app.test.ts` | Top-level CLI command handlers (`commandSearch`, `commandBrowse`, `commandInstall`, etc.) wired against fake IO streams |
+| `cli.test.ts` | Argument parsing, JSON output, error handling, end-to-end command flows |
+| `marketplace.test.ts` | Core search / sort / filter / similarity logic on the bundled catalog |
+| `data.test.ts` | Bundled-catalog invariants — every package has the required shape; npm-validated entries marked installable |
+| `init.test.ts` | Project scanner, init plan generation, config writes |
+| `state.test.ts` | Saved-item persistence, auth token state, atomic writes |
+| `shell.test.ts` | Interactive shell — input classification (`classifyInput`, `looksLikeQuestion`), bash/chat dispatch |
+| `prompter.test.ts` | Raw-mode line editor — completion, history, ghost text, CSI parsing |
+| `completions.test.ts` | Completion providers (slash commands, paths, marketplace ids) |
+| `chat-renderer.test.ts` | Markdown rendering for chat output, live thinking line |
+| `mcp-server.test.ts` | MCP server tool registration and outputs |
+| `transcript.test.ts` | Per-cwd transcript and session-meta files |
+| `format.test.ts` | Number / count / table formatting helpers |
+| `types.test.ts` | TypeScript type compatibility, JSON serialisation |
+| `index.test.ts` | OpenCode plugin tool registration and output |
+| `ui.test.ts` | Banner rendering, colour detection, styler |
 
-### Type Tests (`types.test.ts`)
-- TypeScript type validation
-- Type compatibility
-- JSON serialization
+## Fixtures
 
-### Format Tests (`format.test.ts`)
-- String truncation
-- Number formatting
-- Date formatting
-- Table/list/card formatting
+`test/fixtures/` holds small JSON / config fixtures used by the init and
+marketplace suites.
 
-### CLI Tests (`cli.test.ts`)
-- Argument parsing
-- Search and JSON output
-- Browse error handling
-- Install preview and config writes
-- Config doctor output
-- Local saved-item state
-- Auth token state
-- Live API source and offline fallback
-- Discussion creation
-- Publish/review API commands
-- Profile lookup
+## Network-gated tests
 
-## Coverage
+Some `data.test.ts` cases hit the live npm registry to verify that every
+declared `npmPackage` resolves. They are gated behind `AGORA_NETWORK_TESTS=1`
+to keep the default suite hermetic.
 
-- **5 test files**
-- Tests cover: argument parsing, search, browse, install, config doctor,
-  saved items, auth login/logout/status, live API fallback, discussion
-  creation, publish/review API, profile lookup, data validation, formatting
-
-## Adding Tests
+## Adding tests
 
 ```typescript
 import { describe, test, expect } from 'bun:test';
 
-describe('My Feature', () => {
-  test('should do something', () => {
+describe('My feature', () => {
+  test('does the thing', () => {
     expect(true).toBe(true);
   });
 });
 ```
 
-Run with watch mode:
-```bash
-bun test --watch
-```
+Prefer fake IO streams over real stdin/stdout for any CLI handler test —
+`app.test.ts` has examples (`CliIo` with collected output buffers).
