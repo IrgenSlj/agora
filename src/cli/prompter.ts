@@ -589,6 +589,9 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
               nb >= 0x40 &&
               nb <= 0x7e // final byte of CSI
             ) {
+              // Don't break on '[' (0x5B) — it introduces CSI sequences,
+              // so there must be at least one more byte coming.
+              if (nb === 0x5b) continue;
               break;
             }
           }
@@ -698,6 +701,7 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
 
     function cleanup(): void {
       inp.removeListener('data', onData);
+      inp.pause();
       if (escTimer) clearTimeout(escTimer);
       if (footerRows > 0) {
         // Clear every footer row, then park cursor on the first cleared row so
