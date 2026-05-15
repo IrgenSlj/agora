@@ -99,7 +99,7 @@ export function sortMarketplaceItems(
   query: string
 ): (a: MarketplaceItem, b: MarketplaceItem) => number {
   return (a: MarketplaceItem, b: MarketplaceItem) => {
-    let cmp = 0;
+    let cmp: number;
 
     if (sortBy === 'stars') cmp = a.stars - b.stars;
     else if (sortBy === 'installs') cmp = a.installs - b.installs;

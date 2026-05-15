@@ -168,17 +168,6 @@ export function applyKeyEvent(
       return { state: next };
     }
 
-    case 'backspace': {
-      if (state.cursor === 0) return { state };
-      const chars = Array.from(state.line);
-      chars.splice(state.cursor - 1, 1);
-      const next = withGhost(
-        { ...state, line: chars.join(''), cursor: state.cursor - 1, tabCycle: null },
-        opts
-      );
-      return { state: next };
-    }
-
     case 'left': {
       const next = { ...state, cursor: Math.max(0, state.cursor - 1), tabCycle: null };
       return { state: next };
