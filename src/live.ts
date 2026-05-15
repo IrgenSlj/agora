@@ -29,6 +29,10 @@ export interface SearchSourceOptions extends SourceOptions {
   query?: string;
   category?: string;
   limit?: number;
+  sortBy?: 'relevance' | 'stars' | 'installs' | 'name' | 'updated';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  perPage?: number;
 }
 
 export interface FindSourceOptions extends SourceOptions {
@@ -191,7 +195,15 @@ export async function searchMarketplaceSource(
   options: SearchSourceOptions = {}
 ): Promise<SourceResult<MarketplaceItem[]>> {
   if (!shouldUseApi(options)) {
-    return offline(searchMarketplaceItems(options));
+    return offline(searchMarketplaceItems({
+      query: options.query,
+      category: options.category,
+      limit: options.limit,
+      sortBy: options.sortBy,
+      sortOrder: options.sortOrder,
+      page: options.page,
+      perPage: options.perPage
+    }));
   }
 
   try {

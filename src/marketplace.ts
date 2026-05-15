@@ -29,6 +29,10 @@ export interface SearchOptions {
   query?: string;
   category?: string;
   limit?: number;
+  sortBy?: 'relevance' | 'stars' | 'installs' | 'name' | 'updated';
+  sortOrder?: 'asc' | 'desc';
+  page?: number;
+  perPage?: number;
 }
 
 export interface TutorialSearchOptions {
@@ -68,13 +72,51 @@ export function searchMarketplaceItems(options: SearchOptions = {}): Marketplace
   const query = normalize(options.query || '');
   const category = normalizeCategory(options.category || 'all');
   const limit = normalizeLimit(options.limit);
+  const sortBy = options.sortBy || 'relevance';
+  const sortOrder = options.sortOrder || 'desc';
+  const page = options.page || 1;
+  const perPage = options.perPage || 0;
 
-  const results = getMarketplaceItems()
+  let results = getMarketplaceItems()
     .filter((item) => matchesCategory(item, category))
-    .filter((item) => matchesQuery(item, query))
-    .sort(sortByRelevance(query));
+    .filter((item) => matchesQuery(item, query));
 
-  return limit ? results.slice(0, limit) : results;
+  results.sort(sortMarketplaceItems(sortBy, sortOrder, query));
+
+  if (perPage > 0) {
+    const start = (page - 1) * perPage;
+    results = results.slice(start, start + perPage);
+  } else if (limit) {
+    results = results.slice(0, limit);
+  }
+
+  return results;
+}
+
+export function sortMarketplaceItems(
+  sortBy: string,
+  sortOrder: 'asc' | 'desc',
+  query: string
+): (a: MarketplaceItem, b: MarketplaceItem) => number {
+  return (a: MarketplaceItem, b: MarketplaceItem) => {
+    let cmp = 0;
+
+    if (sortBy === 'stars') cmp = a.stars - b.stars;
+    else if (sortBy === 'installs') cmp = a.installs - b.installs;
+    else if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
+    else if (sortBy === 'updated') cmp = (a.createdAt || '').localeCompare(b.createdAt || '');
+    else cmp = relevanceScore(a, b, query);
+
+    return sortOrder === 'desc' ? -cmp : cmp;
+  };
+}
+
+function relevanceScore(a: MarketplaceItem, b: MarketplaceItem, query: string): number {
+  if (!query) return compareByPopularity(a, b);
+  const aName = normalize(a.name).includes(query) ? 1 : 0;
+  const bName = normalize(b.name).includes(query) ? 1 : 0;
+  if (aName !== bName) return bName - aName;
+  return compareByPopularity(a, b);
 }
 
 export function findMarketplaceItem(id: string, options: FindOptions = {}): MarketplaceItem | null {
@@ -104,7 +146,7 @@ export function getTrendingItems(options: SearchOptions = {}): MarketplaceItem[]
 
   return getMarketplaceItems()
     .filter((item) => matchesCategory(item, category))
-    .sort(compareByPopularity)
+    .sort((a, b) => b.installs - a.installs || b.stars - a.stars || a.name.localeCompare(b.name))
     .slice(0, limit);
 }
 
@@ -285,18 +327,6 @@ function matchesTutorialQuery(tutorial: Tutorial, query: string): boolean {
   return normalize(searchable).includes(query);
 }
 
-function sortByRelevance(query: string) {
-  return (a: MarketplaceItem, b: MarketplaceItem) => {
-    if (!query) return compareByPopularity(a, b);
-
-    const aName = normalize(a.name).includes(query) ? 1 : 0;
-    const bName = normalize(b.name).includes(query) ? 1 : 0;
-
-    if (aName !== bName) return bName - aName;
-    return compareByPopularity(a, b);
-  };
-}
-
 /**
  * Ranks items by real per-item popularity. `installs` (npm downloads / workflow
  * forks) is the primary signal because `stars` is repo-level — every package in
@@ -304,8 +334,8 @@ function sortByRelevance(query: string) {
  * otherwise tie the entire official set.
  */
 function compareByPopularity(a: MarketplaceItem, b: MarketplaceItem): number {
-  if (b.installs !== a.installs) return b.installs - a.installs;
-  if (b.stars !== a.stars) return b.stars - a.stars;
+  if (a.installs !== b.installs) return a.installs - b.installs;
+  if (a.stars !== b.stars) return a.stars - b.stars;
   return a.name.localeCompare(b.name);
 }
 

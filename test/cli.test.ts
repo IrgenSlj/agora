@@ -74,6 +74,46 @@ describe('CLI commands', () => {
     expect(payload.items[0].id).toContain('github');
   });
 
+  test('search --sort stars returns items sorted by stars descending', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['search', 'mcp', '--sort', 'stars', '--limit', '5'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).toContain('agora search');
+    // stars should appear, sorted list
+    expect(out).toContain('mcp-');
+  });
+
+  test('search --table renders box-drawn table', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['search', 'mcp-github', '--table', '--limit', '3'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).toContain('┌');
+    expect(out).toContain('┐');
+    expect(out).toContain('└');
+    expect(out).toContain('┘');
+    expect(out).toContain('│');
+    expect(out).toContain('id');
+    expect(out).toContain('name');
+    expect(out).toContain('stars');
+    expect(out).toContain('installs');
+  });
+
+  test('trending --table renders table format', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['trending', '--table', '--limit', '3'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).toContain('┌');
+    expect(out).toContain('┐');
+    expect(out).toContain('id');
+    expect(out).toContain('stars');
+  });
+
   test('browse returns an error for missing items', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['browse', 'missing-package'], io);

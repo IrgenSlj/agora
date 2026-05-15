@@ -73,6 +73,38 @@ describe('searchMarketplaceItems', () => {
       expect(results[i].installs).toBeGreaterThanOrEqual(results[i + 1].installs);
     }
   });
+
+  test('sort by stars ascending', () => {
+    const results = searchMarketplaceItems({ sortBy: 'stars', sortOrder: 'asc', limit: 50 });
+    for (let i = 0; i < results.length - 1; i++) {
+      expect(results[i].stars).toBeLessThanOrEqual(results[i + 1].stars);
+    }
+  });
+
+  test('sort by stars descending', () => {
+    const results = searchMarketplaceItems({ sortBy: 'stars', sortOrder: 'desc', limit: 50 });
+    for (let i = 0; i < results.length - 1; i++) {
+      expect(results[i].stars).toBeGreaterThanOrEqual(results[i + 1].stars);
+    }
+  });
+
+  test('sort by name ascending', () => {
+    const results = searchMarketplaceItems({ sortBy: 'name', sortOrder: 'asc', limit: 50 });
+    for (let i = 0; i < results.length - 1; i++) {
+      expect(results[i].name.localeCompare(results[i + 1].name)).toBeLessThanOrEqual(0);
+    }
+  });
+
+  test('pagination with perPage and page', () => {
+    const page1 = searchMarketplaceItems({ perPage: 3, page: 1, limit: 50 });
+    const page2 = searchMarketplaceItems({ perPage: 3, page: 2, limit: 50 });
+    expect(page1.length).toBe(3);
+    expect(page2.length).toBe(3);
+    // pages should not overlap
+    for (const item of page1) {
+      expect(page2.find((i) => i.id === item.id)).toBeUndefined();
+    }
+  });
 });
 
 // ── findMarketplaceItem ─────────────────────────────────────────────────────

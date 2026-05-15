@@ -102,6 +102,7 @@ const booleanFlags = new Set([
   'live',
   'mcp',
   'offline',
+  'table',
   'version',
   'verbose',
   'write'
@@ -293,12 +294,22 @@ export function parseArgs(argv: string[]): ParsedArgs {
 async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const query = parsed.args.join(' ');
   const category = stringFlag(parsed, 'category', 'c') || 'all';
-  const limit = numberFlag(parsed, 'limit', 'n') || 10;
+  const sortBy = stringFlag(parsed, 'sort', 's') || 'relevance';
+  const sortOrder = (stringFlag(parsed, 'order', 'o') || 'desc') as 'asc' | 'desc';
+  const table = Boolean(parsed.flags.table);
+  const page = numberFlag(parsed, 'page', 'p') || 1;
+  const perPage = numberFlag(parsed, 'perPage', 'pp') || 0;
+  const limit = perPage > 0 ? perPage : (numberFlag(parsed, 'limit', 'n') || 10);
+
   const result = await searchMarketplaceSource({
     ...sourceOptions(parsed, io),
     query,
     category,
-    limit
+    limit,
+    sortBy: sortBy as 'relevance' | 'stars' | 'installs' | 'name' | 'updated',
+    sortOrder,
+    page,
+    perPage
   });
   const results = result.data;
   warnFallback(result, io);
@@ -306,7 +317,7 @@ async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
   if (parsed.flags.json) {
     writeJson(
       io.stdout,
-      sourcePayload(result, { query, category, count: results.length, items: results })
+      sourcePayload(result, { query, category, sortBy, sortOrder, page, count: results.length, items: results })
     );
     return 0;
   }
@@ -321,7 +332,18 @@ async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
     header('agora search', [`"${query || 'all'}"`, `${results.length} results`, sourceLabel(result)])
   );
   writeLine(io.stdout, '');
-  writeLine(io.stdout, formatItemList(results));
+
+  if (table) {
+    writeLine(io.stdout, formatItemTable(results));
+  } else {
+    writeLine(io.stdout, formatItemList(results));
+  }
+
+  if (perPage > 0) {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, style.dim(`Page ${page} · ${perPage} per page. Use --page N to navigate.`));
+  }
+
   return 0;
 }
 
@@ -350,6 +372,7 @@ async function commandBrowse(parsed: ParsedArgs, io: CliIo): Promise<number> {
 async function commandTrending(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const category = stringFlag(parsed, 'category', 'c') || parsed.args[0] || 'all';
   const limit = numberFlag(parsed, 'limit', 'n') || 5;
+  const table = Boolean(parsed.flags.table);
   const result = await trendingMarketplaceSource({ ...sourceOptions(parsed, io), category, limit });
   const items = result.data;
   warnFallback(result, io);
@@ -364,7 +387,13 @@ async function commandTrending(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
   writeLine(io.stdout, header('agora trending', [category, sourceLabel(result)]));
   writeLine(io.stdout, '');
-  writeLine(io.stdout, formatItemList(items));
+
+  if (table) {
+    writeLine(io.stdout, formatItemTable(items));
+  } else {
+    writeLine(io.stdout, formatItemList(items));
+  }
+
   writeLine(io.stdout, '');
   writeLine(io.stdout, `${style.dim('tags')}  ${getTrendingTags().join(', ')}`);
   return 0;
@@ -1416,6 +1445,26 @@ function formatItemList(items: MarketplaceItem[]): string {
       ].join('\n');
     })
     .join('\n\n');
+}
+
+function formatItemTable(items: MarketplaceItem[]): string {
+  const idW = Math.max(4, ...items.map((i) => i.id.length));
+  const nameW = Math.max(4, ...items.map((i) => i.name.length));
+  const starW = 6;
+  const installW = 9;
+  const totalW = idW + 3 + nameW + 3 + starW + 3 + installW + 4;
+
+  const top = '┌' + '─'.repeat(totalW - 2) + '┐';
+  const bot = '└' + '─'.repeat(totalW - 2) + '┘';
+  const sep = '│';
+
+  const hdr = sep + ' ' + 'id'.padEnd(idW) + ' │ ' + 'name'.padEnd(nameW) + ' │ ' + 'stars'.padStart(starW) + ' │ ' + 'installs'.padStart(installW) + ' │';
+
+  const rows = items.map((item) =>
+    sep + ' ' + style.accent(item.id.padEnd(idW)) + ' │ ' + style.dim(item.name.padEnd(nameW)) + ' │ ' + style.dim(formatNumber(item.stars).padStart(starW)) + ' │ ' + style.dim(formatNumber(item.installs).padStart(installW)) + ' │'
+  );
+
+  return [top, hdr, ...rows, bot].join('\n');
 }
 
 function formatItemDetail(item: MarketplaceItem): string {
