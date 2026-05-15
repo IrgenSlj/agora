@@ -435,7 +435,15 @@ async function commandTutorials(parsed: ParsedArgs, io: CliIo): Promise<number> 
 
 async function commandTutorial(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
-  if (!id) return usageError(io, 'tutorial requires a tutorial id');
+  if (!id) {
+    const { sampleTutorials } = await import('../data.js');
+    writeLine(io.stdout, header('agora tutorial', [`${sampleTutorials.length} available tutorials`]));
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, sampleTutorials.map((t) => `  ${style.accent(t.id.padEnd(22))} ${style.dim(t.title)} ${style.dim('[' + t.level + ']')}`).join('\n'));
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, style.dim('Run `agora tutorial <id>` to start a tutorial.'));
+    return 0;
+  }
 
   const step = tutorialStepNumber(parsed);
   if (!step.ok) return usageError(io, step.error);
@@ -894,7 +902,14 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
 async function commandUse(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
-  if (!id) return usageError(io, 'use requires a workflow id');
+  if (!id) {
+    writeLine(io.stdout, header('agora use', [`${sampleWorkflows.length} available workflows`]));
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, sampleWorkflows.map((wf) => `  ${style.accent(wf.id.padEnd(22))} ${style.dim(wf.name)}`).join('\n'));
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, style.dim('Run `agora use <id>` to apply a workflow as a skill.'));
+    return 0;
+  }
 
   const workflow = sampleWorkflows.find(
     (w) => w.id === id || w.name.toLowerCase() === id.toLowerCase()

@@ -19,6 +19,8 @@ its own.
 
 - **Flat-minimal CLI restyle.** A cohesive look across every command — accent
   identifiers, dim metadata, plain body text. _Done (`src/ui.ts`)._
+- **`agora use` / `agora tutorial` without id** now lists available items
+  instead of erroring. _Done (`app.ts` `commandUse` / `commandTutorial`)._
 - **Gradient wordmark banner** shown on `agora` with no arguments — warm cream →
   terracotta → deep brick gradient across carved-relief letterforms. _Done.
   NO_COLOR fallback: compact text header instead of flat block characters._
@@ -29,6 +31,9 @@ its own.
 - **Demo recording.** Asciinema/VHS recording of the standalone CLI.
 - **"Last refreshed" stamp** on bundled data so users know how fresh it is.
   _Done (`data.ts` `dataRefreshedAt`)._
+- **npm package validation.** All 60+ catalog npmPackage entries verified live
+  against the npm registry; entries without published packages retain browsable
+  status but are marked uninstallable. _Done (test suite, network-gated)._
 
 ## Phase 2 — Backend & accounts
 
@@ -85,4 +90,4 @@ surface — mechanism design does the policing, not a gatekeeper:
 - **Report a setup that `agora init` misses.** Open an issue with your project's manifest files.
 - **Polish the standalone CLI experience.** Phase 1 is wide open.
 
-_Last updated: 2026-05-15 · Docker Compose, catalog growth, NO_COLOR fix_
+_Last updated: 2026-05-15 · npm validation, `use`/`tutorial` listing_

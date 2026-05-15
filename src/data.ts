@@ -165,7 +165,6 @@ export const samplePackages: Package[] = [
     stars: 5678,
     installs: 289000,
     repository: 'https://github.com/anthropics/anthropic-mcp-server',
-    npmPackage: '@anthropic/mcp-server',
     createdAt: '2025-04-01'
   },
   {
@@ -179,7 +178,7 @@ export const samplePackages: Package[] = [
     stars: 1234,
     installs: 34560,
     repository: 'https://github.com/replicate/replicate-mcp-server',
-    npmPackage: 'replicate-mcp-server',
+    npmPackage: 'replicate-mcp',
     createdAt: '2025-02-10'
   },
   {
@@ -193,7 +192,6 @@ export const samplePackages: Package[] = [
     stars: 2340,
     installs: 56780,
     repository: 'https://github.com/huggingface/hf-mcp-server',
-    npmPackage: 'hf-mcp-server',
     createdAt: '2025-03-05'
   },
   {
@@ -396,7 +394,6 @@ export const samplePackages: Package[] = [
     stars: 6543,
     installs: 189000,
     repository: 'https://github.com/linear/linear-mcp-server',
-    npmPackage: '@linear/mcp-server',
     createdAt: '2025-02-25'
   },
   {
@@ -424,7 +421,6 @@ export const samplePackages: Package[] = [
     stars: 450,
     installs: 12300,
     repository: 'https://github.com/asana-community/asana-mcp-server',
-    npmPackage: 'asana-mcp-server',
     createdAt: '2025-04-10'
   },
 
@@ -470,7 +466,6 @@ export const samplePackages: Package[] = [
     stars: 560,
     installs: 18900,
     repository: 'https://github.com/SonarSource/sonarqube-mcp-server',
-    npmPackage: '@sonarsource/mcp-server-sonarqube',
     createdAt: '2025-03-20'
   },
   {
@@ -484,7 +479,6 @@ export const samplePackages: Package[] = [
     stars: 780,
     installs: 34500,
     repository: 'https://github.com/snyk-labs/snyk-mcp-server',
-    npmPackage: 'snyk-mcp-server',
     createdAt: '2025-04-15'
   },
 
@@ -500,7 +494,6 @@ export const samplePackages: Package[] = [
     stars: 4500,
     installs: 156000,
     repository: 'https://github.com/awslabs/aws-mcp-server',
-    npmPackage: '@aws/mcp-server-aws',
     createdAt: '2025-02-01'
   },
   {
@@ -514,7 +507,6 @@ export const samplePackages: Package[] = [
     stars: 3400,
     installs: 89000,
     repository: 'https://github.com/vercel/vercel-mcp-server',
-    npmPackage: '@vercel/mcp-server',
     createdAt: '2025-03-01'
   },
   {
@@ -528,7 +520,7 @@ export const samplePackages: Package[] = [
     stars: 890,
     installs: 23400,
     repository: 'https://github.com/netlify/netlify-mcp-server',
-    npmPackage: '@netlify/mcp-server',
+    npmPackage: '@netlify/mcp',
     createdAt: '2025-04-01'
   },
 
@@ -558,7 +550,7 @@ export const samplePackages: Package[] = [
     stars: 450,
     installs: 23400,
     repository: 'https://github.com/sendgrid-community/sendgrid-mcp-server',
-    npmPackage: '@sendgrid/mcp-server',
+    npmPackage: 'sendgrid-mcp',
     createdAt: '2025-04-15'
   },
 
@@ -663,7 +655,7 @@ export const samplePackages: Package[] = [
     stars: 3200,
     installs: 128000,
     repository: 'https://github.com/sqlite-community/sqlite-mcp',
-    npmPackage: '@sqlite/mcp-server',
+    npmPackage: '@easy-mcps/sqlite-mcp-server',
     createdAt: '2025-02-15'
   },
   {
@@ -677,7 +669,7 @@ export const samplePackages: Package[] = [
     stars: 890,
     installs: 23450,
     repository: 'https://github.com/pinecone-io/pinecone-mcp-server',
-    npmPackage: 'pinecone-mcp-server',
+    npmPackage: 'pinecone-mcp',
     createdAt: '2025-03-10'
   },
   {
@@ -705,7 +697,7 @@ export const samplePackages: Package[] = [
     stars: 1560,
     installs: 45600,
     repository: 'https://github.com/chroma-core/chromadb-mcp-server',
-    npmPackage: 'chromadb-mcp-server',
+    npmPackage: 'chromadb-mcp',
     createdAt: '2025-04-01'
   },
   {
@@ -719,7 +711,6 @@ export const samplePackages: Package[] = [
     stars: 2100,
     installs: 56700,
     repository: 'https://github.com/neo4j/neo4j-mcp-server',
-    npmPackage: 'neo4j-mcp-server',
     createdAt: '2025-02-20'
   },
 
@@ -806,7 +797,7 @@ export const samplePackages: Package[] = [
     stars: 1200,
     installs: 45600,
     repository: 'https://github.com/DataDog/datadog-mcp-server',
-    npmPackage: '@datadog/mcp-server',
+    npmPackage: 'datadog-mcp',
     createdAt: '2025-03-10'
   },
   {
@@ -820,7 +811,6 @@ export const samplePackages: Package[] = [
     stars: 2340,
     installs: 67800,
     repository: 'https://github.com/grafana-community/grafana-mcp-server',
-    npmPackage: 'grafana-mcp-server',
     createdAt: '2025-02-20'
   },
   {
@@ -834,7 +824,6 @@ export const samplePackages: Package[] = [
     stars: 560,
     installs: 18900,
     repository: 'https://github.com/PagerDuty/pagerduty-mcp-server',
-    npmPackage: 'pagerduty-mcp-server',
     createdAt: '2025-04-01'
   },
   {
@@ -848,7 +837,6 @@ export const samplePackages: Package[] = [
     stars: 340,
     installs: 12300,
     repository: 'https://github.com/newrelic/newrelic-mcp-server',
-    npmPackage: '@newrelic/mcp-server',
     createdAt: '2025-04-10'
   },
 
@@ -893,7 +881,6 @@ export const samplePackages: Package[] = [
     stars: 2840,
     installs: 12400,
     repository: 'https://github.com/modelcontextprotocol/servers',
-    npmPackage: '@anthropic/mcp-server-sequelize',
     createdAt: '2025-03-10'
   },
 

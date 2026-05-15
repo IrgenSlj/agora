@@ -204,13 +204,15 @@ describe('agora use', () => {
     }
   });
 
-  test('use without an id exits 1', async () => {
+  test('use without an id lists available workflows', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-use-noid-'));
-    const { io, stderr } = createIo(dir);
+    const { io, stdout } = createIo(dir);
     try {
       const code = await runCli(['use'], io);
-      expect(code).toBe(1);
-      expect(stderr.join('')).toContain('use requires a workflow id');
+      expect(code).toBe(0);
+      expect(stdout.join('')).toContain('agora use');
+      expect(stdout.join('')).toContain('available workflows');
+      expect(stdout.join('')).toContain('wf-tdd-cycle');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

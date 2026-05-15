@@ -163,10 +163,20 @@ describe('Packages', () => {
     });
   });
 
-  test('packages have npm package for MCP servers', () => {
-    const mcpPackages = samplePackages.filter((p) => p.category === 'mcp');
-    mcpPackages.forEach((p) => {
+  test('MCP servers with npmPackage are valid strings', () => {
+    const withNpm = samplePackages.filter((p) => p.category === 'mcp' && p.npmPackage);
+    expect(withNpm.length).toBeGreaterThan(0);
+    withNpm.forEach((p) => {
       expect(p.npmPackage).toBeDefined();
+      expect((p.npmPackage as string).length).toBeGreaterThan(0);
+    });
+  });
+
+  test('some MCP servers may be browsable-only (no npmPackage)', () => {
+    const noNpm = samplePackages.filter((p) => p.category === 'mcp' && !p.npmPackage);
+    // These are valid community entries that haven't been published to npm
+    noNpm.forEach((p) => {
+      expect(p.repository?.length).toBeGreaterThan(0);
     });
   });
 

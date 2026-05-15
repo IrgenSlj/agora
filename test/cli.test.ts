@@ -938,6 +938,30 @@ describe('CLI commands', () => {
     expect(stderr.join('')).toContain('Profile not found: missing');
   });
 
+  test('agora use without id lists available workflows', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['use'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).toContain('agora use');
+    expect(out).toContain('wf-tdd-cycle');
+    expect(out).toContain('available workflows');
+    expect(out).toContain('agora use <id>');
+  });
+
+  test('agora tutorial without id lists available tutorials', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['tutorial'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).toContain('agora tutorial');
+    expect(out).toContain('tut-mcp-basics');
+    expect(out).toContain('available tutorials');
+    expect(out).toContain('agora tutorial <id>');
+  });
+
   test('publish requires an auth token', async () => {
     const { io, stderr } = createIo();
 
@@ -974,6 +998,41 @@ describe('CLI commands', () => {
 
     expect(code).toBe(1);
     expect(stderr.join('')).toContain('reviews unavailable');
+  });
+
+  test('login is an alias for auth login', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const dataDir = join(temp, 'state');
+    const { io, stdout } = createIo(temp);
+
+    try {
+      const code = await runCli(['login', '--token', 'test-token', '--api-url', 'https://api.test', '--data-dir', dataDir], io);
+      expect(code).toBe(0);
+      expect(stdout.join('')).toContain('Stored Agora API token');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('whoami returns auth status as JSON', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const dataDir = join(temp, 'state');
+    const setup = createIo(temp);
+
+    try {
+      await runCli(['login', '--token', 'whoami-token', '--api-url', 'https://api.test', '--data-dir', dataDir], setup.io);
+
+      const { io, stdout } = createIo(temp);
+      const code = await runCli(['whoami', '--data-dir', dataDir], io);
+      const payload = JSON.parse(stdout.join(''));
+
+      expect(code).toBe(0);
+      expect(payload.authenticated).toBe(true);
+      expect(payload.apiUrl).toBe('https://api.test');
+      expect(payload.tokenPreview).toBe('whoa...oken');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
   });
 });
 

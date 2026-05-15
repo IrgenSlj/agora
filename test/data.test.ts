@@ -39,12 +39,18 @@ describe('samplePackages — data integrity', () => {
     }
   });
 
-  test('every MCP package has an npmPackage field', () => {
-    const mcpPkgs = samplePackages.filter((p) => p.category === 'mcp');
-    expect(mcpPkgs.length).toBeGreaterThan(0);
-    for (const pkg of mcpPkgs) {
-      expect(typeof pkg.npmPackage).toBe('string');
-      expect((pkg.npmPackage as string).length).toBeGreaterThan(0);
+  test('MCP packages with npmPackage have non-empty values', () => {
+    const npmMcp = samplePackages.filter((p) => p.category === 'mcp' && p.npmPackage);
+    expect(npmMcp.length).toBeGreaterThan(0);
+    for (const pkg of npmMcp) {
+      expect(pkg.npmPackage!.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('non-MCP packages do not have npmPackage', () => {
+    const nonMcp = samplePackages.filter((p) => p.category !== 'mcp');
+    for (const pkg of nonMcp) {
+      expect(pkg.npmPackage).toBeUndefined();
     }
   });
 
@@ -56,14 +62,13 @@ describe('samplePackages — data integrity', () => {
     }
   });
 
-  test('non-MCP packages do not need an npmPackage', () => {
-    const nonMcp = samplePackages.filter((p) => p.category !== 'mcp');
-    // Prompt packages in the dataset have no npmPackage — that's fine.
-    // This test just asserts that IF they do have one, it is valid.
-    for (const pkg of nonMcp) {
-      if (pkg.npmPackage) {
-        expect(pkg.npmPackage).toMatch(NPM_PKG_RE);
-      }
+  test('MCP packages missing npmPackage are still valid (browsable-only)', () => {
+    const noNpm = samplePackages.filter((p) => p.category === 'mcp' && !p.npmPackage);
+    // These entries can be browsed but not installed — that's intentional
+    // for community servers not published on npm.
+    for (const pkg of noNpm) {
+      expect(pkg.id.length).toBeGreaterThan(0);
+      expect(pkg.repository?.length || pkg.name.length).toBeGreaterThan(0);
     }
   });
 
