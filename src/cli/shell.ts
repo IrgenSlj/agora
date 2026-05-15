@@ -352,6 +352,25 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   // In-memory history for prompter (not persisted — transcript covers that)
   const history: string[] = [];
 
+  const tips = [
+    'type /help to see all slash commands',
+    'type /menu to browse the command catalog',
+    'type ?<msg> to force AI chat',
+    'type !<cmd> to force bash',
+    'type /clear to reset and see the home banner',
+    'type /transcript to see your last 20 commands',
+    'type /last to re-run the last bash command',
+    'type ?how do I use MCP? to ask about the marketplace',
+    'type /verbose for detailed AI responses',
+    'type /quiet for minimal AI responses',
+    'press Tab to auto-complete commands and paths',
+    'press Ctrl-R to reverse-search your history',
+    'press Ctrl-L to clear the screen',
+    'press Esc to dismiss ghost suggestions',
+    'run `agora search --table` for a table view',
+    'run `agora search --sort stars` to sort by stars',
+    'run `agora search --sort name --order asc` for alphabetical'
+  ];
   // Amber chevron when opencode unavailable, accent otherwise
   const accentChevron = opencodeAvailable ? style.accent('›') : '\x1b[38;5;214m›\x1b[0m';
 
@@ -367,8 +386,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   }
 
   function buildContextLine(): string {
-    const turns = meta?.turnCount ?? 0;
-    return style.dim(shortCwd(currentCwd) + (turns > 0 ? ` · ${turns} turn${turns === 1 ? '' : 's'}` : ''));
+    const model = FREE_MODELS[0];
+    const tip = tips[(meta?.turnCount ?? 0) % tips.length];
+    return style.dim(`model: ${model} · ${tip}`);
   }
 
   const sigintHandler = () => {
