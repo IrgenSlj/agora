@@ -282,6 +282,63 @@ export function normalizeCategory(category: string): MarketplaceCategory {
   return 'all';
 }
 
+export function similarItems(
+  id: string,
+  options?: { limit?: number; type?: MarketplaceItemType }
+): MarketplaceItem[] {
+  const target = findMarketplaceItem(id, options ? { type: options.type } : undefined);
+  if (!target) return [];
+
+  const allItems = getMarketplaceItems().filter((item) => {
+    if (options?.type === 'package' && item.kind !== 'package') return false;
+    if (options?.type === 'workflow' && item.kind !== 'workflow') return false;
+    return item.id !== target.id;
+  });
+
+  if (allItems.length === 0) return [];
+
+  const N = allItems.length + 1;
+  const tagDf = new Map<string, number>();
+  const allTagged = [...allItems, target];
+  for (const item of allTagged) {
+    const seen = new Set<string>();
+    for (const tag of item.tags ?? []) {
+      if (!seen.has(tag)) {
+        tagDf.set(tag, (tagDf.get(tag) ?? 0) + 1);
+        seen.add(tag);
+      }
+    }
+  }
+
+  const tagWeight = (tag: string): number => {
+    const df = tagDf.get(tag) ?? 1;
+    return Math.log((N + 1) / (1 + df));
+  };
+
+  const targetTags = new Set(target.tags ?? []);
+  const scored = allItems.map((item) => {
+    const itemTags = new Set(item.tags ?? []);
+    let intersection = 0;
+    let union = 0;
+    const allUnique = new Set([...targetTags, ...itemTags]);
+    for (const tag of allUnique) {
+      const w = tagWeight(tag);
+      if (targetTags.has(tag) && itemTags.has(tag)) intersection += w;
+      union += w;
+    }
+    const sim = union > 0 ? intersection / union : 0;
+    return { item, sim };
+  });
+
+  scored.sort((a, b) => {
+    if (b.sim !== a.sim) return b.sim - a.sim;
+    return (b.item.installs ?? 0) - (a.item.installs ?? 0);
+  });
+
+  const limit = Math.max(1, options?.limit ?? 5);
+  return scored.slice(0, limit).map((s) => s.item);
+}
+
 export function normalizeTutorialLevel(level: string): Tutorial['level'] | 'all' {
   const normalized = normalize(level);
   if (normalized === 'beginner' || normalized === 'intermediate' || normalized === 'advanced') {

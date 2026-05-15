@@ -117,6 +117,43 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora workflows', 'agora workflows tdd', 'agora workflows security --json']
   },
   {
+    name: 'similar',
+    group: 'Marketplace',
+    summary: 'Find similar marketplace items by tag overlap',
+    usage: 'agora similar <id> [--limit 5] [--type package|workflow] [--json]',
+    details:
+      'Computes tag-IDF-weighted Jaccard similarity between marketplace items. ' +
+      'Ranks by similarity score, tiebroken by install count. ' +
+      'Use --type to restrict to packages or workflows.',
+    flags: [
+      { flag: '--type, -t', description: 'Item kind: package or workflow (default all)' },
+      { flag: '--limit, -n', description: 'Maximum number of results (default 5)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora similar mcp-postgres',
+      'agora similar mcp-github --limit 3',
+      'agora similar wf-tdd-cycle --type workflow'
+    ]
+  },
+  {
+    name: 'compare',
+    group: 'Marketplace',
+    summary: 'Compare two or more marketplace items side by side',
+    usage: 'agora compare <id1> <id2> [<id3>...] [--type package|workflow] [--json]',
+    details:
+      'Renders a box-drawn table comparing items across attributes: name, author, installs, ' +
+      'stars, category, tags, npmPackage. Shared tags are highlighted in the accent colour.',
+    flags: [
+      { flag: '--type, -t', description: 'Item kind: package or workflow (default all)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora compare mcp-postgres mcp-supabase',
+      'agora compare mcp-github mcp-gitlab mcp-git'
+    ]
+  },
+  {
     name: 'chat',
     group: 'Marketplace',
     summary: 'Chat with an AI assistant about the Agora marketplace',
@@ -423,6 +460,130 @@ export const COMMANDS: CommandMeta[] = [
     examples: [
       'agora publish package --name @you/server --description "MCP server" --npm @you/server',
       'agora publish workflow --name "My Workflow" --description "Review workflow" --prompt-file ./prompt.md'
+    ]
+  },
+  {
+    name: 'news',
+    group: 'Marketplace',
+    summary: 'Browse ranked tech news from HN, Reddit, GitHub, arXiv',
+    usage: 'agora news [query] [--source hn|reddit|gh|arxiv] [--limit 20] [--refresh] [--json]',
+    details:
+      'Fetches and ranks news stories from multiple sources using a recency-engagement-topic scoring algorithm. ' +
+      'Cached locally in ~/.config/agora/news-cache.jsonl. ' +
+      'Use --refresh to force re-fetch; --source to filter by source; a positional query to search titles and tags.',
+    flags: [
+      { flag: '--source, -s', description: 'Source filter: hn, reddit, gh, arxiv' },
+      { flag: '--limit, -n', description: 'Maximum number of results (default 20)' },
+      { flag: '--refresh', description: 'Force re-fetch all enabled sources' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora news',
+      'agora news mcp',
+      'agora news --source hn --limit 5',
+      'agora news --refresh'
+    ]
+  },
+  {
+    name: 'community',
+    group: 'Community',
+    summary: 'Browse community boards and threads',
+    usage: 'agora community [board] [--sort top|new|active] [--json]',
+    details:
+      'Without a board, lists all available boards with thread counts. ' +
+      'With a board (e.g. mcp, agents), lists threads in that board sorted by activity. ' +
+      'Use `agora thread <id>` to read a specific thread.',
+    flags: [
+      { flag: '--sort', description: 'Sort order: top, new, active (default active)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora community',
+      'agora community mcp',
+      'agora community agents --sort top'
+    ]
+  },
+  {
+    name: 'thread',
+    group: 'Community',
+    summary: 'Read a community thread with replies',
+    usage: 'agora thread <id> [--json]',
+    details: 'Displays a full thread with its reply tree.',
+    flags: [{ flag: '--json', description: 'Output as JSON' }],
+    examples: ['agora thread t-mcp-1']
+  },
+  {
+    name: 'post',
+    group: 'Community',
+    summary: 'Create a new community thread',
+    usage: 'agora post --board <board> --title <title> (--content <text>|--content-file <path>) [--json]',
+    details:
+      'Posts a new thread to a community board. Requires --api-url and a token ' +
+      '(via --token, AGORA_TOKEN, or `agora auth login`). ' +
+      'Boards: mcp, agents, tools, workflows, show, ask, meta.',
+    flags: [
+      { flag: '--board, -b', description: 'Target board (required)' },
+      { flag: '--title', description: 'Thread title (required)' },
+      { flag: '--content', description: 'Thread body as inline text' },
+      { flag: '--content-file', description: 'Read body from a file' },
+      { flag: '--json', description: 'Output created thread as JSON' }
+    ],
+    examples: [
+      'agora post --board mcp --title "My question" --content "How do I?"',
+      'agora post --board show --title "My project" --content-file ./readme.md'
+    ]
+  },
+  {
+    name: 'reply',
+    group: 'Community',
+    summary: 'Reply to a thread or another reply',
+    usage: 'agora reply <id> (--content <text>|--content-file <path>) [--parent-id <id>] [--json]',
+    details:
+      'Posts a reply to an existing thread or reply. ' +
+      'Requires --api-url and a token.',
+    flags: [
+      { flag: '--content', description: 'Reply body as inline text' },
+      { flag: '--content-file', description: 'Read body from a file' },
+      { flag: '--parent-id', description: 'Optional parent reply id for nested replies' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora reply t-mcp-1 --content "Great point!"',
+      'agora reply r-mcp-1-1 --content "Thanks"'
+    ]
+  },
+  {
+    name: 'vote',
+    group: 'Community',
+    summary: 'Upvote or downvote a thread or reply',
+    usage: 'agora vote <id> --up|--down [--type discussion|reply] [--json]',
+    details:
+      'Cast a vote on a community item. Requires --api-url and a token.',
+    flags: [
+      { flag: '--up', description: 'Upvote' },
+      { flag: '--down', description: 'Downvote' },
+      { flag: '--type', description: 'Target type: discussion or reply (default discussion)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora vote t-mcp-1 --up', 'agora vote r-mcp-1-1 --down']
+  },
+  {
+    name: 'flag',
+    group: 'Community',
+    summary: 'Flag a thread, reply, or marketplace item',
+    usage: 'agora flag <id> [--reason spam|harassment|undisclosed-llm|malicious|other] [--type discussion|reply|package|workflow] [--notes <text>] [--json]',
+    details:
+      'Flags content for moderator review. Community items require --api-url and a token. ' +
+      'Marketplace items (packages/workflows) can be flagged without API auth.',
+    flags: [
+      { flag: '--reason', description: 'Reason: spam, harassment, undisclosed-llm, malicious, other' },
+      { flag: '--type', description: 'Target type: discussion, reply, package, workflow' },
+      { flag: '--notes', description: 'Optional notes for moderators' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora flag t-mcp-1 --reason spam',
+      'agora flag mcp-github --reason malicious'
     ]
   },
   {

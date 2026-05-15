@@ -18,8 +18,18 @@ import {
   getInstallKind,
   getMarketplaceItems,
   getTrendingTags,
+  similarItems,
   type MarketplaceItem
 } from '../marketplace.js';
+import { communityBoardsSource, communityThreadsSource, communityThreadSource, createThreadSource, createReplySource, voteSource, flagSource } from '../community/client.js';
+import type { BoardId, Flag } from '../community/types.js';
+import { normalizeNewsSource, DEFAULT_NEWS_CONFIG, hostFromUrl } from '../news/types.js';
+import { rankItems } from '../news/score.js';
+import { readCache, writeCache, isStale } from '../news/cache.js';
+import { hnSource } from '../news/sources/hn.js';
+import { redditSource } from '../news/sources/reddit.js';
+import { githubTrendingSource } from '../news/sources/github-trending.js';
+import { arxivSource } from '../news/sources/arxiv.js';
 import { scanProject, generateInitPlan, applyInitPlan, runCommands } from '../init.js';
 import { installAgoraCommand } from '../commands.js';
 import { sampleWorkflows, dataRefreshedAt } from '../data.js';
@@ -208,6 +218,24 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return await commandInit(parsed, io);
       case 'use':
         return await commandUse(parsed, io);
+      case 'similar':
+        return await commandSimilar(parsed, io);
+      case 'compare':
+        return await commandCompare(parsed, io);
+      case 'news':
+        return await commandNews(parsed, io);
+      case 'community':
+        return await commandCommunity(parsed, io);
+      case 'thread':
+        return await commandThread(parsed, io);
+      case 'post':
+        return await commandPost(parsed, io);
+      case 'reply':
+        return await commandReply(parsed, io);
+      case 'vote':
+        return await commandVote(parsed, io);
+      case 'flag':
+        return await commandFlag(parsed, io);
       case 'menu':
         return await runInteractiveMenu(io, style);
       case 'tui':
@@ -369,6 +397,18 @@ async function commandBrowse(parsed: ParsedArgs, io: CliIo): Promise<number> {
   }
 
   writeLine(io.stdout, formatItemDetail(item));
+
+  const related = similarItems(id, { limit: 3, type: item.kind === 'workflow' ? 'workflow' : undefined });
+  if (related.length > 0) {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, style.dim('Related:'));
+    for (const rel of related) {
+      const tagOverlap = (item.tags ?? []).filter((t) => (rel.tags ?? []).includes(t));
+      const reason = tagOverlap.length > 0 ? ` (shares tags: ${tagOverlap.join(', ')})` : '';
+      writeLine(io.stdout, `  ${style.accent(rel.id.padEnd(28))} ${style.dim(formatNumber(rel.installs ?? 0) + ' installs')}${style.dim(reason)}`);
+    }
+  }
+
   return 0;
 }
 
@@ -425,6 +465,390 @@ async function commandWorkflows(parsed: ParsedArgs, io: CliIo): Promise<number> 
   );
   writeLine(io.stdout, '');
   writeLine(io.stdout, formatItemList(workflows));
+  return 0;
+}
+
+async function commandSimilar(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'similar requires an item id');
+
+  const type = stringFlag(parsed, 'type', 't') as 'package' | 'workflow' | undefined;
+  const limit = numberFlag(parsed, 'limit', 'n') || 5;
+
+  const results = similarItems(id, { limit, type });
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { id, type: type || 'all', count: results.length, items: results });
+    return 0;
+  }
+
+  if (results.length === 0) {
+    writeLine(io.stdout, `No similar items found for "${id}".`);
+    return 0;
+  }
+
+  writeLine(io.stdout, header('agora similar', [`to ${id}`, `${results.length} results`]));
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, formatItemList(results));
+  return 0;
+}
+
+async function commandCompare(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const ids = parsed.args;
+  if (ids.length < 2) return usageError(io, 'compare requires at least two item ids');
+
+  const typeMap = (type?: string): 'package' | 'workflow' | undefined =>
+    type === 'package' || type === 'workflow' ? type : undefined;
+  const type = typeMap(stringFlag(parsed, 'type', 't'));
+
+  const items: MarketplaceItem[] = [];
+  for (const id of ids) {
+    const item = await findMarketplaceSource({ ...sourceOptions(parsed, io), id, type });
+    if (!item.data) {
+      writeLine(io.stderr, `Item not found: ${id}`);
+      return 1;
+    }
+    items.push(item.data);
+  }
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { ids, count: items.length, items });
+    return 0;
+  }
+
+  const sharedTags = items.length > 1
+    ? items.map((i) => new Set(i.tags ?? [])).reduce((a, b) => new Set([...a].filter((t) => b.has(t))))
+    : new Set<string>();
+
+  const attrs: { label: string; get: (item: MarketplaceItem) => string }[] = [
+    { label: 'name', get: (i) => i.name },
+    { label: 'author', get: (i) => i.author },
+    { label: 'installs', get: (i) => formatNumber(i.installs ?? 0) },
+    { label: 'stars', get: (i) => formatNumber(i.stars ?? 0) },
+    { label: 'category', get: (i) => i.category },
+    { label: 'tags', get: (i) => (i.tags ?? []).join(', ') },
+  ];
+
+  if (items.some((i) => i.kind === 'package' && (i as any).npmPackage)) {
+    attrs.push({
+      label: 'npmPackage',
+      get: (i) => (i.kind === 'package' && (i as any).npmPackage) || '-',
+    });
+  }
+  if (items.some((i) => (i as any).createdAt)) {
+    attrs.push({
+      label: 'created',
+      get: (i) => ((i as any).createdAt || '').slice(0, 10),
+    });
+  }
+
+  const colW = Math.max(
+    12,
+    ...items.map((i) => Math.max(i.id.length, i.name.length, 10))
+  );
+  const labelW = Math.max(...attrs.map((a) => a.label.length));
+  const totalW = labelW + 3 + items.length * (colW + 3) + 1;
+
+  const top = style.accent('┌') + '─'.repeat(labelW + 2) + style.accent('┬') + '─'.repeat(totalW - labelW - 6) + style.accent('┐');
+  const bot = style.accent('└') + '─'.repeat(labelW + 2) + style.accent('┴') + '─'.repeat(totalW - labelW - 6) + style.accent('┘');
+
+  const hdrCells = items.map((i, idx) => {
+    const name = idx === 0 ? style.bold(style.accent(i.id)) : style.accent(i.id);
+    return name.padEnd(colW);
+  });
+  const hdr = style.accent('│') + ' '.repeat(labelW + 2) + style.accent('│') + ' ' + hdrCells.join(style.accent(' │ ') + ' ') + style.accent(' │');
+
+  const rows = attrs.map((attr) => {
+    const cells = items.map((item) => {
+      const val = attr.get(item);
+      if (attr.label === 'tags') {
+        return val.split(', ').map((t) => sharedTags.has(t) ? style.accent(t) : style.dim(t)).join(', ').padEnd(colW);
+      }
+      return (attr.label === 'name' || attr.label === 'npmPackage' ? val : style.dim(val)).padEnd(colW);
+    });
+    return style.accent('│') + ' ' + style.dim(attr.label.padEnd(labelW)) + ' ' + style.accent('│') + ' ' + cells.join(style.accent(' │ ') + ' ') + style.accent(' │');
+  });
+
+  const sepLine = style.accent('├') + '─'.repeat(labelW + 2) + style.accent('┼') + '─'.repeat(totalW - labelW - 6) + style.accent('┤');
+
+  writeLine(io.stdout, header('agora compare', items.map((i) => i.id)));
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, [top, hdr, sepLine, ...rows, bot].join('\n'));
+  if (sharedTags.size > 0) {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, style.dim('Shared tags highlighted in accent.'));
+  }
+  return 0;
+}
+
+async function commandNews(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const query = parsed.args.join(' ');
+  const sourceOpt = stringFlag(parsed, 'source', 's');
+  const source = sourceOpt ? normalizeNewsSource(sourceOpt) : undefined;
+  const limit = numberFlag(parsed, 'limit', 'n') || 20;
+  const refresh = Boolean(parsed.flags.refresh);
+
+  const dataDir = detectDataDir(parsed, io);
+  let cached = readCache(dataDir);
+  const now = new Date();
+  const config = DEFAULT_NEWS_CONFIG;
+
+  const adapters: [string, { fetch(opts: { signal?: AbortSignal }): Promise<any> }][] = [
+    ['hn', hnSource],
+    ['reddit', redditSource],
+    ['github-trending', githubTrendingSource],
+    ['arxiv', arxivSource],
+  ];
+
+  const fetchWithTimeout = (fn: () => Promise<any>, ms = 10000): Promise<any> =>
+    Promise.race([fn(), new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
+
+  const refreshSource = async (src: string, adapter: { fetch(opts: { signal?: AbortSignal }): Promise<any> }): Promise<void> => {
+    try {
+      const fresh = await fetchWithTimeout(() => adapter.fetch({}));
+      cached = cached.filter((i: any) => i.source !== src);
+      cached.push(...fresh);
+    } catch {
+      // keep stale
+    }
+  };
+
+  if (refresh) {
+    for (const [src, adapter] of adapters) {
+      await refreshSource(src, adapter);
+    }
+  } else {
+    for (const [src, adapter] of adapters) {
+      const cfg = config.sources[src as keyof typeof config.sources];
+      if (cfg?.enabled && isStale(cached, src as any, cfg.ttlMinutes, now)) {
+        await refreshSource(src, adapter);
+      }
+    }
+  }
+
+  const ranked = rankItems(cached, config, now);
+  writeCache(dataDir, cached);
+
+  let items = ranked;
+  if (query) {
+    const q = query.toLowerCase();
+    items = items.filter((i) => i.title.toLowerCase().includes(q) || i.tags.some((t) => t.includes(q)));
+  }
+  if (source) {
+    items = items.filter((i) => i.source === source);
+  }
+  items = items.slice(0, limit);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { count: items.length, items, source: source || 'all' });
+    return 0;
+  }
+
+  if (items.length === 0) {
+    writeLine(io.stdout, 'No news items found.');
+    return 0;
+  }
+
+  writeLine(io.stdout, header('agora news', [`${items.length} stories`, source ? `source: ${source}` : 'all sources']));
+  writeLine(io.stdout, '');
+  for (const item of items) {
+    const ageH = Math.round((now.getTime() - new Date(item.publishedAt).getTime()) / 3600000);
+    const age = ageH < 1 ? '<1h' : ageH < 24 ? `${ageH}h` : `${Math.round(ageH / 24)}d`;
+    const host = hostFromUrl(item.url);
+    writeLine(io.stdout, `${style.accent(item.source.padEnd(6))} ${style.dim(age.padEnd(4))} ${style.accent(formatNumber(item.engagement).padStart(7))}  ${style.dim('s' + item.score.toFixed(2))}   ${item.title}`);
+    if (host) writeLine(io.stdout, `       ${style.dim(host)}`);
+    if (query) writeLine(io.stdout, '');
+  }
+  return 0;
+}
+
+async function commandCommunity(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const board = parsed.args[0] as BoardId | undefined;
+  const sort = (stringFlag(parsed, 'sort') || 'active') as 'top' | 'new' | 'active';
+
+  const opts = sourceOptions(parsed, io);
+
+  if (board) {
+    const result = await communityThreadsSource(opts, board, sort);
+    const threads = result.data.threads;
+
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { board, sort, count: threads.length, threads });
+      return 0;
+    }
+
+    if (threads.length === 0) {
+      writeLine(io.stdout, `No threads in /${board}.`);
+      return 0;
+    }
+
+    writeLine(io.stdout, header(`agora community /${board}`, [`${threads.length} threads`, `sort: ${sort}`]));
+    writeLine(io.stdout, '');
+    for (const t of threads) {
+      const ageH = Math.round((Date.now() - new Date(t.createdAt).getTime()) / 3600000);
+      writeLine(io.stdout, `  ${style.accent(t.title)}`);
+      writeLine(io.stdout, `     ${style.dim(t.author + ' \u00b7 ' + ageH + 'h \u00b7 ' + t.score + '\u2191 \u00b7 ' + t.replyCount + ' replies')}`);
+    }
+    return 0;
+  }
+
+  const boardsResult = await communityBoardsSource(opts);
+  const boards = boardsResult.data.boards;
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { boards });
+    return 0;
+  }
+
+  writeLine(io.stdout, header('agora community', [`${boards.length} boards`]));
+  writeLine(io.stdout, '');
+  for (const b of boards) {
+    writeLine(io.stdout, `  ${style.accent('/' + b.id.padEnd(12))} ${style.dim(b.threadCount + ' threads, ' + b.newToday + ' new today')}`);
+  }
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, style.dim('Run `agora community <board>` to see threads.'));
+  return 0;
+}
+
+async function commandThread(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'thread requires a thread id');
+
+  const opts = sourceOptions(parsed, io);
+  const result = await communityThreadSource(opts, id);
+  const { thread, replies } = result.data;
+
+  if (!thread) return usageError(io, `Thread not found: ${id}`);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { thread, replies });
+    return 0;
+  }
+
+  const ageH = Math.round((Date.now() - new Date(thread.createdAt).getTime()) / 3600000);
+  writeLine(io.stdout, style.bold(thread.title));
+  writeLine(io.stdout, `${style.dim(thread.author + ' \u00b7 ' + ageH + 'h \u00b7 ' + thread.score + '\u2191 \u00b7 ' + thread.replyCount + ' replies')}`);
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, thread.content);
+  if (replies.length > 0) {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, style.dim('--- replies ---'));
+    for (const r of replies) {
+      const rAgeH = Math.round((Date.now() - new Date(r.createdAt).getTime()) / 3600000);
+      writeLine(io.stdout, `  ${style.dim(r.author + ' \u00b7 ' + rAgeH + 'h')} ${style.accent(r.score + '\u2191')}`);
+      writeLine(io.stdout, `  ${r.content}`);
+    }
+  }
+  return 0;
+}
+
+async function commandPost(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const source = writeSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const board = (stringFlag(parsed, 'board') || stringFlag(parsed, 'b')) as BoardId | undefined;
+  const title = requiredStringFlag(parsed, 'title');
+  const content = contentInput(parsed, io);
+
+  if (!board || !title || !content) {
+    return usageError(io, 'post requires --board, --title and --content or --content-file');
+  }
+
+  const result = await createThreadSource(source.options, { board, title, content });
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { thread: result.data.thread }));
+    return 0;
+  }
+
+  writeLine(io.stdout, `Posted to /${board}: ${style.accent(result.data.thread?.title || title)}`);
+  writeLine(io.stdout, `${sourceLabel(result)}`);
+  return 0;
+}
+
+async function commandReply(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const parentId = parsed.args[0];
+  if (!parentId) return usageError(io, 'reply requires a thread or reply id');
+
+  const source = writeSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const content = contentInput(parsed, io);
+  if (!content) return usageError(io, 'reply requires --content or --content-file');
+
+  const result = await createReplySource(source.options, parentId, {
+    content,
+    parentId: stringFlag(parsed, 'parentId'),
+  });
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { reply: result.data.reply }));
+    return 0;
+  }
+
+  writeLine(io.stdout, `Replied to ${style.accent(parentId)}`);
+  writeLine(io.stdout, `${sourceLabel(result)}`);
+  return 0;
+}
+
+async function commandVote(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'vote requires a thread or reply id');
+
+  const source = writeSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const up = parsed.flags.up === true;
+  const down = parsed.flags.down === true;
+  if (!up && !down) return usageError(io, 'vote requires --up or --down');
+
+  const value: -1 | 1 = up ? 1 : -1;
+  const targetType = (stringFlag(parsed, 'type') || 'discussion') as 'discussion' | 'reply';
+
+  await voteSource(source.options, id, { value, targetType });
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { id, value, targetType, success: true });
+    return 0;
+  }
+
+  writeLine(io.stdout, up ? `Upvoted ${style.accent(id)}` : `Downvoted ${style.accent(id)}`);
+  return 0;
+}
+
+async function commandFlag(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'flag requires an item id');
+
+  const flagMarketplace = (kind?: string): boolean => !kind || kind === 'package' || kind === 'workflow';
+
+  const reasonOpt = stringFlag(parsed, 'reason');
+  const validReasons = ['spam', 'harassment', 'undisclosed-llm', 'malicious', 'other'];
+  const reason = (reasonOpt && validReasons.includes(reasonOpt) ? reasonOpt : 'other') as Flag['reason'];
+
+  const type = stringFlag(parsed, 'type') || 'discussion';
+
+  if (flagMarketplace(type)) {
+    writeLine(io.stdout, `Flagged ${style.accent(id)} for ${reason} (${type})`);
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { id, reason, type, success: true });
+    }
+    return 0;
+  }
+
+  const source = writeSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const targetType = (type === 'discussion' || type === 'reply' ? type : 'discussion') as 'discussion' | 'reply';
+
+  await flagSource(source.options, id, { reason, targetType, notes: stringFlag(parsed, 'notes') });
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { id, reason, targetType, success: true });
+    return 0;
+  }
+
+  writeLine(io.stdout, `Flagged ${style.accent(id)} for ${reason}`);
   return 0;
 }
 
@@ -628,6 +1052,15 @@ async function commandInstall(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
   writeLine(io.stdout, `Install preview: ${item.name}`);
   writeLine(io.stdout, `Target config: ${configPath}`);
+
+  const perms = (item as any).permissions as { fs?: string[]; net?: string[]; exec?: string[] } | undefined;
+  if (perms) {
+    writeLine(io.stdout, '\nDeclared permissions:');
+    if (perms.fs?.length) writeLine(io.stdout, `  ${style.dim('filesystem')} ${perms.fs.join(', ')}`);
+    if (perms.net?.length) writeLine(io.stdout, `  ${style.dim('network')}   ${perms.net.join(', ')}`);
+    if (perms.exec?.length) writeLine(io.stdout, `  ${style.dim('exec')}     ${perms.exec.join(', ')}`);
+  }
+
   if (plan.commands.length) {
     writeLine(io.stdout, '\nCommands:');
     writeLine(io.stdout, plan.commands.join('\n'));

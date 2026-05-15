@@ -1,3 +1,9 @@
+export interface Permissions {
+  fs?: string[];
+  net?: string[];
+  exec?: string[];
+}
+
 export interface Package {
   id: string;
   name: string;
@@ -11,6 +17,8 @@ export interface Package {
   repository?: string;
   npmPackage?: string;
   createdAt: string;
+  permissions?: Permissions;
+  flagCount?: number;
 }
 
 export interface Workflow {

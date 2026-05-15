@@ -13,6 +13,7 @@ import {
   getTutorials,
   findTutorial,
   searchMarketplaceItems,
+  similarItems,
   type MarketplaceItem,
   type PackageMarketplaceItem
 } from '../src/marketplace';
@@ -294,6 +295,57 @@ describe('buildOpenCodeConfig', () => {
     expect(config.mcp!['mcp-postgres']).toBeDefined();
   });
 });
+
+// ── similarItems ────────────────────────────────────────────────────────────
+
+describe('similarItems', () => {
+  test('returns similar items by tag overlap', () => {
+    // mcp-postgres shares tags 'database', 'sql' with other DB items
+    const results = similarItems('mcp-postgres', { limit: 10 });
+    expect(results.length).toBeGreaterThan(0);
+    // mcp-sqlite shares 'database' and 'sql' — should rank high
+    const sqliteIdx = results.findIndex((r) => r.id === 'mcp-sqlite');
+    expect(sqliteIdx).toBeGreaterThanOrEqual(0);
+    // mcp-supabase shares 'database' — should appear in top results
+    const supabaseIdx = results.findIndex((r) => r.id === 'mcp-supabase');
+    expect(supabaseIdx).toBeGreaterThanOrEqual(0);
+    // mcp-sqlite (2 shared tags) should rank above mcp-supabase (1 shared tag)
+    expect(sqliteIdx).toBeLessThan(supabaseIdx);
+  });
+
+  test('excludes the target item itself', () => {
+    const results = similarItems('mcp-github');
+    expect(results.some((r) => r.id === 'mcp-github')).toBe(false);
+  });
+
+  test('respects type filter — package', () => {
+    const results = similarItems('wf-tdd-cycle', { type: 'package', limit: 10 });
+    expect(results.every((r) => r.kind === 'package')).toBe(true);
+  });
+
+  test('respects type filter — workflow', () => {
+    const results = similarItems('mcp-postgres', { type: 'workflow', limit: 10 });
+    expect(results.every((r) => r.kind === 'workflow')).toBe(true);
+  });
+
+  test('limit restricts result count', () => {
+    const results = similarItems('mcp-filesystem', { limit: 2 });
+    expect(results.length).toBeLessThanOrEqual(2);
+  });
+
+  test('returns empty array for unknown id', () => {
+    const results = similarItems('zzz-nonexistent');
+    expect(results).toHaveLength(0);
+  });
+
+  test('results are sorted by similarity descending', () => {
+    const results = similarItems('mcp-github', { limit: 10 });
+    // mcp-gitlab is most similar (shares git, api, official, devtools)
+    expect(results[0]?.id).toBe('mcp-gitlab');
+  });
+});
+
+// ── createInstallPlan ────────────────────────────────────────────────────────
 
 describe('createInstallPlan', () => {
   test('MCP package produces installable plan with commands', () => {
