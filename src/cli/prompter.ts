@@ -460,11 +460,13 @@ export function renderPromptFrame(state: EditorState, prompt: string, footer: st
     return `\r\x1b[K${prompt}${before}${suffix}\x1b[${Array.from(suffix).length}D`;
   }
 
+  const footerLines = footer.split('\n');
   const cursorCol = visibleWidth(prompt) + Array.from(before).length;
+  const footerStr = footerLines.map((line) => `\n\r\x1b[K${line}`).join('');
   return (
     `\r\x1b[K${prompt}${before}${suffix}` +
-    `\n\r\x1b[K${footer}` +
-    `\x1b[1A\r` +
+    footerStr +
+    `\x1b[${footerLines.length}A\r` +
     (cursorCol > 0 ? `\x1b[${cursorCol}C` : '')
   );
 }
@@ -519,6 +521,16 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
 
     // B.5 — track whether we already showed the slash palette for this prompt
     let slashPaletteShown = false;
+    // Number of footer rows in the last redraw; cleared on cleanup / before completions
+    let footerRows = 0;
+
+    function clearFooterRows(): string {
+      if (footerRows <= 0) return '';
+      let seq = '';
+      for (let i = 0; i < footerRows; i++) seq += '\n\r\x1b[K';
+      seq += `\x1b[${footerRows}A`;
+      return seq;
+    }
 
     function maybeShowSlashPalette(newLine: string): void {
       if (!opts.completer) return;
@@ -526,9 +538,7 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
         slashPaletteShown = true;
         const result = opts.completer('/', 1);
         if (result.matches.length > 0) {
-          if (opts.footer) {
-            out.write('\n\r\x1b[K\x1b[1A');
-          }
+          if (footerRows > 0) out.write(clearFooterRows());
           const list = result.matches.join('  ');
           out.write(`\n\x1b[2m${list}\x1b[0m\n`);
         }
@@ -550,9 +560,7 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       }
 
       if (result.sideEffect === 'show-completions' && result.completionsToShow) {
-        if (opts.footer) {
-          out.write('\n\r\x1b[K\x1b[1A');
-        }
+        if (footerRows > 0) out.write(clearFooterRows());
         const list = result.completionsToShow.join(', ');
         out.write(`\n\x1b[2m${list}\x1b[0m\n`);
       }
@@ -572,10 +580,12 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
 
     function redraw(): void {
       if (state.mode === 'reverse-search') {
+        footerRows = 0;
         out.write(renderSearch(state, opts.prompt));
       } else {
         const suffix = opts.promptSuffix ? opts.promptSuffix(state.line) : '';
         const footer = opts.footer ? opts.footer(state.line) : '';
+        footerRows = footer ? footer.split('\n').length : 0;
         out.write(renderPromptFrame(state, opts.prompt + suffix, footer));
       }
     }
@@ -713,8 +723,13 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
     function cleanup(): void {
       inp.removeListener('data', onData);
       if (escTimer) clearTimeout(escTimer);
-      if (opts.footer) {
-        out.write('\n\r\x1b[K');
+      if (footerRows > 0) {
+        // Clear every footer row, then park cursor on the first cleared row so
+        // the caller's next output flows immediately under the input.
+        let seq = '';
+        for (let i = 0; i < footerRows; i++) seq += '\n\r\x1b[K';
+        if (footerRows > 1) seq += `\x1b[${footerRows - 1}A`;
+        out.write(seq);
       } else {
         out.write('\n');
       }

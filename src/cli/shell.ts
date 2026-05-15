@@ -252,7 +252,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const trueColor = supportsTrueColor(env);
 
   const banner = renderBanner({ color: true, trueColor });
-  const motto = 'Agora Hub and marketplace — type a command, /help, or ask a question.';
+  const motto = 'An open terminal hub for MCP servers, workflows, and chat.';
   const mottoLine = gradientText(motto, { trueColor });
   // Static Greek-key frieze sitting between the wordmark and the motto — same
   // width as the banner (52 cells), dim at idle. Same constant doubles as a
@@ -300,9 +300,6 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   let verbosity: Verbosity = 'medium';
   let childActive = false;
   let totalCost = 0;
-
-  // B.1 — separator state
-  let printedAnyTurn = false;
 
   // Lazy caches for completion ids
   let cachedMarketplaceIds: string[] | null = null;
@@ -374,13 +371,42 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const costStr = totalCost > 0 ? `$${totalCost.toFixed(4)}` : '$0';
     const turns = meta?.turnCount ?? 0;
     const cwd = shortCwd(currentCwd);
-    return style.dim(`[opencode/${model} · ${verbosity} · ${turns} turns · ${costStr} · ${cwd}]`);
+    const sep = style.dim('  ');
+    return (
+      style.dim('▎ ') +
+      style.accent(cwd) +
+      sep +
+      style.dim(`opencode/${model}`) +
+      sep +
+      (verbosity === 'medium' ? style.dim(verbosity) : style.accent(verbosity)) +
+      sep +
+      style.dim(`${turns} turns`) +
+      sep +
+      (totalCost > 0 ? style.accent(costStr) : style.dim(costStr))
+    );
   }
 
-  // B.1 — thin dim horizontal rule between turns
-  function printSeparator(): void {
-    if (!printedAnyTurn) return;
-    const width = process.stdout.columns ?? 80;
+  function buildHintLine(): string {
+    const sep = style.dim(' · ');
+    return (
+      style.dim('  ') +
+      style.dim('tab complete') +
+      sep +
+      style.dim('ctrl-r history') +
+      sep +
+      style.accent('!') +
+      style.dim(' bash') +
+      sep +
+      style.accent('?') +
+      style.dim(' chat') +
+      sep +
+      style.dim('/help · /quit')
+    );
+  }
+
+  // Thin dim horizontal rule + breathing room above every prompt iteration.
+  function printPromptDivider(): void {
+    const width = Math.min(process.stdout.columns ?? 80, 80);
     process.stdout.write('\n' + style.dim('─'.repeat(width)) + '\n\n');
   }
 
@@ -397,8 +423,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       // Update completionContext.cwd on each iteration in case cd changed it
       completionContext.cwd = currentCwd;
 
-      // B.1 — separator after each completed turn
-      printSeparator();
+      printPromptDivider();
 
       const result = await readLine({
         prompt: buildPromptBase(),
@@ -406,7 +431,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         history,
         completer: (line, cursor) => completeShellLine(line, cursor, completionContext),
         ghostSuggester: (line, hist) => ghostFromHistory(line, hist),
-        footer: () => buildContextLine()
+        footer: () => buildContextLine() + '\n' + buildHintLine()
       });
 
       if (result.kind === 'eof') {
@@ -437,8 +462,6 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
         if (dispatch.sub === 'clear') {
           process.stdout.write('\x1b[2J\x1b[H');
-          // B.1: do NOT print separator after clear
-          printedAnyTurn = false;
           continue;
         }
 
@@ -504,17 +527,14 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           } catch (e: any) {
             process.stdout.write((e.stdout ?? '') + (e.stderr ?? '') + '\n');
           }
-          printedAnyTurn = true;
           continue;
         }
 
-        printedAnyTurn = true;
         continue;
       }
 
       if (dispatch.kind === 'bash') {
         await runBash(dispatch.cmd);
-        printedAnyTurn = true;
         continue;
       }
 
@@ -523,11 +543,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           process.stdout.write(
             style.dim('opencode is not available on PATH. Install it to use chat.') + '\n'
           );
-          printedAnyTurn = true;
           continue;
         }
         await runChat(dispatch.msg);
-        printedAnyTurn = true;
       }
     }
   } finally {

@@ -395,4 +395,19 @@ describe('renderPromptFrame', () => {
     const out = renderPromptFrame(s, '\x1b[36m> \x1b[0m', '[ctx]');
     expect(out).toContain('\x1b[3C');
   });
+
+  test('multi-line footer moves cursor up by the footer line count', () => {
+    const s = state({ line: 'x', cursor: 1 });
+    const out = renderPromptFrame(s, '> ', 'status\nhint');
+    expect(out).toContain('status');
+    expect(out).toContain('hint');
+    expect(out).toContain('\x1b[2A');
+    expect(out).toContain('\x1b[3C');
+  });
+
+  test('three-line footer moves up three rows', () => {
+    const s = state({ line: '', cursor: 0 });
+    const out = renderPromptFrame(s, '> ', 'a\nb\nc');
+    expect(out).toContain('\x1b[3A');
+  });
 });
