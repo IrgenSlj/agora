@@ -246,6 +246,38 @@ describe('createChatRenderer — quiet mode', () => {
   });
 });
 
+describe('createChatRenderer — getTotalCost', () => {
+  test('returns 0 when no step_finish received', () => {
+    const { out } = makeOut();
+    const r = createChatRenderer({ ...baseOpts, verbosity: 'medium', out });
+    r.handleLine(STEP_START);
+    r.handleLine(TEXT_1);
+    r.finalize();
+    expect(r.getTotalCost()).toBe(0);
+  });
+
+  test('returns cost from step_finish event', () => {
+    const { out } = makeOut();
+    const r = createChatRenderer({ ...baseOpts, verbosity: 'medium', out });
+    r.handleLine(STEP_START);
+    r.handleLine(TEXT_1);
+    r.handleLine(STEP_FINISH); // cost: 0.000123
+    r.finalize();
+    expect(r.getTotalCost()).toBeCloseTo(0.000123, 8);
+  });
+
+  test('accumulates cost across multiple step_finish events', () => {
+    const { out } = makeOut();
+    const r = createChatRenderer({ ...baseOpts, verbosity: 'medium', out });
+    r.handleLine(STEP_START);
+    r.handleLine(TEXT_1);
+    r.handleLine(STEP_FINISH); // 0.000123
+    r.handleLine(STEP_FINISH); // another 0.000123
+    r.finalize();
+    expect(r.getTotalCost()).toBeCloseTo(0.000246, 7);
+  });
+});
+
 describe('createChatRenderer — verbose mode', () => {
   test('includes tool args dump', () => {
     const { out, written } = makeOut();

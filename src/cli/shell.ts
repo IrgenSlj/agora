@@ -1,12 +1,11 @@
-import { spawn } from 'node:child_process';
-import { existsSync, statSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join, resolve } from 'node:path';
-import { createInterface } from 'node:readline/promises';
+import { execSync, spawn } from 'node:child_process';
+import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { homedir, tmpdir } from 'node:os';
+import { join, resolve, sep } from 'node:path';
 import { COMMANDS } from './commands-meta.js';
 import { runInteractiveMenu } from './menu.js';
 import { FREE_MODELS } from './app.js';
-import { detectAgoraDataDir } from '../state.js';
+import { detectAgoraDataDir, loadAgoraState, resolveSavedItems } from '../state.js';
 import {
   appendTranscript,
   loadSessionMeta,
@@ -16,6 +15,9 @@ import {
 } from '../transcript.js';
 import { gradientText, renderBanner, supportsTrueColor, type Styler } from '../ui.js';
 import { createChatRenderer, type Verbosity } from './chat-renderer.js';
+import { readLine } from './prompter.js';
+import { completeShellLine, ghostFromHistory } from './completions.js';
+import { getMarketplaceItems } from '../marketplace.js';
 import type { CliIo } from './app.js';
 
 const SHELL_BUILTINS = new Set(['cd', 'export', 'alias', 'source', 'unset', 'umask', 'exec']);
@@ -25,7 +27,7 @@ const MAX_BASH_BUFFER = 16 * 1024;
 
 export type Dispatch =
   | { kind: 'noop' }
-  | { kind: 'meta'; sub: 'help' | 'quit' | 'exit' | 'clear' | 'transcript' | 'menu' | 'verbose' | 'quiet' | 'medium' }
+  | { kind: 'meta'; sub: 'help' | 'quit' | 'exit' | 'clear' | 'transcript' | 'menu' | 'verbose' | 'quiet' | 'medium' | 'last' | 'again' | 'dry-run'; args?: string }
   | { kind: 'bash'; cmd: string }
   | { kind: 'chat'; msg: string };
 
@@ -40,16 +42,13 @@ export function looksLikeQuestion(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
 
-  // Rule 1: trailing ?
   if (trimmed.endsWith('?')) return true;
 
   const words = trimmed.split(/\s+/);
   const firstWord = words[0].toLowerCase();
 
-  // Rule 2: known question-starter word
   if (QUESTION_STARTERS.has(firstWord)) return true;
 
-  // Rule 3: first char uppercase AND 3+ words
   if (trimmed[0] === trimmed[0].toUpperCase() && trimmed[0] !== trimmed[0].toLowerCase() && words.length >= 3) {
     return true;
   }
@@ -73,6 +72,9 @@ export function classifyInput(
   if (trimmed === '/verbose') return { kind: 'meta', sub: 'verbose' };
   if (trimmed === '/quiet') return { kind: 'meta', sub: 'quiet' };
   if (trimmed === '/medium') return { kind: 'meta', sub: 'medium' };
+  if (trimmed === '/last') return { kind: 'meta', sub: 'last' };
+  if (trimmed === '/again') return { kind: 'meta', sub: 'again' };
+  if (trimmed.startsWith('/? ')) return { kind: 'meta', sub: 'dry-run', args: trimmed.slice(3).trim() };
 
   if (trimmed.startsWith('!')) return { kind: 'bash', cmd: trimmed.slice(1).trim() };
   if (trimmed.startsWith('?')) return { kind: 'chat', msg: trimmed.slice(1).trim() };
@@ -137,6 +139,58 @@ function formatTranscriptEntry(
   return `${prefix}${input}${output}`;
 }
 
+/** Shorten a path for display: replace HOME with ~, truncate if > 30 chars. */
+function shortCwd(p: string): string {
+  const home = homedir();
+  const withTilde = p.startsWith(home) ? '~' + p.slice(home.length) : p;
+  if (withTilde.length <= 30) return withTilde;
+  const parts = withTilde.split(sep).filter(Boolean);
+  if (parts.length <= 2) return withTilde;
+  return '…' + sep + parts.slice(-2).join(sep);
+}
+
+/** Check whether opencode is reachable on PATH. */
+function checkOpencodeAvailable(): boolean {
+  try {
+    execSync('which opencode', { stdio: 'pipe', timeout: 2000 });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Extract the first ```bash / ```sh / ```shell block from markdown text. */
+function extractFirstBashBlock(text: string): string | null {
+  const match = text.match(/```(?:bash|sh|shell)\n([\s\S]*?)```/);
+  return match ? match[1].trim() : null;
+}
+
+/** Read a single keypress in raw mode without the full prompter. */
+async function readOneKey(): Promise<string> {
+  return new Promise<string>((resolve) => {
+    const stdin = process.stdin;
+    const wasRaw = (stdin as any).isRaw ?? false;
+    if ((stdin as any).setRawMode) (stdin as any).setRawMode(true);
+    stdin.resume();
+    function onData(buf: Buffer) {
+      stdin.removeListener('data', onData);
+      if ((stdin as any).setRawMode) (stdin as any).setRawMode(wasRaw);
+      resolve(buf.toString()[0] ?? '');
+    }
+    stdin.on('data', onData);
+  });
+}
+
+/** Copy text to clipboard using pbcopy (macOS) or xclip (Linux). */
+function copyToClipboard(text: string): void {
+  try {
+    const cmd = process.platform === 'darwin' ? 'pbcopy' : 'xclip -selection clipboard';
+    execSync(cmd, { input: text, stdio: ['pipe', 'ignore', 'ignore'], timeout: 3000 });
+  } catch {
+    // fall back silently
+  }
+}
+
 // ── Main shell loop ─────────────────────────────────────────────────────────
 
 export async function runShell(io: CliIo, style: Styler): Promise<number> {
@@ -150,6 +204,13 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     '/help · /menu · /transcript · /verbose · /medium · /quiet · /clear · /quit'
   );
   process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${slashLine}\n\n`);
+
+  const opencodeAvailable = checkOpencodeAvailable();
+  if (!opencodeAvailable) {
+    process.stdout.write(
+      style.dim('Note: opencode not found on PATH. Chat will be unavailable until installed.') + '\n\n'
+    );
+  }
 
   const dataDir = detectAgoraDataDir({ cwd: io.cwd, env: io.env });
   const cwd0 = io.cwd ?? process.cwd();
@@ -174,43 +235,109 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   }
 
   const isExecutable = makeExecutableChecker(env.PATH);
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
 
   let firstTurn = meta.turnCount === 0;
   let exitCode = 0;
   let verbosity: Verbosity = 'medium';
-
-  // SIGINT routing: while a child is running, the per-child handler aborts
-  // it; while idle in the readline prompt, SIGINT closes the shell. Without
-  // this gate, both fire on a single Ctrl-C and a long-running `npm install`
-  // would exit the entire shell when the user just meant to abort the cmd.
   let childActive = false;
-  let sigintReceived = false;
+  let totalCost = 0;
+
+  // Lazy caches for completion ids
+  let cachedMarketplaceIds: string[] | null = null;
+  let cachedSavedIds: string[] | null = null;
+
+  function getMarketplaceIds(): string[] {
+    if (!cachedMarketplaceIds) {
+      cachedMarketplaceIds = getMarketplaceItems().map((item) => item.id);
+    }
+    return cachedMarketplaceIds;
+  }
+
+  function getSavedIds(): string[] {
+    if (!cachedSavedIds) {
+      const state = loadAgoraState(dataDir);
+      cachedSavedIds = resolveSavedItems(state).map((e) => e.saved.id);
+    }
+    return cachedSavedIds;
+  }
+
+  const slashCommands = [
+    '/help', '/menu', '/transcript', '/verbose', '/medium', '/quiet',
+    '/clear', '/quit', '/exit', '/last', '/again',
+  ];
+
+  const completionContext = {
+    slashCommands,
+    agoraCommands: COMMANDS.map((c) => c.name),
+    marketplaceIds: getMarketplaceIds,
+    savedIds: getSavedIds,
+    listDir: (p: string) => {
+      try { return readdirSync(p); } catch { return []; }
+    },
+    cwd: currentCwd,
+  };
+
+  // In-memory history for prompter (not persisted — transcript covers that)
+  const history: string[] = [];
+
+  // Amber chevron when opencode unavailable, accent otherwise
+  const accentChevron = opencodeAvailable
+    ? style.accent('›')
+    : '\x1b[38;5;214m›\x1b[0m';
+
+  function buildPrompt(): string {
+    return style.accent('agora') + ' ' + style.dim(shortCwd(currentCwd)) + ' ' + accentChevron + ' ';
+  }
+
+  function buildContextLine(): string {
+    const model = FREE_MODELS[0];
+    const costStr = totalCost > 0 ? `$${totalCost.toFixed(4)}` : '$0';
+    const turns = meta?.turnCount ?? 0;
+    const cwd = shortCwd(currentCwd);
+    return style.dim(`[opencode/${model} · ${verbosity} · ${turns} turns · ${costStr} · ${cwd}]`);
+  }
+
   const sigintHandler = () => {
     if (childActive) return;
-    sigintReceived = true;
+    // Ctrl-C while idle: the prompter handles abort; SIGINT from outside is rare
     process.stdout.write('\n');
-    rl.close();
+    process.exit(0);
   };
   process.on('SIGINT', sigintHandler);
 
-  const prompt = style.accent('agora') + style.dim(' › ');
-
   try {
     for (;;) {
-      if (sigintReceived) break;
+      // Update completionContext.cwd on each iteration in case cd changed it
+      completionContext.cwd = currentCwd;
 
-      let line: string;
-      try {
-        const answer = await rl.question(prompt);
-        line = answer;
-      } catch {
-        // EOF (Ctrl-D)
+      // Print context line above prompt
+      process.stdout.write(buildContextLine() + '\n');
+
+      const result = await readLine({
+        prompt: buildPrompt(),
+        history,
+        completer: (line, cursor) => completeShellLine(line, cursor, completionContext),
+        ghostSuggester: (line, hist) => ghostFromHistory(line, hist),
+      });
+
+      if (result.kind === 'eof') {
         process.stdout.write('\n');
         break;
       }
 
-      if (sigintReceived) break;
+      if (result.kind === 'abort') {
+        // Ctrl-C in prompter: clear input and continue
+        process.stdout.write('\n');
+        continue;
+      }
+
+      const line = result.value;
+      if (!line.trim()) continue;
+
+      // Add to history
+      if (history[history.length - 1] !== line) {
+        history.push(line);
+      }
 
       const dispatch = classifyInput(line, isExecutable);
 
@@ -252,196 +379,288 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           continue;
         }
 
-        continue;
-      }
+        if (dispatch.sub === 'last') {
+          const entries = readTranscript(dataDir, cwd0);
+          const lastBash = [...entries].reverse().find((e) => e.kind === 'bash' && e.input);
+          if (!lastBash || !lastBash.input) {
+            process.stdout.write(style.dim('No previous bash command in this session.') + '\n');
+            continue;
+          }
+          // Re-dispatch as bash
+          history.push(lastBash.input);
+          const bashDispatch: Dispatch = { kind: 'bash', cmd: lastBash.input };
+          await runBash(bashDispatch.cmd);
+          continue;
+        }
 
-      if (dispatch.kind === 'bash') {
-        const cmd = dispatch.cmd;
+        if (dispatch.sub === 'again') {
+          const entries = readTranscript(dataDir, cwd0);
+          const lastChat = [...entries].reverse().find((e) => e.kind === 'chat-user' && e.input);
+          if (!lastChat || !lastChat.input) {
+            process.stdout.write(style.dim('No previous chat message in this session.') + '\n');
+            continue;
+          }
+          await runChat(lastChat.input);
+          continue;
+        }
 
-        // Handle cd specially
-        const cdMatch = cmd.match(/^cd(?:\s+(.+))?$/);
-        if (cdMatch) {
-          const target = cdMatch[1]?.trim() ?? homedir();
-          const resolved = resolve(currentCwd, expandHome(target));
-          currentCwd = resolved;
-          process.stdout.write(style.dim(`→ ${resolved}`) + '\n');
-          appendTranscript(dataDir, cwd0, {
-            ts: new Date().toISOString(),
-            kind: 'bash',
-            input: cmd,
-            output: `→ ${resolved}`,
-          });
-          if (firstTurn) {
-            firstTurn = false;
-            process.stdout.write(style.dim('Tip: type `/help` to see all agora commands.') + '\n');
+        if (dispatch.sub === 'dry-run' && dispatch.args) {
+          const args = dispatch.args.split(/\s+/).filter(Boolean);
+          process.stdout.write(style.dim(`╤ dry-run · agora ${args.join(' ')}`) + '\n');
+          try {
+            const out = execSync(`agora ${args.join(' ')}`, { timeout: 15000, encoding: 'utf8' });
+            process.stdout.write(out + '\n');
+          } catch (e: any) {
+            process.stdout.write((e.stdout ?? '') + (e.stderr ?? '') + '\n');
           }
           continue;
         }
 
-        let buffer = '';
-        let done = false;
-        let childExitCode = 0;
+        continue;
+      }
 
-        let childRef: ReturnType<typeof spawn> | null = null;
-        const abortChild = () => {
-          if (childRef) childRef.kill('SIGINT');
-        };
-        process.on('SIGINT', abortChild);
-        childActive = true;
-
-        await new Promise<void>((res) => {
-          const child = spawn(cmd, {
-            shell: true,
-            cwd: currentCwd,
-            env: env as Record<string, string>,
-            stdio: ['inherit', 'pipe', 'pipe'],
-          });
-          childRef = child;
-
-          child.stdout?.on('data', (chunk: Buffer) => {
-            const text = chunk.toString();
-            process.stdout.write(text);
-            buffer = tailBuffer(buffer + text, MAX_BASH_BUFFER);
-          });
-
-          child.stderr?.on('data', (chunk: Buffer) => {
-            const text = chunk.toString();
-            process.stderr.write(text);
-            buffer = tailBuffer(buffer + text, MAX_BASH_BUFFER);
-          });
-
-          child.on('close', (code) => {
-            childExitCode = code ?? 0;
-            done = true;
-            res();
-          });
-
-          child.on('error', (err) => {
-            process.stderr.write(`Error: ${err.message}\n`);
-            done = true;
-            res();
-          });
-        });
-
-        process.removeListener('SIGINT', abortChild);
-        childActive = false;
-        if (!done) childExitCode = 1;
-
-        appendTranscript(dataDir, cwd0, {
-          ts: new Date().toISOString(),
-          kind: 'bash',
-          input: cmd,
-          output: buffer,
-          exitCode: childExitCode,
-        });
-
-        if (firstTurn) {
-          firstTurn = false;
-          process.stdout.write(style.dim('Tip: type `/help` to see all agora commands.') + '\n');
-        }
+      if (dispatch.kind === 'bash') {
+        await runBash(dispatch.cmd);
         continue;
       }
 
       if (dispatch.kind === 'chat') {
-        const userMsg = dispatch.msg;
-        const bashCtx = recentBashContext(dataDir, cwd0, { commands: 3, lines: 20 });
-
-        const systemLine =
-          'You are running inside the Agora shell, a marketplace TUI for OpenCode. ' +
-          'Prefer using the agora_* MCP tools when the user asks marketplace questions. ' +
-          'Be concise; output flows directly to a terminal.';
-
-        let fullPrompt = `<system>\n${systemLine}`;
-        if (bashCtx) fullPrompt += `\n${bashCtx}`;
-        fullPrompt += `\n<user>\n${userMsg}`;
-
-        const modelArg = FREE_MODELS[0].includes('/')
-          ? FREE_MODELS[0]
-          : `opencode/${FREE_MODELS[0]}`;
-
-        const args = ['run', '--format', 'json', '--model', modelArg];
-        if (meta.sessionId) args.push('--session', meta.sessionId);
-        args.push(fullPrompt);
-
-        const renderer = createChatRenderer({
-          verbosity,
-          style,
-          trueColor,
-          out: process.stdout,
-        });
-
-        let chatChildRef: ReturnType<typeof spawn> | null = null;
-        const abortChat = () => {
-          if (chatChildRef) chatChildRef.kill('SIGINT');
-        };
-        process.on('SIGINT', abortChat);
-        childActive = true;
-
-        await new Promise<void>((res) => {
-          const child = spawn('opencode', args, {
-            env: env as Record<string, string>,
-            stdio: ['ignore', 'pipe', 'pipe'],
-            shell: false,
-          });
-          chatChildRef = child;
-
-          child.stdout?.on('data', (chunk: Buffer) => {
-            const text = chunk.toString();
-            for (const rawLine of text.split('\n').filter(Boolean)) {
-              renderer.handleLine(rawLine);
-            }
-          });
-
-          child.stderr?.on('data', (_chunk: Buffer) => {
-            // swallow stderr; errors surface via exit code
-          });
-
-          child.on('close', () => res());
-          child.on('error', (err) => {
-            process.stderr.write(`Failed to run opencode: ${err.message}\n`);
-            res();
-          });
-        });
-
-        process.removeListener('SIGINT', abortChat);
-        childActive = false;
-
-        renderer.finalize();
-
-        const renderedSessionId = renderer.getSessionId();
-        if (!meta!.sessionId && renderedSessionId) {
-          meta!.sessionId = renderedSessionId;
-          writeSessionMeta(dataDir, cwd0, meta!);
+        if (!opencodeAvailable) {
+          process.stdout.write(
+            style.dim('opencode is not available on PATH. Install it to use chat.') + '\n'
+          );
+          continue;
         }
-
-        const assistantBuffer = renderer.getAssistantText();
-        appendTranscript(dataDir, cwd0, {
-          ts: new Date().toISOString(),
-          kind: 'chat-user',
-          input: userMsg,
-        });
-        appendTranscript(dataDir, cwd0, {
-          ts: new Date().toISOString(),
-          kind: 'chat-assistant',
-          output: assistantBuffer,
-        });
-
-        meta.turnCount += 1;
-        meta.lastUsedAt = new Date().toISOString();
-        writeSessionMeta(dataDir, cwd0, meta);
-
-        if (firstTurn) {
-          firstTurn = false;
-          process.stdout.write(style.dim('Tip: type `/help` to see all agora commands.') + '\n');
-        }
+        await runChat(dispatch.msg);
       }
     }
   } finally {
     process.removeListener('SIGINT', sigintHandler);
-    rl.close();
   }
 
   return exitCode;
+
+  // ── Bash runner ─────────────────────────────────────────────────────────
+
+  async function runBash(cmd: string): Promise<void> {
+    const cdMatch = cmd.match(/^cd(?:\s+(.+))?$/);
+    if (cdMatch) {
+      const target = cdMatch[1]?.trim() ?? homedir();
+      const resolved = resolve(currentCwd, expandHome(target));
+      currentCwd = resolved;
+      completionContext.cwd = resolved;
+      process.stdout.write(style.dim(`→ ${resolved}`) + '\n');
+      appendTranscript(dataDir, cwd0, {
+        ts: new Date().toISOString(),
+        kind: 'bash',
+        input: cmd,
+        output: `→ ${resolved}`,
+      });
+      if (firstTurn) {
+        firstTurn = false;
+        process.stdout.write(style.dim('Tip: type `/help` to see all agora commands.') + '\n');
+      }
+      return;
+    }
+
+    let buffer = '';
+    let done = false;
+    let childExitCode = 0;
+    let childRef: ReturnType<typeof spawn> | null = null;
+
+    const abortChild = () => { if (childRef) childRef.kill('SIGINT'); };
+    process.on('SIGINT', abortChild);
+    childActive = true;
+
+    await new Promise<void>((res) => {
+      const child = spawn(cmd, {
+        shell: true,
+        cwd: currentCwd,
+        env: env as Record<string, string>,
+        stdio: ['inherit', 'pipe', 'pipe'],
+      });
+      childRef = child;
+
+      child.stdout?.on('data', (chunk: Buffer) => {
+        const text = chunk.toString();
+        process.stdout.write(text);
+        buffer = tailBuffer(buffer + text, MAX_BASH_BUFFER);
+      });
+
+      child.stderr?.on('data', (chunk: Buffer) => {
+        const text = chunk.toString();
+        process.stderr.write(text);
+        buffer = tailBuffer(buffer + text, MAX_BASH_BUFFER);
+      });
+
+      child.on('close', (code) => { childExitCode = code ?? 0; done = true; res(); });
+      child.on('error', (err) => {
+        process.stderr.write(`Error: ${err.message}\n`);
+        done = true;
+        res();
+      });
+    });
+
+    process.removeListener('SIGINT', abortChild);
+    childActive = false;
+    if (!done) childExitCode = 1;
+
+    appendTranscript(dataDir, cwd0, {
+      ts: new Date().toISOString(),
+      kind: 'bash',
+      input: cmd,
+      output: buffer,
+      exitCode: childExitCode,
+    });
+
+    if (firstTurn) {
+      firstTurn = false;
+      process.stdout.write(style.dim('Tip: type `/help` to see all agora commands.') + '\n');
+    }
+  }
+
+  // ── Chat runner ──────────────────────────────────────────────────────────
+
+  async function runChat(userMsg: string): Promise<void> {
+    const bashCtx = recentBashContext(dataDir, cwd0, { commands: 3, lines: 20 });
+
+    const systemLine =
+      'You are running inside the Agora shell, a marketplace TUI for OpenCode. ' +
+      'Prefer using the agora_* MCP tools when the user asks marketplace questions. ' +
+      'Be concise; output flows directly to a terminal.';
+
+    let fullPrompt = `<system>\n${systemLine}`;
+    if (bashCtx) fullPrompt += `\n${bashCtx}`;
+    fullPrompt += `\n<user>\n${userMsg}`;
+
+    const modelArg = FREE_MODELS[0].includes('/')
+      ? FREE_MODELS[0]
+      : `opencode/${FREE_MODELS[0]}`;
+
+    const args = ['run', '--format', 'json', '--model', modelArg];
+    if (meta!.sessionId) args.push('--session', meta!.sessionId);
+    args.push(fullPrompt);
+
+    const renderer = createChatRenderer({
+      verbosity,
+      style,
+      trueColor,
+      out: process.stdout,
+    });
+
+    let chatChildRef: ReturnType<typeof spawn> | null = null;
+    const abortChat = () => { if (chatChildRef) chatChildRef.kill('SIGINT'); };
+    process.on('SIGINT', abortChat);
+    childActive = true;
+
+    await new Promise<void>((res) => {
+      const child = spawn('opencode', args, {
+        env: env as Record<string, string>,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        shell: false,
+      });
+      chatChildRef = child;
+
+      child.stdout?.on('data', (chunk: Buffer) => {
+        const text = chunk.toString();
+        for (const rawLine of text.split('\n').filter(Boolean)) {
+          renderer.handleLine(rawLine);
+        }
+      });
+
+      child.stderr?.on('data', (_chunk: Buffer) => { /* swallow */ });
+      child.on('close', () => res());
+      child.on('error', (err) => {
+        process.stderr.write(`Failed to run opencode: ${err.message}\n`);
+        res();
+      });
+    });
+
+    process.removeListener('SIGINT', abortChat);
+    childActive = false;
+
+    renderer.finalize();
+    totalCost += renderer.getTotalCost();
+
+    const renderedSessionId = renderer.getSessionId();
+    if (!meta!.sessionId && renderedSessionId) {
+      meta!.sessionId = renderedSessionId;
+      writeSessionMeta(dataDir, cwd0, meta!);
+    }
+
+    const assistantBuffer = renderer.getAssistantText();
+    appendTranscript(dataDir, cwd0, {
+      ts: new Date().toISOString(),
+      kind: 'chat-user',
+      input: userMsg,
+    });
+    appendTranscript(dataDir, cwd0, {
+      ts: new Date().toISOString(),
+      kind: 'chat-assistant',
+      output: assistantBuffer,
+    });
+
+    meta!.turnCount += 1;
+    meta!.lastUsedAt = new Date().toISOString();
+    writeSessionMeta(dataDir, cwd0, meta!);
+
+    if (firstTurn) {
+      firstTurn = false;
+      process.stdout.write(style.dim('Tip: type `/help` to see all agora commands.') + '\n');
+    }
+
+    // Code-block hotkeys
+    await handleCodeBlock(assistantBuffer);
+  }
+
+  // ── Code-block hotkeys ───────────────────────────────────────────────────
+
+  async function handleCodeBlock(text: string): Promise<void> {
+    const block = extractFirstBashBlock(text);
+    if (!block) return;
+
+    process.stdout.write(
+      style.dim('Code block: ') +
+      style.accent('(r)un · (c)opy · (e)dit · (s)kip') +
+      ' '
+    );
+
+    const key = await readOneKey();
+    process.stdout.write('\n');
+
+    if (key === 'r') {
+      await runBash(block);
+      appendTranscript(dataDir, cwd0, {
+        ts: new Date().toISOString(),
+        kind: 'bash',
+        input: block,
+        output: '',
+      });
+    } else if (key === 'c') {
+      copyToClipboard(block);
+      process.stdout.write(style.dim('Copied to clipboard.') + '\n');
+    } else if (key === 'e') {
+      const tmpDir = mkdtempSync(join(tmpdir(), 'agora-'));
+      const tmpFile = join(tmpDir, 'block.sh');
+      writeFileSync(tmpFile, block, 'utf8');
+      const editor = process.env.EDITOR ?? 'vi';
+      await new Promise<void>((res) => {
+        const child = spawn(editor, [tmpFile], { stdio: 'inherit', shell: false });
+        child.on('close', () => res());
+        child.on('error', () => res());
+      });
+      // After editor, offer run/skip
+      process.stdout.write(style.dim('(r)un · (s)kip '));
+      const key2 = await readOneKey();
+      process.stdout.write('\n');
+      if (key2 === 'r') {
+        const { readFileSync } = await import('node:fs');
+        const edited = readFileSync(tmpFile, 'utf8').trim();
+        await runBash(edited);
+      }
+    }
+    // s or other: skip silently
+  }
 }
 
 function printHelp(style: Styler): void {
@@ -458,6 +677,12 @@ function printHelp(style: Styler): void {
     '  /clear        clear screen',
     '  /help         this help',
     '  /quit         exit shell',
+    '  /last         re-run most recent bash command',
+    '  /again        re-send most recent chat message',
+    '  /? <cmd>      dry-run an agora command (e.g. /? install mcp-github)',
+    '',
+    style.dim('Verbosity:'),
+    '  /verbose  /medium  /quiet',
     '',
     style.dim('Agora commands:'),
   ];

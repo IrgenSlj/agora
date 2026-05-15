@@ -1,4 +1,4 @@
-import { gradientBar, type Styler } from '../ui.js';
+import { gradientBar, sampleGradient, BANNER_GRADIENT, colorize, type Styler } from '../ui.js';
 
 export type Verbosity = 'quiet' | 'medium' | 'verbose';
 
@@ -7,6 +7,7 @@ export interface ChatRenderer {
   finalize(): void;
   getAssistantText(): string;
   getSessionId(): string | null;
+  getTotalCost(): number;
 }
 
 export interface ChatRendererOptions {
@@ -75,21 +76,46 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
   let sessionId: string | null = null;
   let turnStart: number = Date.now();
   let seenToolCallIds = new Set<string>();
+  let pulseInterval: ReturnType<typeof setInterval> | null = null;
+  let pulseStep = 0;
+  const pulseStops = [0.0, 0.25, 0.5, 0.75, 1.0];
 
   function bar(seed: string): string {
     if (verbosity === 'quiet') return '';
     return gradientBar(seed, { trueColor });
   }
 
+  function pulsedBar(): string {
+    const t = pulseStops[pulseStep % pulseStops.length];
+    const rgb = sampleGradient(BANNER_GRADIENT, t);
+    return colorize('▍', rgb, trueColor);
+  }
+
   function printThinkingLine(): void {
     if (verbosity === 'quiet') return;
     out.write(`${bar('thinking')} ${style.accent('thinking')}${style.dim('…')}`);
     thinkingLinePrinted = true;
+
+    // Pulse only when writing to a real TTY
+    if (process.stdout.isTTY) {
+      pulseInterval = setInterval(() => {
+        pulseStep += 1;
+        out.write(`\r\x1b[K${pulsedBar()} ${style.accent('thinking')}${style.dim('…')}`);
+      }, 180);
+    }
+  }
+
+  function stopPulse(): void {
+    if (pulseInterval !== null) {
+      clearInterval(pulseInterval);
+      pulseInterval = null;
+    }
   }
 
   function finalizeThinking(nowMs: number): void {
     if (thinkingFinalized || thinkingStart === null) return;
     thinkingFinalized = true;
+    stopPulse();
     const dur = formatDuration(nowMs - thinkingStart);
     if (thinkingLinePrinted && verbosity !== 'quiet') {
       // Overwrite the thinking line in place
@@ -198,7 +224,12 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
       else if (type === 'step_finish') handleStepFinish(ev);
     },
 
+    getTotalCost(): number {
+      return totalCost;
+    },
+
     finalize(): void {
+      stopPulse();
       if (!thinkingFinalized && thinkingStart !== null) {
         finalizeThinking(Date.now());
       }

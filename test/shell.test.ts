@@ -143,6 +143,39 @@ describe('classifyInput', () => {
   });
 });
 
+describe('classifyInput — new power commands', () => {
+  test('/last → meta:last', () => {
+    expect(classifyInput('/last', neverExecutable)).toEqual({ kind: 'meta', sub: 'last' });
+  });
+
+  test('/again → meta:again', () => {
+    expect(classifyInput('/again', neverExecutable)).toEqual({ kind: 'meta', sub: 'again' });
+  });
+
+  test('/? install foo → meta:dry-run with args', () => {
+    expect(classifyInput('/? install foo', neverExecutable)).toEqual({
+      kind: 'meta',
+      sub: 'dry-run',
+      args: 'install foo',
+    });
+  });
+
+  test('/? browse mcp-github → meta:dry-run with args', () => {
+    expect(classifyInput('/? browse mcp-github', neverExecutable)).toEqual({
+      kind: 'meta',
+      sub: 'dry-run',
+      args: 'browse mcp-github',
+    });
+  });
+
+  test('/? with no trailing text → chat (does not match /? prefix)', () => {
+    // '/?' alone doesn't have a space after it, so falls through
+    const r = classifyInput('/?', neverExecutable);
+    // Not a meta dry-run since there's no space + args
+    expect(r.kind).not.toBe('meta');
+  });
+});
+
 describe('looksLikeQuestion', () => {
   test('trailing ? returns true', () => {
     expect(looksLikeQuestion('ls files?')).toBe(true);
