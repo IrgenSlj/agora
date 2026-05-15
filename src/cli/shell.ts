@@ -13,7 +13,13 @@ import {
   recentBashContext,
   writeSessionMeta
 } from '../transcript.js';
-import { gradientText, renderBanner, supportsTrueColor, type Styler } from '../ui.js';
+import {
+  gradientText,
+  renderBanner,
+  renderMeander,
+  supportsTrueColor,
+  type Styler
+} from '../ui.js';
 import { createChatRenderer, type Verbosity } from './chat-renderer.js';
 import { readLine } from './prompter.js';
 import { completeShellLine, ghostFromHistory } from './completions.js';
@@ -248,10 +254,14 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const banner = renderBanner({ color: true, trueColor });
   const motto = 'Agora Hub and marketplace — type a command, /help, or ask a question.';
   const mottoLine = gradientText(motto, { trueColor });
+  // Static Greek-key frieze sitting between the wordmark and the motto — same
+  // width as the banner (52 cells), dim at idle. Same constant doubles as a
+  // determinate progress bar during installs. On entry it reads as ornament.
+  const meanderLine = renderMeander({ trueColor, mode: 'idle' });
   const slashLine = style.dim(
     '/help · /menu · /transcript · /verbose · /medium · /quiet · /clear · /quit'
   );
-  process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${slashLine}\n\n`);
+  process.stdout.write(`\n${banner}\n\n${meanderLine}\n\n${mottoLine}\n\n${slashLine}\n\n`);
 
   const opencodeAvailable = checkOpencodeAvailable();
   if (!opencodeAvailable) {

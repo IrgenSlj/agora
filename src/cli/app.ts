@@ -59,6 +59,7 @@ import {
   createStyler,
   renderBanner,
   renderBox,
+  renderMeander,
   shouldUseColor,
   supportsTrueColor,
   type Styler
@@ -835,7 +836,27 @@ async function commandInit(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
     if (plan.commands.length) {
       writeLine(io.stdout, '\nInstalling MCP server packages...');
-      const installResults = runCommands(plan.commands);
+      const isTTY = Boolean((io.stdout as { isTTY?: boolean }).isTTY);
+      const n = plan.commands.length;
+      const installResults: { command: string; ok: boolean }[] = [];
+      for (let i = 0; i < n; i++) {
+        const [result] = runCommands([plan.commands[i]]);
+        installResults.push(result);
+        if (isTTY && n > 1) {
+          const pct = ((i + 1) / n) * 100;
+          const bar = renderMeander({
+            trueColor: supportsTrueColor(io.env ?? {}),
+            mode: 'progress',
+            pct
+          });
+          const line = `  ${bar}`;
+          if (i < n - 1) {
+            process.stdout.write(`\r\x1b[K${line}`);
+          } else {
+            process.stdout.write(`\r\x1b[K${line}\n`);
+          }
+        }
+      }
       const installed = installResults.filter((r) => r.ok).length;
       const failed = installResults.filter((r) => !r.ok).length;
       writeLine(

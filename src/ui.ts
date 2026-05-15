@@ -78,61 +78,22 @@ export function supportsTrueColor(env: Record<string, string | undefined>): bool
 // ── Wordmark + banner ───────────────────────────────────────────────────────
 
 /**
- * Filled-block letterforms, 7 rows × 52 cols. Two-block-thick strokes,
- * 3-space gaps between letters A G O R A.
+ * Carved-relief letterforms (7 rows × 52 cols). Built from a SOLID skeleton +
+ * an algorithmic shading pass: cells whose neighbour above is empty get `▓`
+ * (top highlight), cells whose neighbour below is empty get `▒` (bottom
+ * shadow), plus a few weather specks on stroke interiors. The pass only ever
+ * rewrites existing `█` cells, so it cannot bleed into the O / R counters.
+ * Reads as top-lit carved stone; survives `NO_COLOR` because the texture is
+ * in the *characters*, not the colours.
  */
-export const AGORA_WORDMARK_SOLID: string[] = [
-  '  ████      ██████     ██████    ███████      ████  ',
-  ' ██  ██    ██    ██   ██    ██   ██    ██    ██  ██ ',
-  '██    ██   ██         ██    ██   ██    ██   ██    ██',
-  '████████   ██  ████   ██    ██   ███████    ████████',
-  '██    ██   ██    ██   ██    ██   ██  ██     ██    ██',
-  '██    ██   ██    ██   ██    ██   ██   ██    ██    ██',
-  '██    ██    ██████     ██████    ██    ██   ██    ██'
-];
-
-/**
- * Outlined / hairline letterforms, 7 rows × 52 cols.
- * Uses half-block and box characters for a thinner architectural look.
- */
-export const AGORA_WORDMARK_OUTLINE: string[] = [
-  '  ▄▀▄▀      ▄▀▀▀▀▄     ▄▀▀▀▀▄    ▀▀▀▀▀▄       ▄▀▄▀  ',
-  ' ▌    ▐    ▌      ▐   ▌      ▐   ▌     ▐    ▌    ▐ ',
-  '▌      ▐   ▌            ▌      ▐   ▌      ▐   ▌      ▐',
-  '▌▀▀▀▀▀▀▐   ▌  ▐▀▀▐   ▌      ▐   ▌▀▀▀▀▐   ▌▀▀▀▀▀▀▐',
-  '▌      ▐   ▌      ▐   ▌      ▐   ▌  ▐       ▌      ▐',
-  '▌      ▐   ▌      ▐   ▌      ▐   ▌   ▐      ▌      ▐',
-  ' ▀▄▀▄      ▀▄▄▄▄▀     ▀▄▄▄▄▀    ▀    ▀      ▀▄▀▄  '
-];
-
-/**
- * Bayer-dithered fill of the SOLID shape (7 rows × 52 cols). Density schedule
- * [1.0, 0.95, 0.92, 0.88, 0.85, 0.80, 0.75] keeps every letterform cell
- * filled (no dropouts that would break A's crossbar or G's bottom arc); the
- * texture comes from per-cell shade variation `█ ▓ ▒ ░` graded top-to-bottom.
- */
-export const AGORA_WORDMARK_TEXTURED: string[] = [
-  '  █▓█▓      █▓█▓█▓     ▓█▓█▓█    ▓█▓█▓█▓      █▓█▓  ',
-  ' █░  █░    █▒    █░   ░█    ▒█   █░    █▒    █░  █░ ',
-  '█▒    █▓   ▓█         █▓    █▒   ▒█    ▓█   █▒    █▓',
-  ' ▓░█ ▓░█   █   █ ▓░   ░█     ▓   ▓░█ ▓░█     ▓░█ ▓░█',
-  '█▓    █▒   ▒█    ▓█   █▒    █▓   ▓█  ▓█     █▓    █▒',
-  '░▓     ▓   ▓░    ▓     ▓    ░▓   ▓     ▓    ░▓     ▓',
-  '█░    █▒    █░█▒█░     ▒█░█▒█    ░█    ▒█   █░    █▒'
-];
-
-/**
- * Shaded-ramp letterforms, 7 rows × 52 cols. Rows 0–2 use ▓, rows 3–4 use ▒,
- * rows 5–6 use ░ — a shade ramp from cap to baseline.
- */
-export const AGORA_WORDMARK_SHADED: string[] = [
-  '  ▓▓▓▓      ▓▓▓▓▓▓     ▓▓▓▓▓▓    ▓▓▓▓▓▓▓      ▓▓▓▓  ',
-  ' ▓▓  ▓▓    ▓▓    ▓▓   ▓▓    ▓▓   ▓▓    ▓▓    ▓▓  ▓▓ ',
-  '▓▓    ▓▓   ▓▓         ▓▓    ▓▓   ▓▓    ▓▓   ▓▓    ▓▓',
-  '▒▒▒▒▒▒▒▒   ▒▒  ▒▒▒▒   ▒▒    ▒▒   ▒▒▒▒▒▒▒    ▒▒▒▒▒▒▒▒',
-  '▒▒    ▒▒   ▒▒    ▒▒   ▒▒    ▒▒   ▒▒  ▒▒     ▒▒    ▒▒',
-  '░░    ░░   ░░    ░░   ░░    ░░   ░░   ░░    ░░    ░░',
-  '░░    ░░    ░░░░░░     ░░░░░░    ░░    ░░   ░░    ░░'
+export const AGORA_WORDMARK_RELIEF: string[] = [
+  '    ▓▓▓      ▓▓▓▓▓     ▓▓▓▓▓    ▓▓▓▓▓▓      ▓▓▓     ',
+  '   ▓▒▒▒▓    ▓█   ▒▓   ▓█   █▓   ██   █▓    ▓▒▒▒▓    ',
+  '  ▓▒   █▓   █▒        █▒   ██   █▒   █▒   ▓▒   █▓   ',
+  '  ██   ▒█   ██  ▓▓▓▓  ██   ██   ██▓▓▓▒    ██   ▒█   ',
+  '  ██▓▓▓██   ██   ▒█   ██   █▒   ██ ▒▒     ██▓▓▓██   ',
+  '  ██   █▒   ▒█   █▒   ▒█   █▒   ██  ▒▓    ██   █▒   ',
+  '  ▒▒   ▒▒    ▒▓▓▓▒     ▒▓▓▓▒    ▒▒   ▒▓   ▒▒   ▒▒   '
 ];
 
 /**
@@ -173,15 +134,6 @@ export function sampleGradient(stops: RGB[], t: number): RGB {
   return [lerp(from[0], to[0], local), lerp(from[1], to[1], local), lerp(from[2], to[2], local)];
 }
 
-/** Colorizes `▍` with a stable BANNER_GRADIENT color derived from `seed`. */
-export function gradientBar(seed: string, opts: { trueColor: boolean }): string {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash += seed.charCodeAt(i);
-  const t = (hash % 100) / 100;
-  const rgb = sampleGradient(BANNER_GRADIENT, t);
-  return colorize('▍', rgb, opts.trueColor);
-}
-
 /** Colorizes each character of `text` across BANNER_GRADIENT stops. */
 export function gradientText(text: string, opts: { trueColor: boolean }): string {
   if (text.length === 0) return text;
@@ -197,18 +149,9 @@ export function gradientText(text: string, opts: { trueColor: boolean }): string
 export interface BannerOptions {
   color: boolean;
   trueColor: boolean;
-  /** Which wordmark to render (default: textured). */
-  variant?: 'solid' | 'outline' | 'shaded' | 'textured';
   /** Dim line printed under the wordmark. */
   subtitle?: string;
 }
-
-const WORDMARKS: Record<NonNullable<BannerOptions['variant']>, string[]> = {
-  solid: AGORA_WORDMARK_SOLID,
-  outline: AGORA_WORDMARK_OUTLINE,
-  shaded: AGORA_WORDMARK_SHADED,
-  textured: AGORA_WORDMARK_TEXTURED
-};
 
 /**
  * Renders the AGORA wordmark with a left-to-right gradient applied per column
@@ -216,7 +159,7 @@ const WORDMARKS: Record<NonNullable<BannerOptions['variant']>, string[]> = {
  * dim subtitle. Degrades to plain block letters when colour is off.
  */
 export function renderBanner(opts: BannerOptions): string {
-  const rows = WORDMARKS[opts.variant ?? 'textured'];
+  const rows = AGORA_WORDMARK_RELIEF;
   const width = Math.max(...rows.map((line) => line.length));
 
   const lines = rows.map((line) => {
@@ -276,4 +219,112 @@ export function renderBox(title: string, body: string[], opts: BoxOptions): stri
   return [top, blank, ...contentLines.map((line, i) => row(line, i === 0)), blank, bottom].join(
     '\n'
   );
+}
+
+// ── Movement tints — distinct per-kind accent for the ▍ marker ──────────────
+
+/**
+ * One tint per chat-movement kind so a transcript reads at a glance:
+ * thinking = cool grey-tan (low energy), tool = terracotta (mid), response =
+ * accent amber (full). All three sit inside the BANNER_GRADIENT palette.
+ */
+export const MOVEMENT_COLOR = {
+  thinking: { hex: '#8A7866', rgb: [138, 120, 102] as RGB },
+  tool: { hex: '#C66A4A', rgb: [198, 106, 74] as RGB },
+  response: { hex: '#D4A85A', rgb: [212, 168, 90] as RGB }
+} as const;
+
+export type MovementKind = keyof typeof MOVEMENT_COLOR;
+
+/** Colorize `▍` with the tint for a given movement kind. */
+export function movementBar(kind: MovementKind, opts: { trueColor: boolean }): string {
+  return colorize('▍', MOVEMENT_COLOR[kind].rgb, opts.trueColor);
+}
+
+// ── Meander — Greek-key frieze + loading bar ────────────────────────────────
+
+/**
+ * 52-cell crenellated frieze (`▟▙` × 26). Used three ways:
+ *   1. Idle ornament under the entry banner — every cell dim, reads as a
+ *      static Greek-key ribbon tying the wordmark to the agora theme.
+ *   2. Indeterminate loading wave during thinking — a 5-cell warm-to-hot pulse
+ *      sweeps left→right with brief pauses between sweeps.
+ *   3. Determinate progress bar — `agora install`, downloads, anything with a
+ *      known endpoint. Filled cells use ACCENT, leading edge uses terracotta.
+ */
+export const MEANDER = '▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄▀▀▄▄';
+
+const MEANDER_DIM: RGB = [107, 98, 83]; // #6B6253 — brightened for dark terminal visibility
+const MEANDER_TAIL: RGB = [122, 90, 72]; // #7A5A48 — warm-dim trailing tail
+
+export interface MeanderOptions {
+  trueColor: boolean;
+  /** Render mode: `idle` (default), `wave`, or `progress`. */
+  mode?: 'idle' | 'wave' | 'progress';
+  /** For `wave`: elapsed time in ms. The head moves at ~18 cells/sec. */
+  tMs?: number;
+  /** For `progress`: 0–100. */
+  pct?: number;
+}
+
+/** Per-cell colour for the indeterminate wave at time `tMs`. */
+function meanderWaveColor(i: number, tMs: number): RGB {
+  const speed = 0.018; // cells per ms
+  const period = MEANDER.length + 8; // 8-cell pause between sweeps
+  const head = Math.floor(tMs * speed) % period;
+  const dist = (head - i + period) % period;
+  if (dist === 0) return ACCENT.rgb;
+  if (dist <= 2) return MOVEMENT_COLOR.tool.rgb;
+  if (dist <= 4) return MEANDER_TAIL;
+  return MEANDER_DIM;
+}
+
+/** Per-cell colour for the determinate progress bar at `pct`. */
+function meanderProgressColor(i: number, pct: number): RGB {
+  const n = MEANDER.length;
+  const filled = Math.round((n * Math.max(0, Math.min(100, pct))) / 100);
+  if (i < filled - 1) return ACCENT.rgb;
+  if (i === filled - 1) return MOVEMENT_COLOR.tool.rgb;
+  return MEANDER_DIM;
+}
+
+/** Render the meander as a single styled line. */
+export function renderMeander(opts: MeanderOptions): string {
+  const mode = opts.mode ?? 'idle';
+  let out = '';
+  for (let i = 0; i < MEANDER.length; i++) {
+    const ch = MEANDER[i];
+    let rgb: RGB;
+    if (mode === 'wave') rgb = meanderWaveColor(i, opts.tMs ?? 0);
+    else if (mode === 'progress') rgb = meanderProgressColor(i, opts.pct ?? 0);
+    else rgb = MEANDER_DIM;
+    out += colorize(ch, rgb, opts.trueColor);
+  }
+  return out;
+}
+
+// ── Mascot — Ionic column capital that dances while the model thinks ────────
+
+/**
+ * 5-char dancing figure built from the top of an Ionic column: the corner
+ * brackets `╭ ╮ ╰ ╯` form the *abacus* (flat slab), the two `⊙` characters
+ * are the *volutes* (spiral scrolls), and the `─` between them is the
+ * *echinus*. Only the abacus corners swap between frames — the volutes and
+ * echinus are fixed — so the eye reads it as one figure swaying, not four
+ * different glyphs flickering.
+ *
+ * Lifecycle: paint while a `thinking` movement is in flight; clear the line
+ * on the first response token so the user's eye lands on the answer, not the
+ * dance. Survives `NO_COLOR` because the silhouette is in the characters.
+ */
+export const MASCOT_FRAMES: readonly string[] = [
+  '╭⊙─⊙╮', // both corners up — abacus level
+  '╭⊙─⊙╯', // right corner dips — column leans right
+  '╰⊙─⊙╯', // both corners down
+  '╰⊙─⊙╮' //  left corner dips — column leans left
+] as const;
+
+/** Pick the current mascot frame given elapsed thinking time in ms. */
+export function mascotFrame(tMs: number): string {
+  return MASCOT_FRAMES[Math.floor(tMs / 200) % MASCOT_FRAMES.length];
 }

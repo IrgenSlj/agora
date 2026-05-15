@@ -1,4 +1,4 @@
-import { gradientBar, sampleGradient, BANNER_GRADIENT, colorize, type Styler } from '../ui.js';
+import { mascotFrame, movementBar, type Styler } from '../ui.js';
 
 export type Verbosity = 'quiet' | 'medium' | 'verbose';
 
@@ -75,59 +75,57 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
   let sessionId: string | null = null;
   let turnStart: number = Date.now();
   const seenToolCallIds = new Set<string>();
-  let pulseInterval: ReturnType<typeof setInterval> | null = null;
-  let pulseStep = 0;
-  const pulseStops = [0.0, 0.25, 0.5, 0.75, 1.0];
+  let liveTimer: ReturnType<typeof setInterval> | null = null;
 
-  function bar(seed: string): string {
-    if (verbosity === 'quiet') return '';
-    return gradientBar(seed, { trueColor });
+  function thinkingMarker(): string {
+    return movementBar('thinking', { trueColor });
   }
 
-  function pulsedBar(): string {
-    const t = pulseStops[pulseStep % pulseStops.length];
-    const rgb = sampleGradient(BANNER_GRADIENT, t);
-    return colorize('▍', rgb, trueColor);
+  function thinkingLive(tMs: number): string {
+    const frame = mascotFrame(tMs);
+    return `${thinkingMarker()} ${style.accent('thinking')} ${style.dim('· ' + formatDuration(tMs))}    ${style.accent(frame)}`;
   }
 
   function printThinkingLine(): void {
     if (verbosity === 'quiet') return;
-    out.write(`${bar('thinking')} ${style.accent('thinking')}${style.dim('…')}`);
+    // Static one-liner — what tests and non-TTY callers see. No trailing newline
+    // so the in-place finalizer can overwrite it.
+    out.write(`${thinkingMarker()} ${style.accent('thinking')}${style.dim('…')}`);
     thinkingLinePrinted = true;
 
-    // Pulse only when writing to a real TTY
+    // Live single-line state — only on a real TTY wide enough to show it.
     if (process.stdout.isTTY) {
-      pulseInterval = setInterval(() => {
-        pulseStep += 1;
-        out.write(`\r\x1b[K${pulsedBar()} ${style.accent('thinking')}${style.dim('…')}`);
-      }, 180);
+      if ((process.stdout.columns ?? 80) < 50) return;
+      out.write(`\r\x1b[K${thinkingLive(0)}`);
+
+      liveTimer = setInterval(() => {
+        const elapsed = Date.now() - (thinkingStart ?? Date.now());
+        out.write(`\r\x1b[K${thinkingLive(elapsed)}`);
+      }, 200);
     }
   }
 
-  function stopPulse(): void {
-    if (pulseInterval !== null) {
-      clearInterval(pulseInterval);
-      pulseInterval = null;
+  function stopLive(): void {
+    if (liveTimer !== null) {
+      clearInterval(liveTimer);
+      liveTimer = null;
     }
   }
 
   function finalizeThinking(nowMs: number): void {
     if (thinkingFinalized || thinkingStart === null) return;
     thinkingFinalized = true;
-    stopPulse();
+    stopLive();
     const dur = formatDuration(nowMs - thinkingStart);
-    if (thinkingLinePrinted && verbosity !== 'quiet') {
-      // Overwrite the thinking line in place
-      out.write(
-        `\r\x1b[K${bar('thinking')} ${style.accent('thinking')} ${style.dim('· ' + dur)}\n`
-      );
-    }
+    if (!thinkingLinePrinted || verbosity === 'quiet') return;
+    const finalLine = `${thinkingMarker()} ${style.accent('thinking')} ${style.dim('· ' + dur)}`;
+    out.write(`\r\x1b[K${finalLine}\n`);
   }
 
   function printResponseHeader(): void {
     if (responseHeaderPrinted || verbosity === 'quiet') return;
     responseHeaderPrinted = true;
-    out.write(`${bar('response')} ${style.accent('response')}\n\n`);
+    out.write(`${movementBar('response', { trueColor })} ${style.accent('response')}\n\n`);
   }
 
   function handleStepStart(_ev: any): void {
@@ -177,7 +175,7 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
     const dur = formatDuration(durationMs);
     const callStr = argSummary ? `${name}(${argSummary})` : name;
     out.write(
-      `${bar('tool')} ${style.accent('tool')} ${style.dim('· ' + callStr + ' · ' + dur + ' → ' + resultSummary)}\n`
+      `${movementBar('tool', { trueColor })} ${style.accent('tool')} ${style.dim('· ' + callStr + ' · ' + dur + ' → ' + resultSummary)}\n`
     );
 
     if (verbosity === 'verbose') {
@@ -228,7 +226,7 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
     },
 
     finalize(): void {
-      stopPulse();
+      stopLive();
       if (!thinkingFinalized && thinkingStart !== null) {
         finalizeThinking(Date.now());
       }
