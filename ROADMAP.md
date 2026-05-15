@@ -70,8 +70,6 @@ surface — mechanism design does the policing, not a gatekeeper:
   - **One-shot mode** (`agora chat "question"`): Single query via `opencode run`.
   - Plugin tool (`/agora chat "question"`) available from inside OpenCode.
   _Done in 0.4.0._
-2. **Sellable unit** — skills/workflows only, or also proprietary MCP servers?
-3. **Payment model** — per-item Checkout vs. prepaid credits/wallet.
 
 ## How to help
 
@@ -79,4 +77,4 @@ surface — mechanism design does the policing, not a gatekeeper:
 - **Report a setup that `agora init` misses.** Open an issue with your project's manifest files.
 - **Polish the standalone CLI experience.** Phase 1 is wide open.
 
-_Last updated: 2026-05-14_
+_Last updated: 2026-05-15_
