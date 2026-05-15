@@ -304,14 +304,6 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   // B.1 — separator state
   let printedAnyTurn = false;
 
-  // B.2 — sticky context state
-  let lastContextSnapshot: {
-    model: string;
-    verbosity: string;
-    cwd: string;
-    turnCount: number;
-  } | null = null;
-
   // Lazy caches for completion ids
   let cachedMarketplaceIds: string[] | null = null;
   let cachedSavedIds: string[] | null = null;
@@ -392,24 +384,6 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     process.stdout.write('\n' + style.dim('─'.repeat(width)) + '\n\n');
   }
 
-  // B.2 — print context line only when it changed or every 10 turns
-  function maybePrintContextLine(): void {
-    const model = FREE_MODELS[0];
-    const turns = meta?.turnCount ?? 0;
-    const cwd = shortCwd(currentCwd);
-    const snap = { model, verbosity, cwd, turnCount: turns };
-    const shouldPrint =
-      lastContextSnapshot === null ||
-      snap.model !== lastContextSnapshot.model ||
-      snap.verbosity !== lastContextSnapshot.verbosity ||
-      snap.cwd !== lastContextSnapshot.cwd ||
-      turns % 10 === 0;
-    if (shouldPrint) {
-      process.stdout.write(buildContextLine() + '\n');
-      lastContextSnapshot = snap;
-    }
-  }
-
   const sigintHandler = () => {
     if (childActive) return;
     // Ctrl-C while idle: the prompter handles abort; SIGINT from outside is rare
@@ -426,15 +400,13 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       // B.1 — separator after each completed turn
       printSeparator();
 
-      // B.2 — sticky context line
-      maybePrintContextLine();
-
       const result = await readLine({
         prompt: buildPromptBase(),
         promptSuffix: buildPromptSuffix,
         history,
         completer: (line, cursor) => completeShellLine(line, cursor, completionContext),
-        ghostSuggester: (line, hist) => ghostFromHistory(line, hist)
+        ghostSuggester: (line, hist) => ghostFromHistory(line, hist),
+        footer: () => buildContextLine()
       });
 
       if (result.kind === 'eof') {

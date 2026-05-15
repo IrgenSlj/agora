@@ -8,6 +8,8 @@ export interface PromptOptions {
   prompt: string;
   history: string[];
   completer?: (line: string, cursor: number) => { matches: string[]; replaceFrom: number };
+  /** Optional. Returns a footer line rendered on the row below the input, repainted on every keystroke. */
+  footer?: (line: string) => string;
   ghostSuggester?: (line: string, history: string[]) => string | null;
   /**
    * Optional. Called on every redraw to compute the trailing portion of the
@@ -441,14 +443,30 @@ function longestCommonPrefix(strs: string[]): string {
 
 // ── Rendering helpers ────────────────────────────────────────────────────────
 
-function renderNormal(state: EditorState, prompt: string): string {
+/** Visible cell width of a string with ANSI CSI escape sequences stripped. */
+export function visibleWidth(s: string): number {
+  // eslint-disable-next-line no-control-regex
+  return Array.from(s.replace(/\x1b\[[0-9;]*m/g, '')).length;
+}
+
+export function renderPromptFrame(state: EditorState, prompt: string, footer: string): string {
   const ghost = state.ghost ? `\x1b[2m${state.ghost}\x1b[0m` : '';
   const chars = Array.from(state.line);
   const before = chars.slice(0, state.cursor).join('');
   const after = chars.slice(state.cursor).join('');
-  // Erase line, print prompt + before-cursor + cursor-char + after + ghost, move cursor back
   const suffix = after + ghost;
-  return `\r\x1b[K${prompt}${before}${suffix}\x1b[${Array.from(suffix).length}D`;
+
+  if (!footer) {
+    return `\r\x1b[K${prompt}${before}${suffix}\x1b[${Array.from(suffix).length}D`;
+  }
+
+  const cursorCol = visibleWidth(prompt) + Array.from(before).length;
+  return (
+    `\r\x1b[K${prompt}${before}${suffix}` +
+    `\n\r\x1b[K${footer}` +
+    `\x1b[1A\r` +
+    (cursorCol > 0 ? `\x1b[${cursorCol}C` : '')
+  );
 }
 
 function renderSearch(state: EditorState, _prompt: string): string {
@@ -508,11 +526,13 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
         slashPaletteShown = true;
         const result = opts.completer('/', 1);
         if (result.matches.length > 0) {
+          if (opts.footer) {
+            out.write('\n\r\x1b[K\x1b[1A');
+          }
           const list = result.matches.join('  ');
           out.write(`\n\x1b[2m${list}\x1b[0m\n`);
         }
       } else if (newLine !== '/') {
-        // Allow showing again if user clears back to '/'
         slashPaletteShown = false;
       }
     }
@@ -530,6 +550,9 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       }
 
       if (result.sideEffect === 'show-completions' && result.completionsToShow) {
+        if (opts.footer) {
+          out.write('\n\r\x1b[K\x1b[1A');
+        }
         const list = result.completionsToShow.join(', ');
         out.write(`\n\x1b[2m${list}\x1b[0m\n`);
       }
@@ -552,7 +575,8 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
         out.write(renderSearch(state, opts.prompt));
       } else {
         const suffix = opts.promptSuffix ? opts.promptSuffix(state.line) : '';
-        out.write(renderNormal(state, opts.prompt + suffix));
+        const footer = opts.footer ? opts.footer(state.line) : '';
+        out.write(renderPromptFrame(state, opts.prompt + suffix, footer));
       }
     }
 
@@ -689,7 +713,11 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
     function cleanup(): void {
       inp.removeListener('data', onData);
       if (escTimer) clearTimeout(escTimer);
-      out.write('\n');
+      if (opts.footer) {
+        out.write('\n\r\x1b[K');
+      } else {
+        out.write('\n');
+      }
       if ((inp as any).setRawMode) {
         try {
           (inp as any).setRawMode(false);

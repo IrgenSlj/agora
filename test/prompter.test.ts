@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import {
   applyKeyEvent,
   makeInitialState,
+  renderPromptFrame,
+  visibleWidth,
   type EditorState,
   type KeyEvent
 } from '../src/cli/prompter';
@@ -349,5 +351,48 @@ describe('reverse-i-search', () => {
     });
     const r = applyResult(s0, { kind: 'enter' });
     expect(r.output).toEqual({ kind: 'line', value: 'git status' });
+  });
+});
+
+// ── Rendering ─────────────────────────────────────────────────────────────
+
+describe('visibleWidth', () => {
+  test('counts plain chars', () => {
+    expect(visibleWidth('hello')).toBe(5);
+  });
+  test('ignores ANSI CSI sequences', () => {
+    expect(visibleWidth('\x1b[36mhello\x1b[0m')).toBe(5);
+  });
+  test('handles empty string', () => {
+    expect(visibleWidth('')).toBe(0);
+  });
+});
+
+describe('renderPromptFrame', () => {
+  test('without footer matches the legacy single-line escape sequence', () => {
+    const s = state({ line: 'hello', cursor: 5 });
+    const out = renderPromptFrame(s, '> ', '');
+    expect(out).toBe('\r\x1b[K> hello\x1b[0D');
+  });
+
+  test('with footer emits input row, footer row, and returns cursor to input column', () => {
+    const s = state({ line: 'ls', cursor: 2 });
+    const out = renderPromptFrame(s, '> ', '[ctx]');
+    expect(out).toContain('> ls');
+    expect(out).toContain('[ctx]');
+    expect(out).toContain('\x1b[1A');
+    expect(out).toContain('\x1b[4C');
+  });
+
+  test('with footer and cursor mid-line positions cursor at the cursor column', () => {
+    const s = state({ line: 'hello', cursor: 2 });
+    const out = renderPromptFrame(s, '> ', '[ctx]');
+    expect(out).toContain('\x1b[4C');
+  });
+
+  test('strips ANSI from prompt when computing cursor column', () => {
+    const s = state({ line: 'x', cursor: 1 });
+    const out = renderPromptFrame(s, '\x1b[36m> \x1b[0m', '[ctx]');
+    expect(out).toContain('\x1b[3C');
   });
 });
