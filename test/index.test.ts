@@ -228,7 +228,7 @@ describe('Edge Cases', () => {
 describe('Plugin Tools', () => {
   test('Agora plugin exports all 8 tools', async () => {
     const plugin = await import('../src/index');
-    const tools = (await plugin.Agora({} as any)).tool;
+    const tools = (await plugin.Agora({} as any)).tool!;
     expect(Object.keys(tools).sort()).toEqual([
       'agora_browse',
       'agora_browse_category',
@@ -243,7 +243,7 @@ describe('Plugin Tools', () => {
 
   test('agora_chat accepts message and optional model args', async () => {
     const plugin = await import('../src/index');
-    const tools = (await plugin.Agora({} as any)).tool;
+    const tools = (await plugin.Agora({} as any)).tool!;
     expect(tools.agora_chat).toBeDefined();
     // execute is a function — we verify the signature works
     expect(typeof tools.agora_chat.execute).toBe('function');
@@ -254,12 +254,12 @@ describe('Plugin Tools', () => {
 
   test('agora_chat returns error when opencode is not available', async () => {
     const plugin = await import('../src/index');
-    const tools = (await plugin.Agora({} as any)).tool;
+    const tools = (await plugin.Agora({} as any)).tool!;
 
     const origPath = process.env.PATH;
     process.env.PATH = '/dev/null';
     try {
-      const result = await tools.agora_chat.execute({ message: 'test' });
+      const result = await tools.agora_chat.execute({ message: 'test' }, {} as any);
       expect(result).toContain('Failed to run opencode');
     } finally {
       process.env.PATH = origPath;
