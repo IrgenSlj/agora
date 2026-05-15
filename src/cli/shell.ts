@@ -250,14 +250,18 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const env = io.env ?? {};
   const trueColor = supportsTrueColor(env);
 
-  const banner = renderBanner({ color: true, trueColor });
-  const motto = "Developers' CLI marketplace and community hub - type a command, bash or chat:";
-  const mottoLine = gradientText(motto, { trueColor });
-  const versionLine = style.dim(`v${AGORA_VERSION}`);
-  const slashLine = style.dim(
-    '/help · /menu · /transcript · /verbose · /medium · /quiet · /clear · /quit'
-  );
-  process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${versionLine}\n${slashLine}\n\n`);
+  function printHome(): void {
+    const banner = renderBanner({ color: true, trueColor });
+    const motto = "Developers' CLI marketplace and community hub - type a command, bash or chat:";
+    const mottoLine = gradientText(motto, { trueColor });
+    const versionLine = style.dim(`v${AGORA_VERSION}`);
+    const slashLine = style.dim(
+      '/help · /menu · /transcript · /verbose · /medium · /quiet · /clear · /quit'
+    );
+    process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${versionLine}\n${slashLine}\n\n`);
+  }
+
+  printHome();
 
   const opencodeAvailable = checkOpencodeAvailable();
   if (!opencodeAvailable) {
@@ -417,6 +421,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
         if (dispatch.sub === 'clear') {
           process.stdout.write('\x1b[2J\x1b[H');
+          printHome();
           continue;
         }
 
