@@ -519,8 +519,6 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       if (seq === '\x1b') return dispatchEvent({ kind: 'esc' });
     }
 
-    // B.5 — track whether we already showed the slash palette for this prompt
-    let slashPaletteShown = false;
     // Number of footer rows in the last redraw; cleared on cleanup / before completions
     let footerRows = 0;
 
@@ -532,23 +530,7 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       return seq;
     }
 
-    function maybeShowSlashPalette(newLine: string): void {
-      if (!opts.completer) return;
-      if (newLine === '/' && !slashPaletteShown) {
-        slashPaletteShown = true;
-        const result = opts.completer('/', 1);
-        if (result.matches.length > 0) {
-          if (footerRows > 0) out.write(clearFooterRows());
-          const list = result.matches.join('  ');
-          out.write(`\n\x1b[2m${list}\x1b[0m\n`);
-        }
-      } else if (newLine !== '/') {
-        slashPaletteShown = false;
-      }
-    }
-
     function dispatchEvent(event: KeyEvent): void {
-      const prevLine = state.line;
       const result = applyKeyEvent(state, event, {
         completer: opts.completer,
         ghostSuggester: opts.ghostSuggester
@@ -563,11 +545,6 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
         if (footerRows > 0) out.write(clearFooterRows());
         const list = result.completionsToShow.join(', ');
         out.write(`\n\x1b[2m${list}\x1b[0m\n`);
-      }
-
-      // B.5 — one-time slash palette pop when line transitions to '/'
-      if (state.line !== prevLine) {
-        maybeShowSlashPalette(state.line);
       }
 
       redraw();

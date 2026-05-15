@@ -1,53 +1,83 @@
 # Changelog
 
-## [Unreleased]
+## [0.4.0] - 2026-05-15
+
+The "interactive shell" release. Running `agora` with no arguments in a TTY
+now drops you into a live, persistent shell with bash/chat dispatch, a
+designed look, and live status. Adds an `agora chat` free-inference path and
+an MCP server mode.
 
 ### Added
 
-- **Interactive command browser.** Running `agora` with no command in an
-  interactive terminal now opens a `@clack/prompts`-powered browser: pick a
-  command from a grouped list, read its manual, then choose to view another or
-  quit. Non-TTY invocations (pipes, CI, scripts) keep the static welcome screen
-  and remain fully scriptable. The browser reuses the Level 1 command registry
-  (`COMMANDS`) and a new shared `renderManual` function so the output is
-  identical to `agora help <command>`.
-- **Standalone hub experience.** `agora` with no arguments now shows a gradient
-  wordmark banner inside a rounded header frame, plus quick-start hints. The CLI
-  got a flat-minimal restyle — accent identifiers, dim metadata — with truecolor
-  + 256-colour fallback and clean degradation under `NO_COLOR` / non-TTY.
-- **Design pass landed.** The wordmark letterforms (`AGORA_WORDMARK_SOLID` /
-  `_OUTLINE`), the "agora at golden hour" gradient (Aegean blue → marble →
-  terracotta), the amber accent, and the `renderBox` header frame come from the
-  Claude Design handoff (`docs/claude-design-brief.md`).
-- **`docs/ARCHITECTURE.md`** — the three-surface model, the open-marketplace
-  direction, and the inference question, written down.
-- **`/agora` slash command.** OpenCode plugins can only register tools, not
-  slash commands — so `agora init` now also writes `.opencode/command/agora.md`,
-  a command that forwards your input to the matching `agora_*` tool. Type
-  `/agora search ...`, `/agora install ...`, etc. inside OpenCode.
+- **Interactive shell** (`agora` in a TTY). A persistent REPL with mixed
+  bash/chat dispatch — type a real shell command and it runs; type a
+  question and it routes to `opencode`. Tab completion, ctrl-r reverse
+  search, ghost-text suggestions from history, `/menu` `/transcript`
+  `/clear` `/verbose` `/quiet` `/medium` `/help` `/quit` meta commands,
+  `!` to force bash and `?` to force chat, `/last` and `/again` to re-run
+  the previous bash or chat turn. Per-cwd transcripts under
+  `~/.config/agora/transcripts/<hash>.jsonl` and per-cwd `opencode`
+  sessions so unrelated projects can't bleed context.
+- **`agora chat`** — free inference via `opencode`. TUI mode (`agora chat`)
+  launches the full `opencode` TUI with `inherit` stdio. One-shot mode
+  (`agora chat "question"`) streams a JSON response and persists the
+  session. Plugin tool (`/agora chat "..."`) makes the same available
+  inside OpenCode.
+- **`agora mcp`** — marketplace as an MCP server. All seven marketplace
+  tools (search, browse, trending, install-preview, save, list-saved,
+  workflow-use) exposed as standard MCP tools. Add to `opencode.json` or
+  any MCP client for conversational catalog queries. `agora init --mcp`
+  auto-registers it.
+- **Carved-relief wordmark.** New `AGORA_WORDMARK_RELIEF` — a single set
+  of letterforms with an algorithmic top-highlight / bottom-shadow pass
+  that reads as carved stone under the gradient. Replaces the four
+  earlier wordmark variants (solid / outline / shaded / textured).
+- **Greek-key meander frieze.** Three-row architectural ribbon under
+  the banner: solid top bar, zigzag teeth (`▀▀▄▄` × 13), solid bottom
+  bar. Also doubles as the determinate progress bar during installs
+  (single-line in that mode so it can redraw in place).
+- **Live thinking line + ionic mascot.** While the model is generating,
+  the chat renderer prints a live duration counter with an animated
+  4-frame ionic-column glyph (`╭⊙─⊙╮` swaying). TTY-only, gated on
+  ≥50 cols so narrow terminals stay quiet.
+- **Live status footer.** A single dim line under the prompt input
+  (cwd · model · verbosity · turns · cost), repainted on every
+  keystroke and cleared on submit so output flows from a fresh line.
+- **Markdown chat output.** Streamed chat responses are now formatted
+  inline: `**bold**` → ANSI bold, `` `code` `` → accent, `- bullet` →
+  `·` in accent, `#/##/###` headers → accent. Fenced ``` ``` ``` code
+  blocks pass through untouched (with dim fences).
+- **`/agora` slash command** inside OpenCode. Plugins can only register
+  tools, so `agora init` also writes `.opencode/command/agora.md` to
+  forward your input to the matching `agora_*` tool.
+- **`docs/ARCHITECTURE.md`** — the three-surface model, the
+  open-marketplace direction, and the inference question, written down.
 
 ### Changed
 
-- README and the `agora_info` tool now explain the tool-vs-slash-command
-  distinction instead of implying the plugin registers `/agora` itself
+- README and the `agora_info` tool now explain the
+  tool-vs-slash-command distinction instead of implying the plugin
+  registers `/agora` itself.
 
 ### Removed
 
-- **Dropped the fabricated plugin tools.** `agora_review`, `agora_discussions`,
-  and `agora_profile` returned hardcoded or fake-success data with nothing
-  behind them. The plugin now ships only the seven offline-capable marketplace
-  tools. Profiles, reviews, discussions, and publishing remain in the `agora`
-  CLI, which is backend-backed.
+- **Dropped the fabricated plugin tools.** `agora_review`,
+  `agora_discussions`, and `agora_profile` returned hardcoded or
+  fake-success data with nothing behind them. The plugin now ships
+  only the seven offline-capable marketplace tools. Profiles, reviews,
+  discussions, and publishing remain in the `agora` CLI, which is
+  backend-backed.
 
 ### Fixed
 
 - **Trending no longer ties on stars.** Every package in the
-  modelcontextprotocol/servers monorepo shares one repo-level star count, so
-  trending and empty-query search now rank by `installs` (npm downloads) — a
-  real per-package signal. `agora_trending` shows install counts for packages.
-- Plugin tool output now formats counts (`264.2K` instead of `264237`), leads
-  with installs, shows item ids for `browse`/`install`, and the `install`
-  command's fenced config blocks are no longer mis-indented.
+  modelcontextprotocol/servers monorepo shares one repo-level star
+  count, so trending and empty-query search now rank by `installs`
+  (npm downloads) — a real per-package signal. `agora_trending` shows
+  install counts for packages.
+- Plugin tool output now formats counts (`264.2K` instead of `264237`),
+  leads with installs, shows item ids for `browse`/`install`, and the
+  `install` command's fenced config blocks are no longer mis-indented.
 
 ## [0.3.0] - 2026-05-14
 

@@ -371,43 +371,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const costStr = totalCost > 0 ? `$${totalCost.toFixed(4)}` : '$0';
     const turns = meta?.turnCount ?? 0;
     const cwd = shortCwd(currentCwd);
-    const sep = style.dim('  ');
-    return (
-      style.dim('▎ ') +
-      style.accent(cwd) +
-      sep +
-      style.dim(`opencode/${model}`) +
-      sep +
-      (verbosity === 'medium' ? style.dim(verbosity) : style.accent(verbosity)) +
-      sep +
-      style.dim(`${turns} turns`) +
-      sep +
-      (totalCost > 0 ? style.accent(costStr) : style.dim(costStr))
-    );
-  }
-
-  function buildHintLine(): string {
-    const sep = style.dim(' · ');
-    return (
-      style.dim('  ') +
-      style.dim('tab complete') +
-      sep +
-      style.dim('ctrl-r history') +
-      sep +
-      style.accent('!') +
-      style.dim(' bash') +
-      sep +
-      style.accent('?') +
-      style.dim(' chat') +
-      sep +
-      style.dim('/help · /quit')
-    );
-  }
-
-  // Thin dim horizontal rule + breathing room above every prompt iteration.
-  function printPromptDivider(): void {
-    const width = Math.min(process.stdout.columns ?? 80, 80);
-    process.stdout.write('\n' + style.dim('─'.repeat(width)) + '\n\n');
+    return style.dim(`${cwd} · opencode/${model} · ${verbosity} · ${turns} turns · ${costStr}`);
   }
 
   const sigintHandler = () => {
@@ -423,15 +387,13 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       // Update completionContext.cwd on each iteration in case cd changed it
       completionContext.cwd = currentCwd;
 
-      printPromptDivider();
-
       const result = await readLine({
         prompt: buildPromptBase(),
         promptSuffix: buildPromptSuffix,
         history,
         completer: (line, cursor) => completeShellLine(line, cursor, completionContext),
         ghostSuggester: (line, hist) => ghostFromHistory(line, hist),
-        footer: () => buildContextLine() + '\n' + buildHintLine()
+        footer: () => buildContextLine()
       });
 
       if (result.kind === 'eof') {

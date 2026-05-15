@@ -39,6 +39,21 @@ Agora is one core marketplace engine behind three surfaces:
 
 ## Features
 
+### Interactive shell — `agora` in a TTY
+Run `agora` with no arguments in an interactive terminal and you drop into
+the agora shell: a persistent REPL with mixed bash/chat dispatch.
+
+- Type a shell command (`ls`, `git status`, `npm test`) and it runs.
+- Type a question or sentence and it routes to `opencode` for a free
+  inference chat — markdown formatting, live duration counter, ionic
+  mascot while thinking.
+- `!cmd` forces bash, `?msg` forces chat, `/help` lists meta commands
+  (`/menu` `/transcript` `/clear` `/verbose` `/quiet` `/medium` `/last`
+  `/again` `/quit`).
+- Tab completion, ctrl-r reverse history search, ghost-text suggestions.
+- Per-cwd transcripts under `~/.config/agora/transcripts/` so each
+  project keeps its own session and chat thread isolated.
+
 ### `agora init` — One-Command Setup
 - Scans your project for `package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, `Gemfile`, `Dockerfile`, and more
 - Detects frameworks (React, Next.js, Django, Rails, Spring, Vue)

@@ -244,11 +244,12 @@ export function movementBar(kind: MovementKind, opts: { trueColor: boolean }): s
 // ── Meander — Greek-key frieze + loading bar ────────────────────────────────
 
 /**
- * 52-cell middle row of square teeth — `██  ` × 13. Public for use as the
- * inline single-line progress bar in `idle/wave` modes this row is sandwiched
- * between solid bars to form a three-row Greek-key frieze.
+ * 52-cell middle row of zigzag teeth — alternating upper-half / lower-half
+ * blocks. In a 3-row frieze the teeth attach to the top bar (`▀▀`) and the
+ * bottom bar (`▄▄`) alternately, creating voids that zigzag between top and
+ * bottom — the classic Greek-key reading.
  */
-export const MEANDER = '██  '.repeat(13);
+export const MEANDER = '▀▀▄▄'.repeat(13);
 
 /** Solid 52-cell bar — the top and bottom of the Greek-key frieze. */
 const MEANDER_BAR = '█'.repeat(52);
