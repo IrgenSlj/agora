@@ -1,5 +1,91 @@
 # Changelog
 
+## Unreleased
+
+The "destination scaffold" working session. Phase 1.5 design landed,
+the full-screen TUI shipped as a working scaffold, and two
+user-reported shell bugs were fixed. No version bump (per project
+policy — sculpt before releasing). The next bump will be 0.5.0 once
+news + community fixtures are replaced with live data.
+
+### Added
+
+- **`agora tui`** — the full-screen Agora TUI, designed by Claude
+  Design and integrated end-to-end. Top-tabs frame, five pages
+  (Home · Marketplace · Community · News · Settings), `1`-`5` page
+  switch, `Tab`/`Shift-Tab` cycle, `j/k` nav, `Enter` drill-in,
+  `?` overlay help, `q` quit, `Ctrl-L` redraw. Alt-screen entry/exit
+  is clean; `NO_COLOR` and narrow-terminal (< 80 cols) fallbacks both
+  work. Each page ships in two density variants (calm + dense, see
+  `src/cli/pages/*.{calm,dense}.ts`); the active set is calm/calm/
+  dense/dense/dense per the design rationale.
+- **TUI shell entrypoints** — `/tui` opens Home; `/home`, `/market`,
+  `/marketplace`, `/comm`, `/community`, `/news`, `/settings` open
+  the TUI on that page. Wires through the same in-process pattern as
+  `/menu` — no subprocess. Auto-complete picks up all seven aliases.
+- **`COMMUNITY_GUIDELINES.md`** — drafted ahead of the community
+  feature shipping. Codifies flag-don't-delete, the kill-switch
+  criteria, LLM/bot self-identification, and earned-not-granted
+  reputation.
+- **`docs/TUI_DESIGN.md`** — the brainstorm that drove the Claude
+  Design brief: top-tabs layout, recommendation-engine Home, toml
+  settings persistence, two density variants per page, ASCII
+  mockups for each.
+- **`docs/PHASE_1_5_PLAN.md`** — implementation-level companion to
+  `ROADMAP.md` Phase 1.5. File paths, signatures, SQL deltas, TUI
+  fixture call-sites tagged, verification checklist, repo layout map.
+- **`docs/claude-design-brief-tui.md`** — paste-ready prompt that
+  produced the TUI deliverables. Kept in the repo so future design
+  passes can reuse the format.
+- **`src/settings.ts`** — stub for `AgoraSettings` + `loadSettings`/
+  `writeSettings` so the settings page compiles end-to-end. Real
+  toml parser/serialiser lands in a later PR; the type surface and
+  defaults are stable.
+- **Phase 1.5 directory scaffolds** — `src/cli/pages/`, `src/news/`,
+  `src/news/sources/`, `src/community/`, `test/fixtures/news/`,
+  `test/fixtures/community/` (the page directory is now populated by
+  the TUI deliverables; the others wait for their PRs).
+
+### Fixed
+
+- **`/agora`-prefixed slash inputs in the shell** were falling through
+  to bash because `isExecutable('/agora')` resolved against PATH
+  (Node's `path.join('/usr/bin', '/agora')` strips the leading slash
+  and matched the real binary). Slash inputs that aren't an exact
+  meta now route to the agora CLI; `isExecutable` rejects any name
+  containing `/`. +6 regression tests.
+- **Prompt-line duplication on narrow terminals** — the renderer
+  counted *logical* footer lines instead of *physical* rows, so when
+  a 70-col footer wrapped to 2 rows on a 50-col terminal, the
+  cursor-up landed on the wrong row and a new prompt printed per
+  keystroke. Rewrote `renderPromptFrame` to take terminal width plus
+  a `FramePosition` describing the previous frame, and to erase via
+  `\x1b[J` from the top of that frame. Backward-compatible default
+  (`width=Infinity`); 5 new tests cover the wrap math.
+- **`cd <nonexistent>`** updated `currentCwd` without verifying the
+  target existed. Subsequent `spawn` calls then failed with
+  `Error: spawn /bin/sh ENOENT`. The cd handler now stat-checks
+  before assigning and prints `cd: no such file or directory: …`.
+
+### Docs
+
+- README — count corrections (61 MCP / 6 prompts / 12 workflows /
+  12 tutorials), Project Status expanded with shell/mcp/chat rows
+  plus Phase 1.5 placeholders, duplicate plugin command row removed.
+- SECURITY — supported-versions table updated to `0.4.x / 0.3.x /
+  <0.3`; known-issues section names the backend `requireUser` token
+  flaw and the missing permission manifests.
+- ROADMAP — Phase 1.5 "Destination" added as the headline next step,
+  with three pillars (news, community hub, marketplace polish),
+  production-readiness gates, and a 12-PR sequence.
+- ARCHITECTURE — new "Destination, not just a tool" section
+  describes the news + community direction and the trust through-line.
+- CONTRIBUTING — project-structure block refreshed to match current
+  `src/` layout (cli/, transcript.ts, all modules) and current data
+  counts.
+- test/README — rewritten against the actual 16-file / ~440-test
+  suite.
+
 ## [0.4.1] - 2026-05-15
 
 The "marketplace UX" release. Search and browse now support sorting,

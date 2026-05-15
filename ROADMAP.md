@@ -118,22 +118,33 @@ Make the existing marketplace the strongest part of the app.
 5. **Version bump 0.4.x → 0.5.0** — the "Destination" release. Per policy
    we bump only once Phase 1.5 lands fully; do not bump per-PR.
 
-### Sequencing (proposed PRs)
+### Sequencing — status (updated 2026-05-15 end of session)
 
-| PR | Scope | Approx size |
-|---|---|---|
-| 1 | Docs refresh + `SECURITY.md` + `COMMUNITY_GUIDELINES.md` | ~200 |
-| 2 | `/agora` slash hotfix in shell + regression tests | done (this PR) |
-| 3 | `agora similar` + `agora compare` + "Related" in `browse` | ~210 |
-| 4 | News feed core: types, scoring, cache, fixture-based command | ~500 |
-| 5 | News feed live adapters (HN, Reddit, GH trending, arXiv) | ~350 |
-| 6 | News TUI reader + `/news` shell integration | ~200 |
-| 7 | Backend community schema + endpoints | ~450 |
-| 8 | CLI community commands (`community`, `thread`, `post`, `reply`, `vote`, `flag`) | ~450 |
-| 9 | Community TUI thread reader | ~200 |
-| 10 | Permission manifests + `agora flag` for marketplace items | ~250 |
-| 11 | Backend auth rework + rate-limit middleware | ~200 |
-| 12 | VHS demo tape + README hero gif + 0.5.0 bump | ~50 |
+| #  | Scope | Status |
+|----|---|---|
+| 1  | Docs refresh + `SECURITY.md` + `COMMUNITY_GUIDELINES.md` | ✓ shipped (e56c8d0) |
+| 2  | `/agora` slash hotfix in shell + regression tests | ✓ shipped (64c679e) |
+| 2b | Repo scaffold: `src/cli/pages/`, `src/news/`, `src/community/`, fixtures | ✓ shipped (a2c07f6) |
+| 2c | Prompter wrap-aware redraw + `cd` ENOENT guard | ✓ shipped (bb9d728) |
+| 2d | **Full-screen TUI scaffold** from Claude Design — `agora tui`, 5 pages, alt-screen frame, page contract, settings.ts stub | ✓ shipped (91a2e47) |
+| 2e | TUI shell entrypoints — `/tui`, `/home`, `/market`, `/comm`, `/news`, `/settings` | ✓ shipped (03be473) |
+| 3  | `agora similar` + `agora compare` + "Related" section in `browse` | next |
+| 4  | News feed core: types, scoring, cache, fixture-based `agora news` | queued |
+| 5  | News feed live adapters (HN, Reddit, GH trending, arXiv) | queued |
+| 6  | Replace News page FIXTURE with real `src/news/*` data | queued |
+| 7  | Backend community schema + endpoints | queued |
+| 8  | CLI community commands (`community`, `thread`, `post`, `reply`, `vote`, `flag`) | queued |
+| 9  | Replace Community page FIXTURE with real backend client | queued |
+| 10 | Permission manifests + `agora flag` for marketplace items | queued |
+| 11 | Backend auth rework + rate-limit middleware | queued |
+| 12 | Real toml parser/serializer in `src/settings.ts` (TUI Settings page persistence) | queued |
+| 13 | VHS demo tape + README hero gif + 0.5.0 bump | queued |
+
+**Recommended next session opens with PR 3** — `agora similar` + `agora compare`.
+Smallest spec, builds on data we already have, lets us validate the
+sonnet-delegation cadence before the larger news/community PRs. The TUI
+marketplace page already drills into a detail overlay; "Related" can plug
+straight into it.
 
 ## Phase 1 — The standalone hub experience (current)
 
@@ -229,4 +240,4 @@ surface — mechanism design does the policing, not a gatekeeper:
 - **Report a setup that `agora init` misses.** Open an issue with your project's manifest files.
 - **Polish the standalone CLI experience.** Phase 1 is wide open.
 
-_Last updated: 2026-05-15 · Phase 1.5 "Destination" plan added (news feed, community hub, marketplace elaboration). Phase 1 status unchanged._
+_Last updated: 2026-05-15 (end of working session) · Phase 1.5 "Destination" plan recorded. PRs 1, 2, 2b, 2c, 2d, 2e shipped (docs, shell hotfix, repo scaffolds, prompter+cd fixes, full-screen TUI scaffold, TUI shell entrypoints). PR 3 (similar/compare) is next._
