@@ -1,34 +1,8 @@
 import type { Page, PageAction, PageContext } from './types.js';
-// TODO PR-N: src/settings.ts will be authored in a later PR; the signatures below are the contract.
 import {
   loadSettings, writeSettings, type AgoraSettings,
 } from '../../settings.js';
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-// eslint-disable-next-line no-control-regex
-const ANSI_RE = /\x1b\[[0-9;]*m/g;
-const vlen = (s: string): number => s.replace(ANSI_RE, '').length;
-function padRight(s: string, w: number): string {
-  const need = w - vlen(s);
-  return need > 0 ? s + ' '.repeat(need) : s;
-}
-function truncate(s: string, w: number): string {
-  if (vlen(s) <= w) return s;
-  const plain = s.replace(ANSI_RE, '');
-  return plain.slice(0, Math.max(0, w - 1)) + '\u2026';
-}
-function rail(style: { accent(s: string): string }): string {
-  return style.accent('x') === 'x' ? '> ' : style.accent('\u258c') + ' ';
-}
-function noRail(): string { return '  '; }
-function frame(lines: ReadonlyArray<string>, width: number, height: number): string {
-  const out: string[] = [];
-  for (let i = 0; i < height; i++) {
-    out.push(padRight(truncate(lines[i] ?? '', width), width));
-  }
-  return out.join('\n');
-}
-// ──────────────────────────────────────────────────────────────────────────────
+import { vlen, rail, noRail, frame } from './helpers.js';
 
 interface Field {
   section: 'Account' | 'Display' | 'News' | 'Community';

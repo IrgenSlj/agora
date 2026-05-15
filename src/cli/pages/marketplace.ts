@@ -1,44 +1,8 @@
 import type { Page, PageAction, PageContext } from './types.js';
 import {
-  getMarketplaceItems, searchMarketplaceItems, type MarketplaceItem,
+  getMarketplaceItems, searchMarketplaceItems, similarItems, type MarketplaceItem,
 } from '../../marketplace.js';
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-// eslint-disable-next-line no-control-regex
-const ANSI_RE = /\x1b\[[0-9;]*m/g;
-const vlen = (s: string): number => s.replace(ANSI_RE, '').length;
-function padRight(s: string, w: number): string {
-  const need = w - vlen(s);
-  return need > 0 ? s + ' '.repeat(need) : s;
-}
-function truncate(s: string, w: number): string {
-  if (vlen(s) <= w) return s;
-  const plain = s.replace(ANSI_RE, '');
-  return plain.slice(0, Math.max(0, w - 1)) + '\u2026';
-}
-function rail(style: { accent(s: string): string }): string {
-  return style.accent('x') === 'x' ? '> ' : style.accent('\u258c') + ' ';
-}
-function noRail(): string { return '  '; }
-function sep(label: string, width: number, style: { dim(s: string): string }): string {
-  if (!label) return style.dim('\u2500'.repeat(Math.max(0, width)));
-  const head = '\u2500\u2500 ' + label + ' ';
-  const fill = Math.max(0, width - head.length);
-  return style.dim(head + '\u2500'.repeat(fill));
-}
-function fmtCount(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-  return String(n);
-}
-function frame(lines: ReadonlyArray<string>, width: number, height: number): string {
-  const out: string[] = [];
-  for (let i = 0; i < height; i++) {
-    out.push(padRight(truncate(lines[i] ?? '', width), width));
-  }
-  return out.join('\n');
-}
-// ──────────────────────────────────────────────────────────────────────────────
+import { vlen, rail, noRail, sep, fmtCount, frame, scrollbar } from './helpers.js';
 
 type SortKey = 'installs' | 'stars' | 'name';
 interface MpState {
@@ -126,6 +90,17 @@ export const marketplacePage: Page = {
           + style.accent('i') + style.dim(' install   ')
           + style.accent('s') + style.dim(' save   ')
           + style.accent('Esc') + style.dim(' back'));
+        const kind = it.kind === 'workflow' ? 'workflow' : 'package';
+        const related = similarItems(it.id, { limit: 3, type: kind as any });
+        if (related.length > 0) {
+          lines.push('');
+          lines.push(' ' + sep('Related', width - 2, style));
+          for (const rel of related) {
+            if (rel.id === it.id) continue;
+            lines.push('  \u00b7 ' + style.bold(rel.name.padEnd(20))
+              + style.dim(fmtCount(rel.installs ?? 0) + ' installs'));
+          }
+        }
       }
       return frame(lines, width, height);
     }
@@ -133,6 +108,7 @@ export const marketplacePage: Page = {
     const limit = Math.max(0, height - lines.length - 1);
     const start = Math.max(0,
       Math.min(state.cursor - Math.floor(limit / 2), items.length - limit));
+    const sbar = scrollbar(items.length, limit, state.cursor, style);
     for (let i = 0; i < limit && start + i < items.length; i++) {
       const it = items[start + i];
       if (!it) continue;
@@ -145,11 +121,14 @@ export const marketplacePage: Page = {
           : '');
       const nameCell = selected ? style.bold(it.name) : it.name;
       const left = ' ' + lead + nameCell;
-      const room = width - vlen(left) - vlen(stats) - 1;
+      const room = width - vlen(left) - vlen(stats) - 2;
       const desc = style.dim((it.description ?? '').slice(0, Math.max(0, room - 2)));
       const pad = ' '.repeat(Math.max(1, room - vlen(desc) - 1));
-      lines.push(left + '  ' + desc + pad + stats);
+      lines.push(left + '  ' + desc + pad + stats + ' ' + sbar[i]!);
     }
+    lines.push('  ' + (items.length > limit
+      ? style.dim('items ' + (start + 1) + '\u2013' + Math.min(start + limit, items.length) + ' of ' + items.length)
+      : style.dim(items.length + (items.length === 1 ? ' item' : ' items'))));
     return frame(lines, width, height);
   },
   handleKey(event, _ctx): PageAction {

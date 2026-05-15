@@ -17,9 +17,13 @@ function makeContext(overrides: Partial<CompletionContext> = {}): CompletionCont
       '/quit',
       '/exit',
       '/last',
-      '/again'
+      '/again',
+      '/install',
+      '/browse',
+      '/search',
+      '/save',
+      '/remove'
     ],
-    agoraCommands: ['install', 'browse', 'search', 'save', 'remove'],
     marketplaceIds: () => ['mcp-github', 'mcp-postgres', 'mcp-filesystem', 'wf-tdd-cycle'],
     savedIds: () => ['mcp-github', 'wf-tdd-cycle'],
     listDir: (p: string) => {
@@ -136,6 +140,87 @@ describe('marketplace completions', () => {
     const r = completeShellLine(line, line.length, makeContext());
     // 'install ' = 8 chars, second token starts at 8
     expect(r.replaceFrom).toBe(8);
+  });
+});
+
+// ── New command completions ───────────────────────────────────────────────────
+
+describe('similar/compare/flag completions', () => {
+  test('similar <prefix> filters marketplace ids', () => {
+    const line = 'similar mcp-g';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toContain('mcp-github');
+    expect(r.matches).not.toContain('mcp-postgres');
+  });
+
+  test('compare <prefix> filters marketplace ids', () => {
+    const line = 'compare mcp-p';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toContain('mcp-postgres');
+  });
+
+  test('flag <prefix> filters marketplace ids', () => {
+    const line = 'flag mcp-f';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toContain('mcp-filesystem');
+  });
+
+  test('thread <prefix> filters marketplace ids', () => {
+    const line = 'thread wf-';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toContain('wf-tdd-cycle');
+  });
+
+  test('community <board> completes board names', () => {
+    const line = 'community m';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toContain('mcp');
+    expect(r.matches).not.toContain('agents');
+    expect(r.matches).not.toContain('wf-tdd-cycle');
+  });
+
+  test('community <prefix> with no matching board returns none', () => {
+    const line = 'community z';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toHaveLength(0);
+  });
+});
+
+describe('flag-value completions', () => {
+  test('news --source h completes to hn', () => {
+    const line = 'news --source h';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toContain('hn');
+  });
+
+  test('news --source=ar completes to arxiv', () => {
+    const line = 'news --source=ar';
+    const r = completeShellLine(line, 'news --source=ar'.length, makeContext());
+    expect(r.matches).toContain('arxiv');
+  });
+
+  test('post --board a completes to agents', () => {
+    const line = 'post --board a';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toContain('agents');
+  });
+
+  test('community --sort t completes to top', () => {
+    const line = 'community --sort t';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toContain('top');
+  });
+
+  test('flag --reason s completes to spam', () => {
+    const line = 'flag --reason s';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toContain('spam');
+  });
+
+  test('vote -t completes type flags', () => {
+    const line = 'post --type d';
+    const r = completeShellLine(line, line.length, makeContext());
+    expect(r.matches).toContain('discussion');
   });
 });
 

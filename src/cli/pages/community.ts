@@ -4,35 +4,7 @@ import type { SourceOptions } from '../../live.js';
 import { communityBoardsSource, communityThreadsSource, communityThreadSource } from '../../community/client.js';
 import { BOARD_LABELS } from '../../community/types.js';
 import { loadAgoraState, getAuthState } from '../../state.js';
-
-const ANSI_RE = /\x1b\[[0-9;]*m/g;
-const vlen = (s: string): number => s.replace(ANSI_RE, '').length;
-function padRight(s: string, w: number): string {
-  const need = w - vlen(s);
-  return need > 0 ? s + ' '.repeat(need) : s;
-}
-function truncate(s: string, w: number): string {
-  if (vlen(s) <= w) return s;
-  const plain = s.replace(ANSI_RE, '');
-  return plain.slice(0, Math.max(0, w - 1)) + '\u2026';
-}
-function rail(style: { accent(s: string): string }): string {
-  return style.accent('x') === 'x' ? '> ' : style.accent('\u258c') + ' ';
-}
-function noRail(): string { return '  '; }
-function sep(label: string, width: number, style: { dim(s: string): string }): string {
-  if (!label) return style.dim('\u2500'.repeat(Math.max(0, width)));
-  const head = '\u2500\u2500 ' + label + ' ';
-  const fill = Math.max(0, width - head.length);
-  return style.dim(head + '\u2500'.repeat(fill));
-}
-function frame(lines: ReadonlyArray<string>, width: number, height: number): string {
-  const out: string[] = [];
-  for (let i = 0; i < height; i++) {
-    out.push(padRight(truncate(lines[i] ?? '', width), width));
-  }
-  return out.join('\n');
-}
+import { vlen, rail, noRail, sep, frame } from './helpers.js';
 
 function hoursAgo(iso: string): number {
   return Math.max(0, (Date.now() - new Date(iso).getTime()) / 3600000);

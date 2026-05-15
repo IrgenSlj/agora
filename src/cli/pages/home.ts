@@ -1,46 +1,14 @@
 import type { Page, PageAction, PageContext } from './types.js';
 import {
-  getMarketplaceItems, getTrendingItems, type MarketplaceItem,
+  getMarketplaceItems, getTrendingItems, similarItems, type MarketplaceItem,
 } from '../../marketplace.js';
-
-// ── helpers ───────────────────────────────────────────────────────────────────
-// eslint-disable-next-line no-control-regex
-const ANSI_RE = /\x1b\[[0-9;]*m/g;
-const vlen = (s: string): number => s.replace(ANSI_RE, '').length;
-function padRight(s: string, w: number): string {
-  const need = w - vlen(s);
-  return need > 0 ? s + ' '.repeat(need) : s;
-}
-function truncate(s: string, w: number): string {
-  if (vlen(s) <= w) return s;
-  const plain = s.replace(ANSI_RE, '');
-  return plain.slice(0, Math.max(0, w - 1)) + '\u2026';
-}
-function rail(style: { accent(s: string): string }): string {
-  return style.accent('x') === 'x' ? '> ' : style.accent('\u258c') + ' ';
-}
-function sep(label: string, width: number, style: { dim(s: string): string }): string {
-  if (!label) return style.dim('\u2500'.repeat(Math.max(0, width)));
-  const head = '\u2500\u2500 ' + label + ' ';
-  const fill = Math.max(0, width - head.length);
-  return style.dim(head + '\u2500'.repeat(fill));
-}
-function fmtCount(n: number): string {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-  return String(n);
-}
-function frame(lines: ReadonlyArray<string>, width: number, height: number): string {
-  const out: string[] = [];
-  for (let i = 0; i < height; i++) {
-    out.push(padRight(truncate(lines[i] ?? '', width), width));
-  }
-  return out.join('\n');
-}
-// ──────────────────────────────────────────────────────────────────────────────
+import { rail, sep, fmtCount, frame } from './helpers.js';
 
 interface HomeState { selected: number; }
 const state: HomeState = { selected: 0 };
+
+let cachedPrimary: MarketplaceItem | undefined;
+let cachedSimilar: MarketplaceItem[] = [];
 
 function pickPrimary(items: ReadonlyArray<MarketplaceItem>): MarketplaceItem | undefined {
   const filtered = items.filter((i) => i.id !== 'mcp-everything');
@@ -51,9 +19,24 @@ function pickPrimary(items: ReadonlyArray<MarketplaceItem>): MarketplaceItem | u
   return best;
 }
 
-// FIXTURE: real impl is tag-IDF Jaccard against user's most recent install.
-function reason(_item: MarketplaceItem): string {
-  return 'shares tags [db, sql, postgres, realtime] with packages you have installed';
+function refreshRecommendations(items: ReadonlyArray<MarketplaceItem>): void {
+  const itemsArr = items as MarketplaceItem[];
+  const seed = itemsArr.find((i) => i.id === 'mcp-postgres' || i.id === 'mcp-github')
+    ?? pickPrimary(itemsArr);
+  cachedPrimary = seed;
+  if (seed) {
+    const type = seed.kind === 'workflow' ? 'workflow' : 'package';
+    cachedSimilar = similarItems(seed.id, { limit: 3, type: type as any }).filter((s) => s.id !== seed.id);
+  } else {
+    cachedSimilar = [];
+  }
+}
+
+function reason(item: MarketplaceItem, seed: MarketplaceItem | undefined): string {
+  if (!seed) return '';
+  const shared = (item.tags ?? []).filter((t) => (seed.tags ?? []).includes(t));
+  if (shared.length > 0) return 'shares tags [' + shared.slice(0, 4).join(', ') + '] with ' + seed.id;
+  return 'similar to ' + seed.id + ' by category';
 }
 
 export const homePage: Page = {
@@ -70,14 +53,36 @@ export const homePage: Page = {
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
     const items = getMarketplaceItems();
-    const primary = pickPrimary(items);
+    refreshRecommendations(items);
+    const primary = cachedPrimary;
+    const recs = cachedSimilar;
     const trending = getTrendingItems().slice(0, 3);
 
     const lines: string[] = [];
     lines.push('');
     lines.push('  ' + sep('Recommended for you', width - 2, style));
     lines.push('');
-    if (primary) {
+    if (recs.length > 0) {
+      const rec = recs[0]!;
+      lines.push('  ' + rail(style) + style.bold(rec.name)
+        + style.dim('   (similar items)'));
+      if (rec.description) {
+        lines.push('     ' + style.dim(rec.description)
+          + (rec.author ? style.dim(' \u00b7 ' + rec.author) : ''));
+      }
+      lines.push('     '
+        + style.accent(fmtCount(rec.installs ?? 0)) + style.dim(' installs')
+        + (rec.stars !== undefined
+          ? '   ' + style.accent(fmtCount(rec.stars)) + style.dim(' \u2605')
+          : ''));
+      lines.push('');
+      lines.push('     '
+        + style.accent('i') + style.dim(' install    ')
+        + style.accent('s') + style.dim(' save    ')
+        + style.accent('Enter') + style.dim(' view full details'));
+      lines.push('');
+      lines.push('     ' + style.dim('Why: ') + reason(rec, primary));
+    } else if (primary) {
       lines.push('  ' + rail(style) + style.bold(primary.name)
         + style.dim('   (top-installed package)'));
       if (primary.description) {
@@ -95,21 +100,31 @@ export const homePage: Page = {
         + style.accent('s') + style.dim(' save    ')
         + style.accent('Enter') + style.dim(' view full details'));
       lines.push('');
-      lines.push('     ' + style.dim('Why: ') + reason(primary));
+      lines.push('     ' + style.dim('Why: ') + reason(primary, undefined));
     } else {
       lines.push('  ' + style.dim('Nothing to recommend yet \u2014 press ')
         + style.accent('2') + style.dim(' to browse the marketplace.'));
     }
     lines.push('');
     lines.push('');
-    lines.push('  ' + sep('Other suggestions', width - 2, style));
-    lines.push('');
-    if (trending.length === 0) {
-      lines.push('     ' + style.dim('Nothing trending right now.'));
+    if (recs.length > 1) {
+      lines.push('  ' + sep('More like this', width - 2, style));
+      lines.push('');
+      for (let i = 1; i < recs.length; i++) {
+        const r = recs[i]!;
+        lines.push('     \u00b7 ' + style.bold(r.name.padEnd(20))
+          + style.dim(r.description ?? ''));
+      }
     } else {
-      for (const t of trending) {
-        lines.push('     \u00b7 ' + style.bold(t.name.padEnd(20))
-          + style.dim(t.description ?? ''));
+      lines.push('  ' + sep('Trending', width - 2, style));
+      lines.push('');
+      if (trending.length === 0) {
+        lines.push('     ' + style.dim('Nothing trending right now.'));
+      } else {
+        for (const t of trending) {
+          lines.push('     \u00b7 ' + style.bold(t.name.padEnd(20))
+            + style.dim(t.description ?? ''));
+        }
       }
     }
     return frame(lines, width, height);

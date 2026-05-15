@@ -10,29 +10,7 @@ import { githubTrendingSource } from '../../news/sources/github-trending.js';
 import { arxivSource } from '../../news/sources/arxiv.js';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-
-const ANSI_RE = /\x1b\[[0-9;]*m/g;
-const vlen = (s: string): number => s.replace(ANSI_RE, '').length;
-function padRight(s: string, w: number): string {
-  const need = w - vlen(s);
-  return need > 0 ? s + ' '.repeat(need) : s;
-}
-function truncate(s: string, w: number): string {
-  if (vlen(s) <= w) return s;
-  const plain = s.replace(ANSI_RE, '');
-  return plain.slice(0, Math.max(0, w - 1)) + '\u2026';
-}
-function rail(style: { accent(s: string): string }): string {
-  return style.accent('x') === 'x' ? '> ' : style.accent('\u258c') + ' ';
-}
-function noRail(): string { return '  '; }
-function frame(lines: ReadonlyArray<string>, width: number, height: number): string {
-  const out: string[] = [];
-  for (let i = 0; i < height; i++) {
-    out.push(padRight(truncate(lines[i] ?? '', width), width));
-  }
-  return out.join('\n');
-}
+import { vlen, rail, noRail, frame, scrollbar } from './helpers.js';
 
 const SOURCE_LABELS: Record<string, string> = {
   hn: 'HN',
@@ -41,6 +19,8 @@ const SOURCE_LABELS: Record<string, string> = {
   arxiv: 'XR',
   rss: 'RS',
 };
+
+const ITEM_LINES = 3; // title, url, rule
 
 interface NewsState {
   cursor: number;
@@ -130,7 +110,7 @@ export const newsPage: Page = {
   navLabel: 'News',
   navIcon: 'N',
   hotkeys: [
-    { key: 'j/k', label: 'nav' },
+    { key: 'j/k/Pg', label: 'nav' },
     { key: 'Enter', label: 'open' },
     { key: 's', label: 'save' },
     { key: 'p', label: 'mark read' },
@@ -152,10 +132,12 @@ export const newsPage: Page = {
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
     const list = visible();
+    ctx.app.unread.news = state.loading ? 0 : list.length;
     state.cursor = Math.min(state.cursor, Math.max(0, list.length - 1));
     const lines: string[] = [];
     const head = ' ' + style.bold(style.accent('NEWS'));
-    const right = style.dim('src:') + style.accent(state.source)
+    const pos = list.length > 0 ? style.dim(' [' + (state.cursor + 1) + '/' + list.length + ']') : '';
+    const right = pos + style.dim(' src:') + style.accent(state.source)
       + style.dim('  topic:') + style.accent(state.topic)
       + style.dim('  ' + list.length + ' stories');
     const gap = Math.max(2, width - vlen(head) - vlen(right) - 2);
@@ -175,10 +157,21 @@ export const newsPage: Page = {
         + style.accent('A/H/R/G/X') + style.dim(' source.'));
       return frame(lines, width, height);
     }
-    list.forEach((s, i) => {
-      const sel = i === state.cursor;
+
+    // Virtualized render: only build lines for visible items
+    const used = lines.length;
+    const maxItems = Math.max(1, Math.floor((height - used) / ITEM_LINES));
+    const half = Math.floor(maxItems / 2);
+    let start = Math.max(0, state.cursor - half);
+    if (start + maxItems > list.length) start = Math.max(0, list.length - maxItems);
+    const end = Math.min(list.length, start + maxItems);
+
+    const sbar = scrollbar(list.length, end - start, state.cursor, style);
+    for (let si = start; si < end; si++) {
+      const s = list[si]!;
+      const sel = si === state.cursor;
       const lead = sel ? rail(style) : noRail();
-      const rank = (i + 1).toString().padStart(2);
+      const rank = (si + 1).toString().padStart(2);
       const src = style.accent((SOURCE_LABELS[s.source] ?? s.source.toUpperCase()).padEnd(6));
       const ageH = (Date.now() - new Date(s.publishedAt).getTime()) / 3600000;
       const age = style.dim((Math.round(ageH) + 'h').padEnd(4));
@@ -189,11 +182,12 @@ export const newsPage: Page = {
       const titleColor = isRead ? style.dim(s.title)
         : (sel ? style.bold(s.title) : s.title);
       lines.push(' ' + lead + style.dim(rank + '. ') + src + ' ' + age + '  '
-        + up + '  ' + score + '   ' + titleColor);
+        + up + '  ' + score + '   ' + titleColor + ' ' + sbar[si - start]!);
       lines.push('         ' + style.dim(hostFromUrl(s.url))
         + (isSaved ? style.accent('  saved') : ''));
       lines.push(' ' + style.dim('\u2500'.repeat(Math.max(0, width - 2))));
-    });
+    }
+
     return frame(lines, width, height);
   },
   handleKey(event, ctx): PageAction {
@@ -210,6 +204,14 @@ export const newsPage: Page = {
         state.cursor = Math.min(list.length - 1, state.cursor + 1); return { kind: 'none' };
       case 'k': case 'up':
         state.cursor = Math.max(0, state.cursor - 1); return { kind: 'none' };
+      case 'pageup':
+        state.cursor = Math.max(0, state.cursor - 20); return { kind: 'none' };
+      case 'pagedown':
+        state.cursor = Math.min(list.length - 1, state.cursor + 20); return { kind: 'none' };
+      case 'home':
+        state.cursor = 0; return { kind: 'none' };
+      case 'end':
+        state.cursor = list.length - 1; return { kind: 'none' };
       case 'enter': {
         const it = list[state.cursor];
         return it ? { kind: 'open-url', url: it.url } : { kind: 'none' };

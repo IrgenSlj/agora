@@ -302,7 +302,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const mottoLine = gradientText(motto, { trueColor });
     const versionLine = style.dim(`v${AGORA_VERSION}`);
     const slashLine = style.dim(
-      '/tui · /help · /menu · /transcript · /verbose · /medium · /quiet · /clear · /quit'
+      '/tui · /help · /menu · /search · /news · /community · /similar · /compare · /clear · /quit'
     );
     process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${versionLine}\n${slashLine}\n\n`);
   }
@@ -366,6 +366,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     return cachedSavedIds;
   }
 
+  const agoraSlashCommands = COMMANDS.map((c) => '/' + c.name);
   const slashCommands = [
     '/tui',
     '/home',
@@ -385,12 +386,21 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     '/quit',
     '/exit',
     '/last',
-    '/again'
+    '/again',
+    ...agoraSlashCommands
   ];
 
+  // Deduplicate: /news, /home etc may appear in both lists
+  const seen = new Set<string>();
+  const deduped = slashCommands.filter((c) => {
+    if (seen.has(c)) return false;
+    seen.add(c);
+    return true;
+  });
+  const finalSlashCommands = deduped;
+
   const completionContext = {
-    slashCommands,
-    agoraCommands: COMMANDS.map((c) => c.name),
+    slashCommands: finalSlashCommands,
     marketplaceIds: getMarketplaceIds,
     savedIds: getSavedIds,
     listDir: (p: string) => {
@@ -900,7 +910,7 @@ function printHelp(style: Styler): void {
     style.dim('Free AI models:'),
     ...FREE_MODELS.map((m) => `  ${m}`),
     '',
-    style.dim('Agora commands:')
+    style.dim('Agora commands (also available as /slash shortcuts):')
   ];
 
   const groups = ['Marketplace', 'Setup', 'Library', 'Learn', 'Community'] as const;
@@ -912,7 +922,7 @@ function printHelp(style: Styler): void {
     }
   }
 
-  lines.push('', style.dim(`agora v${AGORA_VERSION} · run \`agora help <command>\` for details`));
+  lines.push('', style.dim(`agora v${AGORA_VERSION} · run \`agora help <command>\` or \`/<command> --help\` for details`));
 
   process.stdout.write(lines.join('\n') + '\n\n');
 }

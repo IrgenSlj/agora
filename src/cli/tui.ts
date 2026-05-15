@@ -9,6 +9,7 @@ import { marketplacePage } from './pages/marketplace.js';
 import { communityPage } from './pages/community.js';
 import { newsPage } from './pages/news.js';
 import { settingsPage } from './pages/settings.js';
+import { vlen, padRight, truncate } from './pages/helpers.js';
 
 const ALT_ON = '\x1b[?1049h';
 const ALT_OFF = '\x1b[?1049l';
@@ -16,19 +17,6 @@ const CUR_HIDE = '\x1b[?25l';
 const CUR_SHOW = '\x1b[?25h';
 const CLEAR = '\x1b[2J\x1b[H';
 const HOME_CUR = '\x1b[H';
-
-// eslint-disable-next-line no-control-regex
-const ANSI_RE = /\x1b\[[0-9;]*m/g;
-const vlen = (s: string): number => s.replace(ANSI_RE, '').length;
-function padRight(s: string, w: number): string {
-  const need = w - vlen(s);
-  return need > 0 ? s + ' '.repeat(need) : s;
-}
-function truncate(s: string, w: number): string {
-  if (vlen(s) <= w) return s;
-  const plain = s.replace(ANSI_RE, '');
-  return plain.slice(0, Math.max(0, w - 1)) + '\u2026';
-}
 
 const PAGE_ORDER: ReadonlyArray<PageId> = ['home', 'marketplace', 'community', 'news', 'settings'];
 
@@ -137,7 +125,7 @@ function renderHeader(o: HeaderOpts): [string, string] {
   return [row1, div];
 }
 
-function renderFooter(width: number, style: Styler, hotkeys: ReadonlyArray<Hotkey>): string {
+function renderFooter(width: number, style: Styler, hotkeys: ReadonlyArray<Hotkey>, status: { msg: string; tone?: 'info' | 'warn' | 'error' } | null): [string, string] {
   const parts: string[] = [];
   parts.push(style.accent('1-5') + ' page');
   parts.push(style.accent('j/k') + ' nav');
@@ -148,7 +136,16 @@ function renderFooter(width: number, style: Styler, hotkeys: ReadonlyArray<Hotke
   parts.push(style.accent('?') + ' help');
   parts.push(style.accent('q') + ' quit');
   const text = ' ' + parts.join(style.dim('  \u00b7  '));
-  return padRight(truncate(text, width), width);
+  const hotkeyLine = padRight(truncate(text, width), width);
+
+  let statusLine: string;
+  if (status) {
+    const icon = status.tone === 'error' ? style.accent('\u26a0') : style.dim('\u00b7');
+    statusLine = padRight(' ' + icon + ' ' + status.msg, width);
+  } else {
+    statusLine = padRight('', width);
+  }
+  return [statusLine, hotkeyLine];
 }
 
 export interface RunOpts {
@@ -175,6 +172,14 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
   let current: PageId = opts.initial ?? 'home';
   let helpOpen = false;
   let status: { msg: string; tone?: 'info' | 'warn' | 'error' } | null = null;
+  let statusTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function setStatus(msg: string, tone?: 'info' | 'warn' | 'error'): void {
+    status = { msg, tone };
+    if (statusTimer) clearTimeout(statusTimer);
+    statusTimer = setTimeout(() => { status = null; statusTimer = null; paint(); }, 2000);
+    paint();
+  }
 
   function size(): { w: number; h: number } {
     return { w: stdout.columns ?? 80, h: stdout.rows ?? 24 };
@@ -182,7 +187,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
 
   function ctxFor(): PageContext {
     const { w, h } = size();
-    return { io, style, width: w, height: Math.max(1, h - 3), trueColor: tc, app };
+    return { io, style, width: w, height: Math.max(1, h - 4), trueColor: tc, app };
   }
 
   function renderHelp(page: Page): string {
@@ -219,10 +224,9 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
     const lines = body.split('\n');
     while (lines.length < ctx.height) lines.push('');
     if (lines.length > ctx.height) lines.length = ctx.height;
-    const footer = status
-      ? padRight(' ' + (status.tone === 'error' ? style.accent('!') : style.dim('\u00b7')) + ' ' + status.msg, w)
-      : renderFooter(w, style, page.hotkeys);
-    return [r1, r2, ...lines.map((l) => padRight(truncate(l, w), w)), footer].join('\n');
+    const [statusLine, footerLine] = renderFooter(w, style, page.hotkeys, status);
+    const rendered = [r1, r2, ...lines.map((l) => padRight(truncate(l, w), w)), statusLine, footerLine].join('\n');
+    return rendered;
   }
 
   function paint(): void { out.write(HOME_CUR + compose()); }
@@ -245,51 +249,62 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
           current = a.to;
           await getPage(current).mount?.(ctxFor());
           status = null;
+          if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
         }
         return;
-      case 'open-url': status = { msg: 'open ' + a.url, tone: 'info' }; return;
-      case 'run-shell': status = { msg: 'would run: ' + a.cmd, tone: 'info' }; return;
-      case 'status': status = { msg: a.message, tone: a.tone }; return;
+      case 'open-url': setStatus('open ' + a.url); return;
+      case 'run-shell': setStatus('would run: ' + a.cmd); return;
+      case 'status': setStatus(a.message, a.tone); return;
     }
   }
 
   const onData = async (chunk: Buffer | string): Promise<void> => {
-    const txt = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
-    const ev = parseKey(txt);
+    try {
+      const txt = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
+      const ev = parseKey(txt);
 
-    if (ev.ctrl && ev.key === 'c') { finish(130); return; }
-    if (!helpOpen && ev.key === 'q') { finish(0); return; }
-    if (ev.ctrl && ev.key === 'l') { paint(); return; }
-    if (ev.key === '?') { helpOpen = !helpOpen; paint(); return; }
-    if (helpOpen) {
-      if (ev.key === 'esc' || ev.key === '?' || ev.key === 'q') { helpOpen = false; paint(); }
-      return;
-    }
-    if (/^[1-5]$/.test(ev.key)) {
-      const next = PAGE_ORDER[Number(ev.key) - 1];
-      if (next && next !== current) {
-        await getPage(current).unmount?.(ctxFor());
-        current = next;
-        await getPage(current).mount?.(ctxFor());
-        status = null;
+      if (ev.ctrl && ev.key === 'c') { finish(130); return; }
+      if (!helpOpen && ev.key === 'q') { finish(0); return; }
+      if (ev.ctrl && ev.key === 'l') { paint(); return; }
+      if (ev.key === '?') { helpOpen = !helpOpen; paint(); return; }
+      if (helpOpen) {
+        if (ev.key === 'esc' || ev.key === '?' || ev.key === 'q') { helpOpen = false; paint(); }
+        return;
       }
-      paint(); return;
-    }
-    if (ev.key === 'tab') {
-      const i = PAGE_ORDER.indexOf(current);
-      const step = ev.shift ? -1 : 1;
-      const next = PAGE_ORDER[(i + step + PAGE_ORDER.length) % PAGE_ORDER.length];
-      if (next) {
-        await getPage(current).unmount?.(ctxFor());
-        current = next;
-        await getPage(current).mount?.(ctxFor());
-        status = null;
+      if (/^[1-5]$/.test(ev.key)) {
+        const next = PAGE_ORDER[Number(ev.key) - 1];
+        if (next && next !== current) {
+          await getPage(current).unmount?.(ctxFor());
+          current = next;
+          await getPage(current).mount?.(ctxFor());
+          status = null;
+        }
+        paint(); return;
       }
-      paint(); return;
+      if (ev.key === 'tab') {
+        const i = PAGE_ORDER.indexOf(current);
+        const step = ev.shift ? -1 : 1;
+        const next = PAGE_ORDER[(i + step + PAGE_ORDER.length) % PAGE_ORDER.length];
+        if (next) {
+          await getPage(current).unmount?.(ctxFor());
+          current = next;
+          await getPage(current).mount?.(ctxFor());
+          status = null;
+        }
+        paint(); return;
+      }
+      const action = await Promise.resolve(getPage(current).handleKey(ev, ctxFor()));
+      await applyAction(action);
+      paint();
+    } catch (err) {
+      // Any unhandled error must still clean up the terminal.
+      // Without this, stdin stays raw, alt screen stays active,
+      // cursor stays hidden, and the shell's next readLine breaks.
+      try {
+        process.stderr.write('\n\x1b[31mTUI error:\x1b[0m ' + (err instanceof Error ? err.message : String(err)) + '\n');
+      } catch { /* ignore */ }
+      finish(1);
     }
-    const action = await Promise.resolve(getPage(current).handleKey(ev, ctxFor()));
-    await applyAction(action);
-    paint();
   };
 
   const onResize = (): void => { paint(); };

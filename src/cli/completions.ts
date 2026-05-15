@@ -13,7 +13,6 @@ export interface CompletionResult {
 
 export interface CompletionContext {
   slashCommands: string[];
-  agoraCommands: string[];
   marketplaceIds: () => string[];
   savedIds: () => string[];
   listDir: (path: string) => string[];
@@ -23,6 +22,38 @@ export interface CompletionContext {
 const PATH_COMMANDS = new Set(['cd', 'ls', 'cat', 'vi', 'vim', 'nano', 'less', 'more']);
 const MARKETPLACE_COMMANDS = new Set(['install', 'browse']);
 const SAVED_COMMANDS = new Set(['remove']);
+const ID_ARG_COMMANDS = new Set(['similar', 'compare', 'flag', 'thread']);
+
+const BOARDS = ['mcp', 'agents', 'tools', 'workflows', 'show', 'ask', 'meta'];
+const NEWS_SOURCES = ['hn', 'reddit', 'gh', 'arxiv', 'rss'];
+const NEWS_TOPICS = ['mcp', 'ai', 'agents', 'workflows', 'llm', 'tool-use', 'coding', 'security'];
+const SORT_ORDERS = ['top', 'new', 'active'];
+const TYPES = ['package', 'workflow'];
+const TYPES_EXT = ['discussion', 'reply', 'package', 'workflow'];
+const FLAG_REASONS = ['spam', 'harassment', 'undisclosed-llm', 'malicious', 'other'];
+
+type FlagCompleter = (token: string) => string[];
+
+const FLAG_VALUE_COMPLETERS: Record<string, FlagCompleter> = {
+  '--source': (t) => NEWS_SOURCES.filter((s) => s.startsWith(t)),
+  '-s': (t) => NEWS_SOURCES.filter((s) => s.startsWith(t)),
+  '--topic': (t) => NEWS_TOPICS.filter((s) => s.startsWith(t)),
+  '--sort': (t) => SORT_ORDERS.filter((s) => s.startsWith(t)),
+  '--board': (t) => BOARDS.filter((b) => b.startsWith(t)),
+  '-b': (t) => BOARDS.filter((b) => b.startsWith(t)),
+  '--type': (t) => TYPES_EXT.filter((s) => s.startsWith(t)),
+  '-t': (t) => TYPES.filter((s) => s.startsWith(t)),
+  '--reason': (t) => FLAG_REASONS.filter((r) => r.startsWith(t)),
+  '--category': (t) => {
+    const cats = ['mcp', 'prompt', 'workflow', 'skill', 'all', 'packages', 'question', 'idea', 'showcase', 'discussion'];
+    return cats.filter((c) => c.startsWith(t));
+  },
+  '-c': (t) => {
+    const cats = ['mcp', 'prompt', 'workflow', 'skill', 'all', 'packages'];
+    return cats.filter((c) => c.startsWith(t));
+  },
+  '--level': (t) => ['beginner', 'intermediate', 'advanced'].filter((l) => l.startsWith(t)),
+};
 
 export function completeShellLine(
   line: string,
@@ -32,7 +63,6 @@ export function completeShellLine(
   const upToCursor = line.slice(0, cursor);
   const trimmed = upToCursor.trimStart();
 
-  // Rule 1: empty or slash prefix → slash completions
   if (!trimmed || trimmed.startsWith('/')) {
     return completeSlash(trimmed, upToCursor, context);
   }
@@ -40,17 +70,40 @@ export function completeShellLine(
   const tokens = trimmed.split(/\s+/);
   const firstToken = tokens[0];
 
-  // Rule 2: path commands
   if (PATH_COMMANDS.has(firstToken)) {
     const lastToken = upToCursor.split(/\s+/).pop() ?? '';
     const replaceFrom = upToCursor.length - lastToken.length;
     return completePath(lastToken, replaceFrom, context);
   }
 
-  // Rule 3: marketplace/saved commands with a second token being typed
+  const secondToken = tokens[1] ?? '';
+
+  // Flag value completion (--flag=value or --flag value)
+  if (firstToken !== secondToken) {
+    const flagMatch = secondToken.match(/^(--?\w[\w-]*)=(.+)?$/);
+    if (flagMatch) {
+      const flagName = flagMatch[1];
+      const val = flagMatch[2] ?? '';
+      const completer = FLAG_VALUE_COMPLETERS[flagName];
+      if (completer) {
+        const replaceFrom = upToCursor.length - val.length;
+        return { matches: completer(val).slice(0, 12), replaceFrom };
+      }
+    }
+    if (tokens.length >= 3) {
+      const prevFlag = tokens[tokens.length - 2];
+      const lastToken = tokens[tokens.length - 1];
+      const completer = FLAG_VALUE_COMPLETERS[prevFlag];
+      if (completer) {
+        const replaceFrom = upToCursor.length - lastToken.length;
+        return { matches: completer(lastToken).slice(0, 12), replaceFrom };
+      }
+    }
+  }
+
+  // Marketplace-id arg completions
   if (tokens.length >= 2 || (tokens.length === 1 && upToCursor.endsWith(' '))) {
     if (MARKETPLACE_COMMANDS.has(firstToken)) {
-      const secondToken = tokens[1] ?? '';
       const replaceFrom = upToCursor.length - secondToken.length;
       const ids = context.marketplaceIds().filter((id) => id.startsWith(secondToken));
       ids.sort();
@@ -58,7 +111,6 @@ export function completeShellLine(
     }
 
     if (firstToken === 'save') {
-      const secondToken = tokens[1] ?? '';
       const replaceFrom = upToCursor.length - secondToken.length;
       const ids = context.marketplaceIds().filter((id) => id.startsWith(secondToken));
       ids.sort();
@@ -66,11 +118,32 @@ export function completeShellLine(
     }
 
     if (SAVED_COMMANDS.has(firstToken)) {
-      const secondToken = tokens[1] ?? '';
       const replaceFrom = upToCursor.length - secondToken.length;
       const ids = context.savedIds().filter((id) => id.startsWith(secondToken));
       ids.sort();
       return { matches: ids.slice(0, 12), replaceFrom };
+    }
+
+    if (ID_ARG_COMMANDS.has(firstToken)) {
+      const replaceFrom = upToCursor.length - secondToken.length;
+      const ids = context.marketplaceIds().filter((id) => id.startsWith(secondToken));
+      ids.sort();
+      return { matches: ids.slice(0, 12), replaceFrom };
+    }
+
+    // community <board> — second token is a board name, not an id
+    if (firstToken === 'community') {
+      const replaceFrom = upToCursor.length - secondToken.length;
+      const matches = BOARDS.filter((b) => b.startsWith(secondToken));
+      return { matches: matches.slice(0, 12), replaceFrom };
+    }
+
+    // Flag-only commands: complete flag names
+    const flagCmds = new Set(['post', 'reply', 'vote', 'publish', 'discuss', 'review', 'auth', 'init', 'use', 'config']);
+    if (flagCmds.has(firstToken) && secondToken.startsWith('-')) {
+      const replaceFrom = upToCursor.length - secondToken.length;
+      const knownFlags = getFlags(firstToken).filter((f) => f.startsWith(secondToken));
+      return { matches: knownFlags.slice(0, 12), replaceFrom };
     }
   }
 
@@ -82,7 +155,6 @@ function completeSlash(
   upToCursor: string,
   context: CompletionContext
 ): CompletionResult {
-  // Token is the slash-prefixed word from the start
   const prefix = trimmed;
   const replaceFrom = upToCursor.length - prefix.length;
   const matches = context.slashCommands
@@ -106,7 +178,6 @@ function completePath(
   const expanded = expandHome(token);
   const absolute = expanded.startsWith('/') ? expanded : resolve(context.cwd, expanded);
 
-  // Determine directory to list and prefix to match
   let dir: string;
   let filePrefix: string;
   if (token.endsWith('/') || token.endsWith('~/')) {
@@ -117,7 +188,6 @@ function completePath(
     filePrefix = basename(absolute);
   }
 
-  // Normalize dir: remove trailing slash unless it is the root
   const normalizedDir = dir !== '/' && dir.endsWith('/') ? dir.slice(0, -1) : dir;
 
   let entries: string[];
@@ -130,7 +200,6 @@ function completePath(
   const matches = entries
     .filter((e) => e.startsWith(filePrefix))
     .map((e) => {
-      // Reconstruct the token-relative path
       const base = token.endsWith('/') ? token : token.slice(0, token.length - filePrefix.length);
       return base + e;
     })
@@ -140,13 +209,24 @@ function completePath(
   return { matches, replaceFrom };
 }
 
+function getFlags(cmd: string): string[] {
+  const map: Record<string, string[]> = {
+    post: ['--board', '-b', '--title', '--content', '--content-file', '--json'],
+    reply: ['--content', '--content-file', '--parent-id', '--json'],
+    vote: ['--up', '--down', '--type', '--json'],
+    publish: ['--name', '--description', '-d', '--npm', '--prompt-file', '--prompt', '--version', '--category', '-c', '--tags', '--repo', '--repository', '--model', '--json'],
+    discuss: ['--title', '--content', '--content-file', '--category', '-c', '--json'],
+    review: ['--rating', '-r', '--content', '--type', '-t', '--json'],
+    auth: ['--token', '--api-url', '--data-dir', '--json'],
+    init: ['--dry-run', '--json', '--mcp'],
+    use: ['--json'],
+    config: ['--config', '--json'],
+  };
+  return map[cmd] ?? [];
+}
+
 // ── Ghost suggester ──────────────────────────────────────────────────────────
 
-/**
- * Returns the suffix needed to complete `line` from the most recent history
- * entry that starts with `line` (but isn't equal to it). Returns null when
- * there is no such entry or line is empty after trimming.
- */
 export function ghostFromHistory(line: string, history: string[]): string | null {
   if (!line.trim()) return null;
   for (let i = history.length - 1; i >= 0; i -= 1) {
