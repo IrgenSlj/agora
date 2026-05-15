@@ -210,6 +210,65 @@ describe('classifyInput — new power commands', () => {
   });
 });
 
+describe('classifyInput — TUI slash shortcuts', () => {
+  // The shell's `/tui` and per-page shortcuts (/home /market /comm /news
+  // /settings) must short-circuit before the generic agora-CLI forwarding,
+  // so they open the in-process TUI rather than spawning `agora home` as a
+  // subprocess.
+
+  test('/tui → tui dispatch with default page', () => {
+    expect(classifyInput('/tui', neverExecutable)).toEqual({ kind: 'tui' });
+  });
+
+  test('/home → tui dispatch on home', () => {
+    expect(classifyInput('/home', neverExecutable)).toEqual({ kind: 'tui', page: 'home' });
+  });
+
+  test('/market → tui dispatch on marketplace (short alias)', () => {
+    expect(classifyInput('/market', neverExecutable)).toEqual({
+      kind: 'tui',
+      page: 'marketplace'
+    });
+  });
+
+  test('/marketplace → tui dispatch on marketplace (full alias)', () => {
+    expect(classifyInput('/marketplace', neverExecutable)).toEqual({
+      kind: 'tui',
+      page: 'marketplace'
+    });
+  });
+
+  test('/comm and /community both → tui dispatch on community', () => {
+    expect(classifyInput('/comm', neverExecutable)).toEqual({ kind: 'tui', page: 'community' });
+    expect(classifyInput('/community', neverExecutable)).toEqual({
+      kind: 'tui',
+      page: 'community'
+    });
+  });
+
+  test('/news → tui dispatch on news', () => {
+    expect(classifyInput('/news', neverExecutable)).toEqual({ kind: 'tui', page: 'news' });
+  });
+
+  test('/settings → tui dispatch on settings', () => {
+    expect(classifyInput('/settings', neverExecutable)).toEqual({ kind: 'tui', page: 'settings' });
+  });
+
+  test('/tui with trailing args falls through to CLI forwarding (no greedy match)', () => {
+    expect(classifyInput('/tui foo', neverExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'agora tui foo'
+    });
+  });
+
+  test('/search still forwards to agora search (TUI shortcuts do not absorb other slashes)', () => {
+    expect(classifyInput('/search', neverExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'agora search'
+    });
+  });
+});
+
 describe('classifyInput — slash forwarding to agora CLI', () => {
   // Bug seen in the shell: `/agora help` fell through to bash because the
   // executable check resolved `/agora` against PATH (Node `path.join` strips

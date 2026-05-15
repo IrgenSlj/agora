@@ -4,6 +4,7 @@ import { homedir, tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { COMMANDS } from './commands-meta.js';
 import { runInteractiveMenu } from './menu.js';
+import { runTui } from './tui.js';
 import { AGORA_VERSION, FREE_MODELS } from './app.js';
 import { detectAgoraDataDir, loadAgoraState, resolveSavedItems } from '../state.js';
 import {
@@ -30,6 +31,8 @@ const MAX_BASH_BUFFER = 16 * 1024;
 
 // ── Input classification ────────────────────────────────────────────────────
 
+export type TuiPageId = 'home' | 'marketplace' | 'community' | 'news' | 'settings';
+
 export type Dispatch =
   | { kind: 'noop' }
   | {
@@ -49,8 +52,21 @@ export type Dispatch =
         | 'dry-run';
       args?: string;
     }
+  | { kind: 'tui'; page?: TuiPageId }
   | { kind: 'bash'; cmd: string }
   | { kind: 'chat'; msg: string };
+
+/** Map slash aliases (with leading `/`) to TUI page ids. */
+const TUI_SLASH_ALIASES: Record<string, TuiPageId | 'default'> = {
+  '/tui': 'default',
+  '/home': 'home',
+  '/market': 'marketplace',
+  '/marketplace': 'marketplace',
+  '/comm': 'community',
+  '/community': 'community',
+  '/news': 'news',
+  '/settings': 'settings'
+};
 
 const QUESTION_STARTERS = new Set([
   'what',
@@ -128,11 +144,20 @@ export function classifyInput(line: string, isExecutable: (name: string) => bool
   if (trimmed.startsWith('!')) return { kind: 'bash', cmd: trimmed.slice(1).trim() };
   if (trimmed.startsWith('?')) return { kind: 'chat', msg: trimmed.slice(1).trim() };
 
-  // Slash-prefixed inputs that weren't an exact meta match are forwarded to the
-  // `agora` CLI itself: `/agora help`, `/agora search foo`, `/help tutorials`,
-  // `/foo` all become `agora <args>`. Never let `/anything` fall through to bash —
-  // PATH-joining an absolute name like `/agora` historically matched the real
-  // binary on disk and bash then tried to exec `/agora` literally.
+  // TUI shortcuts: `/tui` opens Home, `/home` `/market` `/comm` `/news`
+  // `/settings` open the TUI on that page. Recognised only as exact bare
+  // commands so `/tui foo` falls through to the generic CLI forwarding below.
+  if (TUI_SLASH_ALIASES[trimmed] !== undefined) {
+    const target = TUI_SLASH_ALIASES[trimmed];
+    return target === 'default' ? { kind: 'tui' } : { kind: 'tui', page: target };
+  }
+
+  // Slash-prefixed inputs that weren't an exact meta or TUI match are
+  // forwarded to the `agora` CLI: `/agora help`, `/agora search foo`,
+  // `/help tutorials`, `/foo` all become `agora <args>`. Never let
+  // `/anything` fall through to bash — PATH-joining an absolute name like
+  // `/agora` historically matched the real binary on disk and bash then
+  // tried to exec `/agora` literally.
   if (trimmed.startsWith('/')) {
     let rest = trimmed.slice(1).trim();
     if (rest === 'agora' || rest.startsWith('agora ')) {
@@ -277,7 +302,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const mottoLine = gradientText(motto, { trueColor });
     const versionLine = style.dim(`v${AGORA_VERSION}`);
     const slashLine = style.dim(
-      '/help · /menu · /transcript · /verbose · /medium · /quiet · /clear · /quit'
+      '/tui · /help · /menu · /transcript · /verbose · /medium · /quiet · /clear · /quit'
     );
     process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${versionLine}\n${slashLine}\n\n`);
   }
@@ -342,6 +367,14 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   }
 
   const slashCommands = [
+    '/tui',
+    '/home',
+    '/marketplace',
+    '/market',
+    '/community',
+    '/comm',
+    '/news',
+    '/settings',
     '/help',
     '/menu',
     '/transcript',
@@ -531,6 +564,11 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           continue;
         }
 
+        continue;
+      }
+
+      if (dispatch.kind === 'tui') {
+        await runTui(io, { initial: dispatch.page ?? 'home' });
         continue;
       }
 
@@ -845,7 +883,9 @@ function printHelp(style: Styler): void {
     '  <anything>    else → send to AI chat',
     '  !<cmd>        force bash (e.g. !ls -la)',
     '  ?<msg>        force chat (e.g. ?what is MCP)',
-    '  /menu         open command browser',
+    '  /tui          open the full-screen TUI on Home',
+    '  /home /market /comm /news /settings  open the TUI on that page',
+    '  /menu         open the command-browser menu',
     '  /transcript   print last 20 transcript entries',
     '  /clear        clear screen',
     '  /help         this help',
