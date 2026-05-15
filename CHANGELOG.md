@@ -1,5 +1,52 @@
 # Changelog
 
+## [0.4.1] - 2026-05-15
+
+The "marketplace UX" release. Search and browse now support sorting,
+table rendering, and pagination. The shell got auto-complete on `/`,
+a useful footer (model + rotating tips), and fixes for arrow keys and
+`/quit` hang. npm packages fully validated against the registry.
+
+### Added
+
+- **`--sort stars|installs|name|updated|relevance`** flag on `agora search`
+  and `agora trending`. Sort results by any dimension, with `--order asc|desc`.
+- **`--table`** flag on `agora search` and `agora trending`. Renders a
+  box-drawn table (┌ ┐ └ ┘ │ ─) with id, name, stars, and installs columns.
+- **Pagination:** `--page N --per-page N` on `agora search`. Non-overlapping
+  pages with a navigation hint footer.
+- **Auto-complete slash commands on `/`.** As soon as you type `/`, matching
+  slash commands appear in the footer — narrowed with each character,
+  re-shown on backspace. No Tab needed.
+- **Model name + rotating tips footer.** Replaced the unhelpful turn-count
+  display with `model: deepseek-… · type /help to see all slash commands`.
+  17 tips, stable per turn.
+- **`login` / `logout` / `whoami` CLI aliases.** Delegate to `auth login`,
+  `auth logout`, `auth status --json` respectively.
+- **login/whoami tests.** Integration tests verify login writes state and
+  whoami reads it back.
+- **npm validation tests (network-gated).** 20 npmPackage entries verified
+  live against the registry; 15 fixed (13 removed, 2 corrected).
+
+### Fixed
+
+- **Arrow keys in shell.** `[` (0x5b) was treated as a CSI final byte,
+  causing `\x1b[` to be silently dropped and `A`/`B`/`C`/`D` to arrive as
+  printable characters. Auto-complete now works with up/down history navigation.
+- **`/quit` hangs the shell.** stdin stayed in flowing mode after the prompter
+  cleaned up, keeping the event loop alive. Added `inp.pause()` in cleanup
+  and `process.exit()` in the entrypoint.
+- **`/clear` now reprints home banner.** Clears screen then redraws the
+  full home state — wordmark, motto, version line, slash commands.
+- **`searchMarketplaceItems` sort was inverted.** `compareByPopularity`
+  returned descending but was negated again for `desc` order, producing
+  ascending results. All comparators normalized to ascending order.
+- **`getTrendingItems` sort reference.** Was calling `.sort(compareByPopularity)`
+  directly; switched to inline arrow function for clarity.
+- **Data tests assumed every MCP package must have npmPackage.** Updated to
+  allow browsable-only entries (no npmPackage) while still validating
+  installable ones.
+
 ## [0.4.0] - 2026-05-15
 
 The "interactive shell" release. Running `agora` with no arguments in a TTY

@@ -25,7 +25,7 @@ _A terminal recording is in the works — see ROADMAP.md._
 
 Agora is a **standalone terminal marketplace** for the agentic-coding ecosystem — MCP servers, workflows, and tutorials, browsable and installable from your shell with no login and no backend. Run `npx opencode-agora init` in any project and it scans your stack, generates the right `opencode.json`, and installs matched MCP servers.
 
-It bundles **36+ MCP servers**, **10 production workflows**, and **6 tutorials**, all usable offline.
+It bundles **60+ MCP servers**, **12 production workflows**, **12 tutorials**, and **7 prompts**, all usable offline.
 
 **Where it's headed:** Agora is evolving into an **open, self-regulating marketplace** where third-party developers publish and sell advanced skills, tools, and kits — with Agora providing the square and the rules (discovery, trust, delivery), not the goods. See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the direction and [`ROADMAP.md`](./ROADMAP.md) for the plan.
 
@@ -50,7 +50,7 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
 - `!cmd` forces bash, `?msg` forces chat, `/help` lists meta commands
   (`/menu` `/transcript` `/clear` `/verbose` `/quiet` `/medium` `/last`
   `/again` `/quit`).
-- Tab completion, ctrl-r reverse history search, ghost-text suggestions.
+- Tab completion, auto-complete on `/`, ctrl-r reverse history search, ghost-text suggestions.
 - Per-cwd transcripts under `~/.config/agora/transcripts/` so each
   project keeps its own session and chat thread isolated.
 
@@ -67,10 +67,11 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
 - No manual copy-pasting — one command and the workflow is live
 
 ### Rich Offline Marketplace
-- **36+ MCP servers** across 12 categories (filesystem, databases, cloud, browser automation, monitoring, etc.)
+- **60+ MCP servers** across 12 categories (filesystem, databases, cloud, browser automation, monitoring, etc.)
 - All official `@modelcontextprotocol/*` servers plus top community servers
 - Fully functional offline — no backend required
 - Search, browse, trending — all work with bundled data
+- Sort by stars/installs/name with `--sort`, render tables with `--table`, paginate with `--page` / `--per-page`
 
 ### Config-Aware Installs
 - `agora install mcp-github --write` installs the npm package **and** writes to config
@@ -106,7 +107,7 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
 - Runs locally with `bun run hub:dev`
 
 ### Learn
-- 6 interactive tutorials on MCP, OpenCode agents, security auditing, and more
+- 12 interactive tutorials on MCP, auth, catalog-contrib, backend deploy, and more
 
 ## Quick Start
 
@@ -163,9 +164,14 @@ agora use wf-security-audit
 # Search and browse
 agora search filesystem
 agora search database --category mcp
+agora search mcp --sort stars                  # sort by stars
+agora search mcp --sort name --order asc       # alphabetical
+agora search mcp --table                       # box-drawn table
+agora search mcp --per-page 5 --page 2         # paginated
 AGORA_API_URL=https://agora.example.com agora search github --api
 agora browse mcp-postgres
 agora trending
+agora trending --table
 
 # Install MCP servers
 agora install mcp-github           # preview only
@@ -241,7 +247,7 @@ agora config doctor --json
 
 Saved items and optional auth credentials are stored in `~/.config/agora/state.json` by default. Use `AGORA_HOME=/path/to/agora` or `--data-dir /path/to/agora` to override.
 
-The CLI uses bundled offline marketplace data (36+ MCP servers, 10 workflows) by default. Add `--api`, `--live`, `AGORA_USE_API=true`, or `AGORA_API_URL` to use the live backend. Falls back to offline data if the API is unavailable.
+The CLI uses bundled offline marketplace data (60+ MCP servers, 12 workflows) by default. Add `--api`, `--live`, `AGORA_USE_API=true`, or `AGORA_API_URL` to use the live backend. Falls back to offline data if the API is unavailable.
 
 ### OpenCode Plugin Commands
 
@@ -325,17 +331,21 @@ agora/
 ├── src/
 │   ├── cli.ts        # CLI entrypoint
 │   ├── cli/app.ts    # CLI command parser and handlers
+│   ├── cli/shell.ts  # Interactive shell (agora with no args in TTY)
+│   ├── cli/prompter.ts # Raw-mode line editor with auto-complete
+│   ├── cli/completions.ts # Completion providers (slash, path, marketplace ids)
 │   ├── cli/mcp-server.ts # MCP server (agora mcp)
+│   ├── cli/menu.ts   # Interactive menu TUI
 │   ├── init.ts       # Project scanner + init plan generator
 │   ├── live.ts       # Live API source with offline fallback
-│   ├── marketplace.ts # Shared search, browse, trending, install-plan core
+│   ├── marketplace.ts # Shared search, sort, browse, trending, install-plan core
 │   ├── config-files.ts # OpenCode config detection, doctor, and write helpers
 │   ├── state.ts      # Local Agora saved-item state
 │   ├── index.ts      # OpenCode plugin
 │   ├── ui.ts         # Terminal styling: styler, gradient banner, header frame
 │   ├── format.ts     # Count formatting helpers
 │   ├── config.ts     # MCP config generation
-│   ├── data.ts       # 36+ MCP servers, 10 workflows, 6 tutorials
+│   ├── data.ts       # 60+ MCP servers, 12 workflows, 12 tutorials, 7 prompts
 │   └── types.ts      # TypeScript types
 │
 ├── backend/          # Cloudflare Workers API
@@ -356,8 +366,8 @@ agora/
 | `agora init` | ✅ **New** | Project scanning, config generation, auto-install, plugin registration |
 | `agora use` | ✅ **New** | Apply workflows as OpenCode skills in one command |
 | `agora install --write` | ✅ **Improved** | Now auto-installs npm packages |
-| CLI | Ready | 22 commands: `init`, `use`, `mcp`, `chat`, `search`, `browse`, `trending`, `workflows`, `tutorials`, `tutorial`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `auth`, `publish`, `review`, `reviews`, `profile`, `config doctor` |
-| Offline data | ✅ **Expanded** | 36 MCP servers, 10 workflows, 7 discussions, 6 tutorials |
+| CLI | Ready | 25 commands: `init`, `use`, `mcp`, `chat`, `search`, `browse`, `trending`, `workflows`, `tutorials`, `tutorial`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `login`, `logout`, `whoami`, `auth`, `publish`, `review`, `reviews`, `profile`, `config doctor` |
+| Offline data | ✅ **Expanded** | 60+ MCP servers, 12 workflows, 12 tutorials, 7 prompts |
 | Live API mode | Ready | Opt-in via `--api`, `AGORA_API_URL`; falls back offline |
 | Shared core | Ready | CLI and plugin share marketplace logic |
 | Local state | Ready | Saved items and auth tokens under `~/.config/agora` |

@@ -26,6 +26,23 @@ its own.
   NO_COLOR fallback: compact text header instead of flat block characters._
 - **NO_COLOR welcome fix.** Non-TTY/pipe/CI users now get a clean text greeting
   instead of a washed-out block-character banner. _Done (`app.ts` `welcome()`)._
+- **Arrow key fix.** `[` (0x5b) was miscategorized as a CSI final byte, causing
+  arrow keys to print escape letters instead of navigating cursor/history.
+  _Done (`prompter.ts`)._
+- **`/quit` no longer hangs.** stdin stayed in flowing mode after prompter cleanup,
+  keeping the event loop alive after `break`. Added `inp.pause()` + `process.exit()`.
+  _Done (`prompter.ts`, `cli.ts`)._
+- **`/clear` reprints home banner.** Clears screen then redraws wordmark, motto,
+  version, and slash-command bar — a proper home state. _Done (`shell.ts`)._
+- **Footer shows model name + rotating tips.** Replaced unhelpful turn-count with
+  `model: deepseek-… · type /help to see all slash commands`. 17 tips, stable per
+  turn. _Done (`shell.ts`)._
+- **Auto-complete slash commands on `/`.** Type `/` and completions appear in the
+  footer immediately, narrowing with each character. No Tab needed. _Done
+  (`prompter.ts`)._
+- **`--sort`, `--order`, `--table`, pagination flags** on `agora search` and
+  `agora trending`. Sort by stars/installs/name/updated, render box-drawn tables,
+  paginate with `--page` / `--per-page`. _Done (`marketplace.ts`, `app.ts`)._
 - **Catalog growth.** More MCP servers, more workflows, more tutorials in the
   offline data. _Done: 60+ MCP servers, 12 workflows, 12 tutorials, 7 prompts._
 - **Demo recording.** Asciinema/VHS recording of the standalone CLI.
@@ -34,6 +51,8 @@ its own.
 - **npm package validation.** All 60+ catalog npmPackage entries verified live
   against the npm registry; entries without published packages retain browsable
   status but are marked uninstallable. _Done (test suite, network-gated)._
+- **login/logout/whoami aliases.** CLI aliases that delegate to `auth` subcommand.
+  _Done (`app.ts`)._
 
 ## Phase 2 — Backend & accounts
 
@@ -90,4 +109,4 @@ surface — mechanism design does the policing, not a gatekeeper:
 - **Report a setup that `agora init` misses.** Open an issue with your project's manifest files.
 - **Polish the standalone CLI experience.** Phase 1 is wide open.
 
-_Last updated: 2026-05-15 · npm validation, `use`/`tutorial` listing_
+_Last updated: 2026-05-15 · sort/table/pagination flags, auto-complete, model+tips footer_
