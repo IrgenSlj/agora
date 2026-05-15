@@ -32,6 +32,62 @@ app.use(
   })
 );
 
+// ── Rate-limit middleware ───────────────────────────────────────────────────
+
+type RateLimitOpts = { limit: number; window: number }; // window in seconds
+
+const RATE_LIMITS: Record<string, RateLimitOpts> = {
+  default: { limit: 60, window: 60 },
+  write: { limit: 10, window: 60 },
+};
+
+async function rateLimit(
+  c: any,
+  opts: RateLimitOpts = RATE_LIMITS.default
+): Promise<Response | null> {
+  const auth = c.req.header('authorization');
+  const key = auth
+    ? `user:${auth.slice(0, 16)}`
+    : `ip:${c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown'}`;
+  const windowKey = `${key}:${Math.floor(Date.now() / (opts.window * 1000))}`;
+
+  try {
+    const row = (await c.env.DB.prepare(
+      'SELECT requests FROM rate_limits WHERE key = ?'
+    ).bind(windowKey).first()) as any;
+
+    const count = row ? row.requests + 1 : 1;
+
+    if (count === 1) {
+      await c.env.DB.prepare(
+        'INSERT OR REPLACE INTO rate_limits (key, requests, reset_at) VALUES (?, 1, datetime("now", ? || " seconds"))'
+      ).bind(windowKey, String(opts.window)).run();
+    } else {
+      await c.env.DB.prepare(
+        'UPDATE rate_limits SET requests = ? WHERE key = ?'
+      ).bind(count, windowKey).run();
+    }
+
+    const adjusted = auth ? opts.limit : Math.floor(opts.limit / 2);
+
+    if (count > adjusted) {
+      return c.json({ error: 'Rate limit exceeded', limit: adjusted, window: opts.window }, 429);
+    }
+  } catch {
+    // rate-limit failures are non-fatal — allow the request through
+  }
+  return null;
+}
+
+// Apply rate limits to API routes (skip auth routes)
+app.use('/api/*', async (c, next) => {
+  const method = c.req.method;
+  const opts = method === 'GET' ? RATE_LIMITS.default : RATE_LIMITS.write;
+  const blocked = await rateLimit(c, opts);
+  if (blocked) return blocked;
+  await next();
+});
+
 app.get('/', (c) =>
   c.json({
     name: 'Agora API',

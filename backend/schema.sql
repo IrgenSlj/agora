@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS users (
   avatar_url TEXT,
   github_id TEXT UNIQUE,
   github_access_token TEXT,
+  is_llm INTEGER NOT NULL DEFAULT 0,
+  llm_model TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -57,15 +59,18 @@ CREATE TABLE IF NOT EXISTS workflows (
 CREATE INDEX IF NOT EXISTS idx_workflows_name ON workflows(name);
 CREATE INDEX IF NOT EXISTS idx_workflows_stars ON workflows(stars DESC);
 
--- Discussions table
+-- Discussions table (boards: mcp, agents, tools, workflows, show, ask, meta)
 CREATE TABLE IF NOT EXISTS discussions (
   id TEXT PRIMARY KEY,
+  board TEXT NOT NULL DEFAULT 'meta',
   title TEXT NOT NULL,
   content TEXT NOT NULL,
   author TEXT NOT NULL,
-  category TEXT NOT NULL DEFAULT 'discussion',
-  stars INTEGER NOT NULL DEFAULT 0,
+  parent_id TEXT,
+  score INTEGER NOT NULL DEFAULT 0,
+  flag_count INTEGER NOT NULL DEFAULT 0,
   reply_count INTEGER NOT NULL DEFAULT 0,
+  category TEXT NOT NULL DEFAULT 'discussion',
   package_id TEXT,
   workflow_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -75,18 +80,64 @@ CREATE TABLE IF NOT EXISTS discussions (
 CREATE INDEX IF NOT EXISTS idx_discussions_author ON discussions(author);
 CREATE INDEX IF NOT EXISTS idx_discussions_category ON discussions(category);
 CREATE INDEX IF NOT EXISTS idx_discussions_created ON discussions(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_discussions_board ON discussions(board, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_discussions_parent ON discussions(parent_id);
 
--- Discussion replies table
+-- Discussion replies (nested tree via parent_id)
 CREATE TABLE IF NOT EXISTS discussion_replies (
   id TEXT PRIMARY KEY,
   discussion_id TEXT NOT NULL,
+  parent_id TEXT,
   author TEXT NOT NULL,
   content TEXT NOT NULL,
+  score INTEGER NOT NULL DEFAULT 0,
+  flag_count INTEGER NOT NULL DEFAULT 0,
+  author_is_llm INTEGER NOT NULL DEFAULT 0,
+  author_model TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  FOREIGN KEY (discussion_id) REFERENCES discussions(id) ON DELETE CASCADE
+  FOREIGN KEY (discussion_id) REFERENCES discussions(id) ON DELETE CASCADE,
+  FOREIGN KEY (parent_id) REFERENCES discussion_replies(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_replies_discussion ON discussion_replies(discussion_id);
+CREATE INDEX IF NOT EXISTS idx_replies_parent ON discussion_replies(parent_id);
+
+-- Votes (user × target, ±1)
+CREATE TABLE IF NOT EXISTS votes (
+  user_id TEXT NOT NULL,
+  target_id TEXT NOT NULL,
+  target_type TEXT NOT NULL CHECK (target_type IN ('discussion', 'reply')),
+  value INTEGER NOT NULL CHECK (value IN (-1, 1)),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, target_id, target_type)
+);
+
+CREATE INDEX IF NOT EXISTS idx_votes_target ON votes(target_id, target_type);
+
+-- Flags (community-driven moderation)
+CREATE TABLE IF NOT EXISTS flags (
+  id TEXT PRIMARY KEY,
+  target_id TEXT NOT NULL,
+  target_type TEXT NOT NULL CHECK (target_type IN ('discussion', 'reply', 'package', 'workflow')),
+  reporter_id TEXT NOT NULL,
+  reason TEXT NOT NULL CHECK (reason IN ('spam', 'harassment', 'undisclosed-llm', 'malicious', 'other')),
+  notes TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_flags_target ON flags(target_id, target_type);
+
+-- Kill switch (admin-only, for confirmed malware/CSAM)
+CREATE TABLE IF NOT EXISTS kill_switch_log (
+  id TEXT PRIMARY KEY,
+  target_id TEXT NOT NULL,
+  target_type TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  operator_id TEXT NOT NULL,
+  acted_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_kill_switch_target ON kill_switch_log(target_id);
 
 -- Reviews table
 CREATE TABLE IF NOT EXISTS reviews (
