@@ -286,7 +286,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const isExecutable = makeExecutableChecker(env.PATH);
 
   let firstTurn = meta.turnCount === 0;
-  let exitCode = 0;
+  const exitCode = 0;
   let verbosity: Verbosity = 'medium';
   let childActive = false;
   let totalCost = 0;

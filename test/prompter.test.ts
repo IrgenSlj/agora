@@ -242,7 +242,7 @@ describe('tab completion', () => {
   });
 
   test('second tab cycles through matches', () => {
-    let r = applyResult(state({ line: '/', cursor: 1 }), { kind: 'tab' }, { completer });
+    const r = applyResult(state({ line: '/', cursor: 1 }), { kind: 'tab' }, { completer });
     // First tab: shows list, lcp applied
     const s1 = r.state;
     // Second tab: cycle to first match
