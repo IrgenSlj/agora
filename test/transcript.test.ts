@@ -10,7 +10,7 @@ import {
   readTranscript,
   recentBashContext,
   writeSessionMeta,
-  type SessionMeta,
+  type SessionMeta
 } from '../src/transcript';
 
 function makeTmp(): string {
@@ -72,9 +72,22 @@ describe('appendTranscript / readTranscript round-trip', () => {
     const dir = makeTmp();
     const cwd = '/my/project';
     try {
-      appendTranscript(dir, cwd, { ts: '2024-01-01T00:00:00.000Z', kind: 'bash', input: 'ls', output: 'a\nb' });
-      appendTranscript(dir, cwd, { ts: '2024-01-01T00:00:01.000Z', kind: 'chat-user', input: 'hello' });
-      appendTranscript(dir, cwd, { ts: '2024-01-01T00:00:02.000Z', kind: 'chat-assistant', output: 'hi' });
+      appendTranscript(dir, cwd, {
+        ts: '2024-01-01T00:00:00.000Z',
+        kind: 'bash',
+        input: 'ls',
+        output: 'a\nb'
+      });
+      appendTranscript(dir, cwd, {
+        ts: '2024-01-01T00:00:01.000Z',
+        kind: 'chat-user',
+        input: 'hello'
+      });
+      appendTranscript(dir, cwd, {
+        ts: '2024-01-01T00:00:02.000Z',
+        kind: 'chat-assistant',
+        output: 'hi'
+      });
 
       const entries = readTranscript(dir, cwd);
       expect(entries).toHaveLength(3);
@@ -91,7 +104,11 @@ describe('appendTranscript / readTranscript round-trip', () => {
     const cwd = '/tail/test';
     try {
       for (let i = 0; i < 5; i++) {
-        appendTranscript(dir, cwd, { ts: new Date().toISOString(), kind: 'meta', input: `entry${i}` });
+        appendTranscript(dir, cwd, {
+          ts: new Date().toISOString(),
+          kind: 'meta',
+          input: `entry${i}`
+        });
       }
       const entries = readTranscript(dir, cwd, { tail: 2 });
       expect(entries).toHaveLength(2);
@@ -107,7 +124,11 @@ describe('recentBashContext', () => {
     const dir = makeTmp();
     const cwd = '/empty/project';
     try {
-      appendTranscript(dir, cwd, { ts: new Date().toISOString(), kind: 'chat-user', input: 'hello' });
+      appendTranscript(dir, cwd, {
+        ts: new Date().toISOString(),
+        kind: 'chat-user',
+        input: 'hello'
+      });
       const ctx = recentBashContext(dir, cwd, { commands: 3, lines: 20 });
       expect(ctx).toBe('');
     } finally {
@@ -119,8 +140,18 @@ describe('recentBashContext', () => {
     const dir = makeTmp();
     const cwd = '/bash/project';
     try {
-      appendTranscript(dir, cwd, { ts: new Date().toISOString(), kind: 'bash', input: 'ls', output: 'file1\nfile2' });
-      appendTranscript(dir, cwd, { ts: new Date().toISOString(), kind: 'bash', input: 'pwd', output: '/bash/project' });
+      appendTranscript(dir, cwd, {
+        ts: new Date().toISOString(),
+        kind: 'bash',
+        input: 'ls',
+        output: 'file1\nfile2'
+      });
+      appendTranscript(dir, cwd, {
+        ts: new Date().toISOString(),
+        kind: 'bash',
+        input: 'pwd',
+        output: '/bash/project'
+      });
       const ctx = recentBashContext(dir, cwd, { commands: 3, lines: 20 });
       expect(ctx).toContain('Recent shell output in this session:');
       expect(ctx).toContain('$ ls');
@@ -136,7 +167,12 @@ describe('recentBashContext', () => {
     const cwd = '/limit/project';
     try {
       for (let i = 0; i < 5; i++) {
-        appendTranscript(dir, cwd, { ts: new Date().toISOString(), kind: 'bash', input: `cmd${i}`, output: `out${i}` });
+        appendTranscript(dir, cwd, {
+          ts: new Date().toISOString(),
+          kind: 'bash',
+          input: `cmd${i}`,
+          output: `out${i}`
+        });
       }
       const ctx = recentBashContext(dir, cwd, { commands: 2, lines: 20 });
       expect(ctx).not.toContain('$ cmd0');
@@ -168,7 +204,7 @@ describe('loadSessionMeta / writeSessionMeta', () => {
         cwd,
         createdAt: '2024-01-01T00:00:00.000Z',
         lastUsedAt: '2024-01-01T01:00:00.000Z',
-        turnCount: 5,
+        turnCount: 5
       };
       writeSessionMeta(dir, cwd, meta);
       const loaded = loadSessionMeta(dir, cwd);
@@ -187,7 +223,7 @@ describe('loadSessionMeta / writeSessionMeta', () => {
         cwd,
         createdAt: '2024-01-01T00:00:00.000Z',
         lastUsedAt: '2024-01-01T00:00:00.000Z',
-        turnCount: 1,
+        turnCount: 1
       };
       writeSessionMeta(dir, cwd, meta1);
 

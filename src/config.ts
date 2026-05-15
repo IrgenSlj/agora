@@ -91,5 +91,3 @@ export function validatePackageName(name: string): { valid: boolean; error?: str
 
   return { valid: true };
 }
-
-

@@ -13,15 +13,9 @@ async function createTestClient() {
   const server = createAgoraMcpServer();
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 
-  const client = new Client(
-    { name: 'test-client', version: '1.0' },
-    { capabilities: {} }
-  );
+  const client = new Client({ name: 'test-client', version: '1.0' }, { capabilities: {} });
 
-  await Promise.all([
-    server.connect(serverTransport),
-    client.connect(clientTransport),
-  ]);
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
   return { server, client };
 }
@@ -37,7 +31,7 @@ describe('Agora MCP Server', () => {
       'search',
       'trending',
       'tutorial',
-      'tutorials',
+      'tutorials'
     ]);
   });
 
@@ -45,7 +39,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'search',
-      arguments: { query: 'postgres' },
+      arguments: { query: 'postgres' }
     });
     const text = extractText(result);
     expect(text).toContain('mcp-postgres');
@@ -55,7 +49,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'search',
-      arguments: { query: 'zzzznonexistent' },
+      arguments: { query: 'zzzznonexistent' }
     });
     const text = extractText(result);
     expect(text).toContain('No results found');
@@ -65,7 +59,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'browse',
-      arguments: { id: 'mcp-github' },
+      arguments: { id: 'mcp-github' }
     });
     const text = extractText(result);
     expect(text).toContain('@modelcontextprotocol/server-github');
@@ -75,7 +69,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'browse',
-      arguments: { id: 'wf-tdd-cycle' },
+      arguments: { id: 'wf-tdd-cycle' }
     });
     const text = extractText(result);
     expect(text).toContain('TDD Development Cycle');
@@ -85,7 +79,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'browse',
-      arguments: { id: 'does-not-exist' },
+      arguments: { id: 'does-not-exist' }
     });
     const text = extractText(result);
     expect(text).toContain('not found');
@@ -95,7 +89,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'trending',
-      arguments: {},
+      arguments: {}
     });
     const text = extractText(result);
     expect(text).toContain('Trending in Agora');
@@ -105,7 +99,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'install_plan',
-      arguments: { id: 'mcp-github' },
+      arguments: { id: 'mcp-github' }
     });
     const text = extractText(result);
     expect(text).toContain('npm install');
@@ -115,7 +109,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'install_plan',
-      arguments: { id: 'wf-tdd-cycle' },
+      arguments: { id: 'wf-tdd-cycle' }
     });
     const text = extractText(result);
     expect(text).toContain('agora use');
@@ -125,7 +119,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'tutorials',
-      arguments: {},
+      arguments: {}
     });
     const text = extractText(result);
     expect(text).toContain('tut-mcp-basics');
@@ -135,7 +129,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'tutorial',
-      arguments: { id: 'tut-mcp-basics', step: 1 },
+      arguments: { id: 'tut-mcp-basics', step: 1 }
     });
     const text = extractText(result);
     expect(text).toContain('What is MCP');
@@ -145,7 +139,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'tutorial',
-      arguments: { id: 'tut-mcp-basics', step: 99 },
+      arguments: { id: 'tut-mcp-basics', step: 99 }
     });
     const text = extractText(result);
     expect(text).toContain('completed');
@@ -155,7 +149,7 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'tutorial',
-      arguments: { id: 'does-not-exist' },
+      arguments: { id: 'does-not-exist' }
     });
     const text = extractText(result);
     expect(text).toContain('not found');

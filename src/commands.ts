@@ -31,7 +31,7 @@ export const AGORA_COMMAND_TEMPLATE = [
   'are available in the `agora` CLI, not as plugin tools.',
   '',
   'If `$ARGUMENTS` is empty, call `agora_info`. Otherwise treat the first word as',
-  'the sub-command and pass the rest through as tool arguments.',
+  'the sub-command and pass the rest through as tool arguments.'
 ].join('\n');
 
 /**

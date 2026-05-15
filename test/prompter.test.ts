@@ -3,7 +3,7 @@ import {
   applyKeyEvent,
   makeInitialState,
   type EditorState,
-  type KeyEvent,
+  type KeyEvent
 } from '../src/cli/prompter';
 
 function state(overrides: Partial<EditorState> = {}): EditorState {
@@ -43,7 +43,11 @@ describe('char insertion', () => {
   });
 
   test('clears tabCycle on char', () => {
-    const s0 = state({ line: '/h', cursor: 2, tabCycle: { matches: ['/help'], index: 0, replaceFrom: 0 } });
+    const s0 = state({
+      line: '/h',
+      cursor: 2,
+      tabCycle: { matches: ['/help'], index: 0, replaceFrom: 0 }
+    });
     const s1 = apply(s0, { kind: 'char', data: 'e' });
     expect(s1.tabCycle).toBeNull();
   });
@@ -274,7 +278,10 @@ describe('promptSuffix', () => {
 
   test('promptSuffix records all lines it is called with', () => {
     const calls: string[] = [];
-    const suffix = (line: string) => { calls.push(line); return '>'; };
+    const suffix = (line: string) => {
+      calls.push(line);
+      return '>';
+    };
     suffix('abc');
     suffix('abcd');
     expect(calls).toEqual(['abc', 'abcd']);
@@ -334,7 +341,12 @@ describe('reverse-i-search', () => {
   });
 
   test('enter in search mode accepts matched entry', () => {
-    const s0 = state({ mode: 'reverse-search', history: ['git status', 'ls'], searchQuery: 'git', searchIndex: 0 });
+    const s0 = state({
+      mode: 'reverse-search',
+      history: ['git status', 'ls'],
+      searchQuery: 'git',
+      searchIndex: 0
+    });
     const r = applyResult(s0, { kind: 'enter' });
     expect(r.output).toEqual({ kind: 'line', value: 'git status' });
   });

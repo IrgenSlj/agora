@@ -32,7 +32,10 @@ describe('classifyInput', () => {
   });
 
   test('/transcript → meta:transcript', () => {
-    expect(classifyInput('/transcript', neverExecutable)).toEqual({ kind: 'meta', sub: 'transcript' });
+    expect(classifyInput('/transcript', neverExecutable)).toEqual({
+      kind: 'meta',
+      sub: 'transcript'
+    });
   });
 
   test('/menu → meta:menu', () => {
@@ -44,7 +47,10 @@ describe('classifyInput', () => {
   });
 
   test('?what is mcp → chat:what is mcp', () => {
-    expect(classifyInput('?what is mcp', neverExecutable)).toEqual({ kind: 'chat', msg: 'what is mcp' });
+    expect(classifyInput('?what is mcp', neverExecutable)).toEqual({
+      kind: 'chat',
+      msg: 'what is mcp'
+    });
   });
 
   test('ls when ls is executable → bash:ls', () => {
@@ -52,11 +58,17 @@ describe('classifyInput', () => {
   });
 
   test('ls with flags when ls is executable → bash', () => {
-    expect(classifyInput('ls -la /tmp', lsExecutable)).toEqual({ kind: 'bash', cmd: 'ls -la /tmp' });
+    expect(classifyInput('ls -la /tmp', lsExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'ls -la /tmp'
+    });
   });
 
   test('what is mcp when first word not on PATH → chat', () => {
-    expect(classifyInput('what is mcp', neverExecutable)).toEqual({ kind: 'chat', msg: 'what is mcp' });
+    expect(classifyInput('what is mcp', neverExecutable)).toEqual({
+      kind: 'chat',
+      msg: 'what is mcp'
+    });
   });
 
   test('cd /tmp → bash (shell builtin)', () => {
@@ -64,33 +76,48 @@ describe('classifyInput', () => {
   });
 
   test('export FOO=bar → bash (shell builtin)', () => {
-    expect(classifyInput('export FOO=bar', neverExecutable)).toEqual({ kind: 'bash', cmd: 'export FOO=bar' });
+    expect(classifyInput('export FOO=bar', neverExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'export FOO=bar'
+    });
   });
 
   test('alias ll=ls → bash (shell builtin)', () => {
-    expect(classifyInput('alias ll=ls', neverExecutable)).toEqual({ kind: 'bash', cmd: 'alias ll=ls' });
+    expect(classifyInput('alias ll=ls', neverExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'alias ll=ls'
+    });
   });
 
   test('source .env → bash (shell builtin)', () => {
-    expect(classifyInput('source .env', neverExecutable)).toEqual({ kind: 'bash', cmd: 'source .env' });
+    expect(classifyInput('source .env', neverExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'source .env'
+    });
   });
 
   test('! override beats executable check', () => {
     // even if ls would be executable, ! prefix forces bash with the rest
-    expect(classifyInput('!echo hello world', alwaysExecutable)).toEqual({ kind: 'bash', cmd: 'echo hello world' });
+    expect(classifyInput('!echo hello world', alwaysExecutable)).toEqual({
+      kind: 'bash',
+      cmd: 'echo hello world'
+    });
   });
 
   test('? override beats executable check', () => {
     // first word might be on PATH but ? forces chat
     expect(classifyInput('?ls what does this command do', alwaysExecutable)).toEqual({
       kind: 'chat',
-      msg: 'ls what does this command do',
+      msg: 'ls what does this command do'
     });
   });
 
   // looksLikeQuestion-driven dispatch
   test('what is mcp → chat (question starter)', () => {
-    expect(classifyInput('what is mcp', neverExecutable)).toEqual({ kind: 'chat', msg: 'what is mcp' });
+    expect(classifyInput('what is mcp', neverExecutable)).toEqual({
+      kind: 'chat',
+      msg: 'what is mcp'
+    });
   });
 
   test('ls files? → chat (trailing ?)', () => {
@@ -98,11 +125,17 @@ describe('classifyInput', () => {
   });
 
   test('How do I install foo → chat (uppercase + 3+ words)', () => {
-    expect(classifyInput('How do I install foo', neverExecutable)).toEqual({ kind: 'chat', msg: 'How do I install foo' });
+    expect(classifyInput('How do I install foo', neverExecutable)).toEqual({
+      kind: 'chat',
+      msg: 'How do I install foo'
+    });
   });
 
   test('Tell me about bun → chat (question starter)', () => {
-    expect(classifyInput('Tell me about bun', neverExecutable)).toEqual({ kind: 'chat', msg: 'Tell me about bun' });
+    expect(classifyInput('Tell me about bun', neverExecutable)).toEqual({
+      kind: 'chat',
+      msg: 'Tell me about bun'
+    });
   });
 
   test('ls alone → bash (single word, executable)', () => {
@@ -112,7 +145,8 @@ describe('classifyInput', () => {
   test('node should I use v22 or v24? → chat (trailing ?)', () => {
     const nodeExecutable = (name: string) => name === 'node';
     expect(classifyInput('node should I use v22 or v24?', nodeExecutable)).toEqual({
-      kind: 'chat', msg: 'node should I use v22 or v24?',
+      kind: 'chat',
+      msg: 'node should I use v22 or v24?'
     });
   });
 
@@ -156,7 +190,7 @@ describe('classifyInput — new power commands', () => {
     expect(classifyInput('/? install foo', neverExecutable)).toEqual({
       kind: 'meta',
       sub: 'dry-run',
-      args: 'install foo',
+      args: 'install foo'
     });
   });
 
@@ -164,7 +198,7 @@ describe('classifyInput — new power commands', () => {
     expect(classifyInput('/? browse mcp-github', neverExecutable)).toEqual({
       kind: 'meta',
       sub: 'dry-run',
-      args: 'browse mcp-github',
+      args: 'browse mcp-github'
     });
   });
 
@@ -211,15 +245,21 @@ describe('chat failure reason', () => {
   });
 
   test('Model not found in stderr → model suggestion', () => {
-    expect(chatReason({ spawnError: false, errBuffer: 'Model not found: foo' })).toContain('/model to pick another model');
+    expect(chatReason({ spawnError: false, errBuffer: 'Model not found: foo' })).toContain(
+      '/model to pick another model'
+    );
   });
 
   test('other stderr → generic message', () => {
-    expect(chatReason({ spawnError: false, errBuffer: 'timeout' })).toBe('chat failed; see /transcript for details');
+    expect(chatReason({ spawnError: false, errBuffer: 'timeout' })).toBe(
+      'chat failed; see /transcript for details'
+    );
   });
 
   test('empty stderr → generic message', () => {
-    expect(chatReason({ spawnError: false, errBuffer: '' })).toBe('chat failed; see /transcript for details');
+    expect(chatReason({ spawnError: false, errBuffer: '' })).toBe(
+      'chat failed; see /transcript for details'
+    );
   });
 });
 

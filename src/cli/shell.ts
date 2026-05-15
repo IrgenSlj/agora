@@ -11,7 +11,7 @@ import {
   loadSessionMeta,
   readTranscript,
   recentBashContext,
-  writeSessionMeta,
+  writeSessionMeta
 } from '../transcript.js';
 import { gradientText, renderBanner, supportsTrueColor, type Styler } from '../ui.js';
 import { createChatRenderer, type Verbosity } from './chat-renderer.js';
@@ -27,15 +27,57 @@ const MAX_BASH_BUFFER = 16 * 1024;
 
 export type Dispatch =
   | { kind: 'noop' }
-  | { kind: 'meta'; sub: 'help' | 'quit' | 'exit' | 'clear' | 'transcript' | 'menu' | 'verbose' | 'quiet' | 'medium' | 'last' | 'again' | 'dry-run'; args?: string }
+  | {
+      kind: 'meta';
+      sub:
+        | 'help'
+        | 'quit'
+        | 'exit'
+        | 'clear'
+        | 'transcript'
+        | 'menu'
+        | 'verbose'
+        | 'quiet'
+        | 'medium'
+        | 'last'
+        | 'again'
+        | 'dry-run';
+      args?: string;
+    }
   | { kind: 'bash'; cmd: string }
   | { kind: 'chat'; msg: string };
 
 const QUESTION_STARTERS = new Set([
-  'what', 'why', 'how', 'which', 'when', 'where', 'who', 'whose',
-  'should', 'shall', 'can', 'could', 'would', 'will', 'do', 'does', 'did',
-  'is', 'are', 'am', 'was', 'were',
-  'tell', 'explain', 'describe', 'help', 'hi', 'hello', 'hey', 'thanks',
+  'what',
+  'why',
+  'how',
+  'which',
+  'when',
+  'where',
+  'who',
+  'whose',
+  'should',
+  'shall',
+  'can',
+  'could',
+  'would',
+  'will',
+  'do',
+  'does',
+  'did',
+  'is',
+  'are',
+  'am',
+  'was',
+  'were',
+  'tell',
+  'explain',
+  'describe',
+  'help',
+  'hi',
+  'hello',
+  'hey',
+  'thanks'
 ]);
 
 export function looksLikeQuestion(line: string): boolean {
@@ -49,17 +91,18 @@ export function looksLikeQuestion(line: string): boolean {
 
   if (QUESTION_STARTERS.has(firstWord)) return true;
 
-  if (trimmed[0] === trimmed[0].toUpperCase() && trimmed[0] !== trimmed[0].toLowerCase() && words.length >= 3) {
+  if (
+    trimmed[0] === trimmed[0].toUpperCase() &&
+    trimmed[0] !== trimmed[0].toLowerCase() &&
+    words.length >= 3
+  ) {
     return true;
   }
 
   return false;
 }
 
-export function classifyInput(
-  line: string,
-  isExecutable: (name: string) => boolean
-): Dispatch {
+export function classifyInput(line: string, isExecutable: (name: string) => boolean): Dispatch {
   const trimmed = line.trim();
   if (!trimmed) return { kind: 'noop' };
 
@@ -74,7 +117,8 @@ export function classifyInput(
   if (trimmed === '/medium') return { kind: 'meta', sub: 'medium' };
   if (trimmed === '/last') return { kind: 'meta', sub: 'last' };
   if (trimmed === '/again') return { kind: 'meta', sub: 'again' };
-  if (trimmed.startsWith('/? ')) return { kind: 'meta', sub: 'dry-run', args: trimmed.slice(3).trim() };
+  if (trimmed.startsWith('/? '))
+    return { kind: 'meta', sub: 'dry-run', args: trimmed.slice(3).trim() };
 
   if (trimmed.startsWith('!')) return { kind: 'bash', cmd: trimmed.slice(1).trim() };
   if (trimmed.startsWith('?')) return { kind: 'chat', msg: trimmed.slice(1).trim() };
@@ -129,9 +173,13 @@ function tailBuffer(buf: string, maxBytes: number): string {
   return buf.slice(buf.length - maxBytes);
 }
 
-function formatTranscriptEntry(
-  entry: { ts: string; kind: string; input?: string; output?: string; exitCode?: number }
-): string {
+function formatTranscriptEntry(entry: {
+  ts: string;
+  kind: string;
+  input?: string;
+  output?: string;
+  exitCode?: number;
+}): string {
   const time = entry.ts.slice(0, 19);
   const prefix = `[${time}] [${entry.kind}]`;
   const input = entry.input ? ` $ ${entry.input}` : '';
@@ -208,7 +256,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const opencodeAvailable = checkOpencodeAvailable();
   if (!opencodeAvailable) {
     process.stdout.write(
-      style.dim('Note: opencode not found on PATH. Chat will be unavailable until installed.') + '\n\n'
+      style.dim('Note: opencode not found on PATH. Chat will be unavailable until installed.') +
+        '\n\n'
     );
   }
 
@@ -229,7 +278,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       cwd: cwd0,
       createdAt: new Date().toISOString(),
       lastUsedAt: new Date().toISOString(),
-      turnCount: 0,
+      turnCount: 0
     };
     writeSessionMeta(dataDir, cwd0, meta);
   }
@@ -246,7 +295,12 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   let printedAnyTurn = false;
 
   // B.2 — sticky context state
-  let lastContextSnapshot: { model: string; verbosity: string; cwd: string; turnCount: number } | null = null;
+  let lastContextSnapshot: {
+    model: string;
+    verbosity: string;
+    cwd: string;
+    turnCount: number;
+  } | null = null;
 
   // Lazy caches for completion ids
   let cachedMarketplaceIds: string[] | null = null;
@@ -268,8 +322,17 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   }
 
   const slashCommands = [
-    '/help', '/menu', '/transcript', '/verbose', '/medium', '/quiet',
-    '/clear', '/quit', '/exit', '/last', '/again',
+    '/help',
+    '/menu',
+    '/transcript',
+    '/verbose',
+    '/medium',
+    '/quiet',
+    '/clear',
+    '/quit',
+    '/exit',
+    '/last',
+    '/again'
   ];
 
   const completionContext = {
@@ -278,18 +341,20 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     marketplaceIds: getMarketplaceIds,
     savedIds: getSavedIds,
     listDir: (p: string) => {
-      try { return readdirSync(p); } catch { return []; }
+      try {
+        return readdirSync(p);
+      } catch {
+        return [];
+      }
     },
-    cwd: currentCwd,
+    cwd: currentCwd
   };
 
   // In-memory history for prompter (not persisted — transcript covers that)
   const history: string[] = [];
 
   // Amber chevron when opencode unavailable, accent otherwise
-  const accentChevron = opencodeAvailable
-    ? style.accent('›')
-    : '\x1b[38;5;214m›\x1b[0m';
+  const accentChevron = opencodeAvailable ? style.accent('›') : '\x1b[38;5;214m›\x1b[0m';
 
   // B.3 — static portion of the prompt (no chevron); suffix added dynamically
   function buildPromptBase(): string {
@@ -359,7 +424,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         promptSuffix: buildPromptSuffix,
         history,
         completer: (line, cursor) => completeShellLine(line, cursor, completionContext),
-        ghostSuggester: (line, hist) => ghostFromHistory(line, hist),
+        ghostSuggester: (line, hist) => ghostFromHistory(line, hist)
       });
 
       if (result.kind === 'eof') {
@@ -503,7 +568,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         ts: new Date().toISOString(),
         kind: 'bash',
         input: cmd,
-        output: `→ ${resolved}`,
+        output: `→ ${resolved}`
       });
       if (firstTurn) {
         firstTurn = false;
@@ -517,7 +582,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     let childExitCode = 0;
     let childRef: ReturnType<typeof spawn> | null = null;
 
-    const abortChild = () => { if (childRef) childRef.kill('SIGINT'); };
+    const abortChild = () => {
+      if (childRef) childRef.kill('SIGINT');
+    };
     process.on('SIGINT', abortChild);
     childActive = true;
 
@@ -526,7 +593,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         shell: true,
         cwd: currentCwd,
         env: env as Record<string, string>,
-        stdio: ['inherit', 'pipe', 'pipe'],
+        stdio: ['inherit', 'pipe', 'pipe']
       });
       childRef = child;
 
@@ -542,7 +609,11 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         buffer = tailBuffer(buffer + text, MAX_BASH_BUFFER);
       });
 
-      child.on('close', (code) => { childExitCode = code ?? 0; done = true; res(); });
+      child.on('close', (code) => {
+        childExitCode = code ?? 0;
+        done = true;
+        res();
+      });
       child.on('error', (err) => {
         process.stderr.write(`Error: ${err.message}\n`);
         done = true;
@@ -564,7 +635,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       kind: 'bash',
       input: cmd,
       output: buffer,
-      exitCode: childExitCode,
+      exitCode: childExitCode
     });
 
     if (firstTurn) {
@@ -587,9 +658,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     if (bashCtx) fullPrompt += `\n${bashCtx}`;
     fullPrompt += `\n<user>\n${userMsg}`;
 
-    const modelArg = FREE_MODELS[0].includes('/')
-      ? FREE_MODELS[0]
-      : `opencode/${FREE_MODELS[0]}`;
+    const modelArg = FREE_MODELS[0].includes('/') ? FREE_MODELS[0] : `opencode/${FREE_MODELS[0]}`;
 
     const args = ['run', '--format', 'json', '--model', modelArg];
     if (meta!.sessionId) args.push('--session', meta!.sessionId);
@@ -599,11 +668,13 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       verbosity,
       style,
       trueColor,
-      out: process.stdout,
+      out: process.stdout
     });
 
     let chatChildRef: ReturnType<typeof spawn> | null = null;
-    const abortChat = () => { if (chatChildRef) chatChildRef.kill('SIGINT'); };
+    const abortChat = () => {
+      if (chatChildRef) chatChildRef.kill('SIGINT');
+    };
     process.on('SIGINT', abortChat);
     childActive = true;
 
@@ -616,7 +687,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       const child = spawn('opencode', args, {
         env: env as Record<string, string>,
         stdio: ['ignore', 'pipe', 'pipe'],
-        shell: false,
+        shell: false
       });
       chatChildRef = child;
 
@@ -630,7 +701,10 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       child.stderr?.on('data', (chunk: Buffer) => {
         errBuffer = tailBuffer(errBuffer + chunk.toString(), 4096);
       });
-      child.on('close', (code) => { chatExitCode = code ?? 0; res(); });
+      child.on('close', (code) => {
+        chatExitCode = code ?? 0;
+        res();
+      });
       child.on('error', (err) => {
         spawnError = err;
         res();
@@ -667,12 +741,12 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     appendTranscript(dataDir, cwd0, {
       ts: new Date().toISOString(),
       kind: 'chat-user',
-      input: userMsg,
+      input: userMsg
     });
     appendTranscript(dataDir, cwd0, {
       ts: new Date().toISOString(),
       kind: 'chat-assistant',
-      output: assistantBuffer,
+      output: assistantBuffer
     });
 
     meta!.turnCount += 1;
@@ -695,9 +769,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     if (!block) return;
 
     process.stdout.write(
-      style.dim('Code block: ') +
-      style.accent('(r)un · (c)opy · (e)dit · (s)kip') +
-      ' '
+      style.dim('Code block: ') + style.accent('(r)un · (c)opy · (e)dit · (s)kip') + ' '
     );
 
     const key = await readOneKey();
@@ -709,7 +781,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         ts: new Date().toISOString(),
         kind: 'bash',
         input: block,
-        output: '',
+        output: ''
       });
     } else if (key === 'c') {
       copyToClipboard(block);
@@ -759,7 +831,7 @@ function printHelp(style: Styler): void {
     style.dim('Verbosity:'),
     '  /verbose  /medium  /quiet',
     '',
-    style.dim('Agora commands:'),
+    style.dim('Agora commands:')
   ];
 
   const groups = ['Marketplace', 'Setup', 'Library', 'Learn', 'Community'] as const;

@@ -4,7 +4,7 @@ import {
   formatDuration,
   formatToolHeader,
   summarizeToolResult,
-  truncate,
+  truncate
 } from '../src/cli/chat-renderer';
 import { createStyler } from '../src/ui';
 
@@ -66,7 +66,9 @@ describe('summarizeToolResult', () => {
   });
 
   test('object with results array returns n results', () => {
-    expect(summarizeToolResult({ status: 'completed', output: { results: ['a', 'b'] } })).toBe('2 results');
+    expect(summarizeToolResult({ status: 'completed', output: { results: ['a', 'b'] } })).toBe(
+      '2 results'
+    );
   });
 
   test('completed with non-array output returns ok', () => {
@@ -87,8 +89,8 @@ describe('formatToolHeader', () => {
         status: 'completed',
         input: { category: 'mcp', limit: 5 },
         output: [1, 2, 3, 4, 5],
-        time: { start: 1000, end: 1234 },
-      },
+        time: { start: 1000, end: 1234 }
+      }
     };
     const result = formatToolHeader(part, 234);
     expect(result.name).toBe('agora_trending');
@@ -109,16 +111,37 @@ describe('formatToolHeader', () => {
 function makeOut() {
   const writes: string[] = [];
   return {
-    out: { write: (s: string) => { writes.push(s); return 1; } },
+    out: {
+      write: (s: string) => {
+        writes.push(s);
+        return 1;
+      }
+    },
     written: () => writes.join(''),
-    writes,
+    writes
   };
 }
 
-const STEP_START = JSON.stringify({ type: 'step_start', sessionID: 'sess-1', part: { type: 'step-start' } });
-const TEXT_1 = JSON.stringify({ type: 'text', sessionID: 'sess-1', part: { type: 'text', text: 'Hello ', time: { start: 100, end: 110 } } });
-const TEXT_2 = JSON.stringify({ type: 'text', sessionID: 'sess-1', part: { type: 'text', text: 'world', time: { start: 110, end: 120 } } });
-const STEP_FINISH = JSON.stringify({ type: 'step_finish', sessionID: 'sess-1', part: { type: 'step-finish', tokens: { output: 12, total: 50 }, cost: 0.000123 } });
+const STEP_START = JSON.stringify({
+  type: 'step_start',
+  sessionID: 'sess-1',
+  part: { type: 'step-start' }
+});
+const TEXT_1 = JSON.stringify({
+  type: 'text',
+  sessionID: 'sess-1',
+  part: { type: 'text', text: 'Hello ', time: { start: 100, end: 110 } }
+});
+const TEXT_2 = JSON.stringify({
+  type: 'text',
+  sessionID: 'sess-1',
+  part: { type: 'text', text: 'world', time: { start: 110, end: 120 } }
+});
+const STEP_FINISH = JSON.stringify({
+  type: 'step_finish',
+  sessionID: 'sess-1',
+  part: { type: 'step-finish', tokens: { output: 12, total: 50 }, cost: 0.000123 }
+});
 
 const TOOL_USE = JSON.stringify({
   type: 'tool_use',
@@ -131,9 +154,9 @@ const TOOL_USE = JSON.stringify({
       status: 'completed',
       input: { category: 'mcp', limit: 5 },
       output: [1, 2, 3, 4, 5],
-      time: { start: 200, end: 434 },
-    },
-  },
+      time: { start: 200, end: 434 }
+    }
+  }
 });
 
 describe('createChatRenderer — medium mode', () => {

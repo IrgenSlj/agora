@@ -19,10 +19,7 @@ export interface PromptOptions {
   in?: NodeJS.ReadStream;
 }
 
-export type PromptResult =
-  | { kind: 'line'; value: string }
-  | { kind: 'eof' }
-  | { kind: 'abort' };
+export type PromptResult = { kind: 'line'; value: string } | { kind: 'eof' } | { kind: 'abort' };
 
 // ── State ───────────────────────────────────────────────────────────────────
 
@@ -89,7 +86,7 @@ export function makeInitialState(history: string[]): EditorState {
     mode: 'normal',
     searchQuery: '',
     searchIndex: -1,
-    tabCycle: null,
+    tabCycle: null
   };
 }
 
@@ -172,7 +169,7 @@ export function applyKeyEvent(
       const next = {
         ...state,
         cursor: Math.min(chars.length, state.cursor + 1),
-        tabCycle: null,
+        tabCycle: null
       };
       return { state: next };
     }
@@ -190,7 +187,7 @@ export function applyKeyEvent(
       const next = {
         ...state,
         cursor: Math.min(chars.length, state.cursor + 1),
-        tabCycle: null,
+        tabCycle: null
       };
       return { state: next };
     }
@@ -215,7 +212,7 @@ export function applyKeyEvent(
           cursor: Array.from(newLine).length,
           historyIndex: newIndex,
           draft: saveDraft,
-          tabCycle: null,
+          tabCycle: null
         },
         opts
       );
@@ -226,14 +223,14 @@ export function applyKeyEvent(
       if (state.historyIndex >= state.history.length) return { state };
       const newIndex = state.historyIndex + 1;
       const newLine =
-        newIndex === state.history.length ? state.draft : state.history[newIndex] ?? '';
+        newIndex === state.history.length ? state.draft : (state.history[newIndex] ?? '');
       const next = withGhost(
         {
           ...state,
           line: newLine,
           cursor: Array.from(newLine).length,
           historyIndex: newIndex,
-          tabCycle: null,
+          tabCycle: null
         },
         opts
       );
@@ -252,8 +249,8 @@ export function applyKeyEvent(
           mode: 'reverse-search',
           searchQuery: '',
           searchIndex: searchIdx,
-          tabCycle: null,
-        },
+          tabCycle: null
+        }
       };
     }
 
@@ -266,20 +263,14 @@ export function applyKeyEvent(
       // Delete word chars
       while (pos > 0 && chars[pos - 1] !== ' ') pos -= 1;
       chars.splice(pos, state.cursor - pos);
-      const next = withGhost(
-        { ...state, line: chars.join(''), cursor: pos, tabCycle: null },
-        opts
-      );
+      const next = withGhost({ ...state, line: chars.join(''), cursor: pos, tabCycle: null }, opts);
       return { state: next };
     }
 
     case 'ctrl-u': {
       const chars = Array.from(state.line);
       chars.splice(0, state.cursor);
-      const next = withGhost(
-        { ...state, line: chars.join(''), cursor: 0, tabCycle: null },
-        opts
-      );
+      const next = withGhost({ ...state, line: chars.join(''), cursor: 0, tabCycle: null }, opts);
       return { state: next };
     }
 
@@ -307,7 +298,7 @@ export function applyKeyEvent(
             ...state,
             line: newLine,
             cursor: state.tabCycle.replaceFrom + Array.from(match).length,
-            tabCycle: { ...state.tabCycle, index: nextIndex },
+            tabCycle: { ...state.tabCycle, index: nextIndex }
           },
           opts
         );
@@ -337,14 +328,14 @@ export function applyKeyEvent(
           ...state,
           line: newLine,
           cursor: newCursor,
-          tabCycle: { matches: result.matches, index: -1, replaceFrom: result.replaceFrom },
+          tabCycle: { matches: result.matches, index: -1, replaceFrom: result.replaceFrom }
         },
         opts
       );
       return {
         state: next,
         sideEffect: 'show-completions',
-        completionsToShow: result.matches.slice(0, 6),
+        completionsToShow: result.matches.slice(0, 6)
       };
     }
 
@@ -362,14 +353,13 @@ function applySearchEvent(state: EditorState, event: KeyEvent): ApplyResult {
         ...state,
         mode: 'normal',
         searchQuery: '',
-        searchIndex: -1,
-      },
+        searchIndex: -1
+      }
     };
   }
 
   if (event.kind === 'enter') {
-    const matched =
-      state.searchIndex >= 0 ? state.history[state.searchIndex] ?? '' : state.line;
+    const matched = state.searchIndex >= 0 ? (state.history[state.searchIndex] ?? '') : state.line;
     return {
       state: {
         ...state,
@@ -377,22 +367,24 @@ function applySearchEvent(state: EditorState, event: KeyEvent): ApplyResult {
         line: matched,
         cursor: Array.from(matched).length,
         searchQuery: '',
-        searchIndex: -1,
+        searchIndex: -1
       },
-      output: { kind: 'line', value: matched },
+      output: { kind: 'line', value: matched }
     };
   }
 
   if (event.kind === 'ctrl-r') {
     // Cycle to older match
-    const startFrom =
-      state.searchIndex > 0 ? state.searchIndex - 1 : state.history.length - 1;
+    const startFrom = state.searchIndex > 0 ? state.searchIndex - 1 : state.history.length - 1;
     const nextIdx = findPrevMatch(state.history, state.searchQuery, startFrom);
     return { state: { ...state, searchIndex: nextIdx } };
   }
 
   if (event.kind === 'ctrl-c') {
-    return { state: { ...state, mode: 'normal', searchQuery: '', searchIndex: -1 }, output: { kind: 'abort' } };
+    return {
+      state: { ...state, mode: 'normal', searchQuery: '', searchIndex: -1 },
+      output: { kind: 'abort' }
+    };
   }
 
   if (event.kind === 'backspace') {
@@ -429,12 +421,7 @@ function withGhost(
   return { ...state, ghost };
 }
 
-function spliceMatch(
-  line: string,
-  replaceFrom: number,
-  cursor: number,
-  match: string
-): string {
+function spliceMatch(line: string, replaceFrom: number, cursor: number, match: string): string {
   const chars = Array.from(line);
   chars.splice(replaceFrom, cursor - replaceFrom, ...Array.from(match));
   return chars.join('');
@@ -465,8 +452,7 @@ function renderNormal(state: EditorState, prompt: string): string {
 }
 
 function renderSearch(state: EditorState, _prompt: string): string {
-  const matched =
-    state.searchIndex >= 0 ? state.history[state.searchIndex] ?? '' : '';
+  const matched = state.searchIndex >= 0 ? (state.history[state.searchIndex] ?? '') : '';
   return `\r\x1b[K(reverse-i-search)\`${state.searchQuery}\`: ${matched}`;
 }
 
@@ -535,7 +521,7 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       const prevLine = state.line;
       const result = applyKeyEvent(state, event, {
         completer: opts.completer,
-        ghostSuggester: opts.ghostSuggester,
+        ghostSuggester: opts.ghostSuggester
       });
       state = result.state;
 
@@ -590,7 +576,8 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
             escBuf += String.fromCharCode(nb);
             j += 1;
             if (
-              (nb >= 0x40 && nb <= 0x7e) // final byte of CSI
+              nb >= 0x40 &&
+              nb <= 0x7e // final byte of CSI
             ) {
               break;
             }
@@ -613,20 +600,75 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
         }
 
         // Control codes
-        if (b === 0x03) { dispatchEvent({ kind: 'ctrl-c' }); i++; continue; }
-        if (b === 0x04) { dispatchEvent({ kind: 'ctrl-d' }); i++; continue; }
-        if (b === 0x01) { dispatchEvent({ kind: 'home' }); i++; continue; }
-        if (b === 0x05) { dispatchEvent({ kind: 'end' }); i++; continue; }
-        if (b === 0x06) { dispatchEvent({ kind: 'ctrl-f' }); i++; continue; }
-        if (b === 0x07) { i++; continue; } // bell, ignore
-        if (b === 0x08 || b === 0x7f) { dispatchEvent({ kind: 'backspace' }); i++; continue; }
-        if (b === 0x09) { dispatchEvent({ kind: 'tab' }); i++; continue; }
-        if (b === 0x0a || b === 0x0d) { dispatchEvent({ kind: 'enter' }); i++; continue; }
-        if (b === 0x0b) { dispatchEvent({ kind: 'ctrl-k' }); i++; continue; }
-        if (b === 0x0c) { dispatchEvent({ kind: 'ctrl-l' }); i++; continue; }
-        if (b === 0x12) { dispatchEvent({ kind: 'ctrl-r' }); i++; continue; }
-        if (b === 0x15) { dispatchEvent({ kind: 'ctrl-u' }); i++; continue; }
-        if (b === 0x17) { dispatchEvent({ kind: 'ctrl-w' }); i++; continue; }
+        if (b === 0x03) {
+          dispatchEvent({ kind: 'ctrl-c' });
+          i++;
+          continue;
+        }
+        if (b === 0x04) {
+          dispatchEvent({ kind: 'ctrl-d' });
+          i++;
+          continue;
+        }
+        if (b === 0x01) {
+          dispatchEvent({ kind: 'home' });
+          i++;
+          continue;
+        }
+        if (b === 0x05) {
+          dispatchEvent({ kind: 'end' });
+          i++;
+          continue;
+        }
+        if (b === 0x06) {
+          dispatchEvent({ kind: 'ctrl-f' });
+          i++;
+          continue;
+        }
+        if (b === 0x07) {
+          i++;
+          continue;
+        } // bell, ignore
+        if (b === 0x08 || b === 0x7f) {
+          dispatchEvent({ kind: 'backspace' });
+          i++;
+          continue;
+        }
+        if (b === 0x09) {
+          dispatchEvent({ kind: 'tab' });
+          i++;
+          continue;
+        }
+        if (b === 0x0a || b === 0x0d) {
+          dispatchEvent({ kind: 'enter' });
+          i++;
+          continue;
+        }
+        if (b === 0x0b) {
+          dispatchEvent({ kind: 'ctrl-k' });
+          i++;
+          continue;
+        }
+        if (b === 0x0c) {
+          dispatchEvent({ kind: 'ctrl-l' });
+          i++;
+          continue;
+        }
+        if (b === 0x12) {
+          dispatchEvent({ kind: 'ctrl-r' });
+          i++;
+          continue;
+        }
+        if (b === 0x15) {
+          dispatchEvent({ kind: 'ctrl-u' });
+          i++;
+          continue;
+        }
+        if (b === 0x17) {
+          dispatchEvent({ kind: 'ctrl-w' });
+          i++;
+          continue;
+        }
 
         // Printable ASCII or UTF-8 multi-byte: batch until next control
         let printable = '';
@@ -649,7 +691,11 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       if (escTimer) clearTimeout(escTimer);
       out.write('\n');
       if ((inp as any).setRawMode) {
-        try { (inp as any).setRawMode(false); } catch { /* ignore */ }
+        try {
+          (inp as any).setRawMode(false);
+        } catch {
+          /* ignore */
+        }
       }
     }
 
@@ -657,7 +703,9 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
     if ((inp as any).setRawMode) {
       try {
         (inp as any).setRawMode(true);
-      } catch { /* ignore if not a TTY */ }
+      } catch {
+        /* ignore if not a TTY */
+      }
     }
     inp.resume();
     inp.on('data', onData);

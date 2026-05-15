@@ -53,9 +53,7 @@ export function formatToolHeader(
   const input = state.input ?? {};
 
   const argEntries = Object.entries(input as Record<string, unknown>);
-  let argSummary = argEntries
-    .map(([k, v]) => `${k}=${truncate(JSON.stringify(v), 20)}`)
-    .join(', ');
+  let argSummary = argEntries.map(([k, v]) => `${k}=${truncate(JSON.stringify(v), 20)}`).join(', ');
   argSummary = truncate(argSummary, 60);
 
   const resultSummary = summarizeToolResult(state);
@@ -120,7 +118,9 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
     const dur = formatDuration(nowMs - thinkingStart);
     if (thinkingLinePrinted && verbosity !== 'quiet') {
       // Overwrite the thinking line in place
-      out.write(`\r\x1b[K${bar('thinking')} ${style.accent('thinking')} ${style.dim('· ' + dur)}\n`);
+      out.write(
+        `\r\x1b[K${bar('thinking')} ${style.accent('thinking')} ${style.dim('· ' + dur)}\n`
+      );
     }
   }
 
@@ -186,9 +186,7 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
         out.write(style.dim('   ' + l) + '\n');
       }
       const resultStr = truncate(
-        typeof state.output === 'string'
-          ? state.output
-          : JSON.stringify(state.output ?? null),
+        typeof state.output === 'string' ? state.output : JSON.stringify(state.output ?? null),
         800
       );
       out.write(style.dim(`   result: ${resultSummary} — ${resultStr}`) + '\n');
@@ -255,6 +253,6 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
 
     hasReceivedText(): boolean {
       return firstTextSeen;
-    },
+    }
   };
 }

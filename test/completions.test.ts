@@ -1,9 +1,24 @@
 import { describe, expect, test } from 'bun:test';
-import { completeShellLine, ghostFromHistory, type CompletionContext } from '../src/cli/completions';
+import {
+  completeShellLine,
+  ghostFromHistory,
+  type CompletionContext
+} from '../src/cli/completions';
 
 function makeContext(overrides: Partial<CompletionContext> = {}): CompletionContext {
   return {
-    slashCommands: ['/help', '/menu', '/transcript', '/verbose', '/quiet', '/clear', '/quit', '/exit', '/last', '/again'],
+    slashCommands: [
+      '/help',
+      '/menu',
+      '/transcript',
+      '/verbose',
+      '/quiet',
+      '/clear',
+      '/quit',
+      '/exit',
+      '/last',
+      '/again'
+    ],
     agoraCommands: ['install', 'browse', 'search', 'save', 'remove'],
     marketplaceIds: () => ['mcp-github', 'mcp-postgres', 'mcp-filesystem', 'wf-tdd-cycle'],
     savedIds: () => ['mcp-github', 'wf-tdd-cycle'],
@@ -14,7 +29,7 @@ function makeContext(overrides: Partial<CompletionContext> = {}): CompletionCont
       return [];
     },
     cwd: '/home/user',
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -157,7 +172,7 @@ describe('edge cases', () => {
 
   test('at most 12 matches returned', () => {
     const ctx = makeContext({
-      marketplaceIds: () => Array.from({ length: 20 }, (_, i) => `mcp-item-${i}`),
+      marketplaceIds: () => Array.from({ length: 20 }, (_, i) => `mcp-item-${i}`)
     });
     const line = 'install mcp-';
     const r = completeShellLine(line, line.length, ctx);
