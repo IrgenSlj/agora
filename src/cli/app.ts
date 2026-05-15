@@ -144,7 +144,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   }
 
   if (!parsed.command) {
-    if (isInteractive(io, env)) return runInteractiveMenu(io, style);
+    if (isInteractive(io, env)) {
+      const { runShell } = await import('./shell.js');
+      return runShell(io, style);
+    }
     writeLine(io.stdout, welcome(useColor, supportsTrueColor(env)));
     return 0;
   }
@@ -195,6 +198,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return await commandInit(parsed, io);
       case 'use':
         return await commandUse(parsed, io);
+      case 'menu':
+        return await runInteractiveMenu(io, style);
       case 'help': {
         const helpTarget = parsed.args[0];
         if (helpTarget) {
@@ -600,7 +605,7 @@ async function commandMcp(_parsed: ParsedArgs, io: CliIo): Promise<number> {
   return 0;
 }
 
-const FREE_MODELS = [
+export const FREE_MODELS = [
   'deepseek-v4-flash-free',
   'minimax-m2.5-free',
   'nemotron-3-super-free',

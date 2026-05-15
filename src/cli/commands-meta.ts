@@ -187,6 +187,14 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora use wf-tdd-cycle', 'agora use wf-security-audit']
   },
   {
+    name: 'menu',
+    group: 'Setup',
+    summary: 'Browse commands interactively (the old menu)',
+    usage: 'agora menu',
+    details: 'Opens the interactive command browser powered by @clack/prompts.',
+    examples: ['agora menu']
+  },
+  {
     name: 'config',
     group: 'Setup',
     summary: 'Inspect or validate your OpenCode configuration',

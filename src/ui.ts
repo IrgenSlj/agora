@@ -104,9 +104,26 @@ export const AGORA_WORDMARK_OUTLINE: string[] = [
 ];
 
 /**
+ * Bayer-dithered fill of the SOLID shape (5 rows × 39 cols). Each filled cell
+ * is mapped to a shade-ramp character (█ ▓ ▒ ░) determined by a 4×4 ordered
+ * dither matrix and a per-row density that grades from 1.00 at the cap (row 0)
+ * down to 0.25 at the baseline (row 4). Together they produce a halftone marble
+ * texture: dense solid blocks at the top of every letter, dissolving to sparse
+ * stipple dots at the bottom — designed to be read under the warm terracotta
+ * gradient applied per column by renderBanner.
+ */
+export const AGORA_WORDMARK_TEXTURED: string[] = [
+  ' ██▓██   ██▓██   ██▓██  ███▓██   ██▓██ ',
+  '▓▓   ▓▒ ▓▓      ▓▓   ▓▒ ▓▓   ▓▒ ▓▓   ▓▒',
+  '▓▒▓▒▓▒▓ ▓▒  ▓▒▓ ▓▒   ▒▓ ▓▒▓▒▓▒  ▓▒▓▒▓▒▓',
+  '░░   ░░ ░░   ░░ ░░   ░░ ░░  ░░  ░░   ░░',
+  '░░   ░░  ░░ ░░   ░░ ░░  ░░   ░░ ░░   ░░'
+];
+
+/**
  * Shaded-ramp letterforms (5 rows × 34 cols). Each row steps down the
  * ░▒▓ shade ramp — dense at the cap, sparse at the baseline — giving the
- * wordmark a dithered, marble-carved texture. The default banner.
+ * wordmark a dithered, marble-carved texture.
  */
 export const AGORA_WORDMARK_SHADED: string[] = [
   ' ▓▓▓▓   ▓▓▓▓▓  ▓▓▓▓  ▓▓▓▓▓   ▓▓▓▓ ',
@@ -132,8 +149,18 @@ function lerp(a: number, b: number, t: number): number {
   return Math.round(a + (b - a) * t);
 }
 
-/** Sample a multi-stop gradient at position t ∈ [0, 1]. */
-function sampleGradient(stops: RGB[], t: number): RGB {
+/** Nearest colour in the xterm-256 6×6×6 cube — the fallback when truecolor is off. */
+function rgbTo256(rgb: RGB): number {
+  const axis = (v: number) => Math.round((v / 255) * 5);
+  return 16 + 36 * axis(rgb[0]) + 6 * axis(rgb[1]) + axis(rgb[2]);
+}
+
+export function colorize(char: string, rgb: RGB, trueColor: boolean): string {
+  const code = trueColor ? `38;2;${rgb[0]};${rgb[1]};${rgb[2]}` : `38;5;${rgbTo256(rgb)}`;
+  return `\x1b[${code}m${char}${RESET}`;
+}
+
+export function sampleGradient(stops: RGB[], t: number): RGB {
   if (stops.length === 1) return stops[0];
   const clamped = Math.min(1, Math.max(0, t));
   const span = clamped * (stops.length - 1);
@@ -144,22 +171,32 @@ function sampleGradient(stops: RGB[], t: number): RGB {
   return [lerp(from[0], to[0], local), lerp(from[1], to[1], local), lerp(from[2], to[2], local)];
 }
 
-/** Nearest colour in the xterm-256 6×6×6 cube — the fallback when truecolor is off. */
-function rgbTo256(rgb: RGB): number {
-  const axis = (v: number) => Math.round((v / 255) * 5);
-  return 16 + 36 * axis(rgb[0]) + 6 * axis(rgb[1]) + axis(rgb[2]);
+/** Colorizes `▍` with a stable BANNER_GRADIENT color derived from `seed`. */
+export function gradientBar(seed: string, opts: { trueColor: boolean }): string {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash += seed.charCodeAt(i);
+  const t = (hash % 100) / 100;
+  const rgb = sampleGradient(BANNER_GRADIENT, t);
+  return colorize('▍', rgb, opts.trueColor);
 }
 
-function colorize(char: string, rgb: RGB, trueColor: boolean): string {
-  const code = trueColor ? `38;2;${rgb[0]};${rgb[1]};${rgb[2]}` : `38;5;${rgbTo256(rgb)}`;
-  return `\x1b[${code}m${char}${RESET}`;
+/** Colorizes each character of `text` across BANNER_GRADIENT stops. */
+export function gradientText(text: string, opts: { trueColor: boolean }): string {
+  if (text.length === 0) return text;
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const t = text.length === 1 ? 0 : i / (text.length - 1);
+    const rgb = sampleGradient(BANNER_GRADIENT, t);
+    out += colorize(text[i], rgb, opts.trueColor);
+  }
+  return out;
 }
 
 export interface BannerOptions {
   color: boolean;
   trueColor: boolean;
-  /** Which wordmark to render (default: shaded). */
-  variant?: 'solid' | 'outline' | 'shaded';
+  /** Which wordmark to render (default: textured). */
+  variant?: 'solid' | 'outline' | 'shaded' | 'textured';
   /** Dim line printed under the wordmark. */
   subtitle?: string;
 }
@@ -167,7 +204,8 @@ export interface BannerOptions {
 const WORDMARKS: Record<NonNullable<BannerOptions['variant']>, string[]> = {
   solid: AGORA_WORDMARK_SOLID,
   outline: AGORA_WORDMARK_OUTLINE,
-  shaded: AGORA_WORDMARK_SHADED
+  shaded: AGORA_WORDMARK_SHADED,
+  textured: AGORA_WORDMARK_TEXTURED
 };
 
 /**
@@ -176,7 +214,7 @@ const WORDMARKS: Record<NonNullable<BannerOptions['variant']>, string[]> = {
  * dim subtitle. Degrades to plain block letters when colour is off.
  */
 export function renderBanner(opts: BannerOptions): string {
-  const rows = WORDMARKS[opts.variant ?? 'shaded'];
+  const rows = WORDMARKS[opts.variant ?? 'textured'];
   const width = Math.max(...rows.map((line) => line.length));
 
   const lines = rows.map((line) => {
