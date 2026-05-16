@@ -19,6 +19,7 @@ export interface Styler {
   accent(value: string): string;
   dim(value: string): string;
   bold(value: string): string;
+  orange(value: string): string;
 }
 
 const RESET = '\x1b[0m';
@@ -35,10 +36,18 @@ export const ACCENT = {
   ansiBasic: 33 // ANSI yellow (fg) — 16-colour fallback
 } as const;
 
+export const ORANGE = {
+  hex: '#FF8C00',
+  rgb: [255, 140, 0] as RGB,
+  ansi256: 208,
+  ansiBasic: 33
+} as const;
+
 const plain: Styler = {
   accent: (value) => value,
   dim: (value) => value,
-  bold: (value) => value
+  bold: (value) => value,
+  orange: (value) => value
 };
 
 /**
@@ -51,10 +60,14 @@ export function createStyler(useColor: boolean, trueColor = false): Styler {
     ? `38;2;${ACCENT.rgb[0]};${ACCENT.rgb[1]};${ACCENT.rgb[2]}`
     : `38;5;${ACCENT.ansi256}`;
   const wrap = (code: string) => (value: string) => `\x1b[${code}m${value}${RESET}`;
+  const orangeCode = trueColor
+    ? `38;2;${ORANGE.rgb[0]};${ORANGE.rgb[1]};${ORANGE.rgb[2]}`
+    : `38;5;${ORANGE.ansi256}`;
   return {
     accent: wrap(accentCode),
     dim: wrap('2'),
-    bold: wrap('1')
+    bold: wrap('1'),
+    orange: wrap(orangeCode)
   };
 }
 

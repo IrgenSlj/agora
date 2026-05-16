@@ -1,3 +1,4 @@
+import { spawn } from 'node:child_process';
 import type { Styler } from '../ui.js';
 import { createStyler, supportsTrueColor } from '../ui.js';
 import type { CliIo } from './app.js';
@@ -127,14 +128,19 @@ function renderHeader(o: HeaderOpts): [string, string] {
 
 function renderFooter(width: number, style: Styler, hotkeys: ReadonlyArray<Hotkey>, status: { msg: string; tone?: 'info' | 'warn' | 'error' } | null): [string, string] {
   const parts: string[] = [];
-  parts.push(style.accent('1-5') + ' page');
+  parts.push(style.accent('Esc') + ' back');
+  parts.push(style.accent('q') + ' quit');
+  parts.push(style.accent('Enter') + ' open');
   parts.push(style.accent('j/k') + ' nav');
+  parts.push(style.accent('/') + ' filter');
+  parts.push(style.accent('?') + ' help');
+  const globalKeys = new Set(['esc', 'q', 'enter', 'j/k', '/', '?']);
   for (const hk of hotkeys) {
     if (hk.hidden) continue;
+    if (globalKeys.has(hk.key.toLowerCase())) continue;
     parts.push(style.accent(hk.key) + ' ' + hk.label);
   }
-  parts.push(style.accent('?') + ' help');
-  parts.push(style.accent('q') + ' quit');
+  parts.push(style.accent('1-5') + ' page');
   const text = ' ' + parts.join(style.dim('  \u00b7  '));
   const hotkeyLine = padRight(truncate(text, width), width);
 
@@ -187,7 +193,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
 
   function ctxFor(): PageContext {
     const { w, h } = size();
-    return { io, style, width: w, height: Math.max(1, h - 4), trueColor: tc, app };
+    return { io, style, width: w, height: Math.max(1, h - 4), trueColor: tc, app, repaint: paint };
   }
 
   function renderHelp(page: Page): string {
@@ -196,6 +202,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
     lines.push('  ' + style.bold(style.accent('Help')));
     lines.push('');
     lines.push('  ' + style.dim('Global'));
+    lines.push('    ' + style.accent('Esc') + '    back / quit');
     lines.push('    ' + style.accent('1-5') + '    switch page');
     lines.push('    ' + style.accent('Tab') + '    next page');
     lines.push('    ' + style.accent('?') + '      toggle this help');
@@ -254,7 +261,12 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
           if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
         }
         return;
-      case 'open-url': setStatus('open ' + a.url); return;
+      case 'open-url': {
+        const cmd = process.platform === 'darwin' ? 'open' : 'xdg-open';
+        spawn(cmd, [a.url], { stdio: 'ignore', detached: true }).unref();
+        setStatus('opened: ' + a.url);
+        return;
+      }
       case 'run-shell': setStatus('would run: ' + a.cmd); return;
       case 'status': setStatus(a.message, a.tone); return;
     }
@@ -284,6 +296,11 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
         paint(); return;
       }
       if (ev.key === 'tab') {
+        if (getPage(current).handlesTab) {
+          const action = await Promise.resolve(getPage(current).handleKey(ev, ctxFor()));
+          await applyAction(action);
+          paint(); return;
+        }
         const i = PAGE_ORDER.indexOf(current);
         const step = ev.shift ? -1 : 1;
         const next = PAGE_ORDER[(i + step + PAGE_ORDER.length) % PAGE_ORDER.length];
@@ -293,6 +310,11 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
           await getPage(current).mount?.(ctxFor());
           status = null;
         }
+        paint(); return;
+      }
+      if (ev.key === 'esc') {
+        const action = await Promise.resolve(getPage(current).handleKey(ev, ctxFor()));
+        await applyAction(action);
         paint(); return;
       }
       const action = await Promise.resolve(getPage(current).handleKey(ev, ctxFor()));

@@ -44,6 +44,7 @@ export type Dispatch =
         | 'clear'
         | 'transcript'
         | 'menu'
+        | 'terminal'
         | 'verbose'
         | 'quiet'
         | 'medium'
@@ -133,6 +134,7 @@ export function classifyInput(line: string, isExecutable: (name: string) => bool
   if (trimmed === '/clear') return { kind: 'meta', sub: 'clear' };
   if (trimmed === '/transcript') return { kind: 'meta', sub: 'transcript' };
   if (trimmed === '/menu') return { kind: 'meta', sub: 'menu' };
+  if (trimmed === '/terminal') return { kind: 'meta', sub: 'terminal' };
   if (trimmed === '/verbose') return { kind: 'meta', sub: 'verbose' };
   if (trimmed === '/quiet') return { kind: 'meta', sub: 'quiet' };
   if (trimmed === '/medium') return { kind: 'meta', sub: 'medium' };
@@ -300,11 +302,10 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const banner = renderBanner({ color: true, trueColor });
     const motto = "Developers' CLI marketplace and community hub - type a command, bash or chat:";
     const mottoLine = gradientText(motto, { trueColor });
-    const versionLine = style.dim(`v${AGORA_VERSION}`);
-    const slashLine = style.dim(
-      '/tui · /help · /menu · /search · /news · /community · /similar · /compare · /clear · /quit'
-    );
-    process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${versionLine}\n${slashLine}\n\n`);
+    const model = FREE_MODELS[0];
+    const infoLine = style.dim(`v${AGORA_VERSION} · ${model} · /terminal · /help · /menu · /search · /quit`);
+    const slashLine = style.orange('/home · /marketplace · /community · /news · /settings');
+    process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${infoLine}\n${slashLine}\n\n`);
   }
 
   printHome();
@@ -528,6 +529,18 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
         if (dispatch.sub === 'menu') {
           await runInteractiveMenu(io, style);
+          continue;
+        }
+
+        if (dispatch.sub === 'terminal') {
+          process.stdout.write(style.dim('Entering subshell. Type exit or Ctrl-D to return.\n'));
+          const child = spawn(process.env.SHELL || 'bash', [], {
+            stdio: 'inherit',
+            cwd: currentCwd,
+            env: env as Record<string, string>
+          });
+          await new Promise<void>((res) => child.on('exit', () => res()));
+          process.stdout.write('\n');
           continue;
         }
 

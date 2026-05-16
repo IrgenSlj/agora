@@ -43,6 +43,7 @@ export interface PageContext {
   height: number;
   trueColor: boolean;
   app: AppState;
+  repaint: () => void;
 }
 
 export interface Page {
@@ -51,6 +52,7 @@ export interface Page {
   navLabel: string;
   navIcon?: string;
   hotkeys: Hotkey[];
+  handlesTab?: boolean;
   mount?(ctx: PageContext): void | Promise<void>;
   unmount?(ctx: PageContext): void | Promise<void>;
   render(ctx: PageContext): string;

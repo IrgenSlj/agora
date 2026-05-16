@@ -2028,7 +2028,7 @@ function welcome(color: boolean, trueColor: boolean): string {
   if (!color) {
     return [
       '',
-      `agora · terminal marketplace for OpenCode · v${VERSION}`,
+      `agora · Developers' CLI marketplace and community hub · v${VERSION}`,
       '',
       '  Search    agora search <query>',
       '  Browse    agora trending · agora browse <id>',
@@ -2043,7 +2043,7 @@ function welcome(color: boolean, trueColor: boolean): string {
   const box = renderBox(
     'Welcome to Agora',
     [
-      "The developer's terminal marketplace for OpenCode",
+      "Developers' CLI marketplace and community hub - type a command, bash or chat:",
       `v${VERSION} · run \`agora help\` to get started`
     ],
     { color, trueColor }
@@ -2069,7 +2069,7 @@ function usage(): string {
   const groups = ['Marketplace', 'Setup', 'Library', 'Learn', 'Community'] as const;
 
   const lines: string[] = [
-    `${style.accent('agora')}${style.dim(` · terminal marketplace for OpenCode · v${VERSION}`)}`,
+    `${style.accent('agora')}${style.dim(` · Developers' CLI marketplace and community hub · v${VERSION}`)}`,
     ''
   ];
 

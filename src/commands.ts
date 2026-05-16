@@ -13,25 +13,7 @@ export const AGORA_COMMAND_TEMPLATE = [
   'description: Search, browse, and install from the Agora marketplace',
   '---',
   '',
-  'You are operating the Agora marketplace plugin. The user invoked `/agora` with:',
-  '',
-  '$ARGUMENTS',
-  '',
-  'Route the request to the matching Agora tool and return its output:',
-  '',
-  '- `agora_search` — search packages, workflows, and prompts (`search <query>`)',
-  '- `agora_browse_category` — browse a category: mcp, prompt, workflow, all',
-  '- `agora_trending` — trending packages and workflows',
-  '- `agora_browse` — full details for one package or workflow by id (`browse <id>`)',
-  '- `agora_install` — install steps/config for a package or workflow (`install <id>`)',
-  '- `agora_tutorial` — interactive AI/MCP tutorials (`tutorial <id> [step]`)',
-  '- `agora_info` — plugin help and the command list',
-  '',
-  'Community features (reviews, discussions, profiles, publishing) and AI chat',
-  'are available in the `agora` CLI, not as plugin tools.',
-  '',
-  'If `$ARGUMENTS` is empty, call `agora_info`. Otherwise treat the first word as',
-  'the sub-command and pass the rest through as tool arguments.'
+  'Route `$ARGUMENTS`: first word → call `agora_<word>` with rest as args. Empty → `agora_info`.'
 ].join('\n');
 
 /**

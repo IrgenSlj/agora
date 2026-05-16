@@ -8,9 +8,11 @@ import { hnSource } from '../../news/sources/hn.js';
 import { redditSource } from '../../news/sources/reddit.js';
 import { githubTrendingSource } from '../../news/sources/github-trending.js';
 import { arxivSource } from '../../news/sources/arxiv.js';
+import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { vlen, rail, noRail, frame, scrollbar } from './helpers.js';
+import { vlen, rail, noRail, frame, scrollbar, sep } from './helpers.js';
+import { FREE_MODELS } from '../app.js';
 
 const SOURCE_LABELS: Record<string, string> = {
   hn: 'HN',
@@ -20,30 +22,55 @@ const SOURCE_LABELS: Record<string, string> = {
   rss: 'RS',
 };
 
-const ITEM_LINES = 3; // title, url, rule
+const ITEM_LINES = 3;
+
+const TABS = [
+  { id: 'all', label: 'All', match: (_tags: string[]) => true },
+  { id: 'mcp', label: 'Mcp', match: (tags: string[]) => tags.some(t => t.includes('mcp')) },
+  { id: 'tools', label: 'Tools', match: (tags: string[]) => tags.some(t => t.includes('tool')) },
+  { id: 'skills', label: 'Skills', match: (tags: string[]) => tags.some(t => t.includes('skill')) },
+  { id: 'llms', label: 'Llms', match: (tags: string[]) => tags.some(t => t.includes('llm')) },
+  { id: 'repos', label: 'Repos', match: (tags: string[]) => tags.some(t => t.includes('repo') || t.includes('github')) },
+  { id: 'market', label: 'Market', match: (tags: string[]) => tags.some(t => t.includes('market')) },
+  { id: 'search', label: 'Search', match: (tags: string[]) => tags.some(t => t.includes('search')) },
+];
+
+type View = 'list' | 'detail' | 'preview';
 
 interface NewsState {
   cursor: number;
+  tab: number;
   source: NewsSource | 'all';
-  topic: string;
   filter: string;
   filtering: boolean;
   items: ScoredNewsItem[];
   read: Set<string>;
   saved: Set<string>;
   loading: boolean;
+  view: View;
+  previewItem: ScoredNewsItem | null;
+  previewContent: string | null;
+  previewLines: string[];
+  previewScroll: number;
+  previewLoading: boolean;
 }
 
 const state: NewsState = {
   cursor: 0,
+  tab: 0,
   source: 'all',
-  topic: 'all',
   filter: '',
   filtering: false,
   items: [],
   read: new Set(),
   saved: new Set(),
   loading: true,
+  view: 'list',
+  previewItem: null,
+  previewContent: null,
+  previewLines: [],
+  previewScroll: 0,
+  previewLoading: false,
 };
 
 function detectDataDir(ctx: PageContext): string {
@@ -96,10 +123,131 @@ async function refreshNews(ctx: PageContext): Promise<void> {
   state.loading = false;
 }
 
+function htmlToText(html: string): string {
+  let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+  text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+  text = text.replace(/<(p|div|br|h[1-6]|li|tr|blockquote|section|article|header|footer)[^>]*>/gi, '\n');
+  text = text.replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, '$1');
+  text = text.replace(/<[^>]*>/g, '');
+  text = text.replace(/&amp;/g, '&');
+  text = text.replace(/&lt;/g, '<');
+  text = text.replace(/&gt;/g, '>');
+  text = text.replace(/&quot;/g, '"');
+  text = text.replace(/&#39;/g, "'");
+  text = text.replace(/&nbsp;/g, ' ');
+  text = text.replace(/\n{3,}/g, '\n\n');
+  text = text.split('\n').map(l => l.trim()).join('\n');
+  return text.trim();
+}
+
+function fmtAge(date: Date): string {
+  const h = (Date.now() - date.getTime()) / 3600000;
+  if (h < 1) return Math.round(h * 60) + 'm ago';
+  if (h < 24) return Math.round(h) + 'h ago';
+  return Math.round(h / 24) + 'd ago';
+}
+
+function wordWrap(text: string, maxWidth: number): string[] {
+  const result: string[] = [];
+  for (const para of text.split('\n')) {
+    if (para.trim() === '') {
+      if (result.length > 0 && result[result.length - 1] !== '') result.push('');
+      continue;
+    }
+    const words = para.split(/\s+/);
+    let line = '';
+    for (const word of words) {
+      if (!word) continue;
+      const test = line ? line + ' ' + word : word;
+      if (test.length > maxWidth) {
+        if (line) { result.push(line); line = word; }
+        else { result.push(word.slice(0, maxWidth)); line = word.slice(maxWidth); }
+      } else {
+        line = test;
+      }
+    }
+    if (line) result.push(line);
+  }
+  while (result.length > 0 && result[result.length - 1] === '') result.pop();
+  return result;
+}
+
+function trySummarize(text: string): Promise<string | null> {
+  const model = FREE_MODELS[0];
+  const modelArg = model.includes('/') ? model : `opencode/${model}`;
+  const maxChars = 12000;
+  const trimmed = text.length > maxChars ? text.slice(0, maxChars) + '\n...(truncated)' : text;
+  const prompt = `<system>\nYou are a news summarizer. Summarize the following article concisely in 2-4 paragraphs. Focus on key facts and conclusions. Be objective.\n<user>\n${trimmed}`;
+
+  return new Promise((resolve) => {
+    const child = spawn('opencode', ['run', '--format', 'json', '--model', modelArg, prompt], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+      shell: false,
+    });
+
+    let response = '';
+    const timer = setTimeout(() => { child.kill(); resolve(null); }, 30000);
+
+    child.stdout.on('data', (chunk: Buffer) => {
+      for (const line of chunk.toString().split('\n').filter(Boolean)) {
+        try {
+          const ev = JSON.parse(line);
+          if (ev.type === 'text' && ev.part?.text) response += ev.part.text;
+        } catch { /* skip */ }
+      }
+    });
+
+    child.on('close', () => { clearTimeout(timer); resolve(response || null); });
+    child.on('error', () => { clearTimeout(timer); resolve(null); });
+  });
+}
+
+async function fetchArticlePreview(url: string): Promise<string> {
+  try {
+    const resp = await fetch(url, {
+      signal: AbortSignal.timeout(8000),
+      headers: { 'User-Agent': 'Agora/0.4.0 (+https://agora.opencode.ai)' }
+    });
+    if (!resp.ok) return `(error: HTTP ${resp.status})`;
+    const html = await resp.text();
+    const text = htmlToText(html);
+    const lines = text.split('\n').filter(l => l.length > 0);
+    return lines.length > 5
+      ? text
+      : '(could not extract article content from this page)';
+  } catch (e) {
+    return '(failed to fetch: ' + (e instanceof Error ? e.message : String(e)) + ')';
+  }
+}
+
+async function startPreview(item: ScoredNewsItem, ctx: PageContext): Promise<void> {
+  state.view = 'preview';
+  state.previewScroll = 0;
+  state.previewItem = item;
+  state.previewContent = item.url;
+  state.previewLines = [];
+  state.previewLoading = true;
+  ctx.repaint();
+
+  const rawText = await fetchArticlePreview(item.url);
+  if (rawText.startsWith('(failed') || rawText.startsWith('(error') || rawText.startsWith('(could not')) {
+    state.previewLines = wordWrap(rawText, ctx.width - 4);
+    state.previewLoading = false;
+    ctx.repaint();
+    return;
+  }
+
+  const summary = await trySummarize(rawText);
+  state.previewLines = wordWrap(summary ?? rawText, ctx.width - 4);
+  state.previewLoading = false;
+  ctx.repaint();
+}
+
 function visible(): ScoredNewsItem[] {
+  const tab = TABS[state.tab]!;
   return state.items.filter(s =>
     (state.source === 'all' || s.source === state.source)
-    && (state.topic === 'all' || s.tags.includes(state.topic))
+    && tab.match(s.tags)
     && (!state.filter || s.title.toLowerCase().includes(state.filter.toLowerCase())),
   );
 }
@@ -109,15 +257,16 @@ export const newsPage: Page = {
   title: 'NEWS',
   navLabel: 'News',
   navIcon: 'N',
+  handlesTab: true,
   hotkeys: [
     { key: 'j/k/Pg', label: 'nav' },
-    { key: 'Enter', label: 'open' },
+    { key: 'Enter', label: 'detail' },
     { key: 's', label: 'save' },
-    { key: 'p', label: 'mark read' },
+    { key: 'p', label: 'preview' },
     { key: '/', label: 'filter' },
-    { key: 't', label: 'topic' },
+    { key: 'Tab', label: 'category' },
     { key: 'r', label: 'refresh' },
-    { key: 'A/H/R/G/X', label: 'source' },
+    { key: 'o', label: 'open' },
   ],
   mount(ctx: PageContext): void {
     const dataDir = detectDataDir(ctx);
@@ -129,19 +278,105 @@ export const newsPage: Page = {
     }
     refreshNews(ctx);
   },
+  unmount(): void {
+    state.view = 'list';
+  },
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
+
+    if (state.view === 'preview') {
+      const lines: string[] = [];
+      const item = state.previewItem;
+
+      if (state.previewLoading) {
+        lines.push(' ' + style.dim('Loading article\u2026'));
+        return frame(lines, width, height);
+      }
+      if (!item) {
+        lines.push(' ' + style.dim('No article selected.'));
+        return frame(lines, width, height);
+      }
+
+      const headerLines = [
+        ' ' + style.bold(item.title),
+        ' ' + style.dim(SOURCE_LABELS[item.source] ?? item.source.toUpperCase())
+          + style.dim('  \u00b7  ' + fmtAge(new Date(item.publishedAt)))
+          + style.dim('  \u00b7  \u2191 ' + formatNumber(item.engagement))
+          + style.dim('  \u00b7  s' + item.score.toFixed(2)),
+        ' ' + sep('', width - 2, style),
+      ];
+      lines.push(...headerLines);
+
+      const footerLines = [
+        ' ' + style.accent('o') + style.dim(' open in browser  ')
+          + style.accent('Esc') + style.dim(' back  ')
+          + style.accent('j/k') + style.dim(' nav'),
+      ];
+
+      const hdr = headerLines.length;
+      const ftr = footerLines.length;
+      const max = height - hdr - ftr;
+
+      if (state.previewLines.length === 0) {
+        lines.push(' ' + style.dim('No content available.'));
+      } else {
+        const total = state.previewLines.length;
+        if (state.previewScroll > total - max) state.previewScroll = Math.max(0, total - max);
+        const end = Math.min(total, state.previewScroll + max);
+        const sbar = scrollbar(total, max, state.previewScroll, style);
+        for (let i = state.previewScroll; i < end; i++) {
+          lines.push(' ' + state.previewLines[i]! + ' ' + (sbar[i - state.previewScroll] ?? ''));
+        }
+        const pad = hdr + max - lines.length;
+        for (let i = 0; i < pad; i++) lines.push('');
+      }
+
+      lines.push(...footerLines);
+      return frame(lines, width, height);
+    }
+
+    if (state.view === 'detail') {
+      const s = visible()[state.cursor];
+      if (!s) { state.view = 'list'; }
+      else {
+        const lines: string[] = [];
+        const ageH = (Date.now() - new Date(s.publishedAt).getTime()) / 3600000;
+        const age = Math.round(ageH) + 'h ago';
+        lines.push(' ' + style.bold(s.title));
+        lines.push(' ' + style.dim(SOURCE_LABELS[s.source] ?? s.source.toUpperCase())
+          + style.dim('  \u00b7  ' + age)
+          + style.dim('  \u00b7  \u2191 ' + formatNumber(s.engagement))
+          + style.dim('  \u00b7  s' + s.score.toFixed(2)));
+        lines.push(' ' + style.accent(s.url));
+        if (s.tags && s.tags.length > 0) {
+          lines.push(' ' + style.dim('Tags: ') + s.tags.map(t => style.accent(t)).join(', '));
+        }
+        if (s.summary) {
+          lines.push(' ' + sep('summary', width - 2, style));
+          lines.push(' ' + s.summary);
+        }
+        lines.push(' ' + sep('', width - 2, style));
+        lines.push(' ' + style.accent('o') + style.dim(' open in browser  '));
+        lines.push(' ' + style.accent('p') + style.dim(' preview article  '));
+        lines.push(' ' + style.accent('Esc') + style.dim(' back'));
+        return frame(lines, width, height);
+      }
+    }
+
     const list = visible();
     ctx.app.unread.news = state.loading ? 0 : list.length;
     state.cursor = Math.min(state.cursor, Math.max(0, list.length - 1));
     const lines: string[] = [];
     const head = ' ' + style.bold(style.accent('NEWS'));
     const pos = list.length > 0 ? style.dim(' [' + (state.cursor + 1) + '/' + list.length + ']') : '';
-    const right = pos + style.dim(' src:') + style.accent(state.source)
-      + style.dim('  topic:') + style.accent(state.topic)
-      + style.dim('  ' + list.length + ' stories');
+    const right = pos + style.dim('  ' + list.length + ' stories');
     const gap = Math.max(2, width - vlen(head) - vlen(right) - 2);
     lines.push(head + ' '.repeat(gap) + right);
+
+    const tabLine = ' ' + TABS.map((t, i) =>
+      i === state.tab ? style.accent(t.label) : style.dim(t.label)
+    ).join(style.dim('  ') + '\u00b7' + style.dim('  '));
+    lines.push(tabLine);
     lines.push(' ' + style.dim('\u2500'.repeat(Math.max(0, width - 2))));
     if (state.filtering) {
       lines.push(' ' + style.accent('/') + ' ' + state.filter + style.dim('\u258f'));
@@ -152,13 +387,10 @@ export const newsPage: Page = {
     }
     if (list.length === 0) {
       lines.push(' ' + style.dim('Empty feed. Press ')
-        + style.accent('r') + style.dim(' to refresh, or adjust: ')
-        + style.accent('t') + style.dim(' topic, ')
-        + style.accent('A/H/R/G/X') + style.dim(' source.'));
+        + style.accent('r') + style.dim(' to refresh.'));
       return frame(lines, width, height);
     }
 
-    // Virtualized render: only build lines for visible items
     const used = lines.length;
     const maxItems = Math.max(1, Math.floor((height - used) / ITEM_LINES));
     const half = Math.floor(maxItems / 2);
@@ -191,6 +423,41 @@ export const newsPage: Page = {
     return frame(lines, width, height);
   },
   handleKey(event, ctx): PageAction {
+    if (state.view === 'preview') {
+      if (event.key === 'esc') { state.view = 'detail'; return { kind: 'none' }; }
+      if (event.key === 'o') {
+        const pi = state.previewItem;
+        return pi ? { kind: 'open-url', url: pi.url } : { kind: 'none' };
+      }
+      if (event.key === 'j' || event.key === 'down') {
+        state.previewScroll = Math.min(state.previewLines.length - 1, state.previewScroll + 1);
+        return { kind: 'none' };
+      }
+      if (event.key === 'k' || event.key === 'up') {
+        state.previewScroll = Math.max(0, state.previewScroll - 1);
+        return { kind: 'none' };
+      }
+      if (event.key === 'pageup') { state.previewScroll = Math.max(0, state.previewScroll - 20); return { kind: 'none' }; }
+      if (event.key === 'pagedown') { state.previewScroll = Math.min(state.previewLines.length - 1, state.previewScroll + 20); return { kind: 'none' }; }
+      if (event.key === 'home') { state.previewScroll = 0; return { kind: 'none' }; }
+      if (event.key === 'end') { state.previewScroll = state.previewLines.length - 1; return { kind: 'none' }; }
+      return { kind: 'none' };
+    }
+
+    if (state.view === 'detail') {
+      if (event.key === 'esc') { state.view = 'list'; return { kind: 'none' }; }
+      if (event.key === 'o') {
+        const s = visible()[state.cursor];
+        return s ? { kind: 'open-url', url: s.url } : { kind: 'none' };
+      }
+      if (event.key === 'p') {
+        const s = visible()[state.cursor];
+        if (s && state.previewContent !== s.url) startPreview(s, ctx);
+        return { kind: 'none' };
+      }
+      return { kind: 'none' };
+    }
+
     if (state.filtering) {
       if (event.key === 'esc') { state.filtering = false; state.filter = ''; return { kind: 'none' }; }
       if (event.key === 'enter') { state.filtering = false; return { kind: 'none' }; }
@@ -198,8 +465,21 @@ export const newsPage: Page = {
       if (event.key.length === 1 && !event.ctrl) { state.filter += event.key; return { kind: 'none' }; }
       return { kind: 'none' };
     }
+
     const list = visible();
     switch (event.key) {
+      case 'tab':
+        state.tab = (state.tab + 1) % TABS.length;
+        state.cursor = 0;
+        return { kind: 'none' };
+      case 'left':
+        state.tab = state.tab > 0 ? state.tab - 1 : TABS.length - 1;
+        state.cursor = 0;
+        return { kind: 'none' };
+      case 'right':
+        state.tab = (state.tab + 1) % TABS.length;
+        state.cursor = 0;
+        return { kind: 'none' };
       case 'j': case 'down':
         state.cursor = Math.min(list.length - 1, state.cursor + 1); return { kind: 'none' };
       case 'k': case 'up':
@@ -212,10 +492,9 @@ export const newsPage: Page = {
         state.cursor = 0; return { kind: 'none' };
       case 'end':
         state.cursor = list.length - 1; return { kind: 'none' };
-      case 'enter': {
-        const it = list[state.cursor];
-        return it ? { kind: 'open-url', url: it.url } : { kind: 'none' };
-      }
+      case 'enter':
+        if (list.length > 0) { state.view = 'detail'; }
+        return { kind: 'none' };
       case 's': {
         const it = list[state.cursor];
         if (it) {
@@ -224,27 +503,25 @@ export const newsPage: Page = {
         }
         return { kind: 'none' };
       }
-      case 'p': {
+      case 'm': {
         const it = list[state.cursor];
         if (it) state.read.add(it.id);
         return { kind: 'none' };
       }
       case '/': state.filtering = true; return { kind: 'none' };
-      case 't': {
-        const order = ['all', 'mcp', 'ai', 'agents', 'coding', 'security'];
-        state.topic = order[(order.indexOf(state.topic) + 1) % order.length] ?? 'all';
-        state.cursor = 0;
+      case 'p': {
+        const pi = list[state.cursor];
+        if (pi && state.previewContent !== pi.url) startPreview(pi, ctx);
         return { kind: 'none' };
+      }
+      case 'o': {
+        const it = list[state.cursor];
+        return it ? { kind: 'open-url', url: it.url } : { kind: 'none' };
       }
       case 'r':
         state.loading = true;
         refreshNews(ctx);
         return { kind: 'status', message: 'refreshing...' };
-      case 'A': state.source = 'all'; state.cursor = 0; return { kind: 'none' };
-      case 'H': state.source = 'hn'; state.cursor = 0; return { kind: 'none' };
-      case 'R': state.source = 'reddit'; state.cursor = 0; return { kind: 'none' };
-      case 'G': state.source = 'github-trending'; state.cursor = 0; return { kind: 'none' };
-      case 'X': state.source = 'arxiv'; state.cursor = 0; return { kind: 'none' };
       default: return { kind: 'none' };
     }
   },
