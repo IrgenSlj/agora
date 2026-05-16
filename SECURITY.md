@@ -31,16 +31,44 @@ a fix will be prioritized and a security advisory will be published.
 - The bundled offline data contains no secrets or credentials
 - Auto-installable packages are validated against the npm registry — entries without a published `npmPackage` remain browsable but cannot be installed
 
+## Authentication model
+
+Agora uses an OAuth-style token pair on every authenticated backend request:
+
+- **Access token** — stateless JWT (HS256), 1h lifetime. Carried as
+  `Authorization: Bearer <token>`. Verified by signature + `exp` only; no
+  per-request DB lookup.
+- **Refresh token** — JWT with a random `jti`, 90d lifetime. The server
+  stores `sha256(jti)` keyed by `user_id` in `refresh_tokens`. Every call to
+  `POST /auth/refresh` rotates: the old `jti` row is deleted and a fresh
+  pair is issued, so a leaked refresh token is single-use.
+- **Logout** — `POST /auth/logout` revokes either one refresh token
+  (passed in the body) or all of the user's refresh tokens (logout
+  everywhere). `agora logout` calls this best-effort before clearing local
+  state, so a network failure still removes the credentials locally.
+- **GitHub** — used only for identity binding (`users.github_id`); the
+  GitHub OAuth access token is never persisted.
+
+The CLI stores the pair in `~/.config/agora/state.json` (user-only perms).
+Tokens are masked in `agora auth status` output and never logged.
+
 ## Known issues tracked for the next release
 
 These are documented openly because Agora's whole thesis is that trust is the
-product. They block the public backend deployment, not the standalone CLI:
+product:
 
-- **Backend `requireUser` uses the raw GitHub OAuth token as the bearer
-  credential.** Phase 2 rework will replace this with Agora-issued JWTs and
-  hashed token storage. See `backend/src/index.ts` (`// SECURITY:` marker)
-  and `ROADMAP.md` Phase 2.
 - **Marketplace packages do not yet declare permission manifests.** Until the
   Phase 4 trust layer ships, `agora install <id> --write` runs `npm install -g`
   without surfacing what the package can touch. Treat installed MCP servers like
   any other dependency you would `npm i -g`.
+- **Redundant rate-limit check on `/api/*` write endpoints.** Each write
+  flows through both the `/api/*` middleware and an inline `checkRateLimit`
+  call, against different keys. Functionally correct (both buckets must
+  permit), but burns two DB writes per request. Cleanup tracked for the
+  deploy-readiness pass.
+- **`/api/*` rate-limit keying by auth-header prefix.** The middleware keys
+  authenticated requests by `auth.slice(0, 16)` — the first 16 chars of
+  `Bearer eyJ...`, which is identical for every JWT from the same secret.
+  In practice this collapses to per-IP keying for all authed traffic.
+  Pre-existing; replace with per-user keying derived from the verified JWT
+  `sub` claim during the deploy-readiness pass.
