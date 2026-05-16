@@ -164,12 +164,12 @@ app.get('/auth/callback', async (c) => {
     const avatarUrl = userData.avatar_url;
     const now = new Date().toISOString();
 
+    // Upsert user (GitHub OAuth tokens are never persisted)
     await c.env.DB.prepare(
       `
-      INSERT INTO users (id, username, display_name, avatar_url, github_id, github_access_token, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, username, display_name, avatar_url, github_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(github_id) DO UPDATE SET
-        github_access_token = excluded.github_access_token,
         updated_at = excluded.updated_at
     `
     )
@@ -179,17 +179,24 @@ app.get('/auth/callback', async (c) => {
         userData.name || username,
         avatarUrl,
         githubId,
-        accessToken,
         now,
         now
       )
       .run();
 
-    setCookie(c, 'agora_token', accessToken, {
+    const tokens = await mintTokenPair(c, githubId);
+
+    setCookie(c, 'agora_access', tokens.access_token, {
       httpOnly: true,
       secure: c.env.AGORA_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30
+      maxAge: ACCESS_TTL_SECONDS
+    });
+    setCookie(c, 'agora_refresh', tokens.refresh_token, {
+      httpOnly: true,
+      secure: c.env.AGORA_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: REFRESH_TTL_SECONDS
     });
 
     return c.redirect('/');
@@ -199,9 +206,63 @@ app.get('/auth/callback', async (c) => {
   }
 });
 
-app.post('/auth/logout', (c) => {
-  deleteCookie(c, 'agora_token');
-  return c.json({ success: true });
+app.post('/auth/refresh', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
+  let body: any;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'invalid_refresh' }, 401); }
+
+  const refreshToken = String(body.refresh_token || '').trim();
+  if (!refreshToken) return c.json({ error: 'invalid_refresh' }, 401);
+
+  const payload = await verifyJwt(refreshToken, c.env.AUTH_SECRET);
+  if (!payload) return c.json({ error: 'expired_refresh' }, 401);
+  if (payload.type !== 'refresh' || !payload.sub || !payload.jti) {
+    return c.json({ error: 'invalid_refresh' }, 401);
+  }
+
+  const jtiHash = await hashToken(String(payload.jti));
+  const row = (await c.env.DB.prepare(
+    'SELECT jti_hash FROM refresh_tokens WHERE jti_hash = ?'
+  ).bind(jtiHash).first()) as any;
+
+  if (!row) return c.json({ error: 'revoked_refresh' }, 401);
+
+  // Rotate: delete old, mint new pair
+  await c.env.DB.prepare('DELETE FROM refresh_tokens WHERE jti_hash = ?').bind(jtiHash).run();
+  const tokens = await mintTokenPair(c, String(payload.sub));
+  return c.json(tokens);
+});
+
+app.post('/auth/logout', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
+  const user = await requireUser(c);
+  if (isResponse(user)) return user;
+
+  let body: any;
+  try { body = await c.req.json(); } catch { body = {}; }
+
+  const refreshToken = body.refresh_token ? String(body.refresh_token).trim() : null;
+
+  if (refreshToken) {
+    const payload = await verifyJwt(refreshToken, c.env.AUTH_SECRET);
+    if (payload && payload.jti) {
+      await revokeRefreshToken(c, String(payload.jti));
+    }
+    deleteCookie(c, 'agora_access');
+    deleteCookie(c, 'agora_refresh');
+    return c.json({ success: true, revoked: 'one' });
+  } else {
+    await revokeAllUserRefreshTokens(c, user.id);
+    deleteCookie(c, 'agora_access');
+    deleteCookie(c, 'agora_refresh');
+    return c.json({ success: true, revoked: 'all' });
+  }
 });
 
 // ── JWT utilities (HS256 via Web Crypto API) ────────────────────────────────
@@ -259,6 +320,80 @@ async function hashToken(token: string): Promise<string> {
   const enc = new TextEncoder();
   const hash = await crypto.subtle.digest('SHA-256', enc.encode(token));
   return base64Url(hash);
+}
+
+// ── Token pair helpers ────────────────────────────────────────────────────────
+
+const ACCESS_TTL_SECONDS = 3600;
+const REFRESH_TTL_SECONDS = 90 * 86400;
+
+async function mintTokenPair(c: any, userId: string): Promise<{
+  access_token: string; refresh_token: string;
+  expires_in: number; refresh_expires_in: number;
+}> {
+  const now = Math.floor(Date.now() / 1000);
+  const jti = crypto.randomUUID();
+  const access = await signJwt(
+    { sub: userId, type: 'access', iat: now, exp: now + ACCESS_TTL_SECONDS },
+    c.env.AUTH_SECRET
+  );
+  const refresh = await signJwt(
+    { sub: userId, type: 'refresh', jti, iat: now, exp: now + REFRESH_TTL_SECONDS },
+    c.env.AUTH_SECRET
+  );
+  const jtiHash = await hashToken(jti);
+  const expiresAt = new Date((now + REFRESH_TTL_SECONDS) * 1000).toISOString();
+  await c.env.DB.prepare(
+    'INSERT INTO refresh_tokens (jti_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'
+  ).bind(jtiHash, userId, new Date().toISOString(), expiresAt).run();
+  return {
+    access_token: access, refresh_token: refresh,
+    expires_in: ACCESS_TTL_SECONDS, refresh_expires_in: REFRESH_TTL_SECONDS,
+  };
+}
+
+async function revokeRefreshToken(c: any, jti: string): Promise<void> {
+  const jtiHash = await hashToken(jti);
+  await c.env.DB.prepare('DELETE FROM refresh_tokens WHERE jti_hash = ?').bind(jtiHash).run();
+}
+
+async function revokeAllUserRefreshTokens(c: any, userId: string): Promise<void> {
+  await c.env.DB.prepare('DELETE FROM refresh_tokens WHERE user_id = ?').bind(userId).run();
+}
+
+// ── checkRateLimit (inline, returns {allowed, resetIn}) ───────────────────────
+
+async function checkRateLimit(
+  db: D1Database,
+  key: string,
+  opts: RateLimitOpts = RATE_LIMITS.default
+): Promise<{ allowed: boolean; resetIn: number }> {
+  const windowKey = `${key}:${Math.floor(Date.now() / (opts.window * 1000))}`;
+  try {
+    const row = (await db.prepare(
+      'SELECT requests FROM rate_limits WHERE key = ?'
+    ).bind(windowKey).first()) as any;
+
+    const count = row ? row.requests + 1 : 1;
+
+    if (count === 1) {
+      await db.prepare(
+        'INSERT OR REPLACE INTO rate_limits (key, requests, reset_at) VALUES (?, 1, datetime("now", ? || " seconds"))'
+      ).bind(windowKey, String(opts.window)).run();
+    } else {
+      await db.prepare(
+        'UPDATE rate_limits SET requests = ? WHERE key = ?'
+      ).bind(count, windowKey).run();
+    }
+
+    if (count > opts.limit) {
+      const resetIn = opts.window - (Math.floor(Date.now() / 1000) % opts.window);
+      return { allowed: false, resetIn };
+    }
+  } catch {
+    // rate-limit failures are non-fatal — allow through
+  }
+  return { allowed: true, resetIn: 0 };
 }
 
 // ── Device-code flow ────────────────────────────────────────────────────────
@@ -429,7 +564,6 @@ app.get('/auth/device/callback', async (c) => {
     }
 
     const accessToken = tokenData.access_token;
-    const hashedToken = await hashToken(accessToken);
 
     // Fetch GitHub user
     const userRes = await fetch('https://api.github.com/user', {
@@ -440,18 +574,17 @@ app.get('/auth/device/callback', async (c) => {
     const githubId = String(userData.id);
     const now = new Date().toISOString();
 
-    // Upsert user with hashed token
+    // Upsert user (GitHub OAuth tokens are never persisted)
     await c.env.DB.prepare(
-      `INSERT INTO users (id, username, display_name, avatar_url, github_id, github_access_token, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO users (id, username, display_name, avatar_url, github_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(github_id) DO UPDATE SET
-         github_access_token = excluded.github_access_token,
          updated_at = excluded.updated_at`
-    ).bind(githubId, username, userData.name || username, userData.avatar_url, githubId, hashedToken, now, now).run();
+    ).bind(githubId, username, userData.name || username, userData.avatar_url, githubId, now, now).run();
 
-    // Mark device code as authorized
-    await c.env.DB.prepare(`UPDATE device_codes SET status = 'authorized', github_token = ? WHERE device_code = ?`)
-      .bind(hashedToken, deviceCode).run();
+    // Mark device code as authorized; store github_id so /auth/device/token can find the user
+    await c.env.DB.prepare(`UPDATE device_codes SET status = 'authorized', github_id = ? WHERE device_code = ?`)
+      .bind(githubId, deviceCode).run();
 
     return c.html(`<html><body style="font-family:sans-serif;text-align:center;padding:60px 20px">
       <h1 style="color:#D4A85A">✓ Authorized!</h1>
@@ -477,7 +610,7 @@ app.post('/auth/device/token', async (c) => {
 
   try {
     const record = (await c.env.DB.prepare(
-      `SELECT status, github_token, expires_at FROM device_codes WHERE device_code = ?`
+      `SELECT status, github_id, expires_at FROM device_codes WHERE device_code = ?`
     ).bind(deviceCode).first()) as any;
 
     if (!record) return c.json({ error: 'Invalid device_code' }, 404);
@@ -492,21 +625,21 @@ app.post('/auth/device/token', async (c) => {
       return c.json({ error: 'authorization_pending' }, 400);
     }
 
-    if (record.status === 'authorized' && record.github_token) {
-      // Issue a short-lived JWT
-      const now = Math.floor(Date.now() / 1000);
-      const jwt = await signJwt({
-        sub: record.github_token,
-        iat: now,
-        exp: now + 3600, // 1 hour
-        iss: 'agora-api'
-      }, c.env.AUTH_SECRET);
+    if (record.status === 'authorized' && record.github_id) {
+      const user = (await c.env.DB.prepare(
+        'SELECT id FROM users WHERE github_id = ?'
+      ).bind(record.github_id).first()) as any;
+
+      if (!user) {
+        return c.json({ error: 'User not found' }, 404);
+      }
 
       // Mark as completed (one-time use)
       await c.env.DB.prepare(`UPDATE device_codes SET status = 'completed' WHERE device_code = ?`)
         .bind(deviceCode).run();
 
-      return c.json({ access_token: jwt, token_type: 'Bearer', expires_in: 3600 });
+      const tokens = await mintTokenPair(c, user.id);
+      return c.json({ ...tokens, token_type: 'Bearer' });
     }
 
     return c.json({ error: 'authorization_pending' }, 400);
@@ -516,94 +649,25 @@ app.post('/auth/device/token', async (c) => {
   }
 });
 
-// ── Require user middleware (JWT-first, with legacy token fallback) ──────────
+// ── Require user middleware (JWT access token only) ──────────────────────────
 
 async function requireUser(c: any): Promise<AuthUser | Response> {
   const authHeader = c.req.header('authorization') || '';
   const bearer = authHeader.match(/^Bearer\s+(.+)$/i)?.[1];
-  const token = bearer || getCookie(c, 'agora_token');
+  const token = bearer || getCookie(c, 'agora_access');
+  if (!token) return c.json({ error: 'Authentication required' }, 401);
 
-  if (!token) {
-    return c.json({ error: 'Authentication required' }, 401);
+  const payload = await verifyJwt(token, c.env.AUTH_SECRET);
+  if (!payload || payload.type !== 'access' || !payload.sub) {
+    return c.json({ error: 'Invalid or expired token' }, 401);
   }
 
-  // Try JWT first
-  const jwtPayload = await verifyJwt(token, c.env.AUTH_SECRET);
-  if (jwtPayload && jwtPayload.sub) {
-    const hashedToken = String(jwtPayload.sub);
-    const existing = (await c.env.DB.prepare(
-      'SELECT id, username, display_name, avatar_url FROM users WHERE github_access_token = ?'
-    ).bind(hashedToken).first()) as any;
+  const user = await c.env.DB.prepare(
+    'SELECT id, username, display_name, avatar_url FROM users WHERE id = ?'
+  ).bind(String(payload.sub)).first() as any;
+  if (!user) return c.json({ error: 'User not found' }, 401);
 
-    if (existing) {
-      return {
-        id: existing.id,
-        username: existing.username,
-        displayName: existing.display_name,
-        avatarUrl: existing.avatar_url
-      };
-    }
-  }
-
-  // Legacy: try raw GitHub token (plaintext lookup, then GitHub API)
-  const existing = (await c.env.DB.prepare(
-    'SELECT id, username, display_name, avatar_url FROM users WHERE github_access_token = ?'
-  ).bind(token).first()) as any;
-
-  if (existing) {
-    return {
-      id: existing.id,
-      username: existing.username,
-      displayName: existing.display_name,
-      avatarUrl: existing.avatar_url
-    };
-  }
-
-  const githubUser = await fetchGitHubUser(token);
-  if (!githubUser) {
-    return c.json({ error: 'Invalid token' }, 401);
-  }
-
-  const hashedToken = await hashToken(token);
-  const now = new Date().toISOString();
-  await c.env.DB.prepare(
-    `INSERT INTO users (id, username, display_name, avatar_url, github_id, github_access_token, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(github_id) DO UPDATE SET
-       username = excluded.username,
-       display_name = excluded.display_name,
-       avatar_url = excluded.avatar_url,
-       github_access_token = excluded.github_access_token,
-       updated_at = excluded.updated_at`
-  ).bind(
-    String(githubUser.id), githubUser.login,
-    githubUser.name || githubUser.login, githubUser.avatar_url,
-    String(githubUser.id), hashedToken, now, now
-  ).run();
-
-  return {
-    id: String(githubUser.id),
-    username: githubUser.login,
-    displayName: githubUser.name || githubUser.login,
-    avatarUrl: githubUser.avatar_url
-  };
-}
-
-async function fetchGitHubUser(token: string): Promise<any | null> {
-  try {
-    const res = await fetch('https://api.github.com/user', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/vnd.github.v3+json',
-        'User-Agent': 'agora-cli'
-      }
-    });
-
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
+  return { id: user.id, username: user.username, displayName: user.display_name, avatarUrl: user.avatar_url };
 }
 
 function isResponse(value: unknown): value is Response {
@@ -701,6 +765,10 @@ app.get('/api/packages', async (c) => {
 });
 
 app.post('/api/packages', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
@@ -821,6 +889,10 @@ app.get('/api/workflows', async (c) => {
 });
 
 app.post('/api/workflows', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
@@ -924,6 +996,10 @@ app.get('/api/discussions', async (c) => {
 });
 
 app.post('/api/discussions', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
@@ -1010,6 +1086,10 @@ app.get('/api/reviews', async (c) => {
 });
 
 app.post('/api/reviews', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
   const user = await requireUser(c);
   if (isResponse(user)) return user;
 
@@ -1143,6 +1223,10 @@ app.get('/api/trending', async (c) => {
 
 // Search
 app.get('/api/search', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.default);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
   const q = c.req.query('q');
   const type = c.req.query('type') || 'all';
 
