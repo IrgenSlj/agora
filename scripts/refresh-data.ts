@@ -4,7 +4,9 @@
  *
  * For each package with an npmPackage field, fetches the latest version from
  * the npm registry and surgically replaces only the version: '...' line in
- * src/data.ts. Packages that 404 or error are skipped with a warning.
+ * src/data.ts, and also fetches weekly download counts (mapped to `installs`)
+ * from the npm downloads API and surgically replaces the installs: <number>
+ * line. Packages that 404 or error are skipped with a warning.
  * Also updates the dataRefreshedAt constant to today's date.
  */
 
@@ -23,6 +25,10 @@ interface NpmLatestResponse {
   version: string;
 }
 
+interface NpmDownloadsResponse {
+  downloads: number;
+}
+
 async function fetchLatestVersion(npmPackage: string): Promise<string | null> {
   const url = `https://registry.npmjs.org/${npmPackage}/latest`;
   try {
@@ -35,6 +41,23 @@ async function fetchLatestVersion(npmPackage: string): Promise<string | null> {
     }
     const data = (await res.json()) as NpmLatestResponse;
     return data.version ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchWeeklyDownloads(npmPackage: string): Promise<number | null> {
+  const url = `https://api.npmjs.org/downloads/point/last-week/${encodeURIComponent(npmPackage)}`;
+  try {
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(10_000)
+    });
+    if (!res.ok) {
+      return null;
+    }
+    const data = (await res.json()) as NpmDownloadsResponse;
+    return data.downloads ?? null;
   } catch {
     return null;
   }
@@ -63,21 +86,29 @@ async function runWithConcurrency<T>(
 const candidates = samplePackages.filter((p) => Boolean(p.npmPackage));
 
 type FetchResult =
-  | { id: string; npmPackage: string; newVersion: string; status: 'updated' }
+  | { id: string; npmPackage: string; newVersion: string; newInstalls?: number; status: 'updated' }
   | { id: string; npmPackage: string; status: 'skipped'; reason: string };
 
 const tasks = candidates.map((pkg) => async (): Promise<FetchResult> => {
   const npmPackage = pkg.npmPackage!;
-  const fetched = await fetchLatestVersion(npmPackage);
+  const [fetched, downloads] = await Promise.all([
+    fetchLatestVersion(npmPackage),
+    fetchWeeklyDownloads(npmPackage)
+  ]);
   if (fetched === null) {
     console.warn(`  [warn] ${pkg.id} (${npmPackage}) — not found or error, skipped`);
     return { id: pkg.id, npmPackage, status: 'skipped', reason: 'not found or fetch error' };
   }
-  if (fetched === pkg.version) {
-    return { id: pkg.id, npmPackage, newVersion: fetched, status: 'updated' };
+  if (fetched !== pkg.version) {
+    console.log(`  [ok]   ${pkg.id}: ${pkg.version} → ${fetched}`);
   }
-  console.log(`  [ok]   ${pkg.id}: ${pkg.version} → ${fetched}`);
-  return { id: pkg.id, npmPackage, newVersion: fetched, status: 'updated' };
+  return {
+    id: pkg.id,
+    npmPackage,
+    newVersion: fetched,
+    ...(downloads !== null ? { newInstalls: downloads } : {}),
+    status: 'updated'
+  };
 });
 
 console.log(
@@ -87,9 +118,13 @@ const results = await runWithConcurrency(tasks, CONCURRENCY);
 
 // Build a map of id -> new version (only for 'updated' results)
 const updates = new Map<string, string>();
+const installsUpdates = new Map<string, number>();
 for (const r of results) {
   if (r.status === 'updated') {
     updates.set(r.id, r.newVersion);
+    if (r.newInstalls !== undefined) {
+      installsUpdates.set(r.id, r.newInstalls);
+    }
   }
 }
 
@@ -137,6 +172,40 @@ for (const [id, newVersion] of updates) {
   content = content.slice(0, blockStart) + updatedBlock + content.slice(blockEnd);
 }
 
+// Surgical text transformation: update installs fields
+for (const [id, newInstalls] of installsUpdates) {
+  const idMarker = `id: '${id}'`;
+  const idIndex = content.indexOf(idMarker);
+  if (idIndex === -1) {
+    console.warn(`  [warn] Could not locate id marker for ${id}, skipping installs update`);
+    continue;
+  }
+
+  const commaEnd = content.indexOf('\n  },', idIndex);
+  const noCommaEnd = content.indexOf('\n  }', idIndex);
+  const blockEndIndex =
+    commaEnd === -1 ? noCommaEnd : noCommaEnd === -1 ? commaEnd : Math.min(commaEnd, noCommaEnd);
+  if (blockEndIndex === -1) {
+    console.warn(`  [warn] Could not locate block end for ${id}, skipping installs update`);
+    continue;
+  }
+
+  const hasTrailingComma = content.startsWith('\n  },', blockEndIndex);
+  const terminatorLength = hasTrailingComma ? '\n  },'.length : '\n  }'.length;
+
+  const blockStart = idIndex;
+  const blockEnd = blockEndIndex + terminatorLength;
+  const block = content.slice(blockStart, blockEnd);
+
+  const updatedBlock = block.replace(/installs: \d+/, `installs: ${newInstalls}`);
+
+  if (updatedBlock === block) {
+    continue;
+  }
+
+  content = content.slice(0, blockStart) + updatedBlock + content.slice(blockEnd);
+}
+
 // Update the dataRefreshedAt constant
 content = content.replace(
   /export const dataRefreshedAt = '[^']*';/,
@@ -149,4 +218,5 @@ console.log(`\nUpdated src/data.ts  (dataRefreshedAt = '${TODAY}')`);
 // Summary
 const updatedCount = results.filter((r) => r.status === 'updated').length;
 const skippedCount = results.filter((r) => r.status === 'skipped').length;
-console.log(`\nSummary: ${updatedCount} updated, ${skippedCount} skipped/not-found`);
+const installsUpdatedCount = installsUpdates.size;
+console.log(`\nSummary: ${updatedCount} updated, ${skippedCount} skipped/not-found, ${installsUpdatedCount} installs fields updated`);
