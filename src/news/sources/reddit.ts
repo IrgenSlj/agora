@@ -1,4 +1,9 @@
+import { readFileSync } from 'node:fs';
 import type { NewsItem, NewsSource } from '../types.js';
+
+const { version } = JSON.parse(
+  readFileSync(new URL('../../../package.json', import.meta.url), 'utf8')
+) as { version: string };
 
 export interface SourceAdapter {
   fetch(opts: { fetcher?: (url: string, init?: RequestInit) => Promise<Response>; signal?: AbortSignal }): Promise<NewsItem[]>;
@@ -17,7 +22,7 @@ export const redditSource: SourceAdapter = {
         const url = `https://www.reddit.com/r/${sub}/hot.json?limit=25`;
         const res = await fetcher(url, {
           signal: opts.signal,
-          headers: { 'User-Agent': 'agora-cli/0.5.0' },
+          headers: { 'User-Agent': `agora-cli/${version}` },
         });
         if (!res.ok) continue;
         const data = (await res.json()) as any;
