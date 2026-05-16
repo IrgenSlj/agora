@@ -1084,7 +1084,7 @@ describe('TTY gate — no-command path', () => {
     const out = stdout.join('');
 
     expect(code).toBe(0);
-    expect(out).toContain('agora · terminal marketplace for OpenCode');
+    expect(out).toContain("agora · Developers' CLI marketplace and community hub");
   });
 });
 
