@@ -298,7 +298,7 @@ describe('CLI commands', () => {
       expect(code).toBe(0);
       expect(stdout.join('')).toContain('Stored Agora API token');
       expect(stdout.join('')).not.toContain(token);
-      expect(state.auth.token).toBe(token);
+      expect(state.auth.accessToken).toBe(token);
       expect(state.auth.apiUrl).toBe('https://api.example.test');
     } finally {
       rmSync(temp, { recursive: true, force: true });
@@ -333,7 +333,7 @@ describe('CLI commands', () => {
       expect(code).toBe(0);
       expect(stdout.join('')).not.toContain(token);
       expect(payload.authenticated).toBe(true);
-      expect(payload.tokenPreview).toBe('ghp_...cdef');
+      expect(payload.accessTokenPreview).toBe('ghp_...cdef');
       expect(payload.apiUrl).toBe('https://api.example.test');
     } finally {
       rmSync(temp, { recursive: true, force: true });
@@ -1069,7 +1069,7 @@ describe('CLI commands', () => {
       expect(code).toBe(0);
       expect(payload.authenticated).toBe(true);
       expect(payload.apiUrl).toBe('https://api.test');
-      expect(payload.tokenPreview).toBe('whoa...oken');
+      expect(payload.accessTokenPreview).toBe('whoa...oken');
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }

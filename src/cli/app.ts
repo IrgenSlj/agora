@@ -55,6 +55,7 @@ import {
 import {
   clearAuthState,
   detectAgoraDataDir,
+  decodeJwtExp,
   getAuthState,
   getAgoraStatePath,
   loadAgoraState,
@@ -65,6 +66,7 @@ import {
   writeAgoraState,
   type ResolvedSavedItem
 } from '../state.js';
+import { ensureFreshAccess } from '../auth/refresh.js';
 import type { Tutorial } from '../types.js';
 import {
   createStyler,
@@ -339,7 +341,7 @@ async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const limit = perPage > 0 ? perPage : (numberFlag(parsed, 'limit', 'n') || 10);
 
   const result = await searchMarketplaceSource({
-    ...sourceOptions(parsed, io),
+    ...await sourceOptions(parsed, io),
     query,
     category,
     limit,
@@ -395,7 +397,7 @@ async function commandBrowse(parsed: ParsedArgs, io: CliIo): Promise<number> {
   if (!id) return usageError(io, 'browse requires an item id');
 
   const result = await findMarketplaceSource({
-    ...sourceOptions(parsed, io),
+    ...await sourceOptions(parsed, io),
     id,
     type: stringFlag(parsed, 'type', 't')
   });
@@ -428,7 +430,7 @@ async function commandTrending(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const category = stringFlag(parsed, 'category', 'c') || parsed.args[0] || 'all';
   const limit = numberFlag(parsed, 'limit', 'n') || 5;
   const table = Boolean(parsed.flags.table);
-  const result = await trendingMarketplaceSource({ ...sourceOptions(parsed, io), category, limit });
+  const result = await trendingMarketplaceSource({ ...await sourceOptions(parsed, io), category, limit });
   const items = result.data;
   warnFallback(result, io);
 
@@ -458,7 +460,7 @@ async function commandWorkflows(parsed: ParsedArgs, io: CliIo): Promise<number> 
   const query = parsed.args.join(' ');
   const limit = numberFlag(parsed, 'limit', 'n') || 10;
   const result = await searchMarketplaceSource({
-    ...sourceOptions(parsed, io),
+    ...await sourceOptions(parsed, io),
     query,
     category: 'workflow',
     limit
@@ -515,7 +517,7 @@ async function commandCompare(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
   const items: MarketplaceItem[] = [];
   for (const id of ids) {
-    const item = await findMarketplaceSource({ ...sourceOptions(parsed, io), id, type });
+    const item = await findMarketplaceSource({ ...await sourceOptions(parsed, io), id, type });
     if (!item.data) {
       writeLine(io.stderr, `Item not found: ${id}`);
       return 1;
@@ -690,7 +692,7 @@ async function commandCommunity(parsed: ParsedArgs, io: CliIo): Promise<number> 
   const board = parsed.args[0] as BoardId | undefined;
   const sort = (stringFlag(parsed, 'sort') || 'active') as 'top' | 'new' | 'active';
 
-  const opts = sourceOptions(parsed, io);
+  const opts = await sourceOptions(parsed, io);
 
   if (board) {
     const result = await communityThreadsSource(opts, board, sort);
@@ -738,7 +740,7 @@ async function commandThread(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'thread requires a thread id');
 
-  const opts = sourceOptions(parsed, io);
+  const opts = await sourceOptions(parsed, io);
   const result = await communityThreadSource(opts, id);
   const { thread, replies } = result.data;
 
@@ -767,7 +769,7 @@ async function commandThread(parsed: ParsedArgs, io: CliIo): Promise<number> {
 }
 
 async function commandPost(parsed: ParsedArgs, io: CliIo): Promise<number> {
-  const source = writeSourceOptions(parsed, io);
+  const source = await writeSourceOptions(parsed, io);
   if (!source.ok) return usageError(io, source.error);
 
   const board = (stringFlag(parsed, 'board') || stringFlag(parsed, 'b')) as BoardId | undefined;
@@ -794,7 +796,7 @@ async function commandReply(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const parentId = parsed.args[0];
   if (!parentId) return usageError(io, 'reply requires a thread or reply id');
 
-  const source = writeSourceOptions(parsed, io);
+  const source = await writeSourceOptions(parsed, io);
   if (!source.ok) return usageError(io, source.error);
 
   const content = contentInput(parsed, io);
@@ -819,7 +821,7 @@ async function commandVote(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'vote requires a thread or reply id');
 
-  const source = writeSourceOptions(parsed, io);
+  const source = await writeSourceOptions(parsed, io);
   if (!source.ok) return usageError(io, source.error);
 
   const up = parsed.flags.up === true;
@@ -860,7 +862,7 @@ async function commandFlag(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return 0;
   }
 
-  const source = writeSourceOptions(parsed, io);
+  const source = await writeSourceOptions(parsed, io);
   if (!source.ok) return usageError(io, source.error);
 
   const targetType = (type === 'discussion' || type === 'reply' ? type : 'discussion') as 'discussion' | 'reply';
@@ -883,7 +885,7 @@ async function commandTutorials(parsed: ParsedArgs, io: CliIo): Promise<number> 
 
   const limit = numberFlag(parsed, 'limit', 'n') || 20;
   const result = await tutorialsSource({
-    ...sourceOptions(parsed, io),
+    ...await sourceOptions(parsed, io),
     query,
     level: level.value,
     limit
@@ -928,7 +930,7 @@ async function commandTutorial(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const step = tutorialStepNumber(parsed);
   if (!step.ok) return usageError(io, step.error);
 
-  const result = await findTutorialSource({ ...sourceOptions(parsed, io), id });
+  const result = await findTutorialSource({ ...await sourceOptions(parsed, io), id });
   const tutorial = result.data;
   warnFallback(result, io);
   if (!tutorial) return usageError(io, `Tutorial not found: ${id}`);
@@ -951,7 +953,7 @@ async function commandTutorial(parsed: ParsedArgs, io: CliIo): Promise<number> {
 async function commandDiscussions(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const category = stringFlag(parsed, 'category', 'c') || 'all';
   const query = parsed.args.join(' ');
-  const result = await discussionsSource({ ...sourceOptions(parsed, io), category, query });
+  const result = await discussionsSource({ ...await sourceOptions(parsed, io), category, query });
   const discussions = result.data;
   warnFallback(result, io);
 
@@ -989,7 +991,7 @@ async function commandDiscussions(parsed: ParsedArgs, io: CliIo): Promise<number
 }
 
 async function commandDiscuss(parsed: ParsedArgs, io: CliIo): Promise<number> {
-  const source = writeSourceOptions(parsed, io);
+  const source = await writeSourceOptions(parsed, io);
   if (!source.ok) return usageError(io, source.error);
 
   const title = requiredStringFlag(parsed, 'title');
@@ -1022,7 +1024,7 @@ async function commandInstall(parsed: ParsedArgs, io: CliIo): Promise<number> {
   if (!id) return usageError(io, 'install requires an item id');
 
   const source = await findMarketplaceSource({
-    ...sourceOptions(parsed, io),
+    ...await sourceOptions(parsed, io),
     id,
     type: stringFlag(parsed, 'type', 't')
   });
@@ -1500,7 +1502,9 @@ async function commandAuth(parsed: ParsedArgs, io: CliIo): Promise<number> {
       // Token-paste flow (existing behaviour, for CI/automation)
       const apiUrl =
         stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
-      const nextState = setAuthState(state, { token: explicitToken, apiUrl });
+      const nowSec = Math.floor(Date.now() / 1000);
+      const accessExp = decodeJwtExp(explicitToken) || (nowSec + 3600);
+      const nextState = setAuthState(state, { accessToken: explicitToken, accessExp, apiUrl });
       const auth = getAuthState(nextState);
       writeAgoraState(dataDir, nextState);
 
@@ -1509,7 +1513,9 @@ async function commandAuth(parsed: ParsedArgs, io: CliIo): Promise<number> {
         return 0;
       }
 
+      const minutesLeft = Math.max(0, Math.round((accessExp - nowSec) / 60));
       writeLine(io.stdout, 'Stored Agora API token');
+      writeLine(io.stdout, `Note: pasted token expires in ${minutesLeft}m. Use \`agora auth login\` (device-code) for a persistent session.`);
       writeLine(io.stdout, `${style.dim('API URL')} ${auth?.apiUrl || 'not stored'}`);
       writeLine(io.stdout, `${style.dim('State')} ${getAgoraStatePath(dataDir)}`);
       return 0;
@@ -1580,11 +1586,17 @@ async function commandAuth(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
           if (tokenRes.ok) {
             const tokenData = (await tokenRes.json()) as any;
-            const jwt = tokenData.access_token;
 
             process.stdout.write(`\r\x1b[K${style.dim('Authorization received.')}\n`);
 
-            const nextState = setAuthState(state, { token: jwt, apiUrl });
+            const nowSec = Math.floor(Date.now() / 1000);
+            const nextState = setAuthState(state, {
+              accessToken: tokenData.access_token,
+              accessExp: nowSec + (tokenData.expires_in || 3600),
+              refreshToken: tokenData.refresh_token,
+              refreshExp: nowSec + (tokenData.refresh_expires_in || 0),
+              apiUrl,
+            });
             writeAgoraState(dataDir, nextState);
 
             if (parsed.flags.json) {
@@ -1592,9 +1604,10 @@ async function commandAuth(parsed: ParsedArgs, io: CliIo): Promise<number> {
               return 0;
             }
 
+            const expiresInMin = Math.round((tokenData.expires_in || 3600) / 60);
             process.stdout.write(`\n${style.accent('✓ Authenticated')}\n`);
             process.stdout.write(`${style.dim('API URL')} ${baseUrl}\n`);
-            process.stdout.write(`${style.dim('Token expires')} in 1 hour\n`);
+            process.stdout.write(`${style.dim('Token expires')} in ${expiresInMin}m\n`);
             process.stdout.write(`${style.dim('State')} ${getAgoraStatePath(dataDir)}\n`);
             return 0;
           }
@@ -1622,7 +1635,13 @@ async function commandAuth(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
     writeLine(io.stdout, `${style.dim('Authenticated')} ${existingAuth ? 'yes' : 'no'}`);
     if (existingAuth) {
-      writeLine(io.stdout, `${style.dim('Token')} ${maskToken(existingAuth.token)}`);
+      const nowSec = Math.floor(Date.now() / 1000);
+      writeLine(io.stdout, `${style.dim('Access')}         ${maskToken(existingAuth.accessToken)}  (${formatRelativeExp(existingAuth.accessExp, nowSec)})`);
+      if (existingAuth.refreshToken) {
+        writeLine(io.stdout, `${style.dim('Refresh')}        ${maskToken(existingAuth.refreshToken)}  (${formatRelativeExp(existingAuth.refreshExp ?? 0, nowSec)})`);
+      } else {
+        writeLine(io.stdout, `${style.dim('Refresh')}        (none)`);
+      }
       writeLine(io.stdout, `${style.dim('API URL')} ${existingAuth.apiUrl || 'not stored'}`);
       writeLine(io.stdout, `${style.dim('Saved')} ${formatDate(existingAuth.savedAt)}`);
     }
@@ -1641,6 +1660,18 @@ async function commandAuth(parsed: ParsedArgs, io: CliIo): Promise<number> {
       return 0;
     }
 
+    if (existingAuth.apiUrl && existingAuth.accessToken && existingAuth.refreshToken) {
+      try {
+        await fetch(`${existingAuth.apiUrl.replace(/\/+$/, '')}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${existingAuth.accessToken}`,
+          },
+          body: JSON.stringify({ refresh_token: existingAuth.refreshToken }),
+        });
+      } catch { /* network failure — clear local anyway */ }
+    }
     writeAgoraState(dataDir, clearAuthState(state));
 
     if (parsed.flags.json) {
@@ -1660,7 +1691,7 @@ async function commandSave(parsed: ParsedArgs, io: CliIo): Promise<number> {
   if (!id) return usageError(io, 'save requires an item id');
 
   const source = await findMarketplaceSource({
-    ...sourceOptions(parsed, io),
+    ...await sourceOptions(parsed, io),
     id,
     type: stringFlag(parsed, 'type', 't')
   });
@@ -1756,7 +1787,7 @@ async function commandPublish(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return usageError(io, 'publish requires "package" or "workflow"');
   }
 
-  const source = writeSourceOptions(parsed, io);
+  const source = await writeSourceOptions(parsed, io);
   if (!source.ok) return usageError(io, source.error);
 
   const name = requiredStringFlag(parsed, 'name');
@@ -1828,7 +1859,7 @@ async function commandReview(parsed: ParsedArgs, io: CliIo): Promise<number> {
     return usageError(io, 'review requires --rating 1-5 and --content');
   }
 
-  const source = writeSourceOptions(parsed, io);
+  const source = await writeSourceOptions(parsed, io);
   if (!source.ok) return usageError(io, source.error);
 
   const result = await createReviewSource(source.options, {
@@ -1850,7 +1881,7 @@ async function commandReview(parsed: ParsedArgs, io: CliIo): Promise<number> {
 
 async function commandReviews(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const itemId = parsed.args[0];
-  const source = readSourceOptions(parsed, io);
+  const source = await readSourceOptions(parsed, io);
   if (!source.ok) return usageError(io, source.error);
 
   const result = await listReviewsSource(source.options, itemId, stringFlag(parsed, 'type', 't'));
@@ -1881,7 +1912,7 @@ async function commandProfile(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const username = parsed.args[0] || stringFlag(parsed, 'username');
   if (!username) return usageError(io, 'profile requires a username');
 
-  const source = readSourceOptions(parsed, io);
+  const source = await readSourceOptions(parsed, io);
   if (!source.ok) return usageError(io, source.error);
 
   const result = await profileSource(source.options, username);
@@ -2259,10 +2290,13 @@ function detectDataDir(parsed: ParsedArgs, io: CliIo): string {
   });
 }
 
-function sourceOptions(parsed: ParsedArgs, io: CliIo): SourceOptions {
+async function sourceOptions(parsed: ParsedArgs, io: CliIo): Promise<SourceOptions> {
   const explicitApiUrl = stringFlag(parsed, 'apiUrl');
   const envApiUrl = envString(io, 'AGORA_API_URL');
-  const storedAuth = getAuthState(loadAgoraState(detectDataDir(parsed, io)));
+  const dataDir = detectDataDir(parsed, io);
+  let state = loadAgoraState(dataDir);
+  state = await ensureFreshAccess(state, { dataDir, fetcher: io.fetcher });
+  const storedAuth = getAuthState(state);
   const storedApiUrl = storedAuth?.apiUrl;
   const apiUrl = explicitApiUrl || envApiUrl || storedApiUrl || '';
   const useApi =
@@ -2279,17 +2313,17 @@ function sourceOptions(parsed: ParsedArgs, io: CliIo): SourceOptions {
   return {
     useApi,
     apiUrl,
-    token: authTokenInput(parsed, io) || storedAuth?.token,
+    token: authTokenInput(parsed, io) || storedAuth?.accessToken,
     fetcher: io.fetcher,
     timeoutMs: numberFlag(parsed, 'apiTimeout')
   };
 }
 
-function writeSourceOptions(
+async function writeSourceOptions(
   parsed: ParsedArgs,
   io: CliIo
-): { ok: true; options: SourceOptions } | { ok: false; error: string } {
-  const options = sourceOptions(parsed, io);
+): Promise<{ ok: true; options: SourceOptions } | { ok: false; error: string }> {
+  const options = await sourceOptions(parsed, io);
 
   if (!options.apiUrl) {
     return {
@@ -2314,11 +2348,11 @@ function writeSourceOptions(
   };
 }
 
-function readSourceOptions(
+async function readSourceOptions(
   parsed: ParsedArgs,
   io: CliIo
-): { ok: true; options: SourceOptions } | { ok: false; error: string } {
-  const options = sourceOptions(parsed, io);
+): Promise<{ ok: true; options: SourceOptions } | { ok: false; error: string }> {
+  const options = await sourceOptions(parsed, io);
   if (!options.apiUrl) {
     return {
       ok: false,
@@ -2476,16 +2510,22 @@ function authStatusPayload(
   dataDir: string;
   statePath: string;
   authenticated: boolean;
+  accessTokenPreview?: string;
+  accessExp?: number;
+  refreshTokenPreview?: string;
+  refreshExp?: number;
   apiUrl?: string;
-  tokenPreview?: string;
   savedAt?: string;
 } {
   return {
     dataDir,
     statePath: getAgoraStatePath(dataDir),
     authenticated: Boolean(auth),
+    accessTokenPreview: auth ? maskToken(auth.accessToken) : undefined,
+    accessExp: auth?.accessExp,
+    refreshTokenPreview: auth?.refreshToken ? maskToken(auth.refreshToken) : undefined,
+    refreshExp: auth?.refreshExp,
     apiUrl: auth?.apiUrl,
-    tokenPreview: auth ? maskToken(auth.token) : undefined,
     savedAt: auth?.savedAt
   };
 }
@@ -2495,6 +2535,15 @@ function maskToken(token: string): string {
   if (value.length <= 4) return '****';
   if (value.length <= 8) return `${'*'.repeat(value.length - 4)}${value.slice(-4)}`;
   return `${value.slice(0, 4)}...${value.slice(-4)}`;
+}
+
+function formatRelativeExp(exp: number, nowSec: number): string {
+  if (exp === 0) return 'unknown';
+  const diff = exp - nowSec;
+  if (diff <= 0) return 'expired';
+  if (diff < 3600) return `${Math.round(diff / 60)}m`;
+  if (diff < 86400) return `${Math.round(diff / 3600)}h`;
+  return `${Math.round(diff / 86400)}d`;
 }
 
 function matchesSavedQuery(entry: ResolvedSavedItem, query: string): boolean {

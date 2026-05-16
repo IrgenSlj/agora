@@ -63,7 +63,7 @@ function buildSourceOptions(ctx: PageContext): SourceOptions {
       const auth = getAuthState(agoraState);
       if (auth) {
         if (!apiUrl) apiUrl = auth.apiUrl || '';
-        if (!token) token = auth.token || '';
+        if (!token) token = auth.accessToken || '';
       }
     } catch { /* ignore */ }
   }

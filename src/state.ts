@@ -18,7 +18,10 @@ export interface SavedItem {
 }
 
 export interface AuthState {
-  token: string;
+  accessToken: string;
+  accessExp: number;        // unix seconds
+  refreshToken?: string;
+  refreshExp?: number;      // unix seconds
   apiUrl?: string;
   savedAt: string;
 }
@@ -134,13 +137,16 @@ export function removeItemFromState(
 
 export function setAuthState(
   state: AgoraState,
-  auth: { token: string; apiUrl?: string },
+  auth: { accessToken: string; accessExp: number; refreshToken?: string; refreshExp?: number; apiUrl?: string },
   now = new Date()
 ): AgoraState {
   return normalizeState({
     ...state,
     auth: {
-      token: auth.token.trim(),
+      accessToken: auth.accessToken.trim(),
+      accessExp: auth.accessExp,
+      refreshToken: auth.refreshToken?.trim() || undefined,
+      refreshExp: auth.refreshExp,
       apiUrl: auth.apiUrl?.trim() || undefined,
       savedAt: now.toISOString()
     }
@@ -205,10 +211,27 @@ function normalizeState(state: Partial<AgoraState>): AgoraState {
 function normalizeAuthState(auth: unknown): AuthState | undefined {
   if (!auth || typeof auth !== 'object') return undefined;
 
-  const candidate = auth as Partial<AuthState>;
-  const token = typeof candidate.token === 'string' ? candidate.token.trim() : '';
-  if (!token) return undefined;
+  const candidate = auth as Record<string, unknown>;
 
+  // Backward-compat: legacy shape has only `token`
+  let accessToken: string;
+  let accessExp: number;
+  if (typeof candidate.accessToken === 'string' && candidate.accessToken.trim()) {
+    accessToken = candidate.accessToken.trim();
+    accessExp = typeof candidate.accessExp === 'number' ? candidate.accessExp : 0;
+  } else if (typeof candidate.token === 'string' && candidate.token.trim()) {
+    accessToken = candidate.token.trim();
+    accessExp = 0;
+  } else {
+    return undefined;
+  }
+
+  const refreshToken =
+    typeof candidate.refreshToken === 'string' && candidate.refreshToken.trim()
+      ? candidate.refreshToken.trim()
+      : undefined;
+  const refreshExp =
+    typeof candidate.refreshExp === 'number' ? candidate.refreshExp : undefined;
   const apiUrl =
     typeof candidate.apiUrl === 'string' && candidate.apiUrl.trim()
       ? candidate.apiUrl.trim()
@@ -219,10 +242,23 @@ function normalizeAuthState(auth: unknown): AuthState | undefined {
       : new Date(0).toISOString();
 
   return {
-    token,
+    accessToken,
+    accessExp,
+    refreshToken,
+    refreshExp,
     apiUrl,
     savedAt
   };
+}
+
+export function decodeJwtExp(token: string): number {
+  try {
+    const part = token.split('.')[1];
+    if (!part) return 0;
+    const padded = part.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
+    return Number(payload.exp) || 0;
+  } catch { return 0; }
 }
 
 function resolvePath(filePath: string, cwd: string, home: string): string {
