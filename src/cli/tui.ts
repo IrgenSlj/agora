@@ -233,7 +233,9 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
 
   if (stdin.isTTY && stdin.setRawMode) stdin.setRawMode(true);
   stdin.resume?.();
-  stdin.setEncoding?.('utf8');
+  // Deliberately NOT calling stdin.setEncoding('utf8') — the next consumer
+  // (the shell's prompter) reads bytes from a Buffer and would break if
+  // stdin started emitting strings. onData below handles both shapes.
   out.write(ALT_ON + CUR_HIDE + CLEAR);
 
   let resolveDone: (n: number) => void = () => undefined;
@@ -321,6 +323,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
     if (stdin.isTTY && stdin.setRawMode) stdin.setRawMode(false);
     out.write(CUR_SHOW + ALT_OFF);
     stdin.pause?.();
+    if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
     resolveDone(code);
   }
 

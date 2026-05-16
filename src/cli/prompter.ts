@@ -669,7 +669,12 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       }
     }
 
-    function onData(buf: Buffer): void {
+    function onData(chunk: Buffer | string): void {
+      // Defensive: if a previous consumer left stdin in string-encoding mode
+      // (e.g. setEncoding('utf8') uncleared), `chunk` is a string and
+      // `[...string]` yields chars, not bytes. Normalise to Buffer so the
+      // byte-level switch logic below stays correct.
+      const buf = typeof chunk === 'string' ? Buffer.from(chunk, 'utf8') : chunk;
       const bytes = [...buf];
       let i = 0;
 
