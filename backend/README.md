@@ -10,7 +10,7 @@
   <a href="https://developers.cloudflare.com/d1/"><img src="https://img.shields.io/badge/D1-SQLite-3B82F6" alt="D1"></a>
 </p>
 
-> **Status:** Not yet deployed. The CLI works fully offline by default; live-mode features (`--api`, publish, auth, reviews/discussions writes) require self-hosting the backend in this directory. A public hosted instance is on the [roadmap](../ROADMAP.md).
+> **Status:** Not yet deployed. Phase 1.5 added community board/thread/vote/flag endpoint definitions and CLI commands — the CLI works fully offline. Live-mode features require deploying this backend. A public hosted instance is on the [roadmap](../ROADMAP.md).
 
 ## Overview
 
@@ -40,7 +40,13 @@ REST API backend built with Hono that provides:
 - `POST /api/workflows` - Publish or update a workflow
 
 ### Community
-- `GET /api/discussions` - List discussions
+- `GET /api/community/boards` - List boards with thread counts
+- `GET /api/community/threads` - List threads (`?board=&sort=top|new|active&page=`)
+- `GET /api/community/thread/:id` - Get thread + reply tree
+- `POST /api/community/threads` - Create thread (authenticated)
+- `POST /api/community/reply/:parent_id` - Reply to thread/reply (authenticated)
+- `POST /api/community/vote/:id` - Vote up/down (authenticated)
+- `POST /api/community/flag/:id` - Flag content (authenticated)
 - `POST /api/discussions` - Create discussion, authenticated
 - `GET /api/reviews` - List reviews
 - `POST /api/reviews` - Create review
@@ -132,6 +138,6 @@ Protected endpoints:
 
 ## Status
 
-- API code: complete
+- API code: complete (including Phase 1.5 community endpoints)
 - Deployed (hosted instance): not yet — see [ROADMAP.md](../ROADMAP.md)
 - Self-hosting via instructions above: supported

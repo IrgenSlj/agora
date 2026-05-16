@@ -76,22 +76,43 @@ bun src/cli.ts search database     # Search rich offline data
 
 ```
 src/
-├── cli.ts              # CLI entrypoint
-├── cli/app.ts          # CLI command parser and handlers (the standalone hub)
-├── cli/shell.ts        # Interactive REPL — bash/chat dispatch, slash meta commands
-├── cli/prompter.ts     # Raw-mode line editor — auto-complete, history, ghost text
-├── cli/completions.ts  # Completion providers (slash, path, marketplace ids)
-├── cli/menu.ts         # @clack/prompts interactive command browser
-├── cli/commands-meta.ts # Command catalog (groups, summaries, manual rendering)
-├── cli/mcp-server.ts   # MCP server mode (`agora mcp`)
-├── cli/chat-renderer.ts # Markdown chat formatter + live thinking line
-├── ui.ts               # Terminal styling: styler, gradient banner, colour detection
-├── init.ts             # Project scanner + init plan generator
-├── marketplace.ts      # Search, browse, trending, install logic
-├── config-files.ts     # OpenCode config detection and writes
-├── commands.ts         # /agora slash-command template installed by `agora init`
-├── live.ts             # API client with offline fallback (api-or-offline source layer)
-├── state.ts            # Local saved-item and auth state
+├── cli.ts                  # CLI entrypoint
+├── cli/app.ts              # CLI command parser and handlers (the standalone hub)
+├── cli/shell.ts            # Interactive REPL — bash/chat dispatch, slash meta commands
+├── cli/prompter.ts         # Raw-mode line editor — auto-complete, history, ghost text
+├── cli/completions.ts      # Completion providers (slash, path, marketplace ids)
+├── cli/tui.ts              # Full-screen TUI frame renderer + key dispatch
+├── cli/menu.ts             # @clack/prompts interactive command builder wizard
+├── cli/commands-meta.ts    # Command catalog (groups, summaries, manual rendering)
+├── cli/mcp-server.ts       # MCP server mode (`agora mcp`)
+├── cli/chat-renderer.ts    # Markdown chat formatter + live thinking line
+├── cli/pages/              # TUI page implementations (5 pages + helpers)
+│   ├── types.ts            # Page / KeyEvent / PageAction / PageContext contract
+│   ├── helpers.ts          # Shared TUI helpers (frame, scrollbar, sep, etc.)
+│   ├── home.ts             # Home dashboard
+│   ├── marketplace.ts      # Package list + drill-in
+│   ├── community.ts        # Community boards → threads
+│   ├── news.ts             # Ranked feed + reader + AI summarization
+│   └── settings.ts         # Settings form
+├── news/                   # News feed core
+│   ├── types.ts            # NewsItem, ScoredNewsItem, NewsConfig
+│   ├── score.ts            # scoreItem, rankItems
+│   ├── cache.ts            # readCache, writeCache, isStale, readNewsMeta
+│   └── sources/            # Source adapters (hn, reddit, github-trending, arxiv)
+├── community/              # Community hub core
+│   ├── types.ts            # Thread, Reply, Vote, Flag, Board
+│   └── client.ts           # Community API source helpers
+├── ui.ts                   # Terminal styling: styler, gradient banner, colour detection
+├── init.ts                 # Project scanner + init plan generator
+├── marketplace.ts          # Search, browse, trending, install logic
+├── config-files.ts         # OpenCode config detection and writes
+├── commands.ts             # /agora slash-command template installed by `agora init`
+├── live.ts                 # API client with offline fallback (api-or-offline source layer)
+├── state.ts                # Local saved-item and auth state
+├── preferences.ts          # Local preferences (theme, verbosity, username, etc.)
+├── history.ts              # Search + chat history (JSONL append log)
+├── settings.ts             # Settings persistence (toml)
+├── transcript.ts           # Per-cwd chat transcripts
 ├── transcript.ts       # Per-cwd shell transcripts + session metadata
 ├── index.ts            # OpenCode plugin — thin bridge, 7 offline marketplace tools
 ├── data.ts             # 61 MCP servers, 12 workflows, 12 tutorials, 6 prompts

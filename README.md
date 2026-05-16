@@ -25,7 +25,7 @@ _A terminal recording is in the works — see ROADMAP.md._
 
 Agora is a **standalone terminal marketplace** for the agentic-coding ecosystem — MCP servers, workflows, and tutorials, browsable and installable from your shell with no login and no backend. Run `npx opencode-agora init` in any project and it scans your stack, generates the right `opencode.json`, and installs matched MCP servers.
 
-It bundles **61 MCP servers**, **12 production workflows**, **12 tutorials**, and **6 prompts**, all usable offline.
+It bundles **62 MCP servers**, **12 production workflows**, **12 tutorials**, and **6 prompts**, all usable offline.
 
 **Where it's headed:** Agora is evolving into an **open, self-regulating marketplace** where third-party developers publish and sell advanced skills, tools, and kits — with Agora providing the square and the rules (discovery, trust, delivery), not the goods. See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the direction and [`ROADMAP.md`](./ROADMAP.md) for the plan.
 
@@ -48,11 +48,13 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
   inference chat — markdown formatting, live duration counter, ionic
   mascot while thinking.
 - `!cmd` forces bash, `?msg` forces chat, `/help` lists meta commands
-  (`/menu` `/transcript` `/clear` `/verbose` `/quiet` `/medium` `/last`
+  (`/menu` `/terminal` `/transcript` `/clear` `/verbose` `/quiet` `/medium` `/last`
   `/again` `/quit`).
 - Tab completion, auto-complete on `/`, ctrl-r reverse history search, ghost-text suggestions.
 - Per-cwd transcripts under `~/.config/agora/transcripts/` so each
   project keeps its own session and chat thread isolated.
+- `/terminal` spawns a bash subshell from anywhere.
+- Orange-accented home screen with model name, `/terminal`, and page shortcuts.
 
 ### `agora init` — One-Command Setup
 - Scans your project for `package.json`, `Cargo.toml`, `pyproject.toml`, `go.mod`, `Gemfile`, `Dockerfile`, and more
@@ -67,7 +69,7 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
 - No manual copy-pasting — one command and the workflow is live
 
 ### Rich Offline Marketplace
-- **61 MCP servers** across 12 categories (filesystem, databases, cloud, browser automation, monitoring, etc.) — every `npmPackage` is verified against the live npm registry
+- **62 MCP servers** across 12 categories (filesystem, databases, cloud, browser automation, monitoring, etc.) — every `npmPackage` is verified against the live npm registry
 - All official `@modelcontextprotocol/*` servers plus top community servers
 - Fully functional offline — no backend required
 - Search, browse, trending — all work with bundled data
@@ -109,11 +111,16 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
 ### Learn
 - 12 interactive tutorials on MCP, auth, catalog-contrib, backend deploy, and more
 
-### What's next — Phase 1.5: "Destination"
-Three pillars currently in design (see [`ROADMAP.md`](./ROADMAP.md)):
-- **`agora news`** — a curated tech news feed (HN, Reddit, GitHub trending, arXiv) ranked by recency × engagement × topic-match, rendered as a TUI reader. Text only, terminal-native.
-- **`agora community` / `agora thread` / `agora post`** — a Reddit-style, text-only community hub with boards, threaded replies, votes, and flag-don't-delete moderation. Self-identifying LLM/bot participants allowed.
-- **`agora similar <id>` / `agora compare <id1> <id2>`** — discovery polish for the marketplace, plus permission manifests and an automated publish scan for the trust layer.
+### Phase 1.5: "Destination" — substantially shipped
+
+The three pillars are now built into the CLI. See [`ROADMAP.md`](./ROADMAP.md) for remaining items (backend deploy, demo recording):
+
+- **`agora news`** — curated tech news feed (HN, Reddit, GitHub Trending, arXiv, RSS) with scoring, caching, category tabs (All/Mcp/Tools/Skills/Llms/Repos/Market/Search), detail view, and AI-powered article summarization via `opencode run`. TUI reader with scrollable preview.
+- **`agora community` / `agora thread` / `agora post` / `agora reply` / `agora vote` / `agora flag`** — Reddit-style community hub with boards, threaded replies, votes, and flag-don't-delete moderation. CLI commands exist; needs a deployed backend.
+- **`agora similar <id>` / `agora compare <id1> <id2>`** — discovery polish: Jaccard similarity and side-by-side comparison tables. Both shipped.
+- **`agora preferences` / `agora history`** — local persistence for settings, search history, and chat history (no account required).
+- **Full-screen TUI** — 5 pages (Home, Marketplace, Community, News, Settings) with alt-screen frame, key dispatch, scrollbar, status toasts, help panel, and `agora tui` entrypoint.
+- **`/menu` command builder** — interactive wizard that walks through positional args, flags, and value flags, then opens a pre-filled readline prompt for editing.
 
 ## Quick Start
 
@@ -196,6 +203,36 @@ agora workflows
 agora workflows security
 ```
 
+### News
+
+```bash
+agora news                              # ranked feed, top stories
+agora news --source hn                  # filter by source
+agora news --limit 30
+agora news --json                       # JSON output
+```
+
+In the TUI (agora tui → News page): category tabs, detail view, AI summarization, scrollable preview.
+
+### Discovery
+
+```bash
+agora similar mcp-postgres              # Jaccard-similar items
+agora compare mcp-postgres mcp-supabase # side-by-side comparison table
+```
+
+### Preferences & History
+
+```bash
+agora preferences                       # view local preferences
+agora preferences theme light           # set theme (dark|light|auto)
+agora preferences verbosity quiet       # set verbosity
+agora preferences username "Jane"       # set local display name
+agora history                           # view recent searches & chats
+agora history --limit 10
+agora history --clear                   # erase all history
+```
+
 ### Community & Auth
 
 ```bash
@@ -253,7 +290,7 @@ agora config doctor --json
 
 Saved items and optional auth credentials are stored in `~/.config/agora/state.json` by default. Use `AGORA_HOME=/path/to/agora` or `--data-dir /path/to/agora` to override.
 
-The CLI uses bundled offline marketplace data (60+ MCP servers, 12 workflows) by default. Add `--api`, `--live`, `AGORA_USE_API=true`, or `AGORA_API_URL` to use the live backend. Falls back to offline data if the API is unavailable.
+The CLI uses bundled offline marketplace data (62 MCP servers, 12 workflows) by default. Add `--api`, `--live`, `AGORA_USE_API=true`, or `AGORA_API_URL` to use the live backend. Falls back to offline data if the API is unavailable.
 
 ### OpenCode Plugin Commands
 
@@ -323,9 +360,9 @@ agora/
 ├── src/              # CLI, plugin, and shared marketplace core
 ├── backend/          # Cloudflare Workers API
 ├── hub/              # Optional local web Hub
-├── test/             # Tests
+├── test/             # Tests (~500, 20 files)
 ├── dist/             # Built output
-└── README.md
+└── docs/             # Architecture, roadmap, design docs
 ```
 
 ## Architecture
@@ -333,58 +370,91 @@ agora/
 ```
 agora/
 ├── src/
-│   ├── cli.ts        # CLI entrypoint
-│   ├── cli/app.ts    # CLI command parser and handlers
-│   ├── cli/shell.ts  # Interactive shell (agora with no args in TTY)
-│   ├── cli/prompter.ts # Raw-mode line editor with auto-complete
+│   ├── cli.ts            # CLI entrypoint
+│   ├── cli/app.ts        # CLI command parser (~30+ handlers)
+│   ├── cli/shell.ts      # Interactive shell (agora in TTY)
+│   ├── cli/prompter.ts   # Raw-mode line editor with auto-complete
 │   ├── cli/completions.ts # Completion providers (slash, path, marketplace ids)
+│   ├── cli/tui.ts        # Full-screen TUI frame renderer + key dispatch
 │   ├── cli/mcp-server.ts # MCP server (agora mcp)
-│   ├── cli/menu.ts   # Interactive menu TUI
-│   ├── init.ts       # Project scanner + init plan generator
-│   ├── live.ts       # Live API source with offline fallback
-│   ├── marketplace.ts # Shared search, sort, browse, trending, install-plan core
-│   ├── config-files.ts # OpenCode config detection, doctor, and write helpers
-│   ├── state.ts      # Local Agora saved-item state
-│   ├── index.ts      # OpenCode plugin
-│   ├── ui.ts         # Terminal styling: styler, gradient banner, header frame
-│   ├── format.ts     # Count formatting helpers
-│   ├── config.ts     # MCP config generation
-│   ├── data.ts       # 60+ MCP servers, 12 workflows, 12 tutorials, 7 prompts
-│   └── types.ts      # TypeScript types
+│   ├── cli/menu.ts       # Interactive command builder wizard
+│   ├── cli/commands-meta.ts # Command metadata for help + menu
+│   ├── cli/chat-renderer.ts # Chat response formatting
+│   ├── cli/pages/        # TUI page implementations (5 pages)
+│   │   ├── types.ts      # Page / KeyEvent / PageAction / PageContext contract
+│   │   ├── helpers.ts    # Shared TUI helpers (frame, scrollbar, sep, etc.)
+│   │   ├── home.ts       # Home dashboard
+│   │   ├── marketplace.ts# Package list + drill-in
+│   │   ├── community.ts  # Community boards → threads
+│   │   ├── news.ts       # Ranked news feed + TUI reader + AI summarization
+│   │   └── settings.ts   # Settings form
+│   ├── news/             # News feed core
+│   │   ├── types.ts      # NewsItem, ScoredNewsItem, NewsConfig
+│   │   ├── score.ts      # scoreItem, rankItems
+│   │   ├── cache.ts      # readCache, writeCache, isStale, readNewsMeta
+│   │   └── sources/      # Source adapters (hn, reddit, github-trending, arxiv)
+│   ├── community/        # Community hub core
+│   │   ├── types.ts      # Thread, Reply, Vote, Flag, Board
+│   │   └── client.ts     # Community API source helpers
+│   ├── init.ts           # Project scanner + init plan generator
+│   ├── live.ts           # Live API source with offline fallback
+│   ├── marketplace.ts    # Shared search, sort, browse, trending, install-plan core
+│   ├── config-files.ts   # OpenCode config detection, doctor, and write helpers
+│   ├── settings.ts       # Settings persistence (toml)
+│   ├── preferences.ts    # Local preferences (theme, verbosity, username, etc.)
+│   ├── history.ts        # Search + chat history (JSONL append log)
+│   ├── transcript.ts     # Per-cwd chat transcripts
+│   ├── state.ts          # Local Agora saved-item state + auth
+│   ├── index.ts          # OpenCode plugin
+│   ├── ui.ts             # Terminal styling: styler, gradient banner, header frame
+│   ├── format.ts         # Count formatting helpers
+│   ├── config.ts         # MCP config generation
+│   ├── data.ts           # 62 MCP servers, 12 workflows, 12 tutorials, 6 prompts
+│   ├── commands.ts       # OpenCode /agora slash command installer
+│   └── types.ts          # Shared TypeScript types
 │
-├── backend/          # Cloudflare Workers API
-│   ├── src/index.ts  # Hono server + routes
-│   ├── schema.sql    # D1 database schema
-│   └── services/      # npm + GitHub API clients
+├── backend/              # Cloudflare Workers API
+│   ├── src/index.ts      # Hono server + routes
+│   ├── schema.sql        # D1 database schema (including community tables)
+│   └── services/          # npm + GitHub API clients
 │
-├── hub/              # Local Hub app
+├── hub/                  # Local Hub app
 │
-├── test/             # Unit and CLI tests
-└── dist/             # Built output
+├── test/                 # ~500 tests across 20 files
+│   ├── cli.test.ts       # CLI integration tests
+│   ├── news.test.ts      # News scoring, cache, sources
+│   ├── history.test.ts   # History persistence tests
+│   ├── preferences.test.ts # Preferences persistence tests
+│   └── ...
+│
+└── docs/                  # Architecture, roadmap, design docs
 ```
 
 ## Project Status
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Interactive shell (`agora`) | Ready | Persistent REPL with bash/chat dispatch, auto-complete, per-cwd transcripts |
+| Interactive shell (`agora`) | Ready | Persistent REPL, bash/chat dispatch, auto-complete, per-cwd transcripts, `/terminal` subshell |
 | `agora init` | Ready | Project scanning, config generation, auto-install, plugin registration |
 | `agora use` | Ready | Apply workflows as OpenCode skills in one command |
 | `agora install --write` | Ready | Auto-installs npm packages and writes config |
 | `agora mcp` | Ready | Marketplace exposed as a Model Context Protocol server |
 | `agora chat` | Ready | TUI + one-shot inference via `opencode run` |
-| CLI | Ready | 25 commands: `init`, `use`, `mcp`, `chat`, `menu`, `search`, `browse`, `trending`, `workflows`, `tutorials`, `tutorial`, `discussions`, `discuss`, `install`, `save`, `saved`, `remove`, `login`, `logout`, `whoami`, `auth`, `publish`, `review`, `reviews`, `profile`, `config doctor` |
-| Offline data | Ready | 61 MCP servers, 12 workflows, 12 tutorials, 6 prompts (npm-validated) |
+| Full-screen TUI | Ready | 5 pages (Home, Marketplace, Community, News, Settings), alt-screen frame, scrollbar, tabs |
+| CLI | Ready | 30+ commands: `search`, `browse`, `trending`, `workflows`, `similar`, `compare`, `news`, `install`, `save`, `saved`, `remove`, `preferences`, `history`, `init`, `use`, `menu`, `tui`, `chat`, `mcp`, `community`, `discussions`, `discuss`, `thread`, `post`, `reply`, `vote`, `flag`, `auth`, `login`, `logout`, `whoami`, `profile`, `publish`, `review`, `reviews`, `config doctor` |
+| Offline data | Ready | 62 MCP servers, 12 workflows, 12 tutorials, 6 prompts (npm-validated) |
 | Live API mode | Ready | Opt-in via `--api`, `AGORA_API_URL`; falls back offline |
 | Shared core | Ready | CLI and plugin share marketplace logic |
-| Local state | Ready | Saved items and auth tokens under `~/.config/agora` |
+| Local state | Ready | Saved items, auth tokens, preferences, history under `~/.config/agora` |
 | Plugin (offline) | Ready | Works with bundled data |
+| News feed (`agora news`) | Ready | HN + Reddit + GitHub Trending + arXiv + RSS, scoring, caching, category tabs, TUI reader, AI summarization |
+| Community hub (`agora community`) | Ready (CLI) | Boards, threads, votes, flag-don't-delete, LLM participants — needs deployed backend |
+| Discovery (`similar`/`compare`) | Ready | Jaccard similarity, side-by-side comparison tables |
+| Preferences & History | Ready | `agora preferences` (theme, verbosity, username), `agora history` (search/chat log) — local, no account needed |
 | Backend | 🚧 Not deployed — self-host required (see backend/) | Cloudflare Workers + D1 ready for deployment; auth rework blocks public deploy |
 | Local Hub | Ready | Static web app served by Bun |
-| CI | Ready | Typecheck + tests on push/PR |
+| CI | Ready | Typecheck + lint + tests on push/PR |
 | Publish CI | Ready | Auto-publish to npm on release |
-| News feed (`agora news`) | 🚧 Phase 1.5 — designed, not built | HN + Reddit + GitHub trending + arXiv, TUI reader |
-| Community hub (`agora community`) | 🚧 Phase 1.5 — designed, not built | Boards, threads, votes, flag-don't-delete, LLM participants |
 
 ## Testing
 

@@ -3,7 +3,7 @@
 _The pre-Claude-Design brainstorm. Captures the layout I recommend, the
 keymap, the page contract every page must satisfy, and ASCII mockups for
 each of the five pages. The companion file
-[`claude-design-brief-tui.md`](./claude-design-brief-tui.md) turns this into
+[`claude-design-brief-tui.md`](./archive/claude-design-brief-tui.md) (archived) turns this into
 a paste-ready prompt for Claude Design._
 
 The user reviews and adjusts **this** doc first. The Claude Design prompt
@@ -467,7 +467,7 @@ instead of `▌`; footer uses `·` separators only.
 5. **Variants**: Claude Design returns **two** per page (calm vs dense),
    identical contract.
 
-`docs/claude-design-brief-tui.md` reflects all of the above; it is the
-file to hand to Claude Design.
+`docs/archive/claude-design-brief-tui.md` reflects all of the above; the TUI
+has been implemented per this spec (see `src/cli/tui.ts` and `src/cli/pages/`).
 
-_Last updated: 2026-05-15 — reviewed and adjusted; ready to hand to Claude Design._
+_Archived. The TUI is built and shipped as of v0.4.0._

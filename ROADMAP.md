@@ -15,13 +15,13 @@ bring the goods.
 content and the standalone experience. Commerce comes after the hub is good on
 its own.
 
-## Phase 1.5 — "Destination" (next, in design)
+## Phase 1.5 — "Destination" (substantially shipped)
 
 Phase 1 made `agora` look and feel like a polished standalone CLI. Phase 1.5
 makes it a **place you spend time** — a hub, not a tool you invoke. Three
-pillars, each shippable on its own, sequenced to land before backend deploy.
+pillars, each shippable on its own, landed before backend deploy.
 
-### Pillar A — News feed (`agora news`)
+### Pillar A — News feed (`agora news`) ✓ shipped
 
 Curated tech-news feed for the agentic-coding ecosystem, terminal-native and
 text-only. Built so a developer can open it as a daily habit alongside their
@@ -36,32 +36,30 @@ shell.
 - **Algorithm** (`src/news/score.ts`):
   `score = recencyW · e^(-hoursOld/12) + engagementW · log(engagement+1) + topicW · topicMatch`,
   default weights `1.0 / 0.6 / 0.8`. Dedupe by URL host+slug.
-- **Topics**: MCP, AI tooling, agent skills, harnesses, Obsidian / markdown
-  ecosystem, AI research.
-- **Storage**: cache in `~/.config/agora/news-cache.jsonl`; per-source TTL.
+- **Categories**: All, Mcp, Tools, Skills, Llms, Repos, Market, Search — with Tab/Shift+Tab navigation.
+- **Storage**: cache in `~/.config/agora/news-cache.jsonl`, read/saved marks in `news-meta.json`; per-source TTL.
   Background refresh on stale.
-- **TUI**:
-  - `agora news` → top 20 list (default), one accent line per story, dim source/age.
-  - `agora news --reader` → full-screen reader: `j`/`k` navigate, `Enter` opens
-    URL via `open`/`xdg-open`, `s` to save, `p` to mark read, `/` to filter.
-  - `agora news --source hn|reddit|gh|arxiv`, `--topic <tag>`, `--json`.
-  - In the interactive shell, `/news` opens the reader without leaving the REPL.
-- **Files**:
-  `src/news/{score,cache,types}.ts`, `src/news/sources/{hn,reddit,github-trending,arxiv}.ts`,
-  `src/cli/news-reader.ts`, `test/news.test.ts`, `test/news-reader.test.ts`.
+- **TUI reader** (News page in `agora tui`):
+  - Category tabs across the top, one accent line per story, dim source/age/score.
+  - `Enter` opens detail view (full metadata, tags, summary).
+  - `p` previews the article: fetches HTML → strips to text → AI summarizes via `opencode run` → word-wrapped display.
+  - `s` saves, `m` marks read (persisted to disk), `o` opens URL via `open`/`xdg-open`.
+  - `j`/`k` navigate, `/` filter, `r` refresh.
+- **Files**: `src/news/{score,cache,types}.ts`, `src/news/sources/{hn,reddit,github-trending,arxiv}.ts`,
+  `src/cli/pages/news.ts`, `test/news.test.ts`.
 
-### Pillar B — Community hub (`agora community`)
+### Pillar B — Community hub (`agora community`) ✓ CLI shipped, needs backend deploy
 
 Reddit-style, text-only, threaded community where developers and self-identified
 LLMs/bots exchange ideas around the same topics that drive the marketplace.
 
 - **Boards** (initial set): `/mcp`, `/agents`, `/tools`, `/workflows`,
   `/show`, `/ask`, `/meta`.
-- **Backend schema additions** (in `backend/schema.sql`):
+- **Backend schema additions** (in `backend/schema.sql`) — **done**:
   - extend `discussions` with `board`, `parent_id`, `score`;
   - new `votes` (user × target × ±1) and `flags` (target, reporter, reason);
   - extend `users` with `is_llm` boolean and `llm_model` text.
-- **Endpoints**:
+- **Endpoints** — **defined, not yet deployed**:
   - `GET  /api/community/boards`
   - `GET  /api/community/threads?board=&sort=top|new|active`
   - `GET  /api/community/thread/:id` (returns full reply tree)
@@ -69,13 +67,12 @@ LLMs/bots exchange ideas around the same topics that drive the marketplace.
   - `POST /api/community/reply/:parent_id` (auth)
   - `POST /api/community/vote/:id` (auth, ±1)
   - `POST /api/community/flag/:id` (auth)
-- **CLI commands**: `agora community`, `agora community <board>`, `agora thread <id>`,
+- **CLI commands** — **all shipped**: `agora community`, `agora community <board>`, `agora thread <id>`,
   `agora post --board <b> --title <t> --content <c>`, `agora reply <id> --content <c>`,
   `agora vote <id> --up|--down`, `agora flag <id> --reason <r>`.
-- **TUI thread reader** (`src/cli/thread-reader.ts`): indented reply tree
-  with `│ ` depth guides, hotkeys `j/k` navigate, `Enter` expand/collapse,
-  `r` reply (opens `$EDITOR`), `v` vote, `f` flag. `[bot]` chip for `is_llm`
-  authors.
+- **TUI Community page** (`src/cli/pages/community.ts`): boards → threads → thread reader
+  with indented reply trees, `j/k` navigate, `v` vote, `f` flag, `r` reply.
+  `[bot]` chip for `is_llm` authors.
 - **Moderation philosophy**: **flag, don't delete.** Content with N flags
   collapses behind a `[flagged: N]` chip; users can expand it. A kill switch
   remains for confirmed malware/CSAM/etc.; everything else is community-driven.
@@ -84,26 +81,22 @@ LLMs/bots exchange ideas around the same topics that drive the marketplace.
   declared model. Bot posts render with a `[bot · gpt-4o-mini]`-style chip.
   Bots that don't self-identify are flaggable as "undisclosed AI."
 
-### Pillar C — Marketplace elaboration
+### Pillar C — Marketplace elaboration (partial)
 
 Make the existing marketplace the strongest part of the app.
 
-- **`agora similar <id>`** — Jaccard similarity over `item.tags`, weighted by
-  tag rarity (IDF), top 5 results. ~30 lines in `src/marketplace.ts`,
-  surfaced as a "Related" section in `agora browse <id>`.
-- **`agora compare <id1> <id2> [<id3>...]`** — side-by-side table:
+- **`agora similar <id>`** — ✓ **shipped**. Jaccard similarity over `item.tags`, weighted by
+  tag rarity (IDF), top 5 results. Surfaced as a "Related" section in `agora browse <id>`.
+- **`agora compare <id1> <id2> [<id3>...]`** — ✓ **shipped**. Side-by-side table:
   name, author, installs, stars, last updated, tags, license, npm package,
   shared tags highlighted.
-- **`agora flag <id>`** — marketplace-side flag-don't-delete for packages
-  and workflows, surfaces a community-flagged chip on `browse`.
-- **Permission manifests** — add `permissions: { fs?, net?, exec? }` to the
+- **`agora flag <id>`** for marketplace items — **pending**. Community-side flagging exists;
+  marketplace item flagging builds on the same flags table.
+- **Permission manifests** — **pending**. Add `permissions: { fs?, net?, exec? }` to the
   `Package` type, display on `install` as an app-store-style prompt.
-- **Automated publish scan** — backend pre-publish check: parse the npm
-  package's `package.json` for `postinstall`/`preinstall` scripts and basic
-  static heuristics; flag mismatches with the declared manifest.
-- **Live npm download counts** — `scripts/refresh-data.ts` already exists;
-  extend it to hit `api.npmjs.org/downloads/point/last-week/<pkg>` and update
-  `samplePackages[].installs` before each release.
+- **Automated publish scan** — **pending**. Backend pre-publish check.
+- **Live npm download counts** — **pending**. Extend `scripts/refresh-data.ts` to hit
+  `api.npmjs.org/downloads/point/last-week/<pkg>`.
 
 ### Production-readiness gates (block backend deploy)
 
@@ -118,7 +111,7 @@ Make the existing marketplace the strongest part of the app.
 5. **Version bump 0.4.x → 0.5.0** — the "Destination" release. Per policy
    we bump only once Phase 1.5 lands fully; do not bump per-PR.
 
-### Sequencing — status (updated 2026-05-15 end of session)
+### Sequencing — status (updated 2026-05-16 — Phase 1.5 substantially shipped)
 
 | #  | Scope | Status |
 |----|---|---|
@@ -128,23 +121,25 @@ Make the existing marketplace the strongest part of the app.
 | 2c | Prompter wrap-aware redraw + `cd` ENOENT guard | ✓ shipped (bb9d728) |
 | 2d | **Full-screen TUI scaffold** from Claude Design — `agora tui`, 5 pages, alt-screen frame, page contract, settings.ts stub | ✓ shipped (91a2e47) |
 | 2e | TUI shell entrypoints — `/tui`, `/home`, `/market`, `/comm`, `/news`, `/settings` | ✓ shipped (03be473) |
-| 3  | `agora similar` + `agora compare` + "Related" section in `browse` | next |
-| 4  | News feed core: types, scoring, cache, fixture-based `agora news` | queued |
-| 5  | News feed live adapters (HN, Reddit, GH trending, arXiv) | queued |
-| 6  | Replace News page FIXTURE with real `src/news/*` data | queued |
-| 7  | Backend community schema + endpoints | queued |
-| 8  | CLI community commands (`community`, `thread`, `post`, `reply`, `vote`, `flag`) | queued |
-| 9  | Replace Community page FIXTURE with real backend client | queued |
-| 10 | Permission manifests + `agora flag` for marketplace items | queued |
-| 11 | Backend auth rework + rate-limit middleware | queued |
-| 12 | Real toml parser/serializer in `src/settings.ts` (TUI Settings page persistence) | queued |
-| 13 | VHS demo tape + README hero gif + 0.5.0 bump | queued |
-
-**Recommended next session opens with PR 3** — `agora similar` + `agora compare`.
-Smallest spec, builds on data we already have, lets us validate the
-sonnet-delegation cadence before the larger news/community PRs. The TUI
-marketplace page already drills into a detail overlay; "Related" can plug
-straight into it.
+| 3  | `agora similar` + `agora compare` + "Related" section in `browse` | ✓ shipped |
+| 4  | News feed core: types, scoring, cache, fixture-based `agora news` | ✓ shipped |
+| 5  | News feed live adapters (HN, Reddit, GH trending, arXiv) | ✓ shipped |
+| 6  | Replace News page FIXTURE with real `src/news/*` data | ✓ shipped |
+| 7  | Backend community schema + endpoints | ✓ shipped (schema done, endpoints defined) |
+| 8  | CLI community commands (`community`, `thread`, `post`, `reply`, `vote`, `flag`) | ✓ shipped |
+| 9  | Replace Community page FIXTURE with real backend client | ✓ shipped |
+| 10 | Permission manifests + `agora flag` for marketplace items | pending |
+| 11 | Backend auth rework + rate-limit middleware | pending |
+| 12 | Real toml parser/serializer in `src/settings.ts` (TUI Settings page persistence) | ✓ shipped |
+| 13 | VHS demo tape + README hero gif + 0.5.0 bump | pending |
+| — | News read/saved persistence (news-meta.json) | ✓ shipped |
+| — | Preferences system (`agora preferences`) | ✓ shipped |
+| — | Search & chat history (`agora history`) | ✓ shipped |
+| — | `/terminal` subshell | ✓ shipped |
+| — | `/menu` command builder wizard | ✓ shipped |
+| — | TUI Esc fix (delegate to page, never quit) | ✓ shipped |
+| — | TUI news preview with AI summarization | ✓ shipped |
+| — | TUI category tabs (Tab/Shift+Tab, arrow keys) | ✓ shipped |
 
 ## Phase 1 — The standalone hub experience (current)
 
@@ -175,7 +170,7 @@ straight into it.
   `agora trending`. Sort by stars/installs/name/updated, render box-drawn tables,
   paginate with `--page` / `--per-page`. _Done (`marketplace.ts`, `app.ts`)._
 - **Catalog growth.** More MCP servers, more workflows, more tutorials in the
-  offline data. _Done: 60+ MCP servers, 12 workflows, 12 tutorials, 7 prompts._
+  offline data. _Done: 62 MCP servers, 12 workflows, 12 tutorials, 6 prompts._
 - **Demo recording.** Asciinema/VHS recording of the standalone CLI.
 - **"Last refreshed" stamp** on bundled data so users know how fresh it is.
   _Done (`data.ts` `dataRefreshedAt`)._
@@ -240,4 +235,4 @@ surface — mechanism design does the policing, not a gatekeeper:
 - **Report a setup that `agora init` misses.** Open an issue with your project's manifest files.
 - **Polish the standalone CLI experience.** Phase 1 is wide open.
 
-_Last updated: 2026-05-15 (end of working session) · Phase 1.5 "Destination" plan recorded. PRs 1, 2, 2b, 2c, 2d, 2e shipped (docs, shell hotfix, repo scaffolds, prompter+cd fixes, full-screen TUI scaffold, TUI shell entrypoints). PR 3 (similar/compare) is next._
+_Last updated: 2026-05-16 · Phase 1.5 substantially shipped. Remaining: backend deploy (auth rework + rate limiting), permission manifests, marketplace flagging, npm download refresh, demo recording, 0.5.0 bump._

@@ -6,8 +6,8 @@
   "types": "dist/index.d.ts",
   "type": "module",
   "bin": {
-    "agora": "./dist/cli.js",
-    "opencode-agora": "./dist/cli.js"
+    "agora": "dist/cli.js",
+    "opencode-agora": "dist/cli.js"
   },
   "repository": {
     "type": "git",

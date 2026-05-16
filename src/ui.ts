@@ -9,7 +9,7 @@
  * harness) get plain strings, so output stays assertable.
  *
  * The wordmark art, gradient, and accent colour below come from the Claude
- * Design handoff (docs/claude-design-brief.md → `agora-wordmark.ts`). Palette:
+ * Design handoff (docs/archive/claude-design-brief.md → `agora-wordmark.ts`). Palette:
  * "agora at golden hour" — Aegean blue → marble warm → terracotta.
  */
 

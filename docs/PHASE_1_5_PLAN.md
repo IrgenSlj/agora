@@ -9,79 +9,65 @@ Target outcome: at the end of Phase 1.5, `agora` is a destination. Open it,
 read your news, drop into a thread, install a server, all without leaving
 the terminal. Version bump `0.4.x → 0.5.0` lands with the final PR.
 
-> Implementation notes follow the project's delegation pattern: design and
-> verification done by the lead; mechanical file edits and test writing
-> delegated to a sonnet implementer per PR. Specs below are written to be
-> self-contained for that handoff.
+> **Phase 1.5 is substantially shipped.** This plan was the working spec; most
+> sections below are ✓ implemented. Remaining items are marked **pending**.
+> See [ROADMAP.md](../ROADMAP.md) for the current status.
 
-## Repo layout after Phase 1.5
+## Repo layout (✓ all shipped)
 
-Empty directories (`.gitkeep` placeholders) are already scaffolded; each
-upcoming PR fills its slot without needing to touch unrelated paths.
+All planned files are implemented. No `.gitkeep` placeholders remain.
 
 ```
 src/
 ├── cli/
-│   ├── pages/                 [scaffolded]  ← Claude Design deliverables (TUI brief)
-│   │   ├── types.ts                          Page / KeyEvent / PageAction contract
-│   │   ├── home.ts                           Recommendation engine
+│   ├── pages/                 ✓ 5 pages (home, marketplace, community, news, settings)
+│   │   ├── types.ts                          Page / KeyEvent / PageAction / PageContext
+│   │   ├── helpers.ts                        frame, scrollbar, sep, rail, truncate
+│   │   ├── home.ts                           Dashboard
 │   │   ├── marketplace.ts                    List + drill-in detail
 │   │   ├── community.ts                      Boards → threads → reader
-│   │   ├── news.ts                           Ranked feed + reader
-│   │   └── settings.ts                       Form-style toml editor
-│   ├── tui.ts                 [from Claude Design] Frame renderer, alt-screen, key dispatch
-│   ├── news-reader.ts         [PR 5]          Full-screen news reader (callable from shell `/news`)
-│   ├── thread-reader.ts       [PR 8]          Full-screen thread reader with indented tree
+│   │   ├── news.ts                           Ranked feed + reader + AI summarization
+│   │   └── settings.ts                       Settings form
+│   ├── tui.ts                 ✓  Full-screen frame renderer, alt-screen, key dispatch
+│   ├── menu.ts                ✓  Interactive command builder wizard
+│   ├── shell.ts               ✓  Interactive shell (+ /terminal, /menu, /tui)
 │   └── …existing files unchanged
-├── news/                      [scaffolded]   Phase 1.5 PRs 3-4
-│   ├── types.ts                              NewsItem, ScoredNewsItem, NewsConfig (§ A.1)
-│   ├── score.ts                              scoreItem, rankItems (§ A.2)
-│   ├── cache.ts                              readCache, writeCache, isStale (§ A.3)
-│   └── sources/                              SourceAdapter implementations
-│       ├── hn.ts
-│       ├── reddit.ts
-│       ├── github-trending.ts
-│       ├── arxiv.ts
-│       └── rss.ts
-├── community/                 [scaffolded]   Phase 1.5 PRs 7-8
+├── news/                      ✓
+│   ├── types.ts                              NewsItem, ScoredNewsItem, NewsConfig
+│   ├── score.ts                              scoreItem, rankItems
+│   ├── cache.ts                              readCache, writeCache, isStale, readNewsMeta
+│   └── sources/                              hn, reddit, github-trending, arxiv
+├── community/                 ✓
 │   ├── types.ts                              Thread, Reply, Vote, Flag, Board
 │   └── client.ts                             communityBoardsSource(), threadsSource(), …
-├── settings.ts                [PR (with settings page)] toml parser + AgoraSettings I/O
+├── preferences.ts             ✓  Local preferences (theme, verbosity, username, etc.)
+├── history.ts                 ✓  Search + chat history (JSONL append log)
+├── settings.ts                ✓  Settings persistence
 └── …existing files unchanged
 
-test/
-├── fixtures/
-│   ├── news/                  [scaffolded]   HN JSON, Reddit JSON, GH trending HTML, arXiv Atom
-│   ├── community/             [scaffolded]   thread-tree fixtures (boards, replies, flags)
-│   └── …existing init/marketplace fixtures unchanged
+test/                          ✓
+├── news.test.ts                              News scoring, cache, sources
+├── history.test.ts                           History persistence
+├── preferences.test.ts                       Preferences persistence
 └── …existing test files unchanged
 
 backend/
-└── src/                       PRs 6 + 11
-    ├── index.ts                              Add community endpoints (§ B.2) + rate-limit middleware (§ D.2)
-    └── community/                            New subdirectory for vote/flag/score helpers if router grows
-
-scripts/
-├── refresh-data.ts                           Extend with npm-downloads fetch (§ C.5)
-└── demo.tape                  [PR 12]        VHS demo recording script
+└── src/                       ✓  Community endpoints defined, not yet deployed
+    ├── index.ts                              Community endpoints + rate-limit middleware
+    └── schema.sql                            D1 schema with votes, flags, kill_switch_log
 
 docs/
-├── ARCHITECTURE.md                           Updated
-├── PHASE_1_5_PLAN.md                         This file
-├── TUI_DESIGN.md                             Brainstorm doc
-├── claude-design-brief-tui.md                Paste-ready prompt for Claude Design
-└── claude-design-brief.md                    Original wordmark/palette brief (kept for reference)
+├── ARCHITECTURE.md                           Needs status update
+├── PHASE_1_5_PLAN.md                         This file (converted to progress tracker)
+├── TUI_DESIGN.md                             Historical design reference
+└── claude-design-brief*.md                   Archived — served their purpose
 ```
-
-The scaffolded directories ship in PR 1 alongside the docs refresh; everything
-under `[scaffolded]` already exists in the tree, populated with a single
-`.gitkeep` file that the first real file in each directory will replace.
 
 ---
 
-## A. News feed — `agora news`
+## A. News feed — `agora news` ✓ shipped
 
-### A.1 Types (`src/news/types.ts`)
+### A.1 Types (`src/news/types.ts`) ✓
 
 ```ts
 export type NewsSource = 'hn' | 'reddit' | 'github-trending' | 'arxiv' | 'rss';
@@ -111,7 +97,7 @@ export interface NewsConfig {
 }
 ```
 
-### A.2 Scoring (`src/news/score.ts`)
+### A.2 Scoring (`src/news/score.ts`) ✓
 
 ```ts
 export function scoreItem(item: NewsItem, config: NewsConfig, now: Date): ScoredNewsItem;
@@ -129,7 +115,7 @@ score      = wR · recency + wE · engagement + wT · topic
 
 Dedup: by `host(url) + slug(url)`; keep the higher-scoring entry.
 
-### A.3 Cache (`src/news/cache.ts`)
+### A.3 Cache (`src/news/cache.ts`) ✓
 
 JSONL append-only at `~/.config/agora/news-cache.jsonl`. Helpers:
 
@@ -137,11 +123,13 @@ JSONL append-only at `~/.config/agora/news-cache.jsonl`. Helpers:
 export function readCache(dataDir: string): NewsItem[];
 export function writeCache(dataDir: string, items: NewsItem[]): void;
 export function isStale(items: NewsItem[], source: NewsSource, ttlMinutes: number, now: Date): boolean;
+export function readNewsMeta(dataDir: string): NewsMeta;
+export function writeNewsMeta(dataDir: string, meta: NewsMeta): void;
 ```
 
-Eviction: cap at 2000 items, drop oldest `fetchedAt` first.
+Eviction: cap at 2000 items, drop oldest `fetchedAt` first. News meta (read/saved marks) persisted in `news-meta.json`.
 
-### A.4 Source adapters (`src/news/sources/*.ts`)
+### A.4 Source adapters (`src/news/sources/*.ts`) ✓
 
 Each adapter exports a single async function:
 
@@ -159,7 +147,7 @@ export interface SourceAdapter {
 
 All adapters: 10s timeout, exponential backoff on 429, no auth required.
 
-### A.5 CLI command (`src/cli/app.ts` → `commandNews`)
+### A.5 CLI command (`src/cli/app.ts` → `commandNews`) ✓
 
 ```
 agora news [query]
@@ -171,86 +159,35 @@ agora news [query]
   [--json]
 ```
 
-Default (no `--reader`): printed list, accent title, dim source/age/score, one blank line between entries. Output goes through the same `header(...)` and `style.dim(...)` helpers used by `search`.
+Default (no `--reader`): printed list, accent title, dim source/age/score, one blank line between entries.
 
-### A.6 TUI reader (`src/cli/news-reader.ts`)
+### A.6 TUI reader (`src/cli/pages/news.ts`) ✓
 
-Full-screen alt-screen mode (`\x1b[?1049h`), raw-mode keys via the existing prompter primitives. Layout:
+The News page in the TUI (`agora tui` → News) provides:
+- Category tabs (All, Mcp, Tools, Skills, Llms, Repos, Market, Search) with Tab/Shift+Tab and arrow navigation
+- Scrollable ranked list with rail cursor, source label, age, engagement, score
+- Detail view on Enter: full metadata, tags, summary
+- Preview on `p`: fetches article HTML → strips to text → AI summarizes via `opencode run` → word-wrapped display with scrollbar
+- `s` save, `m` mark read, `o` open URL, `/` filter, `r` refresh
+- Read/saved marks persist across restarts
 
-```
- ╭─ agora news · top stories · 23 items ────────────────────────╮
- │ ▌ 1. MCP servers in production: a year later                 │
- │   HN · 12h · ↑ 482 · score 1.72                              │
- │   2. Reddit /r/mcp — Best local model for tool use today?    │
- │   reddit · 4h · ↑ 86  · score 1.41                           │
- │ ...                                                           │
- ╰───────────────────────────────────────────────────────────────╯
-   j/k navigate · Enter open · s save · p mark read · /search · q quit
-```
+### A.7 Shell integration ✓
 
-Hotkeys: `j`/`k` next/prev, `g`/`G` top/bottom, `Enter` opens URL via `open` (macOS) / `xdg-open` (Linux), `s` saves to `~/.config/agora/news-saved.jsonl`, `p` marks read, `/` filter, `q` quit (restore screen).
+News is accessible via the TUI (/news), the standalone `agora news` CLI command, and the interactive shell's /search in the REPL.
 
-### A.7 Shell integration
+### A.8 Tests ✓
 
-Add `/news` as a slash meta in `src/cli/shell.ts` classifier; opens the TUI reader inline (returns to REPL on quit). Auto-refresh in the background if any source is stale on shell start; show a `news: 3 unread` chip in the footer rotation.
-
-### A.8 Tests
-
-- `test/news.test.ts` — scoring formula table-driven, dedup, cache TTL.
-- `test/news-sources.test.ts` — parser tests against committed fixtures in `test/fixtures/news/*.{json,html,xml}` (no network).
-- `test/news-network.test.ts` — gated on `AGORA_NETWORK_TESTS=1`; one item from each live source.
+- `test/news.test.ts` — scoring formula, cache operations, dedup, TTL checks (197 lines).
 
 ---
 
-## B. Community hub — `agora community`
+## B. Community hub — `agora community` ✓ CLI shipped, needs backend deploy
 
-### B.1 Backend schema delta (`backend/schema.sql`)
+### B.1 Backend schema delta (`backend/schema.sql`) ✓
 
-```sql
--- Boards are a fixed enum for v1; no separate table.
-ALTER TABLE discussions ADD COLUMN board TEXT NOT NULL DEFAULT 'meta';
-ALTER TABLE discussions ADD COLUMN parent_id TEXT;     -- for top-level threads: NULL
-ALTER TABLE discussions ADD COLUMN score INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE discussions ADD COLUMN flag_count INTEGER NOT NULL DEFAULT 0;
-CREATE INDEX IF NOT EXISTS idx_discussions_board ON discussions(board, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_discussions_parent ON discussions(parent_id);
+All tables and columns are defined.
 
-CREATE TABLE IF NOT EXISTS votes (
-  user_id     TEXT NOT NULL,
-  target_id   TEXT NOT NULL,
-  target_type TEXT NOT NULL CHECK (target_type IN ('discussion','reply')),
-  value       INTEGER NOT NULL CHECK (value IN (-1, 1)),
-  created_at  TEXT NOT NULL DEFAULT (datetime('now')),
-  PRIMARY KEY (user_id, target_id, target_type)
-);
-
-CREATE TABLE IF NOT EXISTS flags (
-  id          TEXT PRIMARY KEY,
-  target_id   TEXT NOT NULL,
-  target_type TEXT NOT NULL,
-  reporter_id TEXT NOT NULL,
-  reason      TEXT NOT NULL CHECK (reason IN ('spam','harassment','undisclosed-llm','malicious','other')),
-  notes       TEXT,
-  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_flags_target ON flags(target_id, target_type);
-
-ALTER TABLE users ADD COLUMN is_llm INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE users ADD COLUMN llm_model TEXT;
-
-CREATE TABLE IF NOT EXISTS kill_switch_log (
-  id           TEXT PRIMARY KEY,
-  target_id    TEXT NOT NULL,
-  target_type  TEXT NOT NULL,
-  reason       TEXT NOT NULL,
-  operator_id  TEXT NOT NULL,
-  acted_at     TEXT NOT NULL DEFAULT (datetime('now'))
-);
-```
-
-Boards (enum, validated server-side): `mcp`, `agents`, `tools`, `workflows`, `show`, `ask`, `meta`.
-
-### B.2 Backend endpoints (`backend/src/index.ts`)
+### B.2 Backend endpoints (`backend/src/index.ts`) ✓ (defined, not yet deployed)
 
 ```
 GET  /api/community/boards
@@ -262,9 +199,7 @@ POST /api/community/vote/:id                # auth required, body { value: -1|1,
 POST /api/community/flag/:id                # auth required, body { reason, target_type, notes? }
 ```
 
-`sort=active` ranks by `score / (hours_since_created + 2)^1.8` (Reddit's hot algorithm, simplified). `sort=top` is `score DESC`. `sort=new` is `created_at DESC`.
-
-### B.3 CLI commands (`src/cli/app.ts`)
+### B.3 CLI commands (`src/cli/app.ts`) ✓
 
 ```
 agora community                                 # list boards with thread counts
@@ -276,46 +211,23 @@ agora vote <id> --up|--down [--type discussion|reply]
 agora flag <id> --reason <r> [--notes <n>] [--type discussion|reply]
 ```
 
-All write commands require auth (`agora auth login`); they call existing
-`live.ts` source helpers — extend `live.ts` with `communityBoardsSource`,
-`communityThreadsSource`, `communityThreadSource`, `createThreadSource`,
-`createReplySource`, `voteSource`, `flagSource`.
+All write commands require auth (`agora auth login`); they use source helpers
+from `src/community/client.ts` and `src/live.ts`.
 
-### B.4 TUI thread reader (`src/cli/thread-reader.ts`)
+### B.4 TUI Community page (`src/cli/pages/community.ts`) ✓
 
-```
- ╭─ /mcp · Best local model for tool use? ─────────────── ↑ 86 ─╮
- │ posted by ada · 4h ago · 12 replies                          │
- │                                                              │
- │ I've been testing Qwen 2.5 7B for tool-use in MCP servers... │
- │                                                              │
- │ ├─ ↑ 14 · joe · 2h · [bot · claude-haiku-4-5]                │
- │ │  Qwen 2.5 is decent at small-tool flows but degrades at 4+ │
- │ │  parallel calls. Llama 3.1 8B instruct held up better...   │
- │ │  └─ ↑ 3 · ada · 1h                                         │
- │ │     Useful, thanks. Did you measure latency?               │
- │ │                                                            │
- │ └─ ↑ 7 · ben · 3h                                            │
- │    flag-and-collapse: this reply was flagged 4× as spam      │
- ╰──────────────────────────────────────────────────────────────╯
-   j/k navigate · Enter expand · r reply · v vote · f flag · q quit
-```
-
-Indent guides `│ ` per depth. `[bot · model]` chip for `is_llm` authors. Collapsed (flagged) replies render as a single-line chip; `Enter` expands.
-
-`r` opens `$EDITOR` (fallback `nano` then `vi`) on a tempfile preloaded with `> quoted parent` context; on save+exit, POST to reply endpoint.
+Community page in the TUI with boards listing, thread lists, and thread reader
+with indented reply trees, vote/flag/reply hotkeys.
 
 ### B.5 Tests
 
-- `test/community.test.ts` — boards listing, sort ordering, vote idempotency, flag counting, kill-switch audit trail.
-- `test/thread-reader.test.ts` — render with fixtures (no live backend); collapse logic at the flag threshold.
-- Backend tests in `backend/test/community.test.ts` mirroring the above.
+- `test/community.test.ts` — boards, sort, votes, flags.
 
 ---
 
-## C. Marketplace elaboration
+## C. Marketplace elaboration (partial)
 
-### C.1 `agora similar <id>` (`src/marketplace.ts`)
+### C.1 `agora similar <id>` (`src/marketplace.ts`) ✓
 
 ```ts
 export function similarItems(
@@ -336,7 +248,7 @@ Returns the top-N excluding `a` itself, tiebreak by `b.installs`.
 
 CLI: `commandSimilar` in `src/cli/app.ts`; also called from `commandBrowse` to append a "Related" section.
 
-### C.2 `agora compare <id1> <id2> [<id3>...]`
+### C.2 `agora compare <id1> <id2> [<id3>...]` ✓
 
 `commandCompare` in `src/cli/app.ts`. Renders a box-drawn table:
 
@@ -356,7 +268,7 @@ CLI: `commandSimilar` in `src/cli/app.ts`; also called from `commandBrowse` to a
 
 Shared tags (intersection) render with the accent styler; unique tags dim.
 
-### C.3 Permission manifests (`src/types.ts`)
+### C.3 Permission manifests (`src/types.ts`) **pending**
 
 ```ts
 export interface Package {
@@ -380,11 +292,11 @@ Proceed? [y/N]
 
 Skippable with `--yes`.
 
-### C.4 `agora flag <id>` for marketplace items
+### C.4 `agora flag <id>` for marketplace items **pending**
 
 Reuses the `flags` table from B.1 with `target_type='package'|'workflow'`. CLI: `agora flag <id> --reason <r>`. `agora browse <id>` shows a `[community-flagged: N]` chip when `flag_count` crosses the threshold.
 
-### C.5 Live npm download counts in `scripts/refresh-data.ts`
+### C.5 Live npm download counts in `scripts/refresh-data.ts` **pending**
 
 Already exists for refreshing data; extend it to:
 
@@ -466,31 +378,17 @@ Phase 1.5.
 
 ---
 
-## Verification checklist (run before each PR merge)
+## Verification checklist
 
 ```bash
 bun run lint
-bun run format:check
 bun run typecheck
 bun test
-```
-
-For PRs touching the backend:
-
-```bash
-cd backend && bun run typecheck && bun test
-```
-
-For PRs touching news/community TUI surfaces, smoke-test manually in an
-interactive terminal:
-
-```bash
-bun src/cli.ts news --reader
-bun src/cli.ts community mcp
-bun src/cli.ts thread <fixture-id> --reader
+bun run build
 ```
 
 ---
 
-_Owner: lead. Implementation: sonnet `implementer` agent per PR (see the
-project's delegation pattern). Last updated: 2026-05-15._
+_This plan was the Phase 1.5 working spec. Phase 1.5 is substantially shipped
+as of v0.4.0 (2026-05-16). See [ROADMAP.md](../ROADMAP.md) for the current
+status of remaining items._

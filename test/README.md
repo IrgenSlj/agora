@@ -8,7 +8,7 @@ bun test test/shell.test.ts    # one file
 bun test --watch               # watch mode
 ```
 
-At the time of writing: **16 test files, ~440 tests, 1 intentional skip.**
+At the time of writing: **20 test files, ~500 tests, 1 intentional skip.**
 Tests are written with `bun:test` (Bun's built-in `describe` / `test` /
 `expect` API).
 
@@ -32,6 +32,10 @@ Tests are written with `bun:test` (Bun's built-in `describe` / `test` /
 | `types.test.ts` | TypeScript type compatibility, JSON serialisation |
 | `index.test.ts` | OpenCode plugin tool registration and output |
 | `ui.test.ts` | Banner rendering, colour detection, styler |
+| `news.test.ts` | News scoring formula, cache operations, dedup, TTL |
+| `settings.test.ts` | Settings persistence (toml parser/serializer) |
+| `preferences.test.ts` | Preferences persistence (load, save, defaults, corrupt recovery) |
+| `history.test.ts` | History append, load (reverse order), limit, clear |
 
 ## Fixtures
 

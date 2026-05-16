@@ -177,18 +177,23 @@ flag/score/threshold logic that Phase 4 needs for marketplace items.
 
 1. **TUI shape** — **Decision: hybrid.** Scriptable one-shot commands remain
    the default (all named commands, `--json`, pipes, CI all work as before).
-   In addition, `agora` with no command in an interactive TTY launches an
-   interactive command browser powered by `@clack/prompts` — pick a command,
-   read its manual, repeat. A full-screen Ink TUI is deferred; the hybrid
-   covers the browsing use-case without the build complexity.
+   The interactive shell (`agora` with no arguments) handles bash dispatch,
+  chat, and `/` meta commands. A full-screen TUI (`agora tui` / `/tui`) is
+  built with 5 pages (Home, Marketplace, Community, News, Settings) using
+  raw terminal codes and a `Page` contract — see `src/cli/tui.ts` and
+  `src/cli/pages/`.
 2. **Sellable unit** — skills/workflows only, or also proprietary MCP servers?
    This shapes `install` and the permission manifest.
 3. **Payment model** — per-item Stripe Checkout vs. prepaid credits/wallet.
 
 ## Status
 
-- **Phase 1 (standalone hub experience)** — done; sculpting before the next bump.
+- **Phase 1 (standalone hub experience)** — done.
 - **Phase 1.5 ("Destination": news feed + community hub + marketplace
-  elaboration)** — designed; sequenced into ~10 PRs in `ROADMAP.md`.
+  elaboration)** — substantially shipped. News feed with 5 source adapters,
+  scoring, TUI reader with AI summarization. Community hub CLI commands
+  and backend schema. `agora similar` / `agora compare`. Preferences and
+  history persistence. See [`../ROADMAP.md`](../ROADMAP.md) for remaining items
+  (backend deploy, demo, 0.5.0 bump).
 - **Phases 2–5** — see [`../ROADMAP.md`](../ROADMAP.md). Payments (Phase 3) are
   deliberately deferred behind the content and experience work.
