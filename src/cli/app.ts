@@ -612,12 +612,24 @@ async function commandNews(parsed: ParsedArgs, io: CliIo): Promise<number> {
     ['arxiv', arxivSource],
   ];
 
-  const fetchWithTimeout = (fn: () => Promise<any>, ms = 10000): Promise<any> =>
-    Promise.race([fn(), new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))]);
+  const fetchWithTimeout = (fn: (signal: AbortSignal) => Promise<any>, ms = 10000): Promise<any> => {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
+    return new Promise((resolve, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new Error('timeout'));
+      }, ms);
+      fn(controller.signal).then(
+        (val) => { clearTimeout(timer); resolve(val); },
+        (err) => { clearTimeout(timer); reject(err); },
+      );
+    });
+  };
 
   const refreshSource = async (src: string, adapter: { fetch(opts: { signal?: AbortSignal }): Promise<any> }): Promise<void> => {
     try {
-      const fresh = await fetchWithTimeout(() => adapter.fetch({}));
+      const fresh = await fetchWithTimeout((signal) => adapter.fetch({ signal }));
       cached = cached.filter((i: any) => i.source !== src);
       cached.push(...fresh);
     } catch {
