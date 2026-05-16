@@ -39,6 +39,7 @@ import {
   findMarketplaceSource,
   createReviewSource,
   findTutorialSource,
+  flagMarketplaceSource,
   listReviewsSource,
   profileSource,
   publishPackageSource,
@@ -855,9 +856,28 @@ async function commandFlag(parsed: ParsedArgs, io: CliIo): Promise<number> {
   const type = stringFlag(parsed, 'type') || 'discussion';
 
   if (flagMarketplace(type)) {
-    writeLine(io.stdout, `Flagged ${style.accent(id)} for ${reason} (${type})`);
+    const source = await writeSourceOptions(parsed, io);
+    if (!source.ok) return usageError(io, source.error);
+
+    const targetType = (type === 'workflow' ? 'workflow' : 'package') as 'package' | 'workflow';
+    const result = await flagMarketplaceSource(source.options, id, {
+      reason,
+      targetType,
+      notes: stringFlag(parsed, 'notes'),
+    });
+
     if (parsed.flags.json) {
-      writeJson(io.stdout, { id, reason, type, success: true });
+      writeJson(io.stdout, { id, reason, targetType, success: result.data.success, deduplicated: result.data.deduplicated });
+      return result.data.success ? 0 : 1;
+    }
+
+    if (result.data.deduplicated) {
+      writeLine(io.stdout, `Already flagged ${style.accent(id)}`);
+    } else if (result.data.success) {
+      writeLine(io.stdout, `Flagged ${style.accent(id)} for ${reason} (${targetType})`);
+    } else {
+      writeLine(io.stdout, `Could not flag — API not configured. Run \`agora auth login --api-url <url>\` first.`);
+      return 1;
     }
     return 0;
   }

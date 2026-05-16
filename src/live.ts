@@ -447,6 +447,38 @@ export async function profileSource(
   return api(payload?.user ? mapProfile(payload.user) : null, options);
 }
 
+export interface MarketplaceFlagInput {
+  reason: 'spam' | 'harassment' | 'undisclosed-llm' | 'malicious' | 'other';
+  targetType: 'package' | 'workflow';
+  notes?: string;
+}
+
+export async function flagMarketplaceSource(
+  opts: SourceOptions,
+  targetId: string,
+  input: MarketplaceFlagInput
+): Promise<SourceResult<{ success: boolean; deduplicated?: boolean }>> {
+  if (!opts.useApi || !opts.apiUrl || !opts.token) {
+    return { source: 'offline', data: { success: false }, fallbackReason: 'API required for flag' };
+  }
+  const fetcher = (opts as any).fetcher ?? globalThis.fetch;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10000);
+  try {
+    const res = await fetcher(`${opts.apiUrl}/api/marketplace/flag/${targetId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${opts.token}` },
+      body: JSON.stringify(input),
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`Failed to flag: ${res.status}`);
+    const data = (await res.json()) as { success: boolean; deduplicated?: boolean };
+    return { source: 'api', apiUrl: opts.apiUrl, data };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function shouldUseApi(options: SourceOptions): boolean {
   return Boolean(options.useApi && options.apiUrl);
 }
