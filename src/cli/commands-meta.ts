@@ -613,5 +613,43 @@ export const COMMANDS: CommandMeta[] = [
       'agora auth status',
       'agora auth logout'
     ]
+  },
+  {
+    name: 'preferences',
+    group: 'Setup',
+    summary: 'View or set local preferences',
+    usage: 'agora preferences [<key> <value>] [--json]',
+    details:
+      'Preferences are stored locally on disk and work without an account. ' +
+      'Keys: theme (dark|light|auto), verbosity (verbose|medium|quiet), ' +
+      'username, email, bio.',
+    flags: [
+      { flag: '--json', description: 'Output preferences as JSON' }
+    ],
+    examples: [
+      'agora preferences',
+      'agora preferences theme light',
+      'agora preferences verbosity quiet',
+      'agora preferences username "Jane Doe"'
+    ]
+  },
+  {
+    name: 'history',
+    group: 'Setup',
+    summary: 'View search and chat history',
+    usage: 'agora history [--limit N] [--clear] [--json]',
+    details:
+      'Shows recent searches and chat messages. History is stored locally and ' +
+      'works offline. Use --clear to erase all history.',
+    flags: [
+      { flag: '--limit', description: 'Number of entries to show (default: 50)' },
+      { flag: '--clear', description: 'Clear all history' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora history',
+      'agora history --limit 10',
+      'agora history --clear'
+    ]
   }
 ];

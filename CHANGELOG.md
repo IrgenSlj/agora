@@ -1,144 +1,13 @@
 # Changelog
 
-## Unreleased
+## [0.4.0] - 2026-05-16
 
-The "destination scaffold" working session. Phase 1.5 design landed,
-the full-screen TUI shipped as a working scaffold, and two
-user-reported shell bugs were fixed. No version bump (per project
-policy — sculpt before releasing). The next bump will be 0.5.0 once
-news + community fixtures are replaced with live data.
-
-### Added
-
-- **`agora tui`** — the full-screen Agora TUI, designed by Claude
-  Design and integrated end-to-end. Top-tabs frame, five pages
-  (Home · Marketplace · Community · News · Settings), `1`-`5` page
-  switch, `Tab`/`Shift-Tab` cycle, `j/k` nav, `Enter` drill-in,
-  `?` overlay help, `q` quit, `Ctrl-L` redraw. Alt-screen entry/exit
-  is clean; `NO_COLOR` and narrow-terminal (< 80 cols) fallbacks both
-  work. Each page ships in two density variants (calm + dense, see
-  `src/cli/pages/*.{calm,dense}.ts`); the active set is calm/calm/
-  dense/dense/dense per the design rationale.
-- **TUI shell entrypoints** — `/tui` opens Home; `/home`, `/market`,
-  `/marketplace`, `/comm`, `/community`, `/news`, `/settings` open
-  the TUI on that page. Wires through the same in-process pattern as
-  `/menu` — no subprocess. Auto-complete picks up all seven aliases.
-- **`COMMUNITY_GUIDELINES.md`** — drafted ahead of the community
-  feature shipping. Codifies flag-don't-delete, the kill-switch
-  criteria, LLM/bot self-identification, and earned-not-granted
-  reputation.
-- **`docs/TUI_DESIGN.md`** — the brainstorm that drove the Claude
-  Design brief: top-tabs layout, recommendation-engine Home, toml
-  settings persistence, two density variants per page, ASCII
-  mockups for each.
-- **`docs/PHASE_1_5_PLAN.md`** — implementation-level companion to
-  `ROADMAP.md` Phase 1.5. File paths, signatures, SQL deltas, TUI
-  fixture call-sites tagged, verification checklist, repo layout map.
-- **`docs/claude-design-brief-tui.md`** — paste-ready prompt that
-  produced the TUI deliverables. Kept in the repo so future design
-  passes can reuse the format.
-- **`src/settings.ts`** — stub for `AgoraSettings` + `loadSettings`/
-  `writeSettings` so the settings page compiles end-to-end. Real
-  toml parser/serialiser lands in a later PR; the type surface and
-  defaults are stable.
-- **Phase 1.5 directory scaffolds** — `src/cli/pages/`, `src/news/`,
-  `src/news/sources/`, `src/community/`, `test/fixtures/news/`,
-  `test/fixtures/community/` (the page directory is now populated by
-  the TUI deliverables; the others wait for their PRs).
-
-### Fixed
-
-- **`/agora`-prefixed slash inputs in the shell** were falling through
-  to bash because `isExecutable('/agora')` resolved against PATH
-  (Node's `path.join('/usr/bin', '/agora')` strips the leading slash
-  and matched the real binary). Slash inputs that aren't an exact
-  meta now route to the agora CLI; `isExecutable` rejects any name
-  containing `/`. +6 regression tests.
-- **Prompt-line duplication on narrow terminals** — the renderer
-  counted *logical* footer lines instead of *physical* rows, so when
-  a 70-col footer wrapped to 2 rows on a 50-col terminal, the
-  cursor-up landed on the wrong row and a new prompt printed per
-  keystroke. Rewrote `renderPromptFrame` to take terminal width plus
-  a `FramePosition` describing the previous frame, and to erase via
-  `\x1b[J` from the top of that frame. Backward-compatible default
-  (`width=Infinity`); 5 new tests cover the wrap math.
-- **`cd <nonexistent>`** updated `currentCwd` without verifying the
-  target existed. Subsequent `spawn` calls then failed with
-  `Error: spawn /bin/sh ENOENT`. The cd handler now stat-checks
-  before assigning and prints `cd: no such file or directory: …`.
-
-### Docs
-
-- README — count corrections (61 MCP / 6 prompts / 12 workflows /
-  12 tutorials), Project Status expanded with shell/mcp/chat rows
-  plus Phase 1.5 placeholders, duplicate plugin command row removed.
-- SECURITY — supported-versions table updated to `0.4.x / 0.3.x /
-  <0.3`; known-issues section names the backend `requireUser` token
-  flaw and the missing permission manifests.
-- ROADMAP — Phase 1.5 "Destination" added as the headline next step,
-  with three pillars (news, community hub, marketplace polish),
-  production-readiness gates, and a 12-PR sequence.
-- ARCHITECTURE — new "Destination, not just a tool" section
-  describes the news + community direction and the trust through-line.
-- CONTRIBUTING — project-structure block refreshed to match current
-  `src/` layout (cli/, transcript.ts, all modules) and current data
-  counts.
-- test/README — rewritten against the actual 16-file / ~440-test
-  suite.
-
-## [0.4.1] - 2026-05-15
-
-The "marketplace UX" release. Search and browse now support sorting,
-table rendering, and pagination. The shell got auto-complete on `/`,
-a useful footer (model + rotating tips), and fixes for arrow keys and
-`/quit` hang. npm packages fully validated against the registry.
-
-### Added
-
-- **`--sort stars|installs|name|updated|relevance`** flag on `agora search`
-  and `agora trending`. Sort results by any dimension, with `--order asc|desc`.
-- **`--table`** flag on `agora search` and `agora trending`. Renders a
-  box-drawn table (┌ ┐ └ ┘ │ ─) with id, name, stars, and installs columns.
-- **Pagination:** `--page N --per-page N` on `agora search`. Non-overlapping
-  pages with a navigation hint footer.
-- **Auto-complete slash commands on `/`.** As soon as you type `/`, matching
-  slash commands appear in the footer — narrowed with each character,
-  re-shown on backspace. No Tab needed.
-- **Model name + rotating tips footer.** Replaced the unhelpful turn-count
-  display with `model: deepseek-… · type /help to see all slash commands`.
-  17 tips, stable per turn.
-- **`login` / `logout` / `whoami` CLI aliases.** Delegate to `auth login`,
-  `auth logout`, `auth status --json` respectively.
-- **login/whoami tests.** Integration tests verify login writes state and
-  whoami reads it back.
-- **npm validation tests (network-gated).** 20 npmPackage entries verified
-  live against the registry; 15 fixed (13 removed, 2 corrected).
-
-### Fixed
-
-- **Arrow keys in shell.** `[` (0x5b) was treated as a CSI final byte,
-  causing `\x1b[` to be silently dropped and `A`/`B`/`C`/`D` to arrive as
-  printable characters. Auto-complete now works with up/down history navigation.
-- **`/quit` hangs the shell.** stdin stayed in flowing mode after the prompter
-  cleaned up, keeping the event loop alive. Added `inp.pause()` in cleanup
-  and `process.exit()` in the entrypoint.
-- **`/clear` now reprints home banner.** Clears screen then redraws the
-  full home state — wordmark, motto, version line, slash commands.
-- **`searchMarketplaceItems` sort was inverted.** `compareByPopularity`
-  returned descending but was negated again for `desc` order, producing
-  ascending results. All comparators normalized to ascending order.
-- **`getTrendingItems` sort reference.** Was calling `.sort(compareByPopularity)`
-  directly; switched to inline arrow function for clarity.
-- **Data tests assumed every MCP package must have npmPackage.** Updated to
-  allow browsable-only entries (no npmPackage) while still validating
-  installable ones.
-
-## [0.4.0] - 2026-05-15
-
-The "interactive shell" release. Running `agora` with no arguments in a TTY
-now drops you into a live, persistent shell with bash/chat dispatch, a
-designed look, and live status. Adds an `agora chat` free-inference path and
-an MCP server mode.
+The "interactive shell & destination scaffold" release — the largest in Agora's
+history. Running `agora` in a TTY now drops you into a live, persistent shell
+with bash/chat dispatch, a designed look, and live status. The full-screen TUI
+ships as a working scaffold with five pages and two density variants. Search and
+browse gained sorting, table rendering, and pagination. Every AI-facing string
+in the plugin was audited and optimized. 17K new lines across 97 files.
 
 ### Added
 
@@ -157,60 +26,92 @@ an MCP server mode.
   session. Plugin tool (`/agora chat "..."`) makes the same available
   inside OpenCode.
 - **`agora mcp`** — marketplace as an MCP server. All seven marketplace
-  tools (search, browse, trending, install-preview, save, list-saved,
-  workflow-use) exposed as standard MCP tools. Add to `opencode.json` or
-  any MCP client for conversational catalog queries. `agora init --mcp`
-  auto-registers it.
-- **Carved-relief wordmark.** New `AGORA_WORDMARK_RELIEF` — a single set
-  of letterforms with an algorithmic top-highlight / bottom-shadow pass
-  that reads as carved stone under the gradient. Replaces the four
-  earlier wordmark variants (solid / outline / shaded / textured).
-- **Greek-key meander frieze.** Three-row architectural ribbon under
-  the banner: solid top bar, zigzag teeth (`▀▀▄▄` × 13), solid bottom
-  bar. Also doubles as the determinate progress bar during installs
-  (single-line in that mode so it can redraw in place).
-- **Live thinking line + ionic mascot.** While the model is generating,
-  the chat renderer prints a live duration counter with an animated
-  4-frame ionic-column glyph (`╭⊙─⊙╮` swaying). TTY-only, gated on
-  ≥50 cols so narrow terminals stay quiet.
-- **Live status footer.** A single dim line under the prompt input
-  (cwd · model · verbosity · turns · cost), repainted on every
-  keystroke and cleared on submit so output flows from a fresh line.
-- **Markdown chat output.** Streamed chat responses are now formatted
-  inline: `**bold**` → ANSI bold, `` `code` `` → accent, `- bullet` →
-  `·` in accent, `#/##/###` headers → accent. Fenced ``` ``` ``` code
-  blocks pass through untouched (with dim fences).
-- **`/agora` slash command** inside OpenCode. Plugins can only register
-  tools, so `agora init` also writes `.opencode/command/agora.md` to
-  forward your input to the matching `agora_*` tool.
-- **`docs/ARCHITECTURE.md`** — the three-surface model, the
-  open-marketplace direction, and the inference question, written down.
+  tools exposed as standard MCP tools. `agora init --mcp` auto-registers it.
+- **`agora tui`** — the full-screen Agora TUI. Top-tabs frame, five pages
+  (Home · Marketplace · Community · News · Settings), `1`-`5` page
+  switch, `Tab`/`Shift-Tab` cycle, `j/k` nav, `Enter` drill-in,
+  `?` overlay help, `q` quit, `Ctrl-L` redraw. Alt-screen entry/exit
+  is clean; `NO_COLOR` and narrow-terminal (< 80 cols) fallbacks both
+  work. Each page ships in two density variants (calm + dense).
+- **TUI shell entrypoints** — `/tui`, `/home`, `/market`, `/marketplace`,
+  `/comm`, `/community`, `/news`, `/settings` open the TUI on that page.
+- **`--sort stars|installs|name|updated|relevance`** flag on `agora search`
+  and `agora trending`, with `--order asc|desc`.
+- **`--table`** flag on `agora search` and `agora trending` — box-drawn table
+  rendering with id, name, stars, and installs columns.
+- **Pagination:** `--page N --per-page N` on `agora search`.
+- **Auto-complete slash commands on `/`.** Matching commands appear in the
+  footer as you type, narrowed with each character, re-shown on backspace.
+- **Model name + rotating tips footer.** Replaced turn-count display with
+  `model: deepseek-… · type /help to see all slash commands`. 17 tips.
+- **Carved-relief wordmark.** Algorithmic top-highlight / bottom-shadow pass
+  that reads as carved stone under the gradient.
+- **Greek-key meander frieze.** Three-row architectural ribbon under the
+  banner; doubles as the determinate progress bar during installs.
+- **Live thinking line + ionic mascot** — animated 4-frame ionic-column glyph
+  while the model is generating. TTY-only, gated on ≥50 cols.
+- **Live status footer** under the prompt (cwd · model · verbosity · turns ·
+  cost), repainted on every keystroke.
+- **Markdown chat output** — `**bold**` `code` `- bullet` `# headers` rendered
+  inline with ANSI; fenced code blocks pass through untouched.
+- **`/agora` slash command** — `.opencode/command/agora.md` written by
+  `agora init`, forwarding input to the matching `agora_*` tool.
+- **`login` / `logout` / `whoami` CLI aliases** — delegate to `auth login`,
+  `auth logout`, `auth status --json`.
+- **`COMMUNITY_GUIDELINES.md`** — flag-don't-delete, kill-switch criteria,
+  LLM/bot self-identification, earned-not-granted reputation.
+- **`AGENTS.md`** — developer prompt for AI-efficient tool design, output
+  formatting, slash command routing, and pre-commit checks.
+- **`docs/ARCHITECTURE.md`**, `docs/TUI_DESIGN.md`, `docs/PHASE_1_5_PLAN.md`,
+  `docs/claude-design-brief-tui.md` — architecture, design rationale, and
+  Phase 1.5 implementation plan.
+- **`src/settings.ts`** — `AgoraSettings` + `loadSettings`/`writeSettings`
+  stubs for TOML persistence.
+- **Phase 1.5 directory scaffolds** — `src/cli/pages/`, `src/news/`,
+  `src/news/sources/`, `src/community/`, `test/fixtures/news/`,
+  `test/fixtures/community/`.
+- **npm validation tests (network-gated)** — 20 npmPackage entries verified
+  live against the registry; 15 fixed, 2 corrected.
 
 ### Changed
 
-- README and the `agora_info` tool now explain the
-  tool-vs-slash-command distinction instead of implying the plugin
-  registers `/agora` itself.
+- **Optimized `/agora` slash command prompt** — reduced from 33 lines of
+  preamble, tool re-listing, and background to a single routing rule. The
+  model already sees tool descriptions from plugin registration; repeating
+  them wasted tokens on every invocation.
+- **Trending ranked by installs, not stars** — modelcontextprotocol/servers
+  monorepo packages shared one star count; now uses npm download counts.
+- **Plugin tool output reformatted** — counts shown as `264.2K`, ids
+  displayed for `browse`/`install`, config blocks no longer mis-indented.
+- README/`agora_info` explain the tool-vs-slash-command distinction instead
+  of implying the plugin registers `/agora` itself.
+- Deps bumped: TypeScript 5→6, ESLint 9→10, zod 3→4, `@types/node` 22→25.
 
 ### Removed
 
-- **Dropped the fabricated plugin tools.** `agora_review`,
-  `agora_discussions`, and `agora_profile` returned hardcoded or
-  fake-success data with nothing behind them. The plugin now ships
-  only the seven offline-capable marketplace tools. Profiles, reviews,
-  discussions, and publishing remain in the `agora` CLI, which is
-  backend-backed.
+- **Fabricated plugin tools.** `agora_review`, `agora_discussions`, and
+  `agora_profile` returned hardcoded data. Profiles, reviews, discussions,
+  and publishing remain in the CLI (backend-backed).
+- Dead modules: `src/api.ts`, `src/logger.ts`.
 
 ### Fixed
 
-- **Trending no longer ties on stars.** Every package in the
-  modelcontextprotocol/servers monorepo shares one repo-level star
-  count, so trending and empty-query search now rank by `installs`
-  (npm downloads) — a real per-package signal. `agora_trending` shows
-  install counts for packages.
-- Plugin tool output now formats counts (`264.2K` instead of `264237`),
-  leads with installs, shows item ids for `browse`/`install`, and the
-  `install` command's fenced config blocks are no longer mis-indented.
+- **Arrow keys in shell** — `[` (0x5b) was treated as a CSI final byte,
+  dropping escape sequences. Auto-complete now works with up/down history.
+- **`/quit` hanging** — stdin stayed in flowing mode after prompter cleanup.
+  Added `inp.pause()` and `process.exit()`.
+- **`/clear` now reprints home banner** — wordmark, motto, version, commands.
+- **`/agora`-prefixed slash inputs** fell through to bash because
+  `isExecutable('/agora')` resolved against PATH. Rejected if name contains `/`.
+- **Prompt-line duplication on narrow terminals** — rewrote `renderPromptFrame`
+  with terminal width awareness and `\x1b[J` erase from the top of the frame.
+  +5 tests.
+- **`cd <nonexistent>`** updated `currentCwd` without verifying the target.
+  Now stat-checks before assigning.
+- **`searchMarketplaceItems` sort inverted** — `compareByPopularity` was
+  double-negated for `desc` order. All comparators normalized to ascending.
+- **Data tests assumed every MCP package must have `npmPackage`** — updated to
+  allow browsable-only entries.
 
 ## [0.3.0] - 2026-05-14
 

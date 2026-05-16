@@ -40,6 +40,30 @@ export function writeCache(dataDir: string, items: NewsItem[]): void {
   writeFileSync(path, lines.join('\n') + '\n', 'utf8');
 }
 
+export interface NewsMeta {
+  read: string[];
+  saved: string[];
+}
+
+export function metaPath(dataDir: string): string {
+  return join(dataDir, 'news-meta.json');
+}
+
+export function readNewsMeta(dataDir: string): NewsMeta {
+  const path = metaPath(dataDir);
+  if (!existsSync(path)) return { read: [], saved: [] };
+  try {
+    return JSON.parse(readFileSync(path, 'utf8'));
+  } catch {
+    return { read: [], saved: [] };
+  }
+}
+
+export function writeNewsMeta(dataDir: string, meta: NewsMeta): void {
+  mkdirSync(dataDir, { recursive: true });
+  writeFileSync(metaPath(dataDir), JSON.stringify(meta, null, 2), 'utf8');
+}
+
 export function isStale(
   items: NewsItem[],
   source: NewsSource,

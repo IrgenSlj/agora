@@ -65,3 +65,65 @@ Before any commit:
 - `bun run lint` — must pass  
 - `bun run build` — must produce working dist/
 - Read `src/index.ts` and `src/commands.ts` — verify AI-facing strings are crisp
+
+## Publishing to npm
+
+The release process is driven by GitHub Releases — the CI workflow (`.github/workflows/publish.yml`) auto-publishes when a release is created. Manual publish is also possible but not recommended.
+
+### Release Checklist
+
+1. **Bump the version** in `package.json` (remove `-dev` suffix, set to release version).  
+   The changelog drives the decision: check CHANGELOG.md for the `## Unreleased` section content.
+
+2. **Finalize the changelog** — in CHANGELOG.md, rename `## Unreleased` to `## [<version>] - <YYYY-MM-DD>`.  
+   Read through the entries: are they accurate? Is anything missing? Is the language public-facing?
+
+3. **Quality gates** — run all four:
+   ```
+   bun run typecheck
+   bun run lint
+   bun run build
+   bun test
+   ```
+
+4. **Commit and push:**
+   ```
+   git add -A
+   git commit -m "Release v<version>"
+   git push origin main
+   ```
+
+5. **Tag the release:**
+   ```
+   git tag v<version>
+   git push origin v<version>
+   ```
+
+6. **Create the GitHub Release** — point at the tag, use the changelog section as body:
+   ```bash
+   gh release create v<version> --title "v<version>" --notes "$(cat CHANGELOG.md | awk '/^## \['"$version"'\]/,/^## \[/' | head -n -2)"
+   ```
+   Or create it manually in the GitHub UI. This triggers the `publish.yml` workflow.
+
+7. **Verify the publish:**
+   - Check `https://github.com/<owner>/agora/actions` — the Publish workflow should succeed.
+   - Verify on npm: `npm view opencode-agora version` shows the new version.
+   - Quick smoke test: `npx opencode-agora --version` and `npx opencode-agora search filesystem`.
+
+### Rollback (if needed)
+
+```
+npm unpublish opencode-agora@<version>
+git tag -d v<version> && git push origin :refs/tags/v<version>
+```
+
+Only unpublish within the first 72 hours. After that, publish a patch bump instead.
+
+### Version Bump Rules
+
+| Change scope | Bump | Example |
+|---|---|---|
+| Breaking API/CLI change | minor | `0.3.0` → `0.4.0` |
+| New feature (backward-compatible) | minor | `0.3.0` → `0.4.0` |
+| Bug fix / documentation | patch | `0.3.0` → `0.3.1` |
+| Changelog policy | — | Never bump for changelog-only changes; do it in the next feature/fix release.

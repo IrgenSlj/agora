@@ -75,6 +75,8 @@ import {
   supportsTrueColor,
   type Styler
 } from '../ui.js';
+import { loadPreferences, writePreferences, prefsPath } from '../preferences.js';
+import { appendHistory, loadHistory, clearHistory } from '../history.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -236,6 +238,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         return await commandVote(parsed, io);
       case 'flag':
         return await commandFlag(parsed, io);
+      case 'preferences':
+        return await commandPreferences(parsed, io);
+      case 'history':
+        return await commandHistory(parsed, io);
       case 'menu':
         return await runInteractiveMenu(io, style);
       case 'tui':
@@ -375,6 +381,12 @@ async function commandSearch(parsed: ParsedArgs, io: CliIo): Promise<number> {
     writeLine(io.stdout, style.dim(`Page ${page} · ${perPage} per page. Use --page N to navigate.`));
   }
 
+  appendHistory(detectDataDir(parsed, io), {
+    type: 'search',
+    query,
+    timestamp: new Date().toISOString(),
+    results: results.length,
+  });
   return 0;
 }
 
@@ -1213,8 +1225,15 @@ async function commandChat(parsed: ParsedArgs, io: CliIo): Promise<number> {
     child.on('close', (code) => {
       if (!wroteNewline) process.stdout.write('\n');
 
+      const dataDir = detectDataDir(parsed, io);
+      appendHistory(dataDir, {
+        type: 'chat',
+        query: message,
+        timestamp: new Date().toISOString(),
+        model,
+      });
+
       if (sessionId) {
-        const dataDir = detectDataDir(parsed, io);
         persistChatSession(dataDir, sessionId);
         if (!rawJson) {
           process.stdout.write(`\x1b[2mSession: ${sessionId.slice(0, 24)}…  `);
@@ -1862,6 +1881,83 @@ async function commandProfile(parsed: ParsedArgs, io: CliIo): Promise<number> {
   }
 
   writeLine(io.stdout, formatProfileDetail(result.data));
+  return 0;
+}
+
+async function commandPreferences(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const dataDir = detectDataDir(parsed, io);
+  const prefs = loadPreferences(dataDir);
+  const sub = parsed.args[0];
+
+  if (!sub) {
+    if (parsed.flags.json) {
+      writeJson(io.stdout, prefs);
+      return 0;
+    }
+    writeLine(io.stdout, `Preferences (${prefsPath(dataDir)})`);
+    writeLine(io.stdout, `  theme:      ${prefs.theme}`);
+    writeLine(io.stdout, `  verbosity:  ${prefs.verbosity}`);
+    writeLine(io.stdout, `  username:   ${prefs.username || '(not set)'}`);
+    writeLine(io.stdout, `  email:      ${prefs.email || '(not set)'}`);
+    writeLine(io.stdout, `  bio:        ${prefs.bio ? prefs.bio.slice(0, 60) + (prefs.bio.length > 60 ? '...' : '') : '(not set)'}`);
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, '  Set values:  agora preferences <key> <value>');
+    writeLine(io.stdout, '  Keys:        theme, verbosity, username, email, bio');
+    return 0;
+  }
+
+  const key = sub as keyof typeof prefs;
+  const val = parsed.args.slice(1).join(' ');
+
+  if (!val || !(key in prefs)) {
+    return usageError(io, `Usage: agora preferences <key> <value>\nValid keys: theme, verbosity, username, email, bio`);
+  }
+
+  if (key === 'theme' && !['dark', 'light', 'auto'].includes(val)) {
+    return usageError(io, 'theme must be: dark, light, or auto');
+  }
+  if (key === 'verbosity' && !['verbose', 'medium', 'quiet'].includes(val)) {
+    return usageError(io, 'verbosity must be: verbose, medium, or quiet');
+  }
+
+  (prefs as unknown as Record<string, string>)[key] = val;
+  writePreferences(dataDir, prefs);
+  writeLine(io.stdout, `\u2713 ${key} set to "${val}"`);
+  return 0;
+}
+
+async function commandHistory(parsed: ParsedArgs, io: CliIo): Promise<number> {
+  const dataDir = detectDataDir(parsed, io);
+  const limit = numberFlag(parsed, 'limit', 'n') || 50;
+
+  if (parsed.flags.clear) {
+    clearHistory(dataDir);
+    writeLine(io.stdout, '\u2713 History cleared');
+    return 0;
+  }
+
+  const entries = loadHistory(dataDir, limit);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, entries);
+    return 0;
+  }
+
+  if (entries.length === 0) {
+    writeLine(io.stdout, 'No history yet.');
+    writeLine(io.stdout, 'Searches and chat messages are recorded automatically.');
+    return 0;
+  }
+
+  writeLine(io.stdout, `Recent history (${entries.length}):`);
+  for (const entry of entries) {
+    const icon = entry.type === 'search' ? '\uD83D\uDD0D' : '\uD83D\uDCAC';
+    const date = new Date(entry.timestamp).toLocaleString();
+    const query = entry.query.length > 60 ? entry.query.slice(0, 60) + '...' : entry.query;
+    writeLine(io.stdout, `  ${icon} ${style.dim(date)}  ${query}`);
+  }
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, style.dim('Use --clear to clear history, --json for JSON output.'));
   return 0;
 }
 

@@ -2,7 +2,7 @@ import type { Page, PageAction, PageContext } from './types.js';
 import type { NewsItem, ScoredNewsItem, NewsSource } from '../../news/types.js';
 import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
 import { rankItems } from '../../news/score.js';
-import { readCache, writeCache, isStale } from '../../news/cache.js';
+import { readCache, writeCache, isStale, readNewsMeta, writeNewsMeta } from '../../news/cache.js';
 import { formatNumber } from '../../format.js';
 import { hnSource } from '../../news/sources/hn.js';
 import { redditSource } from '../../news/sources/reddit.js';
@@ -53,6 +53,8 @@ interface NewsState {
   previewLines: string[];
   previewScroll: number;
   previewLoading: boolean;
+  previewPhase: string;
+  dataDir: string | null;
 }
 
 const state: NewsState = {
@@ -71,6 +73,8 @@ const state: NewsState = {
   previewLines: [],
   previewScroll: 0,
   previewLoading: false,
+  previewPhase: '',
+  dataDir: null,
 };
 
 function detectDataDir(ctx: PageContext): string {
@@ -227,7 +231,9 @@ async function startPreview(item: ScoredNewsItem, ctx: PageContext): Promise<voi
   state.previewContent = item.url;
   state.previewLines = [];
   state.previewLoading = true;
+  state.previewPhase = 'Fetching article\u2026';
   ctx.repaint();
+  await sleep(100);
 
   const rawText = await fetchArticlePreview(item.url);
   if (rawText.startsWith('(failed') || rawText.startsWith('(error') || rawText.startsWith('(could not')) {
@@ -237,10 +243,26 @@ async function startPreview(item: ScoredNewsItem, ctx: PageContext): Promise<voi
     return;
   }
 
+  state.previewPhase = 'Summarizing\u2026';
+  ctx.repaint();
+  await sleep(100);
+
   const summary = await trySummarize(rawText);
   state.previewLines = wordWrap(summary ?? rawText, ctx.width - 4);
   state.previewLoading = false;
   ctx.repaint();
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(r => setTimeout(r, ms));
+}
+
+function persistMeta(): void {
+  if (!state.dataDir) return;
+  writeNewsMeta(state.dataDir, {
+    read: [...state.read],
+    saved: [...state.saved],
+  });
 }
 
 function visible(): ScoredNewsItem[] {
@@ -270,15 +292,20 @@ export const newsPage: Page = {
   ],
   mount(ctx: PageContext): void {
     const dataDir = detectDataDir(ctx);
+    state.dataDir = dataDir;
     const cached = readCache(dataDir);
     if (cached.length > 0) {
       const config = DEFAULT_NEWS_CONFIG;
       state.items = rankItems(cached, config, new Date());
       state.loading = false;
     }
+    const meta = readNewsMeta(dataDir);
+    state.read = new Set(meta.read);
+    state.saved = new Set(meta.saved);
     refreshNews(ctx);
   },
   unmount(): void {
+    persistMeta();
     state.view = 'list';
   },
   render(ctx: PageContext): string {
@@ -289,7 +316,8 @@ export const newsPage: Page = {
       const item = state.previewItem;
 
       if (state.previewLoading) {
-        lines.push(' ' + style.dim('Loading article\u2026'));
+        const dots = state.previewPhase === 'Summarizing\u2026' ? '\u25D4' : '\u25D9';
+        lines.push(' ' + dots + '  ' + style.dim(state.previewPhase || 'Loading\u2026'));
         return frame(lines, width, height);
       }
       if (!item) {
@@ -500,12 +528,13 @@ export const newsPage: Page = {
         if (it) {
           if (state.saved.has(it.id)) state.saved.delete(it.id);
           else state.saved.add(it.id);
+          persistMeta();
         }
         return { kind: 'none' };
       }
       case 'm': {
         const it = list[state.cursor];
-        if (it) state.read.add(it.id);
+        if (it) { state.read.add(it.id); persistMeta(); }
         return { kind: 'none' };
       }
       case '/': state.filtering = true; return { kind: 'none' };
