@@ -951,6 +951,54 @@ app.post('/api/workflows', async (c) => {
   }
 });
 
+app.post('/api/marketplace/flag/:id', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
+  const user = await requireUser(c);
+  if (isResponse(user)) return user;
+
+  const targetId = c.req.param('id');
+  if (!targetId) return c.json({ error: 'Missing target id' }, 400);
+
+  let body: any;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON body' }, 400); }
+
+  const targetType = String(body.targetType || '').trim();
+  if (targetType !== 'package' && targetType !== 'workflow') {
+    return c.json({ error: 'targetType must be package or workflow' }, 400);
+  }
+
+  const reason = String(body.reason || '').trim();
+  const validReasons = ['spam', 'harassment', 'undisclosed-llm', 'malicious', 'other'];
+  if (!validReasons.includes(reason)) {
+    return c.json({ error: 'Invalid reason' }, 400);
+  }
+
+  const notes = body.notes ? String(body.notes).slice(0, 500) : null;
+
+  try {
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM flags WHERE reporter_id = ? AND target_id = ? AND target_type = ?'
+    ).bind(user.id, targetId, targetType).first();
+    if (existing) {
+      return c.json({ success: true, deduplicated: true });
+    }
+
+    const id = `flag-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    await c.env.DB.prepare(
+      `INSERT INTO flags (id, target_id, target_type, reporter_id, reason, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).bind(id, targetId, targetType, user.id, reason, notes).run();
+
+    return c.json({ success: true });
+  } catch (e) {
+    console.error('POST /api/marketplace/flag/:id error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
 app.get('/api/workflows/:id', async (c) => {
   const id = c.req.param('id');
 
@@ -1045,6 +1093,55 @@ app.post('/api/discussions', async (c) => {
     });
   } catch (e) {
     console.error('POST /api/discussions error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+app.post('/api/community/flag/:id', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
+  const user = await requireUser(c);
+  if (isResponse(user)) return user;
+
+  const targetId = c.req.param('id');
+  if (!targetId) return c.json({ error: 'Missing target id' }, 400);
+
+  let body: any;
+  try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON body' }, 400); }
+
+  const targetType = String(body.targetType || '').trim();
+  if (targetType !== 'discussion' && targetType !== 'reply') {
+    return c.json({ error: 'targetType must be discussion or reply' }, 400);
+  }
+
+  const reason = String(body.reason || '').trim();
+  const validReasons = ['spam', 'harassment', 'undisclosed-llm', 'malicious', 'other'];
+  if (!validReasons.includes(reason)) {
+    return c.json({ error: 'Invalid reason' }, 400);
+  }
+
+  const notes = body.notes ? String(body.notes).slice(0, 500) : null;
+
+  try {
+    // Dedup: if this user already flagged this target with any reason, return success without insert.
+    const existing = await c.env.DB.prepare(
+      'SELECT id FROM flags WHERE reporter_id = ? AND target_id = ? AND target_type = ?'
+    ).bind(user.id, targetId, targetType).first();
+    if (existing) {
+      return c.json({ success: true, deduplicated: true });
+    }
+
+    const id = `flag-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+    await c.env.DB.prepare(
+      `INSERT INTO flags (id, target_id, target_type, reporter_id, reason, notes, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
+    ).bind(id, targetId, targetType, user.id, reason, notes).run();
+
+    return c.json({ success: true });
+  } catch (e) {
+    console.error('POST /api/community/flag/:id error:', e);
     return c.json({ error: 'Internal server error' }, 500);
   }
 });
