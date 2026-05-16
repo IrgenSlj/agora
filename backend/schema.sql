@@ -1,7 +1,9 @@
--- Agora Backend Database Schema
+-- Agora Backend Database Schema v2
+-- BREAKING CHANGE: github_access_token column removed from users; refresh_tokens table added (OAuth token pair model).
 -- Run this against Cloudflare D1
 
 -- Users table
+-- NOTE: GitHub OAuth tokens are never persisted after this schema version.
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   username TEXT UNIQUE NOT NULL,
@@ -9,7 +11,6 @@ CREATE TABLE IF NOT EXISTS users (
   bio TEXT,
   avatar_url TEXT,
   github_id TEXT UNIQUE,
-  github_access_token TEXT,
   is_llm INTEGER NOT NULL DEFAULT 0,
   llm_model TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -197,13 +198,24 @@ CREATE TABLE IF NOT EXISTS rate_limits (
   reset_at TEXT NOT NULL
 );
 
+-- Refresh tokens (rotating, 90d, server-side tracked by sha256(jti))
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  jti_hash TEXT PRIMARY KEY,           -- sha256(jti), base64url
+  user_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  expires_at TEXT NOT NULL,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at);
+
 -- Device codes for OAuth device-code login flow
 CREATE TABLE IF NOT EXISTS device_codes (
   device_code TEXT PRIMARY KEY,
   user_code TEXT UNIQUE NOT NULL,
   client_id TEXT NOT NULL DEFAULT 'agora-cli',
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'authorized', 'expired', 'completed')),
-  github_token TEXT,
+  github_id TEXT,  -- set during /auth/device/callback; consumed by /auth/device/token to mint the JWT pair
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   expires_at TEXT NOT NULL,
   verified_at TEXT
