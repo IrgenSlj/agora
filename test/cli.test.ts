@@ -1188,6 +1188,31 @@ describe('help system', () => {
     expect(stderr.join('')).toContain('Unknown command: bogus');
   });
 
+  test('agora share emits a markdown snippet', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['share', 'mcp-github'], io);
+    const out = stdout.join('');
+    expect(code).toBe(0);
+    expect(out).toContain('**');
+    expect(out).toContain('Install: `agora install mcp-github`');
+  });
+
+  test('agora share --json wraps the snippet', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['share', 'mcp-github', '--json'], io);
+    expect(code).toBe(0);
+    const payload = JSON.parse(stdout.join(''));
+    expect(payload.id).toBe('mcp-github');
+    expect(payload.snippet).toContain('Install:');
+  });
+
+  test('agora share unknown id exits 1', async () => {
+    const { io, stderr } = createIo();
+    const code = await runCli(['share', 'nope-no-such-thing'], io);
+    expect(code).toBe(1);
+    expect(stderr.join('')).toContain('Unknown item');
+  });
+
   test('unknown command suggests the nearest match', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['serch', 'mcp'], io);

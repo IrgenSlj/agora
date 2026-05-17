@@ -65,3 +65,32 @@ export const commandOpen: CommandHandler = async (parsed, io, _style) => {
   writeLine(io.stdout, url);
   return 0;
 };
+
+export const commandShare: CommandHandler = async (parsed, io, _style) => {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'share requires an item id');
+
+  const item = findMarketplaceItem(id);
+  if (!item) {
+    writeLine(io.stderr, `Unknown item: ${id}`);
+    return 1;
+  }
+
+  const isPackage = item.kind === 'package';
+  const repo = isPackage ? item.repository : undefined;
+  const npm =
+    isPackage && item.npmPackage ? `https://www.npmjs.com/package/${item.npmPackage}` : undefined;
+  const link = repo || npm;
+  const author = item.author ? ` by ${item.author}` : '';
+  const linkLine = link ? `\n${link}` : '';
+  const tags = item.tags?.length ? `\n${item.tags.map((t) => '#' + t).join(' ')}` : '';
+  const snippet = `**${item.name}**${author}\n${item.description ?? ''}${linkLine}${tags}\n\nInstall: \`agora install ${item.id}\``;
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { id: item.id, name: item.name, link, snippet });
+    return 0;
+  }
+
+  writeLine(io.stdout, snippet);
+  return 0;
+};

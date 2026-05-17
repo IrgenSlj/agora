@@ -799,6 +799,17 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'share',
+    group: 'Marketplace',
+    summary: 'Print a shareable markdown snippet for a marketplace item',
+    usage: 'agora share <id> [--json]',
+    details:
+      'Produces a markdown blurb with the item name, description, link, tags, and install ' +
+      'command — paste-ready for a community post, README, or chat message.',
+    flags: [{ flag: '--json', description: 'Output { id, name, link, snippet } as JSON' }],
+    examples: ['agora share mcp-github', 'agora share mcp-filesystem --json']
+  },
+  {
     name: 'author',
     group: 'Marketplace',
     summary: 'List marketplace items by a specific author',

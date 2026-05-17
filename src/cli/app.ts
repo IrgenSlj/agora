@@ -151,6 +151,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       notify: notifyModule.commandNotify,
       today: todayModule.commandToday,
       open: browseModule.commandOpen,
+      share: browseModule.commandShare,
       author: marketplace.commandAuthor,
       bookmarks: operations.commandBookmarks,
       welcome: welcomeModule.commandWelcome,
