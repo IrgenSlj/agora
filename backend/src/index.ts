@@ -874,6 +874,13 @@ app.post('/api/packages', async (c) => {
     return c.json({ error: 'id, name, and description are required' }, 400);
   }
 
+  if (name.length > 100 || description.length > 500 || (npmPackage && npmPackage.length > 200)) {
+    return c.json(
+      { error: 'name ≤ 100, description ≤ 500, npmPackage ≤ 200 chars' },
+      400
+    );
+  }
+
   if (category === 'mcp' && !npmPackage) {
     return c.json({ error: 'npmPackage is required for MCP packages' }, 400);
   }
@@ -993,6 +1000,13 @@ app.post('/api/workflows', async (c) => {
 
   if (!id || !name || !description || !prompt) {
     return c.json({ error: 'id, name, description, and prompt are required' }, 400);
+  }
+
+  if (name.length > 100 || description.length > 500 || prompt.length > 50000) {
+    return c.json(
+      { error: 'name ≤ 100, description ≤ 500, prompt ≤ 50000 chars' },
+      400
+    );
   }
 
   try {
@@ -1154,6 +1168,10 @@ app.post('/api/discussions', async (c) => {
     return c.json({ error: 'title and content are required' }, 400);
   }
 
+  if (title.length > 200 || content.length > 10000) {
+    return c.json({ error: 'title ≤ 200, content ≤ 10000 chars' }, 400);
+  }
+
   const id = `disc-${crypto.randomUUID()}`;
   const createdAt = new Date().toISOString();
 
@@ -1226,15 +1244,22 @@ app.get('/api/community/boards', async (c) => {
   }
 });
 
+const VALID_THREAD_SORTS = ['new', 'top', 'active'] as const;
+type ThreadSort = (typeof VALID_THREAD_SORTS)[number];
+
 app.get('/api/community/threads', async (c) => {
   const board = c.req.query('board') ?? '';
-  const sort = c.req.query('sort') ?? 'active';
+  const sortParam = c.req.query('sort') ?? 'active';
   const page = Math.max(1, parseInt(c.req.query('page') ?? '1', 10) || 1);
   const PAGE_SIZE = 25;
 
   if (!COMMUNITY_BOARD_IDS.includes(board)) {
     return c.json({ error: 'Invalid board' }, 400);
   }
+  if (!VALID_THREAD_SORTS.includes(sortParam as ThreadSort)) {
+    return c.json({ error: 'sort must be one of: ' + VALID_THREAD_SORTS.join(', ') }, 400);
+  }
+  const sort = sortParam as ThreadSort;
 
   // `new` is purely chronological. `top` and `active` weight in the author's
   // reputation via weightedThreadScore so high-rep users surface higher.
@@ -1912,11 +1937,12 @@ app.get('/api/users/:username', async (c) => {
 
   try {
     const user = (await c.env.DB.prepare(
-      `
-      SELECT id, username, display_name, bio, avatar_url, reputation, created_at
-      FROM users
-      WHERE username = ?
-    `
+      `SELECT u.id, u.username, u.display_name, u.bio, u.avatar_url, u.reputation, u.created_at,
+              (SELECT COUNT(*) FROM packages    WHERE author = u.username) AS package_count,
+              (SELECT COUNT(*) FROM workflows   WHERE author = u.username) AS workflow_count,
+              (SELECT COUNT(*) FROM discussions WHERE author = u.username) AS discussion_count
+       FROM users u
+       WHERE u.username = ?`
     )
       .bind(username)
       .first()) as any;
@@ -1924,22 +1950,6 @@ app.get('/api/users/:username', async (c) => {
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
     }
-
-    const packageCount = (await c.env.DB.prepare(
-      'SELECT COUNT(*) AS count FROM packages WHERE author = ?'
-    )
-      .bind(user.username)
-      .first()) as any;
-    const workflowCount = (await c.env.DB.prepare(
-      'SELECT COUNT(*) AS count FROM workflows WHERE author = ?'
-    )
-      .bind(user.username)
-      .first()) as any;
-    const discussionCount = (await c.env.DB.prepare(
-      'SELECT COUNT(*) AS count FROM discussions WHERE author = ?'
-    )
-      .bind(user.username)
-      .first()) as any;
 
     return c.json({
       user: {
@@ -1949,9 +1959,9 @@ app.get('/api/users/:username', async (c) => {
         bio: user.bio,
         avatar_url: user.avatar_url,
         reputation: Number(user.reputation || 0),
-        package_count: Number(packageCount?.count || 0),
-        workflow_count: Number(workflowCount?.count || 0),
-        discussion_count: Number(discussionCount?.count || 0),
+        package_count: Number(user.package_count || 0),
+        workflow_count: Number(user.workflow_count || 0),
+        discussion_count: Number(user.discussion_count || 0),
         created_at: user.created_at
       }
     });
