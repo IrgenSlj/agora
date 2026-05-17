@@ -9,6 +9,75 @@ gained completions, history, job control, a letter-shortcut surface, and a
 broad new command surface (`export`, `watch`, `notify`, `config doctor`, …).
 No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
 
+### Fixed — security (shell injection × 3 + http→https)
+
+Three real shell-eval hazards from an internal review:
+
+- **`commandConfig edit`** previously `execSync(\`${editor} "${configPath}"\`)`,
+  so a malicious or misconfigured `$EDITOR` value broke out of the
+  shell quoting. Switched to `execFileSync(editor, [path], ...)`.
+- **`commandAuth login`** interpolated the server-supplied
+  `verificationUri` into `open '...'` / `xdg-open '...'`. A
+  single-quote in the response escaped the quoting. Now we
+  `new URL(verificationUri)`, require an `http(s)://` scheme, and
+  `spawnSync` with an args array.
+- **`createInstallPlan` git-clone**: the `repository` URL was
+  interpolated into the install runner's `execSync`. Plans whose
+  URL contains shell metacharacters are now refused at plan-build
+  time with reason `"repository URL contains characters not
+  permitted by the install runner"`; accepts only `http(s)://...`
+  or `git@host:owner/repo` forms.
+- **arxiv**: switched the news source from `http://` to `https://`.
+
+### Fixed — concrete bugs
+
+- **`config doctor --fix`**: the "Removed N duplicate plugin
+  entries" message was always `0` because `config.plugin` was
+  reassigned before the subtraction. Now captures `originalLen`
+  first.
+- **`news-cache.jsonl` and `news-meta.json` atomic writes**: both
+  now write to a `.tmp` sibling + `renameSync` + `chmod 0o600`
+  (matches what `state.json` does). A SIGKILL mid-flush no longer
+  empties the user's news cache; meta is no longer world-readable
+  for the bookmark IDs.
+- **`agora community <board>` validation**: positional board arg is
+  now checked against `BOARD_IDS` at the entry point, so typos
+  print `Unknown board "<x>". Valid: mcp, agents, …` instead of
+  silently falling back to fixture with empty results. `--sort`
+  gets the same treatment.
+
+### Changed — consistency polish
+
+- **`communitySearchSource`**: dropped a stray
+  `process.stderr.write('[communitySearchSource] fetch error: …')`
+  debug line that leaked internal module names to the terminal;
+  now matches the silent-fallback pattern of every other source
+  wrapper.
+- **Install runner output**: `Failed: <cmd>` lines now write to
+  `io.stderr` instead of `io.stdout`, so an install with `--json`
+  no longer mixes error prose into the JSON stream.
+- **Device-code auth flow**: user-visible lines (code presentation,
+  "Browser opened.", "✓ Authenticated") now route through
+  `io.stdout` so they're testable. The CR-overwrite polling
+  spinner stays on `process.stdout` (io abstraction can't model
+  overwrite-in-place).
+- **News source User-Agents**: new shared `agoraUserAgent` constant
+  in `news/types.ts` reads the live `package.json` version.
+  Replaces the hardcoded `agora-cli/0.5.0` drift across arxiv +
+  github-trending and adds the previously-missing UA on hn.
+
+### Perf
+
+- **`refreshNews`** fires all stale source fetches in parallel via
+  `Promise.all`. Cold-start refresh is now bounded by the slowest
+  source instead of the sum.
+- **`getMarketplaceItems`** gained a 30s in-process memo keyed on
+  `AGORA_LIVE_HUBS`. TUI pages call this once per render — without
+  memoization that was 60+ catalog rebuilds per minute on
+  arrow-key navigation with live hubs enabled. The "empty" /
+  "stale" hub-cache console warnings are now deduped to once per
+  process.
+
 ### Changed — reviewer punch-list pass
 
 A focused quality pass driven by an internal codebase review:
