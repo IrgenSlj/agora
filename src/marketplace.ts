@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import type { Package, Workflow, Discussion, Tutorial } from './types.js';
 import {
   samplePackages,
@@ -9,7 +10,7 @@ import {
 import type { OpenCodeConfig } from './config.js';
 import { detectAgoraDataDir } from './state.js';
 import { readHubsCache } from './hubs/cache.js';
-import type { HubItem } from './hubs/types.js';
+import type { HubItem, InstallKind } from './hubs/types.js';
 
 export type MarketplaceCategory = 'all' | 'package' | 'mcp' | 'prompt' | 'workflow' | 'skill';
 export type MarketplaceItemType = 'package' | 'workflow';
@@ -50,11 +51,14 @@ export interface FindOptions {
 
 export interface InstallPlan {
   item: MarketplaceItem;
+  kind: InstallKind | 'workflow' | 'unsupported';
   installable: boolean;
   reason?: string;
   config: OpenCodeConfig;
   commands: string[];
   notes: string[];
+  cloneTarget?: string;
+  postInstallHint?: string;
 }
 
 const CONFIG_SCHEMA = 'https://opencode.ai/config.json';
@@ -231,13 +235,15 @@ export function getTrendingTags(limit = 8): string[] {
 
 export function createInstallPlan(
   item: MarketplaceItem,
-  existingConfig: OpenCodeConfig = {}
+  existingConfig: OpenCodeConfig = {},
+  opts?: { dataDir?: string }
 ): InstallPlan {
   const installKind = getInstallKind(item);
 
   if (installKind === 'unsupported') {
     return {
       item,
+      kind: 'unsupported',
       installable: false,
       reason: `${item.name} does not expose an install target yet`,
       config: normalizeConfig(existingConfig),
@@ -246,9 +252,46 @@ export function createInstallPlan(
     };
   }
 
+  if (installKind === 'git-clone') {
+    const repo = (item as any).repository as string;
+    const repoMatch = repo.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/|$)/);
+    const slug = repoMatch
+      ? `${repoMatch[1]}-${repoMatch[2]}`
+      : item.id.replace(/[^a-z0-9-]/gi, '-');
+    const cloneTarget = opts?.dataDir
+      ? join(opts.dataDir, 'installed', slug)
+      : `~/.config/agora/installed/${slug}`;
+    const cloneCommand = `git clone ${repo} ${cloneTarget}`;
+    const notes = opts?.dataDir
+      ? [`Repository will be cloned to ${cloneTarget}.`]
+      : [`Repository will be cloned to ${cloneTarget} (path resolved at install time).`];
+    return {
+      item,
+      kind: 'git-clone',
+      installable: true,
+      config: normalizeConfig(existingConfig),
+      commands: [cloneCommand],
+      notes,
+      cloneTarget
+    };
+  }
+
+  if (installKind === 'package-install') {
+    const commands: string[] = [];
+    return {
+      item,
+      kind: 'package-install',
+      installable: true,
+      config: normalizeConfig(existingConfig),
+      commands,
+      notes: ['Package will be installed via the appropriate package manager.']
+    };
+  }
+
+  // mcp-config-patch and workflow
   const config = buildOpenCodeConfig([item], existingConfig);
   const commands =
-    installKind === 'mcp' && item.kind === 'package' && item.npmPackage
+    installKind === 'mcp-config-patch' && item.kind === 'package' && item.npmPackage
       ? [`npm install -g ${item.npmPackage}`]
       : [];
   const notes =
@@ -260,11 +303,28 @@ export function createInstallPlan(
 
   return {
     item,
+    kind: installKind,
     installable: true,
     config,
     commands,
     notes
   };
+}
+
+export function extractPostInstallHint(readme: string): string | undefined {
+  const headingRe = /^##\s+(installation|install|setup|getting started)\s*$/im;
+  const match = headingRe.exec(readme);
+  if (!match) return undefined;
+  const afterHeading = readme.slice(match.index + match[0].length);
+  const lines = afterHeading.split('\n');
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('#')) break; // stop at next heading
+    if (trimmed) {
+      return trimmed.slice(0, 120);
+    }
+  }
+  return undefined;
 }
 
 export function buildOpenCodeConfig(
@@ -296,9 +356,12 @@ export function buildOpenCodeConfig(
   };
 }
 
-export function getInstallKind(item: MarketplaceItem): 'mcp' | 'workflow' | 'unsupported' {
-  if (item.kind === 'package' && item.npmPackage) return 'mcp';
+export function getInstallKind(item: MarketplaceItem): InstallKind | 'workflow' | 'unsupported' {
   if (item.kind === 'workflow') return 'workflow';
+  if (item.kind === 'package' && item.npmPackage) return 'mcp-config-patch';
+  if (item.kind === 'package' && item.repository && (item as any).source === 'github')
+    return 'git-clone';
+  // package-install reserved for future pypi/cargo detection — unreachable in v1
   return 'unsupported';
 }
 

@@ -1,9 +1,12 @@
+import { execSync } from 'node:child_process';
 import type { Page, PageAction, PageContext } from './types.js';
 import {
   getMarketplaceItems,
   searchMarketplaceItems,
   similarItems,
-  type MarketplaceItem
+  createInstallPlan,
+  type MarketplaceItem,
+  type InstallPlan
 } from '../../marketplace.js';
 import { vlen, rail, noRail, sep, fmtCount, frame, scrollbar } from './helpers.js';
 
@@ -15,6 +18,9 @@ interface MpState {
   filtering: boolean;
   category: string;
   sort: SortKey;
+  view: 'list' | 'install-preview';
+  installPlan: InstallPlan | null;
+  installStatus: string | null;
 }
 const state: MpState = {
   cursor: 0,
@@ -22,7 +28,10 @@ const state: MpState = {
   query: '',
   filtering: false,
   category: 'all',
-  sort: 'installs'
+  sort: 'installs',
+  view: 'list',
+  installPlan: null,
+  installStatus: null
 };
 
 function filtered(): MarketplaceItem[] {
@@ -53,6 +62,58 @@ export const marketplacePage: Page = {
   ],
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
+
+    if (state.view === 'install-preview' && state.installPlan) {
+      const plan = state.installPlan;
+      const lines: string[] = [];
+      lines.push(' ' + style.bold(style.accent('INSTALL PREVIEW')));
+      lines.push(' ' + sep('', width - 2, style));
+      lines.push('');
+      lines.push(' ' + style.bold(plan.item.name) + style.dim('  ' + plan.kind));
+      lines.push('');
+      if (plan.kind === 'git-clone') {
+        if (plan.cloneTarget) lines.push(' ' + style.dim('Target  ') + plan.cloneTarget);
+        if (plan.commands.length) {
+          lines.push('');
+          lines.push(' ' + style.dim('Command'));
+          for (const cmd of plan.commands) lines.push('   ' + cmd);
+        }
+        if (plan.postInstallHint) {
+          lines.push('');
+          lines.push(' ' + style.dim('Next steps  ') + plan.postInstallHint);
+        }
+      } else if (plan.kind === 'package-install') {
+        if (plan.commands.length) {
+          lines.push(' ' + style.dim('Commands'));
+          for (const cmd of plan.commands) lines.push('   ' + cmd);
+        }
+      } else {
+        if (plan.commands.length) {
+          lines.push(' ' + style.dim('Commands'));
+          for (const cmd of plan.commands) lines.push('   ' + cmd);
+        }
+        if (plan.notes.length) {
+          lines.push('');
+          for (const note of plan.notes) lines.push(' ' + style.dim(note));
+        }
+      }
+      if (state.installStatus) {
+        lines.push('');
+        lines.push(' ' + style.accent(state.installStatus));
+      }
+      lines.push('');
+      lines.push(
+        ' ' +
+          style.accent('y') +
+          style.dim(' confirm   ') +
+          style.accent('n') +
+          style.dim('/') +
+          style.accent('Esc') +
+          style.dim(' cancel')
+      );
+      return frame(lines, width, height);
+    }
+
     const items = filtered();
     state.cursor = Math.min(state.cursor, Math.max(0, items.length - 1));
     const lines: string[] = [];
@@ -173,6 +234,38 @@ export const marketplacePage: Page = {
     return frame(lines, width, height);
   },
   handleKey(event, _ctx): PageAction {
+    if (state.view === 'install-preview') {
+      if (event.key === 'y' && state.installPlan) {
+        const plan = state.installPlan;
+        if (!plan.installable) {
+          state.installStatus = plan.reason || 'Not installable.';
+          return { kind: 'none' };
+        }
+        // Spawn commands sequentially via execSync (best-effort in TUI)
+        let success = true;
+        for (const cmd of plan.commands) {
+          try {
+            execSync(cmd, { stdio: 'pipe', timeout: 60000 });
+          } catch {
+            state.installStatus = `Failed: ${cmd}`;
+            success = false;
+            break;
+          }
+        }
+        if (success) {
+          state.installStatus = `Installed ${plan.item.name}`;
+        }
+        return { kind: 'none' };
+      }
+      if (event.key === 'n' || event.key === 'esc') {
+        state.view = 'list';
+        state.installPlan = null;
+        state.installStatus = null;
+        return { kind: 'none' };
+      }
+      return { kind: 'none' };
+    }
+
     if (state.filtering) {
       if (event.key === 'esc') {
         state.filtering = false;
@@ -211,10 +304,12 @@ export const marketplacePage: Page = {
         return { kind: 'none' };
       case 'i': {
         const it = items[state.cursor];
-        return {
-          kind: 'status',
-          message: it ? 'install ' + it.id + ' queued' : 'nothing selected'
-        };
+        if (!it) return { kind: 'status', message: 'nothing selected' };
+        const plan = createInstallPlan(it);
+        state.installPlan = plan;
+        state.installStatus = null;
+        state.view = 'install-preview';
+        return { kind: 'none' };
       }
       case 's':
         return { kind: 'status', message: 'saved' };

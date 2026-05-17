@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import {
   buildOpenCodeConfig,
   createInstallPlan,
+  extractPostInstallHint,
   findMarketplaceItem,
   getInstallKind,
   getMarketplaceItems,
@@ -20,7 +21,7 @@ import {
   type MarketplaceItem,
   type PackageMarketplaceItem
 } from '../src/marketplace';
-import { samplePackages } from '../src/data';
+import { samplePackages, sampleWorkflows } from '../src/data';
 
 // ── searchMarketplaceItems ──────────────────────────────────────────────────
 
@@ -235,10 +236,10 @@ describe('findTutorial', () => {
 // ── createInstallPlan / buildOpenCodeConfig / getInstallKind ───────────────
 
 describe('getInstallKind', () => {
-  test('package with npmPackage → mcp', () => {
+  test('package with npmPackage → mcp-config-patch', () => {
     const pkg = samplePackages.find((p) => p.npmPackage) as (typeof samplePackages)[0];
     const item: PackageMarketplaceItem = { ...pkg, kind: 'package' };
-    expect(getInstallKind(item)).toBe('mcp');
+    expect(getInstallKind(item)).toBe('mcp-config-patch');
   });
 
   test('package without npmPackage → unsupported', () => {
@@ -253,6 +254,47 @@ describe('getInstallKind', () => {
     const item = findMarketplaceItem('wf-tdd-cycle');
     expect(item).not.toBeNull();
     expect(getInstallKind(item!)).toBe('workflow');
+  });
+
+  test('hub item with repository and source=github and no npmPackage → git-clone', () => {
+    const item: PackageMarketplaceItem = {
+      kind: 'package',
+      id: 'gh:owner/myrepo',
+      name: 'myrepo',
+      description: 'A GitHub hub repo',
+      author: 'owner',
+      version: 'main',
+      category: 'mcp',
+      tags: ['mcp'],
+      stars: 10,
+      installs: 10,
+      repository: 'https://github.com/owner/myrepo',
+      npmPackage: undefined,
+      createdAt: '2026-01-01T00:00:00Z',
+      pricing: { kind: 'free' },
+      source: 'github'
+    } as any;
+    expect(getInstallKind(item)).toBe('git-clone');
+  });
+
+  test('curated package without npmPackage and no github source → unsupported', () => {
+    const item: PackageMarketplaceItem = {
+      kind: 'package',
+      id: 'some-pkg',
+      name: 'some-pkg',
+      description: 'No npm, no source',
+      author: 'test',
+      version: '1.0.0',
+      category: 'prompt',
+      tags: [],
+      stars: 0,
+      installs: 0,
+      repository: '',
+      npmPackage: undefined,
+      createdAt: '2026-01-01T00:00:00Z',
+      pricing: { kind: 'free' }
+    };
+    expect(getInstallKind(item)).toBe('unsupported');
   });
 });
 
@@ -351,29 +393,32 @@ describe('similarItems', () => {
 // ── createInstallPlan ────────────────────────────────────────────────────────
 
 describe('createInstallPlan', () => {
-  test('MCP package produces installable plan with commands', () => {
+  test('MCP package (mcp-config-patch) produces installable plan with commands', () => {
     const pkg = findMarketplaceItem('mcp-github') as PackageMarketplaceItem;
     const plan = createInstallPlan(pkg);
     expect(plan.installable).toBe(true);
+    expect(plan.kind).toBe('mcp-config-patch');
     expect(plan.commands).toHaveLength(1);
     expect(plan.commands[0]).toBe('npm install -g @modelcontextprotocol/server-github');
     expect(plan.config.mcp!['mcp-github']).toBeDefined();
     expect(plan.notes.length).toBeGreaterThan(0);
   });
 
-  test('prompt package (no npmPackage) produces non-installable plan', () => {
+  test('prompt package (no npmPackage) produces non-installable plan with kind=unsupported', () => {
     const promptPkg = samplePackages.find((p) => p.category === 'prompt' && !p.npmPackage);
     if (!promptPkg) return;
     const item: PackageMarketplaceItem = { ...promptPkg, kind: 'package' };
     const plan = createInstallPlan(item);
     expect(plan.installable).toBe(false);
+    expect(plan.kind).toBe('unsupported');
     expect(plan.commands).toHaveLength(0);
   });
 
-  test('workflow item produces installable plan with plugin, no commands', () => {
+  test('workflow item produces installable plan with plugin, no commands, kind=workflow', () => {
     const wf = findMarketplaceItem('wf-tdd-cycle')!;
     const plan = createInstallPlan(wf);
     expect(plan.installable).toBe(true);
+    expect(plan.kind).toBe('workflow');
     expect(plan.commands).toHaveLength(0);
     expect(plan.config.plugin).toContain('skill-tdd-cycle');
   });
@@ -386,6 +431,114 @@ describe('createInstallPlan', () => {
     const plan = createInstallPlan(pkg, existing);
     expect(plan.config.mcp!['other-server']).toBeDefined();
     expect(plan.config.mcp!['mcp-filesystem']).toBeDefined();
+  });
+
+  test('git-clone hub item produces plan with cloneTarget and git clone command', () => {
+    const item: PackageMarketplaceItem = {
+      kind: 'package',
+      id: 'gh:owner/myrepo',
+      name: 'myrepo',
+      description: 'A GitHub hub repo',
+      author: 'owner',
+      version: 'main',
+      category: 'mcp',
+      tags: ['mcp'],
+      stars: 10,
+      installs: 10,
+      repository: 'https://github.com/owner/myrepo',
+      npmPackage: undefined,
+      createdAt: '2026-01-01T00:00:00Z',
+      pricing: { kind: 'free' },
+      source: 'github'
+    } as any;
+    const plan = createInstallPlan(item, {}, { dataDir: '/tmp/agora-test' });
+    expect(plan.installable).toBe(true);
+    expect(plan.kind).toBe('git-clone');
+    expect(plan.cloneTarget).toBe('/tmp/agora-test/installed/owner-myrepo');
+    expect(plan.commands).toHaveLength(1);
+    expect(plan.commands[0]).toContain('git clone');
+    expect(plan.commands[0]).toContain('https://github.com/owner/myrepo');
+  });
+
+  test('git-clone without dataDir uses placeholder path', () => {
+    const item: PackageMarketplaceItem = {
+      kind: 'package',
+      id: 'gh:owner/myrepo',
+      name: 'myrepo',
+      description: 'A GitHub hub repo',
+      author: 'owner',
+      version: 'main',
+      category: 'mcp',
+      tags: ['mcp'],
+      stars: 10,
+      installs: 10,
+      repository: 'https://github.com/owner/myrepo',
+      npmPackage: undefined,
+      createdAt: '2026-01-01T00:00:00Z',
+      pricing: { kind: 'free' },
+      source: 'github'
+    } as any;
+    const plan = createInstallPlan(item);
+    expect(plan.kind).toBe('git-clone');
+    expect(plan.cloneTarget).toContain('~/.config/agora/installed/');
+    expect(plan.notes.some((n) => n.includes('resolved at install time'))).toBe(true);
+  });
+});
+
+// ── extractPostInstallHint ───────────────────────────────────────────────────
+
+describe('extractPostInstallHint', () => {
+  test('returns undefined when no matching heading exists', () => {
+    const readme = '# My Repo\n\nSome content here.\n\n## Usage\n\nRun the tool.';
+    expect(extractPostInstallHint(readme)).toBeUndefined();
+  });
+
+  test('returns first non-empty line after ## Installation heading', () => {
+    const readme = '# My Repo\n\n## Installation\n\nnpm install -g my-tool\n\n## Usage\n\nRun it.';
+    expect(extractPostInstallHint(readme)).toBe('npm install -g my-tool');
+  });
+
+  test('returns first non-empty line after ## Install heading', () => {
+    const readme = '## Install\n\npip install mypackage\n';
+    expect(extractPostInstallHint(readme)).toBe('pip install mypackage');
+  });
+
+  test('returns first non-empty line after ## Setup heading', () => {
+    const readme = '## Setup\n\ncargo install mytool\n';
+    expect(extractPostInstallHint(readme)).toBe('cargo install mytool');
+  });
+
+  test('returns first non-empty line after ## Getting Started heading', () => {
+    const readme = '## Getting Started\n\nClone and run make install.\n';
+    expect(extractPostInstallHint(readme)).toBe('Clone and run make install.');
+  });
+
+  test('is case-insensitive for heading matching', () => {
+    const readme = '## INSTALLATION\n\nnpm install foo\n';
+    expect(extractPostInstallHint(readme)).toBe('npm install foo');
+  });
+
+  test('returns undefined when heading is at EOF with no content after it', () => {
+    const readme = '## Installation';
+    expect(extractPostInstallHint(readme)).toBeUndefined();
+  });
+
+  test('returns undefined when heading is followed only by blank lines then another heading', () => {
+    const readme = '## Installation\n\n## Usage\n\nnpm start';
+    expect(extractPostInstallHint(readme)).toBeUndefined();
+  });
+
+  test('truncates hint to 120 chars', () => {
+    const longLine = 'x'.repeat(200);
+    const readme = `## Installation\n\n${longLine}\n`;
+    const result = extractPostInstallHint(readme);
+    expect(result).toBeDefined();
+    expect(result!.length).toBe(120);
+  });
+
+  test('takes first matching heading when multiple exist', () => {
+    const readme = '## Install\n\nfirst hint\n\n## Setup\n\nsecond hint\n';
+    expect(extractPostInstallHint(readme)).toBe('first hint');
   });
 });
 

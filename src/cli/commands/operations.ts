@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { mkdirSync } from 'node:fs';
 import { formatConfigJson } from '../../config.js';
 import {
   detectOpenCodeConfigPath,
@@ -83,7 +84,8 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
   const loaded = loadOpenCodeConfig(configPath);
   if (loaded.error) return usageError(io, `${loaded.path}: ${loaded.error}`);
 
-  const plan = createInstallPlan(item, loaded.config);
+  const dataDir = detectDataDir(parsed, io);
+  const plan = createInstallPlan(item, loaded.config, { dataDir });
   if (!plan.installable) return usageError(io, plan.reason || `${item.name} is not installable`);
 
   if (parsed.flags.json) {
@@ -94,19 +96,146 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
       item,
       configPath,
       write: Boolean(parsed.flags.write),
+      kind: plan.kind,
       commands: plan.commands,
       notes: plan.notes,
-      config: plan.config
+      config: plan.config,
+      cloneTarget: plan.cloneTarget,
+      postInstallHint: plan.postInstallHint
     });
     return 0;
   }
 
   if (parsed.flags.write) {
-    writeOpenCodeConfig(configPath, plan.config);
-    writeLine(io.stdout, `Installed ${style.accent(item.name)}`);
-    writeLine(io.stdout, `${style.dim('Config')} ${configPath}`);
+    if (plan.kind === 'git-clone') {
+      if (plan.cloneTarget) {
+        try {
+          mkdirSync(plan.cloneTarget, { recursive: true });
+        } catch {
+          /* ignore if already exists */
+        }
+      }
+      if (plan.commands.length) {
+        writeLine(io.stdout, 'Cloning repository...');
+        for (const cmd of plan.commands) {
+          try {
+            execSync(cmd, { stdio: 'pipe', timeout: 60000 });
+            writeLine(io.stdout, `  ✓ ${cmd}`);
+          } catch (err: any) {
+            writeLine(io.stdout, `  ! Failed: ${cmd}`);
+            if (err.stderr) writeLine(io.stdout, String(err.stderr));
+          }
+        }
+      }
+      writeLine(io.stdout, `Installed ${style.accent(item.name)}`);
+      if (plan.cloneTarget) writeLine(io.stdout, `${style.dim('Location')} ${plan.cloneTarget}`);
+      if (plan.postInstallHint)
+        writeLine(io.stdout, `${style.dim('Next steps')} ${plan.postInstallHint}`);
+    } else if (plan.kind === 'package-install') {
+      if (plan.commands.length) {
+        writeLine(io.stdout, 'Installing packages...');
+        for (const cmd of plan.commands) {
+          try {
+            execSync(cmd, { stdio: 'pipe', timeout: 120000 });
+            writeLine(io.stdout, `  ✓ ${cmd}`);
+          } catch {
+            writeLine(io.stdout, `  ! Failed: ${cmd} (may already be installed)`);
+          }
+        }
+      }
+      writeLine(io.stdout, `Installed ${style.accent(item.name)}`);
+    } else {
+      writeOpenCodeConfig(configPath, plan.config);
+      writeLine(io.stdout, `Installed ${style.accent(item.name)}`);
+      writeLine(io.stdout, `${style.dim('Config')} ${configPath}`);
+      if (plan.commands.length) {
+        writeLine(io.stdout, 'Installing packages...');
+        for (const cmd of plan.commands) {
+          try {
+            execSync(cmd, { stdio: 'pipe', timeout: 120000 });
+            writeLine(io.stdout, `  ✓ ${cmd}`);
+          } catch {
+            writeLine(io.stdout, `  ! Failed: ${cmd} (may already be installed)`);
+          }
+        }
+      }
+    }
+    return 0;
+  }
+
+  writeLine(io.stdout, `Install preview: ${item.name}`);
+
+  if (plan.kind === 'git-clone') {
+    writeLine(io.stdout, `Kind: git-clone`);
+    if (plan.cloneTarget) writeLine(io.stdout, `Target directory: ${plan.cloneTarget}`);
     if (plan.commands.length) {
-      writeLine(io.stdout, 'Installing packages...');
+      writeLine(io.stdout, '\nCommands:');
+      writeLine(io.stdout, plan.commands.join('\n'));
+    }
+    if (plan.postInstallHint) writeLine(io.stdout, `\nNext steps: ${plan.postInstallHint}`);
+  } else if (plan.kind === 'package-install') {
+    writeLine(io.stdout, `Kind: package-install`);
+    if (plan.commands.length) {
+      writeLine(io.stdout, '\nCommands:');
+      writeLine(io.stdout, plan.commands.join('\n'));
+    }
+  } else {
+    writeLine(io.stdout, `Target config: ${configPath}`);
+
+    const perms = (item as any).permissions as
+      | { fs?: string[]; net?: string[]; exec?: string[] }
+      | undefined;
+    if (perms) {
+      writeLine(io.stdout, '\nDeclared permissions:');
+      if (perms.fs?.length)
+        writeLine(io.stdout, `  ${style.dim('filesystem')} ${perms.fs.join(', ')}`);
+      if (perms.net?.length)
+        writeLine(io.stdout, `  ${style.dim('network')}   ${perms.net.join(', ')}`);
+      if (perms.exec?.length)
+        writeLine(io.stdout, `  ${style.dim('exec')}     ${perms.exec.join(', ')}`);
+    }
+
+    if (plan.commands.length) {
+      writeLine(io.stdout, '\nCommands:');
+      writeLine(io.stdout, plan.commands.join('\n'));
+    }
+    writeLine(io.stdout, '\nopencode.json preview:');
+    writeLine(io.stdout, formatConfigJson(plan.config));
+  }
+
+  if (!parsed.flags.yes && !parsed.flags.y) {
+    writeLine(io.stdout, '\nRun with --write to update the config file and install packages.');
+  } else {
+    // --yes/-y: execute immediately (still showed preview above)
+    if (plan.kind === 'git-clone') {
+      if (plan.cloneTarget) {
+        try {
+          mkdirSync(plan.cloneTarget, { recursive: true });
+        } catch {
+          /* ignore */
+        }
+      }
+      for (const cmd of plan.commands) {
+        try {
+          execSync(cmd, { stdio: 'pipe', timeout: 60000 });
+          writeLine(io.stdout, `  ✓ ${cmd}`);
+        } catch (err: any) {
+          writeLine(io.stdout, `  ! Failed: ${cmd}`);
+          if (err.stderr) writeLine(io.stdout, String(err.stderr));
+        }
+      }
+      if (plan.postInstallHint) writeLine(io.stdout, `Next steps: ${plan.postInstallHint}`);
+    } else if (plan.kind === 'package-install') {
+      for (const cmd of plan.commands) {
+        try {
+          execSync(cmd, { stdio: 'pipe', timeout: 120000 });
+          writeLine(io.stdout, `  ✓ ${cmd}`);
+        } catch {
+          writeLine(io.stdout, `  ! Failed: ${cmd} (may already be installed)`);
+        }
+      }
+    } else {
+      writeOpenCodeConfig(configPath, plan.config);
       for (const cmd of plan.commands) {
         try {
           execSync(cmd, { stdio: 'pipe', timeout: 120000 });
@@ -116,32 +245,9 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
         }
       }
     }
-    return 0;
+    writeLine(io.stdout, `Installed ${style.accent(item.name)}`);
   }
 
-  writeLine(io.stdout, `Install preview: ${item.name}`);
-  writeLine(io.stdout, `Target config: ${configPath}`);
-
-  const perms = (item as any).permissions as
-    | { fs?: string[]; net?: string[]; exec?: string[] }
-    | undefined;
-  if (perms) {
-    writeLine(io.stdout, '\nDeclared permissions:');
-    if (perms.fs?.length)
-      writeLine(io.stdout, `  ${style.dim('filesystem')} ${perms.fs.join(', ')}`);
-    if (perms.net?.length)
-      writeLine(io.stdout, `  ${style.dim('network')}   ${perms.net.join(', ')}`);
-    if (perms.exec?.length)
-      writeLine(io.stdout, `  ${style.dim('exec')}     ${perms.exec.join(', ')}`);
-  }
-
-  if (plan.commands.length) {
-    writeLine(io.stdout, '\nCommands:');
-    writeLine(io.stdout, plan.commands.join('\n'));
-  }
-  writeLine(io.stdout, '\nopencode.json preview:');
-  writeLine(io.stdout, formatConfigJson(plan.config));
-  writeLine(io.stdout, '\nRun with --write to update the config file and install packages.');
   return 0;
 };
 
