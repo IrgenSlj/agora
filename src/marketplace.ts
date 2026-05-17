@@ -285,6 +285,22 @@ export function createInstallPlan(
 
   if (installKind === 'git-clone') {
     const repo = (item as any).repository as string;
+    // Refuse to clone repos whose URL contains shell metacharacters — the
+    // runner uses execSync(cmd, ...) and we shouldn't interpolate untrusted
+    // strings into shell. Accept only http(s):// or git@host:owner/repo forms.
+    const looksClean = /^(https?:\/\/[\w.\-/:?#=&%+~]+|git@[\w.\-]+:[\w.\-/]+)$/.test(repo);
+    if (!looksClean) {
+      return {
+        item,
+        kind: 'git-clone',
+        installable: false,
+        reason: 'repository URL contains characters not permitted by the install runner',
+        config: normalizeConfig(existingConfig),
+        commands: [],
+        notes: [],
+        permissions: itemPerms
+      };
+    }
     const repoMatch = repo.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/|$)/);
     const slug = repoMatch
       ? `${repoMatch[1]}-${repoMatch[2]}`

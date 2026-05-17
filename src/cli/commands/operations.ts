@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync, spawnSync } from 'node:child_process';
 import { readNewsMeta, readCache } from '../../news/cache.js';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { formatConfigJson } from '../../config.js';
@@ -631,12 +631,15 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
       writeFileSync(configPath, '{\n  "$schema": "https://opencode.ai/config.json"\n}\n', 'utf8');
       writeLine(io.stdout, `Created ${configPath}`);
     }
-    const editor = io.env?.EDITOR || io.env?.VISUAL || 'vi';
+    const editorRaw = io.env?.EDITOR || io.env?.VISUAL || 'vi';
+    const editorParts = editorRaw.trim().split(/\s+/);
+    const editorBin = editorParts[0]!;
+    const editorArgs = [...editorParts.slice(1), configPath];
     try {
-      execSync(`${editor} "${configPath}"`, { stdio: 'inherit' });
+      execFileSync(editorBin, editorArgs, { stdio: 'inherit' });
       writeLine(io.stdout, style.dim('Config saved.'));
     } catch {
-      return usageError(io, `Editor "${editor}" failed. Set $EDITOR or try manually: nano ${configPath}`);
+      return usageError(io, `Editor "${editorRaw}" failed. Set $EDITOR or try manually: nano ${configPath}`);
     }
     return 0;
   }
@@ -906,15 +909,20 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
       process.stdout.write(`  ${style.dim('Open in your browser:')} ${verificationUri}\n`);
       process.stdout.write(`  ${style.dim('Enter code:')}         ${userCode}\n\n`);
 
-      // Try to open browser automatically
+      // Try to open browser automatically. verificationUri is server-supplied,
+      // so we validate the scheme and pass via spawnSync args (no shell).
       try {
-        const url = `${verificationUri}`;
-        if (process.platform === 'darwin') {
-          execSync(`open '${url}'`, { timeout: 3000 });
-        } else if (process.platform === 'linux') {
-          execSync(`xdg-open '${url}'`, { timeout: 3000 });
+        const parsed = new URL(verificationUri);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+          throw new Error('Refusing to open non-http(s) verification URI');
         }
-        process.stdout.write(`  ${style.dim('Browser opened.')}\n\n`);
+        const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
+        const result = spawnSync(opener, [parsed.toString()], { timeout: 3000, stdio: 'ignore' });
+        if (result.status === 0) {
+          process.stdout.write(`  ${style.dim('Browser opened.')}\n\n`);
+        } else {
+          process.stdout.write(`  ${style.dim('Open the URL manually.')}\n\n`);
+        }
       } catch {
         process.stdout.write(`  ${style.dim('Open the URL manually.')}\n\n`);
       }

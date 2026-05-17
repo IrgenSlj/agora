@@ -17,7 +17,7 @@ export const arxivSource: SourceAdapter = {
     const now = new Date().toISOString();
 
     const categories = QUERY_CATEGORIES.join('+OR+');
-    const url = `http://export.arxiv.org/api/query?search_query=cat:${categories}&sortBy=submittedDate&sortOrder=descending&max_results=${MAX_RESULTS}`;
+    const url = `https://export.arxiv.org/api/query?search_query=cat:${categories}&sortBy=submittedDate&sortOrder=descending&max_results=${MAX_RESULTS}`;
 
     try {
       const res = await fetcher(url, {
