@@ -18,6 +18,7 @@ import * as operations from './commands/operations.js';
 import * as exportModule from './commands/export.js';
 import * as watchModule from './commands/watch.js';
 import * as notifyModule from './commands/notify.js';
+import * as todayModule from './commands/today.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -106,6 +107,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       export: exportModule.commandExport,
       watch: watchModule.commandWatch,
       notify: notifyModule.commandNotify,
+      today: todayModule.commandToday,
       open: browseModule.commandOpen,
       author: marketplace.commandAuthor,
       bookmarks: operations.commandBookmarks,

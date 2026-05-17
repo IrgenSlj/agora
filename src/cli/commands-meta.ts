@@ -510,6 +510,21 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'today',
+    group: 'Marketplace',
+    summary: 'Daily digest: top news, community threads, and trending items from the last 24h',
+    usage: 'agora today [--section news|community|market|all] [--json]',
+    flags: [
+      { flag: '--section, -s', description: 'Show only one section: news, community, market, or all (default all)' },
+      { flag: '--json', description: 'Output { at, news, threads, trending } as JSON' }
+    ],
+    examples: [
+      'agora today',
+      'agora today --section news',
+      'agora today --json'
+    ]
+  },
+  {
     name: 'community',
     group: 'Community',
     summary: 'Browse community boards and threads',

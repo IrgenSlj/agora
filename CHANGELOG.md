@@ -9,6 +9,16 @@ gained completions, history, job control, a letter-shortcut surface, and a
 broad new command surface (`export`, `watch`, `notify`, `config doctor`, …).
 No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
 
+### Added — `agora today`
+
+- **`agora today`** — one-shot daily digest. Reads the local news cache
+  (no network) for stories from the last 24h, the `mcp` community board
+  for active threads (auth-gated; dim hint when not signed in), and
+  `getTrendingItems()` for top marketplace items — top 3 per section.
+  Flags: `--section news|community|market|all` (default all), `--json`.
+  Empty sections render a single dim line, not blank. New
+  `src/cli/commands/today.ts`; 5 test cases in `test/today.test.ts`.
+
 ### Added — `agora open / author / bookmarks`
 
 - **`agora open <id>`** opens a marketplace item's repository (or its
