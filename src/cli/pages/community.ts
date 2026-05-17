@@ -201,6 +201,7 @@ async function loadBoards(ctx: PageContext): Promise<void> {
     /* keep empty */
   }
   boardsLoading = false;
+  ctx.repaint();
 }
 
 async function loadThreads(boardId: string, ctx: PageContext): Promise<void> {
@@ -527,6 +528,24 @@ export const communityPage: Page = {
   mount(_ctx: PageContext): void {
     boardsLoading = true;
     loadBoards(_ctx);
+  },
+  unmount(): void {
+    if (state.statusTimer) {
+      clearTimeout(state.statusTimer);
+      state.statusTimer = null;
+    }
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = null;
+    }
+    state.search = null;
+    state.composer = null;
+    state.flagModal = null;
+    state.filtering = false;
+    state.filter = '';
+    state.view = 'boards';
+    state.expandedItems.clear();
+    state.userVotes.clear();
   },
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;

@@ -75,8 +75,8 @@ function matchesPricingFilter(item: MarketplaceItem, filter: PricingFilter): boo
   return kind === filter;
 }
 
-function filtered(): MarketplaceItem[] {
-  const all = state.query ? searchMarketplaceItems({ query: state.query }) : getMarketplaceItems();
+function filtered(source: ReadonlyArray<MarketplaceItem>): MarketplaceItem[] {
+  const all = state.query ? searchMarketplaceItems({ query: state.query }) : source;
   const sorted = all.slice().sort((a, b) => {
     if (state.sort === 'name') return a.name.localeCompare(b.name);
     if (state.sort === 'stars') return (b.stars ?? 0) - (a.stars ?? 0);
@@ -212,7 +212,7 @@ export const marketplacePage: Page = {
     }
 
     const allItems = getMarketplaceItems();
-    const items = filtered();
+    const items = filtered(allItems);
     state.cursor = Math.min(state.cursor, Math.max(0, items.length - 1));
     const lines: string[] = [];
 
@@ -493,7 +493,7 @@ export const marketplacePage: Page = {
       }
       return { kind: 'none' };
     }
-    const items = filtered();
+    const items = filtered(getMarketplaceItems());
     switch (event.key) {
       case 'j':
       case 'down':

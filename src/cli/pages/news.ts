@@ -81,6 +81,8 @@ interface NewsState {
   previewScroll: number;
   previewLoading: boolean;
   previewPhase: string;
+  previewAbort: AbortController | null;
+  previewChild: ReturnType<typeof spawn> | null;
   dataDir: string | null;
 }
 
@@ -103,6 +105,8 @@ const state: NewsState = {
   previewScroll: 0,
   previewLoading: false,
   previewPhase: '',
+  previewAbort: null,
+  previewChild: null,
   dataDir: null
 };
 
@@ -228,6 +232,7 @@ function trySummarize(text: string): Promise<string | null> {
       stdio: ['ignore', 'pipe', 'pipe'],
       shell: false
     });
+    state.previewChild = child;
 
     let response = '';
     const timer = setTimeout(() => {
@@ -235,7 +240,7 @@ function trySummarize(text: string): Promise<string | null> {
       resolve(null);
     }, 30000);
 
-    child.stdout.on('data', (chunk: Buffer) => {
+    child.stdout?.on('data', (chunk: Buffer) => {
       for (const line of chunk.toString().split('\n').filter(Boolean)) {
         try {
           const ev = JSON.parse(line);
@@ -248,19 +253,21 @@ function trySummarize(text: string): Promise<string | null> {
 
     child.on('close', () => {
       clearTimeout(timer);
+      if (state.previewChild === child) state.previewChild = null;
       resolve(response || null);
     });
     child.on('error', () => {
       clearTimeout(timer);
+      if (state.previewChild === child) state.previewChild = null;
       resolve(null);
     });
   });
 }
 
-async function fetchArticlePreview(url: string): Promise<string> {
+async function fetchArticlePreview(url: string, signal: AbortSignal): Promise<string> {
   try {
     const resp = await fetch(url, {
-      signal: AbortSignal.timeout(8000),
+      signal,
       headers: { 'User-Agent': 'Agora/0.4.0 (+https://agora.opencode.ai)' }
     });
     if (!resp.ok) return `(error: HTTP ${resp.status})`;
@@ -274,6 +281,11 @@ async function fetchArticlePreview(url: string): Promise<string> {
 }
 
 async function startPreview(item: ScoredNewsItem, ctx: PageContext): Promise<void> {
+  if (state.previewAbort) state.previewAbort.abort();
+  if (state.previewChild && !state.previewChild.killed) state.previewChild.kill();
+  const ac = new AbortController();
+  const timeoutId = setTimeout(() => ac.abort(), 8000);
+  state.previewAbort = ac;
   state.view = 'preview';
   state.previewScroll = 0;
   state.previewItem = item;
@@ -284,7 +296,9 @@ async function startPreview(item: ScoredNewsItem, ctx: PageContext): Promise<voi
   ctx.repaint();
   await sleep(100);
 
-  const rawText = await fetchArticlePreview(item.url);
+  const rawText = await fetchArticlePreview(item.url, ac.signal);
+  clearTimeout(timeoutId);
+  if (state.previewAbort !== ac) return; // superseded — bail without writing state
   if (
     rawText.startsWith('(failed') ||
     rawText.startsWith('(error') ||
@@ -301,8 +315,10 @@ async function startPreview(item: ScoredNewsItem, ctx: PageContext): Promise<voi
   await sleep(100);
 
   const summary = await trySummarize(rawText);
+  if (state.previewAbort !== ac) return; // superseded mid-summarize
   state.previewLines = wordWrap(summary ?? rawText, ctx.width - 4);
   state.previewLoading = false;
+  state.previewAbort = null;
   ctx.repaint();
 }
 
@@ -366,7 +382,16 @@ export const newsPage: Page = {
   },
   unmount(): void {
     persistMeta();
+    if (state.previewAbort) {
+      state.previewAbort.abort();
+      state.previewAbort = null;
+    }
+    if (state.previewChild && !state.previewChild.killed) {
+      state.previewChild.kill();
+      state.previewChild = null;
+    }
     state.view = 'list';
+    state.previewLoading = false;
   },
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
