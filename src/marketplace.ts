@@ -9,7 +9,7 @@ import {
 } from './data.js';
 import type { OpenCodeConfig } from './config.js';
 import { detectAgoraDataDir } from './state.js';
-import { readHubsCache } from './hubs/cache.js';
+import { isHubCacheStale, readHubsCache } from './hubs/cache.js';
 import type { HubItem, InstallKind } from './hubs/types.js';
 
 export type MarketplaceCategory = 'all' | 'package' | 'mcp' | 'prompt' | 'workflow' | 'skill';
@@ -96,6 +96,11 @@ export function getMarketplaceItems(): MarketplaceItem[] {
   if (process.env.AGORA_LIVE_HUBS === '1') {
     const dataDir = detectAgoraDataDir({ env: process.env });
     const hubItems = readHubsCache(dataDir);
+    if (hubItems.length === 0) {
+      console.warn('AGORA_LIVE_HUBS=1 but hub cache is empty. Run: bun scripts/refresh-hubs.ts');
+    } else if (isHubCacheStale(hubItems, 60, new Date())) {
+      console.warn('AGORA_LIVE_HUBS=1 but hub cache is stale (>60min). Run: bun scripts/refresh-hubs.ts');
+    }
     if (hubItems.length > 0) {
       const curatedIds = new Set(curated.map((i) => i.id));
       const live = hubItems.filter((item) => !curatedIds.has(item.id)).map(hubItemToPackage);

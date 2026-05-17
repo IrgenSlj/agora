@@ -100,6 +100,7 @@ const LETTER_SHORTCUTS: Record<string, LetterDispatch> = {
   '/l': { kind: 'meta', sub: 'last' },
   '/m': { kind: 'tui', page: 'marketplace' },
   '/n': { kind: 'tui', page: 'news' },
+  '/o': { kind: 'bash', cmd: 'agora browse' },
   '/p': { kind: 'bash', cmd: 'agora preferences' },
   '/q': { kind: 'meta', sub: 'quit' },
   '/r': { kind: 'bash', cmd: 'agora reviews' },
@@ -109,7 +110,8 @@ const LETTER_SHORTCUTS: Record<string, LetterDispatch> = {
   '/v': { kind: 'meta', sub: 'verbose' },
   '/w': { kind: 'bash', cmd: 'agora watch' },
   '/x': { kind: 'bash', cmd: 'agora export' },
-  '/y': { kind: 'bash', cmd: 'agora history' }
+  '/y': { kind: 'bash', cmd: 'agora history' },
+  '/z': { kind: 'bash', cmd: 'agora config doctor --fix' }
 };
 
 const QUESTION_STARTERS = new Set([
@@ -575,9 +577,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     'run `agora shell` anywhere to re-enter this interactive mode'
   ];
   // Amber chevron when opencode unavailable, accent otherwise
-  const accentChevron = opencodeAvailable ? style.accent('›') : '\x1b[38;5;214m›\x1b[0m';
+  const accentChevron = opencodeAvailable ? style.accent('›') : style.orange('›');
 
-  // B.3 — static portion of the prompt (no chevron); suffix added dynamically
+  // Static portion of the prompt (no chevron); suffix added dynamically
   function buildPromptBase(): string {
     return style.accent('agora') + ' ' + style.dim(shortCwd(currentCwd)) + ' ';
   }
@@ -759,7 +761,6 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           try {
             process.kill(job.pid, 0);
             process.stdout.write(style.dim(`Foreground: ${job.cmd}`) + '\n');
-            process.stdin.resume();
             await new Promise<void>((resolve) => {
               const check = setInterval(() => {
                 try {
@@ -989,7 +990,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     childActive = false;
     if (!done) childExitCode = 1;
 
-    // B.4 — show non-zero exit code
+    // Show non-zero exit code
     if (childExitCode !== 0) {
       process.stdout.write(style.dim(`· exit ${childExitCode}`) + '\n');
     }
@@ -1042,7 +1043,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     process.on('SIGINT', abortChat);
     childActive = true;
 
-    // B.4 — accumulate last 4 KB of stderr for failure diagnosis
+    // Accumulate last 4 KB of stderr for failure diagnosis
     let errBuffer = '';
     let chatExitCode = 0;
     let spawnError: Error | null = null;
@@ -1081,7 +1082,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     renderer.finalize();
     totalCost += renderer.getTotalCost();
 
-    // B.4 — detect and report chat failures
+    // Detect and report chat failures
     const chatFailed = spawnError !== null || (chatExitCode !== 0 && !renderer.hasReceivedText());
     if (chatFailed) {
       let reason: string;
@@ -1180,9 +1181,10 @@ function printLetterHelp(style: Styler): void {
     '',
     '  /a  again     /b  browse    /c  community  /d  doctor   /e  env',
     '  /f  fg        /g  search    /h  home       /i  init     /j  jobs',
-    '  /k  search    /l  last      /m  marketplace /n  news     /p  preferences',
-    '  /q  quit      /r  reviews   /s  settings   /t  terminal /u  use',
-    '  /v  verbose   /w  watch     /x  export     /y  history',
+    '  /k  search    /l  last      /m  marketplace /n  news     /o  browse',
+    '  /p  preferences /q  quit   /r  reviews   /s  settings /t  terminal',
+    '  /u  use       /v  verbose   /w  watch     /x  export   /y  history',
+    '  /z  doctor --fix',
     '',
     'Shortcuts are exact matches only (no arguments).',
     'Type /help for full command reference, /abc to show this again.'

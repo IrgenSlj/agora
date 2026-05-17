@@ -1,5 +1,4 @@
 import process from 'node:process';
-import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import {
   detectAgoraDataDir,
@@ -17,8 +16,6 @@ import type { CliIo, ParsedArgs, OutputStream } from './flags.js';
 
 // ── I/O helpers ──────────────────────────────────────────────────────────────
 
-const MIN_LINES_FOR_PAGER = 30;
-
 export function writeLine(stream: OutputStream, value = ''): void {
   stream.write(value.endsWith('\n') ? value : `${value}\n`);
 }
@@ -30,33 +27,6 @@ export function writeJson(stream: OutputStream, value: unknown): void {
 export function usageError(io: CliIo, message: string): number {
   writeLine(io.stderr, message);
   return 1;
-}
-
-export function shouldPage(
-  io: CliIo,
-  env: Record<string, string | undefined>,
-  lineCount: number,
-  hasJson: boolean = false
-): boolean {
-  if (env.NO_PAGER || env.AGORA_NO_PAGER || env.NO_COLOR != null) return false;
-  if (env.TERM === 'dumb') return false;
-  if (hasJson) return false;
-  const tty = Boolean((io.stdout as { isTTY?: boolean }).isTTY);
-  return tty && lineCount >= MIN_LINES_FOR_PAGER;
-}
-
-export function writeWithPager(
-  io: CliIo,
-  env: Record<string, string | undefined>,
-  text: string,
-  hasJson: boolean = false
-): void {
-  if (shouldPage(io, env, text.split('\n').length, hasJson)) {
-    const pager = env.PAGER || 'less';
-    spawnSync(pager, [], { input: text, stdio: ['pipe', 'inherit', 'inherit'] });
-  } else {
-    writeLine(io.stdout, text);
-  }
 }
 
 /**

@@ -75,19 +75,4 @@ export function extractPackageFromConfig(config: OpenCodeConfig): string[] {
   return packages;
 }
 
-export function validatePackageName(name: string): { valid: boolean; error?: string } {
-  if (!name) {
-    return { valid: false, error: 'Package name is required' };
-  }
 
-  if (name.startsWith('@')) {
-    const scoped = name.split('/');
-    if (scoped.length !== 2) {
-      return { valid: false, error: 'Invalid scoped package name' };
-    }
-  } else if (!/^[a-zA-Z0-9-_]+$/.test(name)) {
-    return { valid: false, error: 'Package name contains invalid characters' };
-  }
-
-  return { valid: true };
-}

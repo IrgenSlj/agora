@@ -604,6 +604,13 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
         escTimer = null;
       }
       if (!escBuf) return;
+      // If the buffer is just a bare \x1b, it means a new escape byte
+      // interrupted an incomplete sequence. Discard silently instead of
+      // dispatching a false Esc keypress that could dismiss ghost suggestions.
+      if (escBuf === '\x1b') {
+        escBuf = '';
+        return;
+      }
       const seq = escBuf;
       escBuf = '';
       dispatchEscSequence(seq);

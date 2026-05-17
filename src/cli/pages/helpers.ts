@@ -45,19 +45,6 @@ export function frame(lines: ReadonlyArray<string>, width: number, height: numbe
   return out.join('\n');
 }
 
-/** Box-drawing characters (with ASCII fallback if useAscii) */
-export function box(useAscii: boolean): {
-  tl: string;
-  tr: string;
-  bl: string;
-  br: string;
-  h: string;
-  v: string;
-} {
-  if (useAscii) return { tl: '+', tr: '+', bl: '+', br: '+', h: '-', v: '|' };
-  return { tl: '\u250c', tr: '\u2510', bl: '\u2514', br: '\u2518', h: '\u2500', v: '\u2502' };
-}
-
 /**
  * Render a scrollbar for a list viewport.
  * Returns an array of `height` strings, each being a 1-char scroll indicator.
