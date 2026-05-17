@@ -108,13 +108,13 @@ Make the existing marketplace the strongest part of the app.
 - **README enrichment** — ✓ **shipped**. Opening a GitHub item's detail view
   fetches its README and runs opencode-powered enrichment (1-sentence
   description + install hint), cached on disk keyed by `repo@sha`.
-- **`agora flag <id>`** for marketplace items — **pending**. Community-side flagging exists;
-  marketplace item flagging builds on the same flags table.
+- **`agora flag <id>`** for marketplace items — ✓ **shipped** (204e7f5). Wired to the same
+  `flags` table on the backend (2d4ab18) with CLI in `src/cli/app.ts` `commandFlag`.
 - **Permission manifests** — **pending**. Add `permissions: { fs?, net?, exec? }` to the
   `Package` type, display on `install` as an app-store-style prompt.
 - **Automated publish scan** — **pending**. Backend pre-publish check.
-- **Live npm download counts** — **pending**. Extend `scripts/refresh-data.ts` to hit
-  `api.npmjs.org/downloads/point/last-week/<pkg>`.
+- **Live npm download counts** — ✓ **shipped** (97ffd12). `scripts/refresh-data.ts` hits
+  `api.npmjs.org/downloads/point/last-week/<pkg>` for every npm-backed entry.
 
 ### Production-readiness gates (block backend deploy)
 
@@ -166,28 +166,68 @@ Make the existing marketplace the strongest part of the app.
 | — | TUI news preview with AI summarization | ✓ shipped |
 | — | TUI category tabs (Tab/Shift+Tab, arrow keys) | ✓ shipped |
 
-## Phase 1.6 — Polish (next)
+## Phase 1.6 — Polish (in progress)
 
 Small, focused PRs to close out loose ends from Phase 1.5. Each is independent
 and shippable on its own; no ordering constraint.
 
-- **HuggingFace README enrichment** — extend `src/hubs/enrichment.ts` to fetch
-  HF model cards (different API path than GitHub) and run the same opencode
-  description + install-hint pipeline. Cache key becomes `hf:<repoId>@<lastModified>`.
-- **Reputation calculation** — backend job that computes `account_age + log(net_votes)`
-  per user nightly, written to a `users.reputation` column. Displayed on `agora
-  profile`. Does NOT gate participation per the guidelines; affects sort weight
-  only on `top-week` and `active`.
-- **FTS5 search migration** — replace the LIKE-based community search with a
-  FTS5 virtual table + triggers on `discussions` and `discussion_replies` for
-  proper full-text. The current TODO is at `backend/src/index.ts` in the search
-  handler.
-- **Kill-switch operator UI** — backend has `kill_switch_log` table; needs a
-  maintainer-only CLI (`agora admin hide <id> --reason …`) that writes to it and
-  flips the `hidden` flag. Per guidelines, every use is logged publicly.
-- **Flagged auto-hide trigger** — when `flag_count >= 10` on a single item,
-  backend auto-sets `hidden = 1`. TODO from the community PR.
-- **VHS demo tape + README hero gif + 0.5.0 bump** — the "Destination" release.
+- **HuggingFace README enrichment** — ✓ **shipped**. `fetchHfRepoMetadata` +
+  `enrichHfItem` in `src/hubs/enrichment.ts` mirror the GitHub flow; cache
+  key is `hf:<repoId>@<lastModified>`, falls back `models → datasets → spaces`
+  on 404. Wired into the marketplace TUI for HF detail views.
+- **Reputation calculation** — **pending**. Backend job that computes
+  `account_age + log(net_votes)` per user nightly, written to a `users.reputation`
+  column. Displayed on `agora profile`. Does NOT gate participation per the
+  guidelines; affects sort weight only on `top-week` and `active`.
+- **FTS5 search migration** — ✓ **shipped**. Virtual tables + sync triggers
+  landed in `backend/schema.sql` (70feea6); search-handler cutover in
+  `backend/src/index.ts /api/community/search` now joins
+  `discussions_fts` / `discussion_replies_fts` via `MATCH`. User input is
+  wrapped as a quoted FTS5 phrase (`sanitizeFtsQuery` in
+  `src/community/search.ts`).
+- **Kill-switch operator UI** — **pending**. Backend has `kill_switch_log` table;
+  needs a maintainer-only CLI (`agora admin hide <id> --reason …`) that writes
+  to it and flips the `hidden` flag. Per guidelines, every use is logged publicly.
+- **Flagged auto-hide trigger** — ✓ **shipped** (ec0e68e). When a flag insert
+  pushes a target's total to ≥10, backend sets `hidden = 1` on the underlying
+  discussion or reply.
+- **VHS demo tape + README hero gif + 0.5.0 bump** — **pending**. The
+  "Destination" release.
+
+## Phase 1 polish since 0.4.0 (shipped 2026-05-17 onward)
+
+Continuous polish of the standalone CLI experience. Not phase-gated; shipped as
+single-PR improvements.
+
+- **Shell completions** (`agora completions {bash,zsh,fish}`) — generates static
+  scripts from `commands-meta.ts`. (70feea6)
+- **Persistent shell history** — `~/.config/agora/shell-history.jsonl`,
+  re-loaded on shell start. (70feea6)
+- **Multi-line paste detection** — prompter detects pasted newlines and inserts
+  instead of submitting. (70feea6)
+- **`agora shell`** — explicit interactive entrypoint (in addition to bare
+  `agora` in a TTY). (70feea6)
+- **`agora export --format {json,csv,markdown,table}`** — export catalog
+  results in scriptable formats. (1b55c49)
+- **`agora watch <sec> <cmd…>`** — repeat any command at an interval. (1b55c49)
+- **`agora config {show,edit,doctor,diff}`** — config introspection / editing /
+  diagnostics (`--deep` for opencode PATH, npm, tokens, data dir; `--fix` for
+  auto-heal). (d380d34, 1b55c49)
+- **`agora notify`** — cross-platform desktop notifications. (d380d34)
+- **`agora init --template {node-mcp,python-mcp}`** — scaffold MCP server
+  projects. (d380d34)
+- **Shell job control** — `&` for background, `/jobs`, `/fg [N]`, `/bg [N]`.
+  (d380d34)
+- **CLI pager** — auto-pipe long output through `$PAGER` on TTY. (d380d34)
+- **Shell `/env`** — track `export VAR=val` and inline `VAR=val cmd` prefixes
+  per session. (1b55c49)
+- **`/abc` letter-shortcut system** — every letter maps to a major command
+  (`/a` again, `/b` browse, `/c` community, `/m` marketplace, `/n` news, …),
+  `/abc` shows the reference. (3f5fe36)
+- **Audit fixes** — hub-cache staleness warning, prompter Esc-flush race,
+  removed 6 dead exports, `/o` and `/z` letter shortcuts. (510335a)
+- **Plugin tools** — `agora_news` and `agora_config` exposed via the MCP
+  surface for in-AI use. (1b55c49)
 
 ## Phase 1 — The standalone hub experience (current)
 
@@ -283,4 +323,4 @@ surface — mechanism design does the policing, not a gatekeeper:
 - **Report a setup that `agora init` misses.** Open an issue with your project's manifest files.
 - **Polish the standalone CLI experience.** Phase 1 is wide open.
 
-_Last updated: 2026-05-17 · Phase 1.5 shipped (six PRs landed today: live GitHub hub, install rework, README enrichment, HuggingFace hub, community deepening, cross-thread search). Remaining for the 0.5.0 cut: Phase 1.6 polish list above + backend deploy (auth rework + rate limiting) + permission manifests + marketplace flagging + npm download refresh + VHS demo._
+_Last updated: 2026-05-17 · Phase 1.5 shipped on 2026-05-17 (live GitHub hub, install rework, README enrichment, HuggingFace hub, community deepening, cross-thread search). Phase 1.6 in progress: auto-hide trigger, marketplace flagging, live npm downloads, and FTS5 schema have landed; FTS5 search-handler cutover, HuggingFace README enrichment, reputation calc, kill-switch operator UI, permission manifests, and the VHS demo / 0.5.0 cut remain._

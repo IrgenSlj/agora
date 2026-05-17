@@ -1636,7 +1636,7 @@ app.post('/api/community/flag/:id', async (c) => {
   }
 });
 
-// TODO: Switch from LIKE to FTS5 (content tables + triggers) once volume warrants it.
+// FTS5 schema (discussions_fts, discussion_replies_fts, sync triggers) lives in schema.sql.
 app.get('/api/community/search', async (c) => {
   const q = c.req.query('q') ?? '';
   const boardParam = c.req.query('board') ?? '';
@@ -1652,23 +1652,22 @@ app.get('/api/community/search', async (c) => {
 
   const limit = Math.min(100, Math.max(1, parseInt(limitParam || '25', 10) || 25));
 
-  // User input is passed via .bind() — D1 prepared statement binding handles escaping.
-  const pattern = '%' + q.toLowerCase() + '%';
+  // Wrap as a quoted FTS5 phrase so operators in user input are treated as literals.
+  const ftsQuery = '"' + q.replace(/"/g, '""') + '"';
 
   try {
-    const threadConditions = boardParam
-      ? 'WHERE d.hidden = 0 AND d.board = ? AND (LOWER(d.title) LIKE ? OR LOWER(d.content) LIKE ?)'
-      : 'WHERE d.hidden = 0 AND (LOWER(d.title) LIKE ? OR LOWER(d.content) LIKE ?)';
-
+    const threadBoardFilter = boardParam ? 'AND d.board = ?' : '';
     const threadBindArgs: (string | number)[] = boardParam
-      ? [boardParam, pattern, pattern]
-      : [pattern, pattern];
+      ? [ftsQuery, boardParam]
+      : [ftsQuery];
 
     const { results: threadRows } = (await c.env.DB.prepare(
       `SELECT d.id, d.board, d.title, d.content, d.author, d.score, d.flag_count, d.created_at, d.author_is_llm,
               (SELECT COUNT(*) FROM flags f WHERE f.target_id = d.id AND f.target_type = 'discussion') AS computed_flag_count
-       FROM discussions d
-       ${threadConditions}
+       FROM discussions_fts ft
+       JOIN discussions d ON d.id = ft.id
+       WHERE ft MATCH ? AND d.hidden = 0
+         ${threadBoardFilter}
        ORDER BY d.score DESC, d.created_at DESC
        LIMIT ?`
     )
@@ -1693,22 +1692,20 @@ app.get('/api/community/search', async (c) => {
       authorIsLLM: Boolean(r.author_is_llm)
     }));
 
-    const replyConditions = boardParam
-      ? `WHERE dr.hidden IS NULL OR dr.hidden = 0`
-      : `WHERE dr.hidden IS NULL OR dr.hidden = 0`;
-
-    const replyBoardJoin = boardParam ? 'AND d2.board = ?' : '';
-    const replyBindArgs: (string | number)[] = boardParam ? [pattern, boardParam] : [pattern];
+    const replyBoardFilter = boardParam ? 'AND d2.board = ?' : '';
+    const replyBindArgs: (string | number)[] = boardParam ? [ftsQuery, boardParam] : [ftsQuery];
 
     const { results: replyRows } = (await c.env.DB.prepare(
       `SELECT dr.id, dr.discussion_id, dr.author, dr.content, dr.score, dr.flag_count, dr.created_at, dr.author_is_llm,
               d2.board, d2.title AS thread_title,
               (SELECT COUNT(*) FROM flags f WHERE f.target_id = dr.id AND f.target_type = 'reply') AS computed_flag_count
-       FROM discussion_replies dr
+       FROM discussion_replies_fts ft
+       JOIN discussion_replies dr ON dr.id = ft.id
        JOIN discussions d2 ON d2.id = dr.discussion_id
-       WHERE LOWER(dr.content) LIKE ?
+       WHERE ft MATCH ?
+         AND (dr.hidden IS NULL OR dr.hidden = 0)
          AND d2.hidden = 0
-         ${replyBoardJoin}
+         ${replyBoardFilter}
        ORDER BY dr.score DESC, dr.created_at DESC
        LIMIT ?`
     )

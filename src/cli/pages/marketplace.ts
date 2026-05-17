@@ -9,7 +9,7 @@ import {
   type InstallPlan
 } from '../../marketplace.js';
 import { vlen, rail, noRail, sep, fmtCount, frame, scrollbar } from './helpers.js';
-import { enrichItem, type EnrichmentEntry } from '../../hubs/enrichment.js';
+import { enrichItem, enrichHfItem, type EnrichmentEntry } from '../../hubs/enrichment.js';
 import { detectAgoraDataDir } from '../../state.js';
 
 type SortKey = 'installs' | 'stars' | 'name';
@@ -320,6 +320,21 @@ export const marketplacePage: Page = {
               const dataDir = detectAgoraDataDir({ env: process.env });
               const ctx = _ctx;
               enrichItem(repoId, dataDir).then((entry) => {
+                state.enrichment = entry;
+                state.enrichmentLoading = false;
+                ctx.repaint();
+              });
+            } else {
+              state.enrichmentLoading = false;
+            }
+          } else if (selected && (selected as any).source === 'hf') {
+            state.enrichment = null;
+            state.enrichmentLoading = true;
+            const repoId = selected.id.startsWith('hf:') ? selected.id.slice(3) : null;
+            if (repoId) {
+              const dataDir = detectAgoraDataDir({ env: process.env });
+              const ctx = _ctx;
+              enrichHfItem(repoId, dataDir).then((entry) => {
                 state.enrichment = entry;
                 state.enrichmentLoading = false;
                 ctx.repaint();

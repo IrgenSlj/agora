@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { extractSnippet, validateSearchQuery } from '../../src/community/search.js';
+import { extractSnippet, sanitizeFtsQuery, validateSearchQuery } from '../../src/community/search.js';
 import { BOARD_IDS } from '../../src/community/types.js';
 
 // ── extractSnippet ─────────────────────────────────────────────────────────────
@@ -130,5 +130,30 @@ describe('validateSearchQuery', () => {
   test('non-string q is rejected', () => {
     const err = validateSearchQuery(42 as any, undefined, BOARD_IDS);
     expect(err).not.toBeNull();
+  });
+});
+
+// ── sanitizeFtsQuery ───────────────────────────────────────────────────────────
+
+describe('sanitizeFtsQuery', () => {
+  test('wraps plain query in double-quotes', () => {
+    expect(sanitizeFtsQuery('langchain')).toBe('"langchain"');
+  });
+
+  test('escapes embedded double-quotes so FTS5 treats them as literals', () => {
+    expect(sanitizeFtsQuery('say "hello"')).toBe('"say ""hello"""');
+  });
+
+  test('query with FTS5 operators is wrapped as a literal phrase', () => {
+    expect(sanitizeFtsQuery('foo*-bar:baz')).toBe('"foo*-bar:baz"');
+  });
+
+  test('query with only special chars still wraps without blowing up', () => {
+    const result = sanitizeFtsQuery('*-:');
+    expect(result).toBe('"*-:"');
+  });
+
+  test('multiple embedded quotes are all escaped', () => {
+    expect(sanitizeFtsQuery('"a" AND "b"')).toBe('"""a"" AND ""b"""');
   });
 });

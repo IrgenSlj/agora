@@ -10,6 +10,7 @@ import {
   setEnrichment,
   fetchRepoMetadata,
   enrichItem,
+  enrichHfItem,
   type EnrichmentEntry,
   type EnrichmentStore,
   type FetchLike
@@ -217,6 +218,117 @@ describe('enrichItem() cache hit', () => {
       };
       const result = await enrichItem('owner/nonexistent', dir, { fetcher });
       expect(result).toBeNull();
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+});
+
+describe('enrichHfItem()', () => {
+  const LAST_MODIFIED = '2026-05-17T10:00:00.000Z';
+  const README_TEXT = '# My HF Model\n\nThis model does text generation.';
+
+  function makeHfFetcher(opts: {
+    lastModified?: string;
+    readmeText?: string;
+    modelCardStatus?: number;
+    readmeEndpoint?: 'models' | 'datasets' | 'spaces';
+  } = {}): FetchLike {
+    const lm = opts.lastModified ?? LAST_MODIFIED;
+    const readme = opts.readmeText ?? README_TEXT;
+    const readmeEndpoint = opts.readmeEndpoint ?? 'models';
+
+    return async (url: string | URL, _init?: RequestInit) => {
+      const urlStr = url.toString();
+      if (urlStr.includes('huggingface.co/api/models/')) {
+        if (opts.modelCardStatus && opts.modelCardStatus !== 200) {
+          return { ok: false, status: opts.modelCardStatus } as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ lastModified: lm })
+        } as Response;
+      }
+      if (urlStr.endsWith('/raw/main/README.md')) {
+        const isModelsPath = urlStr.includes('/datasets/') === false && urlStr.includes('/spaces/') === false;
+        const isDatasetsPath = urlStr.includes('/datasets/');
+        const isSpacesPath = urlStr.includes('/spaces/');
+        if (
+          (readmeEndpoint === 'models' && isModelsPath) ||
+          (readmeEndpoint === 'datasets' && isDatasetsPath) ||
+          (readmeEndpoint === 'spaces' && isSpacesPath)
+        ) {
+          return {
+            ok: true,
+            text: async () => readme
+          } as unknown as Response;
+        }
+        return { ok: false, status: 404 } as Response;
+      }
+      return { ok: false, status: 404 } as Response;
+    };
+  }
+
+  const fakeOpencode = async (_prompt: string) => 'Fake AI response';
+
+  test('cache hit: same lastModified skips opencode and returns existing entry', async () => {
+    const dir = makeTmpDir();
+    try {
+      const existing: EnrichmentEntry = {
+        repoId: 'hf:owner/mymodel',
+        commitSha: LAST_MODIFIED,
+        description: 'Cached HF description',
+        installHint: 'pip install mymodel',
+        fetchedAt: '2026-05-17T00:00:00Z'
+      };
+      writeEnrichmentStore(dir, setEnrichment({}, existing));
+
+      let opencodeCalled = false;
+      const trackingOpencode = async (prompt: string) => {
+        opencodeCalled = true;
+        return fakeOpencode(prompt);
+      };
+
+      const fetcher = makeHfFetcher();
+      const result = await enrichHfItem('owner/mymodel', dir, { fetcher, opencode: trackingOpencode });
+
+      expect(result).not.toBeNull();
+      expect(result!.repoId).toBe('hf:owner/mymodel');
+      expect(result!.commitSha).toBe(LAST_MODIFIED);
+      expect(result!.description).toBe('Cached HF description');
+      expect(opencodeCalled).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  test('cache miss: fetches metadata + README and writes new entry', async () => {
+    const dir = makeTmpDir();
+    try {
+      const fetcher = makeHfFetcher();
+      const result = await enrichHfItem('owner/mymodel', dir, { fetcher, opencode: fakeOpencode });
+
+      expect(result).not.toBeNull();
+      expect(result!.repoId).toBe('hf:owner/mymodel');
+      expect(result!.commitSha).toBe(LAST_MODIFIED);
+      expect(result!.description).toBe('Fake AI response');
+
+      const store = readEnrichmentStore(dir);
+      expect(store[`hf:owner/mymodel@${LAST_MODIFIED}`]).toBeDefined();
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  test('404 on models README falls through to datasets', async () => {
+    const dir = makeTmpDir();
+    try {
+      const fetcher = makeHfFetcher({ readmeEndpoint: 'datasets' });
+      const result = await enrichHfItem('owner/mydataset', dir, { fetcher, opencode: fakeOpencode });
+
+      expect(result).not.toBeNull();
+      expect(result!.repoId).toBe('hf:owner/mydataset');
+      expect(result!.commitSha).toBe(LAST_MODIFIED);
     } finally {
       rmSync(dir, { recursive: true });
     }

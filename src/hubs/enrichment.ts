@@ -86,6 +86,45 @@ export async function fetchRepoMetadata(
   }
 }
 
+export async function fetchHfRepoMetadata(
+  repoId: string,
+  opts: { fetcher?: FetchLike; signal?: AbortSignal } = {}
+): Promise<{ version: string; readme: string } | null> {
+  const fetcher = opts.fetcher ?? globalThis.fetch;
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'User-Agent': 'agora-cli'
+  };
+
+  const cardRes = await fetcher(`https://huggingface.co/api/models/${repoId}`, {
+    headers,
+    signal: opts.signal
+  });
+  if (!cardRes.ok) return null;
+  const card = (await cardRes.json()) as { lastModified?: string };
+  const version = card.lastModified;
+  if (!version) return null;
+
+  const endpoints = ['models', 'datasets', 'spaces'] as const;
+  let readme: string | null = null;
+  for (const ep of endpoints) {
+    const url =
+      ep === 'models'
+        ? `https://huggingface.co/${repoId}/raw/main/README.md`
+        : `https://huggingface.co/${ep}/${repoId}/raw/main/README.md`;
+    const res = await fetcher(url, { headers, signal: opts.signal });
+    if (res.ok) {
+      readme = await res.text();
+      break;
+    }
+  }
+  if (!readme) return null;
+
+  const maxChars = 8000;
+  const trimmed = readme.length > maxChars ? readme.slice(0, maxChars) + '\n...(truncated)' : readme;
+  return { version, readme: trimmed };
+}
+
 async function callOpencode(prompt: string): Promise<string | null> {
   const model = FREE_MODELS[0];
   const modelArg = model.includes('/') ? model : `opencode/${model}`;
@@ -124,23 +163,29 @@ async function callOpencode(prompt: string): Promise<string | null> {
   });
 }
 
-export async function generateDescription(readme: string): Promise<string | null> {
+export async function generateDescription(
+  readme: string,
+  opencodeFn?: (prompt: string) => Promise<string | null>
+): Promise<string | null> {
   const maxChars = 8000;
   const trimmed =
     readme.length > maxChars ? readme.slice(0, maxChars) + '\n...(truncated)' : readme;
   const prompt = `<system>\nYou are summarizing an open-source repository's README. Write ONE sentence (max 20 words) describing what this repo does. Be concrete; no marketing language.\n<user>\n${trimmed}`;
-  const result = await callOpencode(prompt);
+  const result = await (opencodeFn ?? callOpencode)(prompt);
   if (!result) return null;
   const trimmedResult = result.trim();
   return trimmedResult || null;
 }
 
-export async function generateInstallHint(readme: string): Promise<string | null> {
+export async function generateInstallHint(
+  readme: string,
+  opencodeFn?: (prompt: string) => Promise<string | null>
+): Promise<string | null> {
   const maxChars = 8000;
   const trimmed =
     readme.length > maxChars ? readme.slice(0, maxChars) + '\n...(truncated)' : readme;
   const prompt = `<system>\nExtract the single install command or step from this README. Return ONE line, max 100 chars. If unclear, return 'UNKNOWN'. Do not add commentary.\n<user>\n${trimmed}`;
-  const result = await callOpencode(prompt);
+  const result = await (opencodeFn ?? callOpencode)(prompt);
   if (!result) return null;
   const trimmedResult = result.trim();
   if (!trimmedResult || trimmedResult.toUpperCase() === 'UNKNOWN') return null;
@@ -150,7 +195,7 @@ export async function generateInstallHint(readme: string): Promise<string | null
 export async function enrichItem(
   repoId: string,
   dataDir: string,
-  opts: { fetcher?: FetchLike; token?: string } = {}
+  opts: { fetcher?: FetchLike; token?: string; opencode?: (prompt: string) => Promise<string | null> } = {}
 ): Promise<EnrichmentEntry | null> {
   const store = readEnrichmentStore(dataDir);
 
@@ -197,8 +242,8 @@ export async function enrichItem(
   if (!meta) return null;
 
   const [description, aiHint] = await Promise.all([
-    generateDescription(meta.readme),
-    generateInstallHint(meta.readme)
+    generateDescription(meta.readme, opts.opencode),
+    generateInstallHint(meta.readme, opts.opencode)
   ]);
 
   const installHint = aiHint ?? extractPostInstallHint(meta.readme);
@@ -206,6 +251,43 @@ export async function enrichItem(
   const entry: EnrichmentEntry = {
     repoId,
     commitSha: meta.commitSha,
+    description: description ?? undefined,
+    installHint: installHint ?? undefined,
+    fetchedAt: new Date().toISOString()
+  };
+
+  const updated = setEnrichment(store, entry);
+  writeEnrichmentStore(dataDir, updated);
+
+  return entry;
+}
+
+export async function enrichHfItem(
+  repoId: string,
+  dataDir: string,
+  opts: { fetcher?: FetchLike; opencode?: (prompt: string) => Promise<string | null> } = {}
+): Promise<EnrichmentEntry | null> {
+  const storeRepoId = `hf:${repoId}`;
+  const store = readEnrichmentStore(dataDir);
+  const existingEntry = Object.values(store).find((e) => e.repoId === storeRepoId);
+
+  const meta = await fetchHfRepoMetadata(repoId, { fetcher: opts.fetcher });
+  if (!meta) {
+    return existingEntry ?? null;
+  }
+
+  if (existingEntry && existingEntry.commitSha === meta.version) {
+    return existingEntry;
+  }
+
+  const [description, installHint] = await Promise.all([
+    generateDescription(meta.readme, opts.opencode),
+    generateInstallHint(meta.readme, opts.opencode)
+  ]);
+
+  const entry: EnrichmentEntry = {
+    repoId: storeRepoId,
+    commitSha: meta.version,
     description: description ?? undefined,
     installHint: installHint ?? undefined,
     fetchedAt: new Date().toISOString()

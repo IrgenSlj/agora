@@ -43,6 +43,14 @@ export function extractSnippet(content: string, query: string): string {
 }
 
 /**
+ * Wrap the user query as a quoted FTS5 phrase so special characters
+ * (`"`, `*`, `:`, `-`, parens) are treated as literals.
+ */
+export function sanitizeFtsQuery(q: string): string {
+  return '"' + q.replace(/"/g, '""') + '"';
+}
+
+/**
  * Validate search query parameters.
  * Returns null on success, or an error string on failure.
  */

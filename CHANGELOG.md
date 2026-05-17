@@ -2,12 +2,103 @@
 
 ## [Unreleased]
 
-The "live hubs & community deepening" cycle. Six PRs landed on 2026-05-17 that
-take the catalog from curated-only to curated + live, make the community hub
-end-to-end usable, and close out the long-standing backend CI failure. No
-version bump yet — sculpting toward the 0.5.0 "Destination" cut.
+The "live hubs & community deepening" cycle that began on 2026-05-17, followed
+by a second wave of shell / CLI polish. The catalog is now curated + live; the
+community hub is end-to-end usable with auto-moderation; the standalone shell
+gained completions, history, job control, a letter-shortcut surface, and a
+broad new command surface (`export`, `watch`, `notify`, `config doctor`, …).
+No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
 
-### Added
+### Added — shell & CLI polish (2026-05-17 onward)
+
+- **Shell completions** (`agora completions {bash,zsh,fish}`). Generates static
+  scripts from `src/cli/commands-meta.ts`. (70feea6)
+- **Persistent shell history** at `~/.config/agora/shell-history.jsonl`, replayed
+  on shell start. (70feea6)
+- **Multi-line paste detection** in the prompter — pasted newlines insert
+  instead of submitting. (70feea6)
+- **`agora shell`** explicit interactive entrypoint. (70feea6)
+- **`agora export --format {json,csv,markdown,table}`** for scriptable catalog
+  output. (1b55c49)
+- **`agora watch <sec> <cmd…>`** — repeat any command at an interval. (1b55c49)
+- **`agora config show / edit / diff / doctor [--deep|--fix]`** — config
+  introspection, in-`$EDITOR` editing, two-config diff, deep diagnostics
+  (opencode PATH, npm, tokens, data dir), and auto-heal mode. (d380d34, 1b55c49)
+- **`agora notify`** — cross-platform desktop notifications (macOS / Linux /
+  Windows). (d380d34)
+- **`agora init --template {node-mcp,python-mcp}`** — scaffolded MCP server
+  starters. (d380d34)
+- **Shell job control** — trailing `&` for background, `/jobs`, `/fg [N]`,
+  `/bg [N]`. (d380d34)
+- **CLI pager** — auto-pipes long output through `$PAGER` (less) on TTY.
+  (d380d34)
+- **Shell `/env`** — tracks `export VAR=val` and inline `VAR=val cmd` prefixes
+  per session. (1b55c49)
+- **`/abc` letter-shortcut system** — every letter maps to a major command
+  (`/a` again, `/b` browse, `/c` community, `/m` marketplace, `/n` news, …);
+  `/abc` shows the full reference. `/o` and `/z` added later. (3f5fe36, 510335a)
+- **`agora_news` and `agora_config` plugin tools** exposed via the MCP surface
+  so opencode sessions can pull news + config in-context. (1b55c49)
+- **Top-level aliases** `agora show` and `agora edit` for `config show`/`edit`.
+  (d380d34)
+
+### Fixed — shell & CLI polish
+
+- **Hub stale-cache warning** when `AGORA_LIVE_HUBS=1` but the cache is empty or
+  past TTL — was silent before. (510335a, H1)
+- **Prompter Esc-flush race** discards partial CSI sequences instead of
+  dispatching them as a bare `Esc`. (510335a, H2)
+- **`/fg` no longer calls `stdin.resume()` unnecessarily**. (510335a, H3)
+- **Removed 6 dead exports** (`rssSource`, `validatePackageName`,
+  `writeWithPager`, `shouldPage`, `box`, newsletter adapter) and the blocking
+  spawnSync-based pager (was never wired). (510335a, M1–M8)
+- **Hub cache staleness check** now wired into `getMarketplaceItems()`.
+  (510335a, M9)
+- **`looksLikeQuestion`** correctly classifies env-prefixed (`FOO=bar cmd`)
+  commands as shell, not chat. (70feea6)
+- **Boolean flag set** widened with `clear / down / fix / once / sound`;
+  `notify --once`, `config doctor --fix`, etc. now parse without erroring on
+  missing values. (4c78bea)
+- **Shell SIGINT handler** no longer calls `process.exit()` mid-prompt; Ctrl+C
+  just cancels the current line. (4c78bea)
+- **`warnFallback` output formatting** fixed for the doctor/notify test
+  expectations. (4c78bea)
+
+### Added — community moderation
+
+- **Flag auto-hide trigger** in the backend. When a flag insert pushes a
+  target's total to ≥10, the underlying `discussions` or `discussion_replies`
+  row gets `hidden = 1`; the existing read endpoints already filter
+  `hidden = 0`, so the item drops out of default views. Maintainers retain
+  access via the `kill_switch_log` audit table. Adds the previously missing
+  `hidden` column to `discussion_replies`. (ec0e68e)
+- **FTS5 virtual tables + sync triggers** on `discussions` and
+  `discussion_replies` (`backend/schema.sql`, 70feea6) plus
+  **search-handler cutover** in `backend/src/index.ts`: `/api/community/search`
+  now joins `discussions_fts` / `discussion_replies_fts` via `MATCH`. User
+  input is wrapped as a quoted FTS5 phrase (`'"' + q.replace(/"/g, '""') + '"'`)
+  so query operators are treated as literals; `sanitizeFtsQuery` lives in
+  `src/community/search.ts` for unit-testing. Board filter, `hidden`
+  exclusion (both reply and parent), pagination, and the wire response
+  shape are unchanged.
+
+### Added — HuggingFace README enrichment
+
+- **HF model-card + README fetch** in `src/hubs/enrichment.ts`
+  (`fetchHfRepoMetadata`). Pulls `lastModified` from
+  `https://huggingface.co/api/<endpoint>/<repoId>` and the raw README from
+  `https://huggingface.co/[datasets/|spaces/]<repoId>/raw/main/README.md`,
+  falling back `models → datasets → spaces` on 404.
+- **`enrichHfItem`** mirrors `enrichItem` with cache key `hf:<repoId>@<lastModified>`,
+  reusing the same on-disk `EnrichmentStore` and the same `generateDescription` /
+  `generateInstallHint` opencode pipeline. Wired into the marketplace TUI
+  (`src/cli/pages/marketplace.ts`) so HF detail views get the same AI
+  description + install-hint badge that GitHub items have had.
+- **Test seam**: `generateDescription`, `generateInstallHint`, `enrichItem`,
+  and `enrichHfItem` now accept an optional `opencode?: (prompt) => Promise<string|null>`
+  override so tests can stub out the subprocess.
+
+### Added — live hubs & community deepening (initial 2026-05-17 wave)
 
 - **Live marketplace hubs** (`AGORA_LIVE_HUBS=1`). New `src/hubs/` module with
   GitHub Search REST and HuggingFace API connectors, a shared quality gate
@@ -81,10 +172,12 @@ version bump yet — sculpting toward the 0.5.0 "Destination" cut.
 
 ### Internal
 
-- 95 new tests today; suite now 604 pass / 0 fail across 27 files (up from
-  509 across 22).
-- 6 commits on `main`: `9b07266`, `b779332`, `027b62e`, `2f239db`,
-  `b552d7a`, `3f21ebe`.
+- 95 new tests on 2026-05-17; an additional 324-line `test/app.test.ts`
+  added 2026-05-19 to cover the new shell / config / notify surface.
+- Commits on `main` since 0.4.0: live-hubs / community wave `9b07266`,
+  `b779332`, `027b62e`, `2f239db`, `b552d7a`, `3f21ebe`; backend CI unblock
+  `c5599df`; moderation `ec0e68e`; shell / CLI polish `70feea6`, `1b55c49`,
+  `d380d34`, `3f5fe36`, `510335a`, `4c78bea`.
 
 ## [0.4.0] - 2026-05-16
 
