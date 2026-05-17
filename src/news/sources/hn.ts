@@ -1,4 +1,5 @@
 import type { NewsItem, NewsSource } from '../types.js';
+import { agoraUserAgent } from '../types.js';
 
 export interface SourceAdapter {
   fetch(opts: {
@@ -13,7 +14,10 @@ export const hnSource: SourceAdapter = {
     const url =
       'https://hn.algolia.com/api/v1/search?tags=front_page&numericFilters=points>50&hitsPerPage=30';
 
-    const res = await fetcher(url, { signal: opts.signal });
+    const res = await fetcher(url, {
+      signal: opts.signal,
+      headers: { 'User-Agent': agoraUserAgent }
+    });
     if (!res.ok) throw new Error(`HN API returned ${res.status}`);
     const data = (await res.json()) as any;
 

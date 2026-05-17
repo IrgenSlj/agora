@@ -266,8 +266,8 @@ export async function communitySearchSource(
         const data = (await res.json()) as CommunitySearchResult;
         return { source: 'api', apiUrl: opts.apiUrl, data };
       }
-    } catch (e) {
-      process.stderr.write('[communitySearchSource] fetch error: ' + String(e) + '\n');
+    } catch {
+      /* fall through to fixture */
     }
   }
   return {

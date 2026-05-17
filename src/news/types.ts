@@ -1,4 +1,14 @@
+import { readFileSync } from 'node:fs';
+
 export type NewsSource = 'hn' | 'reddit' | 'github-trending' | 'arxiv' | 'rss';
+
+const { version: AGORA_VERSION } = JSON.parse(
+  readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
+) as { version: string };
+
+/** Shared User-Agent for outbound news fetches. Reads the live package.json
+ *  so the agent string stays in sync with the published version. */
+export const agoraUserAgent = `agora-cli/${AGORA_VERSION}`;
 
 export interface NewsItem {
   id: string;

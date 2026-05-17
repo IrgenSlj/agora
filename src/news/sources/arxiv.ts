@@ -1,4 +1,5 @@
 import type { NewsItem, NewsSource } from '../types.js';
+import { agoraUserAgent } from '../types.js';
 
 export interface SourceAdapter {
   fetch(opts: {
@@ -22,7 +23,7 @@ export const arxivSource: SourceAdapter = {
     try {
       const res = await fetcher(url, {
         signal: opts.signal,
-        headers: { 'User-Agent': 'agora-cli/0.5.0' }
+        headers: { 'User-Agent': agoraUserAgent }
       });
       if (!res.ok) throw new Error(`arXiv API returned ${res.status}`);
       const xml = await res.text();

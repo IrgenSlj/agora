@@ -140,8 +140,8 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
             execSync(cmd, { stdio: 'pipe', timeout: 60000 });
             writeLine(io.stdout, `  ✓ ${cmd}`);
           } catch (err: any) {
-            writeLine(io.stdout, `  ! Failed: ${cmd}`);
-            if (err.stderr) writeLine(io.stdout, String(err.stderr));
+            writeLine(io.stderr, `  ! Failed: ${cmd}`);
+            if (err.stderr) writeLine(io.stderr, String(err.stderr));
           }
         }
       }
@@ -157,7 +157,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
             execSync(cmd, { stdio: 'pipe', timeout: 120000 });
             writeLine(io.stdout, `  ✓ ${cmd}`);
           } catch {
-            writeLine(io.stdout, `  ! Failed: ${cmd} (may already be installed)`);
+            writeLine(io.stderr, `  ! Failed: ${cmd} (may already be installed)`);
           }
         }
       }
@@ -173,7 +173,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
             execSync(cmd, { stdio: 'pipe', timeout: 120000 });
             writeLine(io.stdout, `  ✓ ${cmd}`);
           } catch {
-            writeLine(io.stdout, `  ! Failed: ${cmd} (may already be installed)`);
+            writeLine(io.stderr, `  ! Failed: ${cmd} (may already be installed)`);
           }
         }
       }
@@ -906,9 +906,9 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
       const deviceCode = codeData.device_code;
       const interval = (codeData.interval || 5) * 1000;
 
-      process.stdout.write(`\n${style.accent(userCode.slice(0, 4) + ' ' + userCode.slice(4))}\n\n`);
-      process.stdout.write(`  ${style.dim('Open in your browser:')} ${verificationUri}\n`);
-      process.stdout.write(`  ${style.dim('Enter code:')}         ${userCode}\n\n`);
+      io.stdout.write(`\n${style.accent(userCode.slice(0, 4) + ' ' + userCode.slice(4))}\n\n`);
+      io.stdout.write(`  ${style.dim('Open in your browser:')} ${verificationUri}\n`);
+      io.stdout.write(`  ${style.dim('Enter code:')}         ${userCode}\n\n`);
 
       // Try to open browser automatically. verificationUri is server-supplied,
       // so we validate the scheme and pass via spawnSync args (no shell).
@@ -920,12 +920,12 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
         const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
         const result = spawnSync(opener, [parsed.toString()], { timeout: 3000, stdio: 'ignore' });
         if (result.status === 0) {
-          process.stdout.write(`  ${style.dim('Browser opened.')}\n\n`);
+          io.stdout.write(`  ${style.dim('Browser opened.')}\n\n`);
         } else {
-          process.stdout.write(`  ${style.dim('Open the URL manually.')}\n\n`);
+          io.stdout.write(`  ${style.dim('Open the URL manually.')}\n\n`);
         }
       } catch {
-        process.stdout.write(`  ${style.dim('Open the URL manually.')}\n\n`);
+        io.stdout.write(`  ${style.dim('Open the URL manually.')}\n\n`);
       }
 
       // Poll for token
@@ -982,10 +982,10 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
             }
 
             const expiresInMin = Math.round((tokenData.expires_in || 3600) / 60);
-            process.stdout.write(`\n${style.accent('✓ Authenticated')}\n`);
-            process.stdout.write(`${style.dim('API URL')} ${baseUrl}\n`);
-            process.stdout.write(`${style.dim('Token expires')} in ${expiresInMin}m\n`);
-            process.stdout.write(`${style.dim('State')} ${getAgoraStatePath(dataDir)}\n`);
+            io.stdout.write(`\n${style.accent('✓ Authenticated')}\n`);
+            io.stdout.write(`${style.dim('API URL')} ${baseUrl}\n`);
+            io.stdout.write(`${style.dim('Token expires')} in ${expiresInMin}m\n`);
+            io.stdout.write(`${style.dim('State')} ${getAgoraStatePath(dataDir)}\n`);
             return 0;
           }
 

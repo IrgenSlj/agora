@@ -2,6 +2,7 @@
 // from src/hubs/github.ts, which uses the REST API to find installable repos
 // for the marketplace catalog.
 import type { NewsItem, NewsSource } from '../types.js';
+import { agoraUserAgent } from '../types.js';
 
 export interface SourceAdapter {
   fetch(opts: {
@@ -23,7 +24,7 @@ export const githubTrendingSource: SourceAdapter = {
         const url = `https://github.com/trending/${lang}?since=daily`;
         const res = await fetcher(url, {
           signal: opts.signal,
-          headers: { 'User-Agent': 'agora-cli/0.5.0' }
+          headers: { 'User-Agent': agoraUserAgent }
         });
         if (!res.ok) continue;
         const html = await res.text();
