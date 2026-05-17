@@ -823,6 +823,66 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
       deepIssues.push(`Agora data dir ${agoraDir} does not exist`);
     }
 
+    // Auth state — distinguishes "no backend configured" from "signed out"
+    const agoraState = loadAgoraState(agoraDir);
+    const auth = getAuthState(agoraState);
+    if (auth?.apiUrl && auth?.accessToken) {
+      const expIn = (auth.accessExp ?? 0) - Math.floor(Date.now() / 1000);
+      const expLabel =
+        expIn > 3600
+          ? Math.round(expIn / 3600) + 'h'
+          : expIn > 0
+            ? Math.round(expIn / 60) + 'm'
+            : 'expired';
+      deepOk.push(`auth: signed in to ${auth.apiUrl} (token ${expLabel})`);
+    } else if (io.env?.AGORA_API_URL) {
+      deepIssues.push('AGORA_API_URL set but no auth token — run `agora auth login`');
+    } else {
+      deepOk.push('auth: not configured (offline mode)');
+    }
+
+    // News cache age — surfaces "the feed is stale" before the user notices
+    try {
+      const { readCache } = await import('../../news/cache.js');
+      const items = readCache(agoraDir);
+      if (items.length === 0) {
+        deepOk.push('news cache: empty (run `agora news` to populate)');
+      } else {
+        const newest = items.reduce(
+          (m, i) => Math.max(m, new Date(i.fetchedAt).getTime()),
+          0
+        );
+        const ageH = (Date.now() - newest) / 3600000;
+        const ageLabel = ageH < 1 ? Math.round(ageH * 60) + 'm' : Math.round(ageH) + 'h';
+        if (ageH > 24) {
+          deepIssues.push(`news cache: stale (${ageLabel} old, ${items.length} items)`);
+        } else {
+          deepOk.push(`news cache: ${items.length} items, newest ${ageLabel} old`);
+        }
+      }
+    } catch {
+      /* skip news check if cache module fails */
+    }
+
+    // Hub cache age (only meaningful when live hubs are on)
+    if (io.env?.AGORA_LIVE_HUBS === '1' || process.env.AGORA_LIVE_HUBS === '1') {
+      try {
+        const { readHubsCache, isHubCacheStale } = await import('../../hubs/cache.js');
+        const hubItems = readHubsCache(agoraDir);
+        if (hubItems.length === 0) {
+          deepIssues.push('hub cache: empty (run `bun scripts/refresh-hubs.ts`)');
+        } else if (isHubCacheStale(hubItems, 60, new Date())) {
+          deepIssues.push(
+            `hub cache: stale (>60min, ${hubItems.length} items) — refresh-hubs to update`
+          );
+        } else {
+          deepOk.push(`hub cache: ${hubItems.length} items, fresh`);
+        }
+      } catch {
+        /* skip */
+      }
+    }
+
     for (const issue of deepIssues) writeLine(io.stdout, `  ${style.dim('⚠')} ${issue}`);
     for (const ok of deepOk) writeLine(io.stdout, `  ${style.dim('✓')} ${ok}`);
   }
