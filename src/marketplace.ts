@@ -105,7 +105,28 @@ function hubItemToPackage(item: HubItem): PackageMarketplaceItem {
   };
 }
 
+// Memoize for 30s. The curated catalog is a static import; the hub cache
+// changes only when scripts/refresh-hubs.ts runs. TUI pages call this once
+// per render — without memoization that's 60+ catalog rebuilds per minute on
+// arrow-key navigation with AGORA_LIVE_HUBS=1.
+let _memo: { at: number; envFlag: string; items: MarketplaceItem[] } | null = null;
+const MEMO_TTL_MS = 30_000;
+
+let _warnedEmpty = false;
+let _warnedStale = false;
+
+export function clearMarketplaceItemsCache(): void {
+  _memo = null;
+  _warnedEmpty = false;
+  _warnedStale = false;
+}
+
 export function getMarketplaceItems(): MarketplaceItem[] {
+  const envFlag = process.env.AGORA_LIVE_HUBS ?? '';
+  if (_memo && _memo.envFlag === envFlag && Date.now() - _memo.at < MEMO_TTL_MS) {
+    return _memo.items;
+  }
+
   const curated: MarketplaceItem[] = [
     ...samplePackages.map((pkg) => ({ ...pkg, kind: 'package' as const })),
     ...sampleWorkflows.map((workflow) => ({
@@ -116,22 +137,27 @@ export function getMarketplaceItems(): MarketplaceItem[] {
     }))
   ];
 
-  if (process.env.AGORA_LIVE_HUBS === '1') {
+  let items: MarketplaceItem[] = curated;
+
+  if (envFlag === '1') {
     const dataDir = detectAgoraDataDir({ env: process.env });
     const hubItems = readHubsCache(dataDir);
-    if (hubItems.length === 0) {
+    if (hubItems.length === 0 && !_warnedEmpty) {
       console.warn('AGORA_LIVE_HUBS=1 but hub cache is empty. Run: bun scripts/refresh-hubs.ts');
-    } else if (isHubCacheStale(hubItems, 60, new Date())) {
+      _warnedEmpty = true;
+    } else if (hubItems.length > 0 && isHubCacheStale(hubItems, 60, new Date()) && !_warnedStale) {
       console.warn('AGORA_LIVE_HUBS=1 but hub cache is stale (>60min). Run: bun scripts/refresh-hubs.ts');
+      _warnedStale = true;
     }
     if (hubItems.length > 0) {
       const curatedIds = new Set(curated.map((i) => i.id));
       const live = hubItems.filter((item) => !curatedIds.has(item.id)).map(hubItemToPackage);
-      return [...curated, ...live];
+      items = [...curated, ...live];
     }
   }
 
-  return curated;
+  _memo = { at: Date.now(), envFlag, items };
+  return items;
 }
 
 export function searchMarketplaceItems(options: SearchOptions = {}): MarketplaceItem[] {

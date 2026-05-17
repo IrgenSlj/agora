@@ -140,17 +140,29 @@ async function refreshNews(ctx: PageContext): Promise<void> {
     ['arxiv', arxivSource]
   ];
 
-  let merged = [...cached];
-  for (const [source, adapter] of adapters) {
-    const cfg = config.sources[source];
-    if (cfg?.enabled && isStale(merged, source, cfg.ttlMinutes, now)) {
+  // Fetch all stale sources in parallel rather than sequentially — cold-start
+  // refresh is bounded by the slowest source instead of the sum.
+  const cachedSnapshot = [...cached];
+  const results = await Promise.all(
+    adapters.map(async ([source, adapter]) => {
+      const cfg = config.sources[source];
+      if (!cfg?.enabled || !isStale(cachedSnapshot, source, cfg.ttlMinutes, now)) {
+        return { source, fresh: null as NewsItem[] | null };
+      }
       try {
         const fresh = await fetchWithTimeout(() => adapter.fetch({}));
-        merged = merged.filter((i) => i.source !== source);
-        merged.push(...fresh);
+        return { source, fresh };
       } catch {
-        // keep stale
+        return { source, fresh: null };
       }
+    })
+  );
+
+  let merged = cachedSnapshot;
+  for (const { source, fresh } of results) {
+    if (fresh) {
+      merged = merged.filter((i) => i.source !== source);
+      merged.push(...fresh);
     }
   }
 
