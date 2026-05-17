@@ -118,9 +118,9 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
 ### Learn
 - 12 interactive tutorials on MCP, auth, catalog-contrib, backend deploy, and more
 
-### Phase 1.5: "Destination" — shipped
+### Phase 1.5 + 1.6 — shipped
 
-All three pillars are now built end-to-end. See [`ROADMAP.md`](./ROADMAP.md) for the Phase 1.6 polish list (HF README enrichment, reputation, FTS5 search, kill-switch UI):
+All three pillars are now built end-to-end **and** the Phase 1.6 polish list is closed: HuggingFace README enrichment, FTS5 community search cutover, kill-switch operator UI (`agora admin hide / log`), reputation calculation with sort weighting, and the permission-manifest display + install-time acknowledgment all landed.
 
 - **`agora news`** — curated tech news feed (HN, Reddit, GitHub Trending, arXiv, RSS) with scoring, caching, category tabs (All/Mcp/Tools/Skills/Llms/Repos/Market/Search), detail view, and AI-powered article summarization via `opencode run`. TUI reader with scrollable preview.
 - **Live marketplace hubs** — `AGORA_LIVE_HUBS=1` merges live GitHub + HuggingFace results into the catalog. Topic-driven discovery, quality-gated, free pricing badge, install flow with three kinds (`git-clone`, `mcp-config-patch`, `package-install`) and preview-then-confirm UX in the TUI.
@@ -167,6 +167,19 @@ opencode-agora --help
 
 ## Usage
 
+### Daily entry points
+
+```bash
+agora welcome                           # guided first-run tour (adapts when signed in)
+agora today                             # one-shot digest: news + community + trending (24h)
+agora today --section news --json       # scriptable, per-section
+agora bookmarks                         # unified saves: marketplace + news
+agora bookmarks --kind news             # narrow by kind
+agora open mcp-github                   # open an item's repo in the browser
+agora open mcp-github --print           # print URL instead of spawning
+agora author "@anthropic-ai"            # everything by an author
+```
+
 ### Setup
 
 ```bash
@@ -195,8 +208,9 @@ agora trending
 agora trending --table
 
 # Install MCP servers
-agora install mcp-github           # preview only
+agora install mcp-github           # preview only — shows commands + declared permissions
 agora install mcp-github --write   # install npm package + write config
+agora install mcp-filesystem --write --yes   # required when the item declares permissions
 
 # Save/bookmark items
 agora save wf-security-audit
@@ -252,8 +266,19 @@ agora publish package --name @you/server --description "MCP server" --npm @you/s
 agora publish workflow --name "Security Audit" --description "Audit workflow" --prompt-file ./prompt.md
 agora review mcp-github --rating 5 --content "Works well"
 agora reviews mcp-github --api
-agora profile alice
+agora profile alice                                # reputation appears on the profile line
 ```
+
+### Moderation (operator-only, gated on `AGORA_ADMIN_USER_IDS`)
+
+```bash
+agora admin hide <thread-or-reply-id> --reason "confirmed malware"
+agora admin hide <id> --type reply --reason "..."
+agora admin log --limit 50                          # public audit trail
+agora admin recompute                               # rebuild users.reputation
+```
+
+These call the backend's `requireAdmin`-gated endpoints (`POST /api/admin/hide`, `GET /api/admin/log`, `POST /api/admin/reputation/recompute`). Every kill-switch use is logged publicly per [`COMMUNITY_GUIDELINES.md`](./COMMUNITY_GUIDELINES.md).
 
 ### MCP Server & AI Chat
 
