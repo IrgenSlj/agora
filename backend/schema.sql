@@ -228,6 +228,53 @@ CREATE TABLE IF NOT EXISTS device_codes (
 CREATE INDEX IF NOT EXISTS idx_device_codes_user_code ON device_codes(user_code);
 CREATE INDEX IF NOT EXISTS idx_device_codes_status ON device_codes(status);
 
+-- FTS5 virtual tables for community search (2026-05-17)
+CREATE VIRTUAL TABLE IF NOT EXISTS discussions_fts USING fts5(
+  id UNINDEXED,
+  board UNINDEXED,
+  title,
+  content,
+  tokenize = 'porter unicode61 remove_diacritics 2'
+);
+
+CREATE VIRTUAL TABLE IF NOT EXISTS discussion_replies_fts USING fts5(
+  id UNINDEXED,
+  discussion_id UNINDEXED,
+  content,
+  tokenize = 'porter unicode61 remove_diacritics 2'
+);
+
+-- Sync triggers — keep FTS in lockstep with base tables
+CREATE TRIGGER IF NOT EXISTS discussions_ai AFTER INSERT ON discussions BEGIN
+  INSERT INTO discussions_fts(id, board, title, content)
+  VALUES (new.id, new.board, new.title, new.content);
+END;
+
+CREATE TRIGGER IF NOT EXISTS discussions_ad AFTER DELETE ON discussions BEGIN
+  DELETE FROM discussions_fts WHERE id = old.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS discussions_au AFTER UPDATE ON discussions BEGIN
+  DELETE FROM discussions_fts WHERE id = old.id;
+  INSERT INTO discussions_fts(id, board, title, content)
+  VALUES (new.id, new.board, new.title, new.content);
+END;
+
+CREATE TRIGGER IF NOT EXISTS replies_ai AFTER INSERT ON discussion_replies BEGIN
+  INSERT INTO discussion_replies_fts(id, discussion_id, content)
+  VALUES (new.id, new.discussion_id, new.content);
+END;
+
+CREATE TRIGGER IF NOT EXISTS replies_ad AFTER DELETE ON discussion_replies BEGIN
+  DELETE FROM discussion_replies_fts WHERE id = old.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS replies_au AFTER UPDATE ON discussion_replies BEGIN
+  DELETE FROM discussion_replies_fts WHERE id = old.id;
+  INSERT INTO discussion_replies_fts(id, discussion_id, content)
+  VALUES (new.id, new.discussion_id, new.content);
+END;
+
 -- Migrations applied to existing D1 instances (run manually via wrangler d1 execute):
 -- ALTER TABLE discussions ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
 -- ALTER TABLE discussions ADD COLUMN author_is_llm INTEGER NOT NULL DEFAULT 0;
@@ -236,3 +283,11 @@ CREATE INDEX IF NOT EXISTS idx_device_codes_status ON device_codes(status);
 -- (discussion_replies.author_is_llm and author_model already present in schema above)
 -- (votes PRIMARY KEY (user_id, target_id, target_type) serves as unique constraint)
 -- ALTER TABLE discussion_replies ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0; -- 2026-05-17 auto-hide trigger
+
+-- 2026-05-17 FTS5 community search migration. Apply via wrangler d1 execute:
+--   1. Run the CREATE VIRTUAL TABLE + TRIGGER statements above.
+--   2. Backfill existing rows:
+--      INSERT INTO discussions_fts(id, board, title, content)
+--        SELECT id, board, title, content FROM discussions;
+--      INSERT INTO discussion_replies_fts(id, discussion_id, content)
+--        SELECT id, discussion_id, content FROM discussion_replies;

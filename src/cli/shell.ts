@@ -1,5 +1,13 @@
 import { execSync, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import {
+  appendFileSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+  writeFileSync
+} from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { COMMANDS } from './commands-meta.js';
@@ -24,6 +32,8 @@ import { getMarketplaceItems } from '../marketplace.js';
 
 const SHELL_BUILTINS = new Set(['cd', 'export', 'alias', 'source', 'unset', 'umask', 'exec']);
 const MAX_BASH_BUFFER = 16 * 1024;
+const SHELL_HISTORY_FILE = 'shell-history.jsonl';
+const SHELL_HISTORY_MAX = 2000;
 
 // ── Input classification ────────────────────────────────────────────────────
 
@@ -98,11 +108,20 @@ const QUESTION_STARTERS = new Set([
   'thanks'
 ]);
 
+const ENV_VAR_RE = /^[A-Za-z_][A-Za-z0-9_]*=/;
+const BACKTICK_RE = /^`[^`]+`/;
+
 export function looksLikeQuestion(line: string): boolean {
   const trimmed = line.trim();
   if (!trimmed) return false;
 
   if (trimmed.endsWith('?')) return true;
+
+  // Env-prefixed commands (FOO=bar cmd) are always bash, never questions
+  if (ENV_VAR_RE.test(trimmed)) return false;
+
+  // Backtick-prefixed commands are always bash
+  if (BACKTICK_RE.test(trimmed)) return false;
 
   const words = trimmed.split(/\s+/);
   const firstWord = words[0].toLowerCase();
@@ -288,6 +307,42 @@ function copyToClipboard(text: string): void {
   }
 }
 
+// ── Shell history persistence ────────────────────────────────────────────────
+
+function getShellHistoryPath(dataDir: string): string {
+  return join(dataDir, SHELL_HISTORY_FILE);
+}
+
+function loadShellHistory(dataDir: string): string[] {
+  const path = getShellHistoryPath(dataDir);
+  if (!existsSync(path)) return [];
+  try {
+    const raw = readFileSync(path, 'utf8');
+    const entries: string[] = [];
+    for (const line of raw.split('\n').filter(Boolean).reverse()) {
+      try {
+        const parsed = JSON.parse(line);
+        if (parsed.line) entries.push(parsed.line);
+      } catch {
+        continue;
+      }
+      if (entries.length >= SHELL_HISTORY_MAX) break;
+    }
+    return entries;
+  } catch {
+    return [];
+  }
+}
+
+function appendShellHistory(dataDir: string, line: string): void {
+  const path = getShellHistoryPath(dataDir);
+  try {
+    appendFileSync(path, JSON.stringify({ line, ts: new Date().toISOString() }) + '\n', 'utf8');
+  } catch {
+    // best-effort
+  }
+}
+
 // ── Main shell loop ─────────────────────────────────────────────────────────
 
 export async function runShell(io: CliIo, style: Styler): Promise<number> {
@@ -412,8 +467,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     cwd: currentCwd
   };
 
-  // In-memory history for prompter (not persisted — transcript covers that)
-  const history: string[] = [];
+  // Shell history — persisted to disk and loaded on startup
+  const history: string[] = loadShellHistory(dataDir);
 
   const tips = [
     'type /help to see all slash commands',
@@ -423,6 +478,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     'type /clear to reset and see the home banner',
     'type /transcript to see your last 20 commands',
     'type /last to re-run the last bash command',
+    'type /again to re-send the last chat message',
+    'type /? <agora_cmd> to dry-run an agora command',
     'type ?how do I use MCP? to ask about the marketplace',
     'type /verbose for detailed AI responses',
     'type /quiet for minimal AI responses',
@@ -432,7 +489,20 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     'press Esc to dismiss ghost suggestions',
     'run `agora search --table` for a table view',
     'run `agora search --sort stars` to sort by stars',
-    'run `agora search --sort name --order asc` for alphabetical'
+    'run `agora search --sort name --order asc` for alphabetical',
+    'run `agora completions bash | source /dev/stdin` for bash completions',
+    'run `agora completions zsh > /usr/local/share/zsh/site-functions/_agora` for zsh completions',
+    'run `agora completions fish > ~/.config/fish/completions/agora.fish` for fish completions',
+    'type /home to open the TUI Home page',
+    'type /marketplace to open the TUI Marketplace page',
+    'type /settings to open the TUI Settings page',
+    'run `agora save <id>` to bookmark a package',
+    'run `agora saved` to see your saved items',
+    'run `agora auth login --api-url <url>` to connect the community',
+    'run `agora config doctor` to check your OpenCode config',
+    'type VAR=val command to set env vars in bash',
+    'pipe output with | or redirect with > as normal in bash',
+    'run `agora shell` anywhere to re-enter this interactive mode'
   ];
   // Amber chevron when opencode unavailable, accent otherwise
   const accentChevron = opencodeAvailable ? style.accent('›') : '\x1b[38;5;214m›\x1b[0m';
@@ -450,8 +520,12 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
   function buildContextLine(): string {
     const model = FREE_MODELS[0];
-    const tip = tips[(meta?.turnCount ?? 0) % tips.length];
-    return style.dim(`model: ${model} · ${tip}`);
+    const turnCount = meta?.turnCount ?? 0;
+    const tip = tips[turnCount % tips.length];
+    const parts = [`model: ${model}`, `${turnCount} turns`];
+    if (totalCost > 0) parts.push(`$${totalCost.toFixed(6)}`);
+    parts.push(tip);
+    return style.dim(parts.join(' · '));
   }
 
   const sigintHandler = () => {
@@ -490,9 +564,10 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       const line = result.value;
       if (!line.trim()) continue;
 
-      // Add to history
+      // Add to history and persist
       if (history[history.length - 1] !== line) {
         history.push(line);
+        appendShellHistory(dataDir, line);
       }
 
       const dispatch = classifyInput(line, isExecutable);

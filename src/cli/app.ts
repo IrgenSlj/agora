@@ -126,6 +126,11 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
 
     if (parsed.command === 'menu') return await runInteractiveMenu(io, style);
     if (parsed.command === 'tui') return await runTui(io, { initial: 'home' });
+    if (parsed.command === 'completions') return await commandCompletions(parsed, io, style);
+    if (parsed.command === 'shell') {
+      const { runShell } = await import('./shell.js');
+      return runShell(io, style);
+    }
 
     writeLine(io.stderr, `Unknown command: ${parsed.command}`);
     writeLine(io.stderr, 'Run agora help for usage.');
@@ -140,6 +145,22 @@ export function commandManual(name: string): string {
   const meta = COMMANDS.find((c) => c.name === name);
   if (!meta) return '';
   return renderManual(meta, style);
+}
+
+export async function commandCompletions(
+  parsed: { args: string[] },
+  io: CliIo,
+  _style: Styler
+): Promise<number> {
+  const shell = parsed.args[0] || 'bash';
+  const { generateCompletions } = await import('./completions-gen.js');
+  const output = generateCompletions(shell);
+  if (output.startsWith('Unknown shell')) {
+    writeLine(io.stderr, output);
+    return 1;
+  }
+  writeLine(io.stdout, output);
+  return 0;
 }
 
 export function listKnownItems(): MarketplaceItem[] {

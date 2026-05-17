@@ -593,6 +593,10 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
     // Accumulated escape sequence buffer
     let escBuf = '';
     let escTimer: ReturnType<typeof setTimeout> | null = null;
+    // Paste detection: when characters arrive faster than 50ms apart,
+    // treat newlines as literal inserts instead of submission.
+    let lastCharTime = 0;
+    let pasteMode = false;
 
     function flushEsc(): void {
       if (escTimer) {
@@ -679,6 +683,11 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
       const bytes = [...buf];
       let i = 0;
 
+      // If more than 200ms since last character data, exit paste mode
+      if (pasteMode && lastCharTime > 0 && Date.now() - lastCharTime > 200) {
+        pasteMode = false;
+      }
+
       while (i < bytes.length) {
         const b = bytes[i];
 
@@ -762,6 +771,19 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
           continue;
         }
         if (b === 0x0a || b === 0x0d) {
+          // In paste mode, insert literal newline instead of submitting
+          if (pasteMode) {
+            const chars = Array.from(state.line);
+            chars.splice(state.cursor, 0, '\n');
+            const newLine = chars.join('');
+            state = withGhost(
+              { ...state, line: newLine, cursor: state.cursor + 1, tabCycle: null },
+              { ghostSuggester: opts.ghostSuggester }
+            );
+            redraw();
+            i++;
+            continue;
+          }
           dispatchEvent({ kind: 'enter' });
           i++;
           continue;
@@ -791,6 +813,13 @@ export async function readLine(opts: PromptOptions): Promise<PromptResult> {
           i++;
           continue;
         }
+
+        // Paste detection: if data chunks arrive < 50ms apart, enter paste mode
+        const now = Date.now();
+        if (now - lastCharTime < 50 && lastCharTime > 0) {
+          pasteMode = true;
+        }
+        lastCharTime = now;
 
         // Printable ASCII or UTF-8 multi-byte: batch until next control
         let printable = '';

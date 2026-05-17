@@ -27,10 +27,14 @@ const booleanFlags = new Set([
   'live',
   'mcp',
   'offline',
+  'refresh',
   'table',
+  'up',
+  'down',
   'version',
   'verbose',
-  'write'
+  'write',
+  'yes'
 ]);
 
 export function normalizeFlag(flag: string): string {
@@ -45,6 +49,7 @@ function shortFlag(arg: string): string {
   if (flag === 'c') return 'c';
   if (flag === 'n') return 'n';
   if (flag === 't') return 't';
+  if (flag === 'y') return 'yes';
   return flag;
 }
 

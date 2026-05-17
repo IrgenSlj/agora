@@ -640,5 +640,37 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--json', description: 'Output as JSON' }
     ],
     examples: ['agora history', 'agora history --limit 10', 'agora history --clear']
+  },
+  {
+    name: 'completions',
+    group: 'Setup',
+    summary: 'Generate shell completion scripts for bash, zsh, or fish',
+    usage: 'agora completions bash|zsh|fish',
+    details:
+      'Generates shell completion scripts for the agora CLI. Pipe the output to your shell\'s ' +
+      'completions directory or source it directly. Completions include all commands, flags, ' +
+      'marketplace IDs, categories, and common option values.',
+    examples: [
+      'agora completions bash > /usr/local/etc/bash_completion.d/agora',
+      'agora completions zsh > /usr/local/share/zsh/site-functions/_agora',
+      'agora completions fish > ~/.config/fish/completions/agora.fish',
+      'eval "$(agora completions bash)"'
+    ]
+  },
+  {
+    name: 'shell',
+    group: 'Setup',
+    summary: 'Start the interactive Agora shell (bash + chat hybrid)',
+    usage: 'agora shell [--verbose|--quiet]',
+    details:
+      'Opens an interactive REPL that dispatches between bash and AI chat. ' +
+      'Commands found on PATH run as bash; questions and everything else go to AI. ' +
+      'Special prefixes: !<cmd> force bash, ?<msg> force chat. ' +
+      'Type /help to see all meta commands. History is persisted across sessions.',
+    flags: [
+      { flag: '--verbose', description: 'Detailed AI responses' },
+      { flag: '--quiet', description: 'Minimal AI responses' }
+    ],
+    examples: ['agora shell']
   }
 ];
