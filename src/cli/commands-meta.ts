@@ -837,6 +837,19 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'welcome',
+    group: 'Setup',
+    summary: 'Show a guided onboarding tour of the agora CLI',
+    usage: 'agora welcome [--json]',
+    details:
+      'Displays a six-section guide covering sign-in, the marketplace, news, community, ' +
+      'shell completions, and scaffolding an MCP project. ' +
+      'Step 1 adapts to show your profile commands when you are already signed in. ' +
+      'Use --json to get a machine-readable list of steps.',
+    flags: [{ flag: '--json', description: 'Output { signedIn, username?, steps } as JSON' }],
+    examples: ['agora welcome', 'agora welcome --json']
+  },
+  {
     name: 'notify',
     group: 'Setup',
     summary: 'Send a desktop notification via macOS, Linux, or Windows',

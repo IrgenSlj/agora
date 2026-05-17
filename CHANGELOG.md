@@ -24,6 +24,16 @@ No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
   `repository` URL via the existing `open-url` page action; in list
   mode it still cycles the sort.
 
+### Added — `agora welcome`
+
+- **`agora welcome`** — guided first-run tour. Six adaptive sections
+  (sign in / browse marketplace / read news / join community / shell
+  completions / scaffold an MCP project). When the user is signed in,
+  step 1 flips from "Sign in" to "Signed in as <username>" pointing at
+  `agora profile` + `agora bookmarks`. `--json` returns the structured
+  step list for scripts.
+- The existing `agora` (no-args) banner is unchanged.
+
 ### Added — `agora today`
 
 - **`agora today`** — one-shot daily digest. Reads the local news cache
