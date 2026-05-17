@@ -160,6 +160,49 @@ describe('CLI commands', () => {
     }
   });
 
+  test('install --write of a permission-declaring item refuses without --yes', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const configPath = join(temp, 'opencode.json');
+    const { io, stdout } = createIo(temp);
+
+    try {
+      const code = await runCli(
+        ['install', 'mcp-filesystem', '--write', '--config', configPath],
+        io
+      );
+
+      expect(code).toBe(1);
+      const out = stdout.join('');
+      expect(out).toContain('Permissions');
+      expect(out).toContain('fs');
+      expect(out).toContain('Re-run with --yes');
+      // The config file should NOT have been written.
+      expect(existsSync(configPath)).toBe(false);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('install --write --yes of a permission-declaring item prints Granted permissions', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const configPath = join(temp, 'opencode.json');
+    const { io, stdout } = createIo(temp);
+
+    try {
+      const code = await runCli(
+        ['install', 'mcp-filesystem', '--write', '--yes', '--config', configPath],
+        io
+      );
+
+      expect(code).toBe(0);
+      const out = stdout.join('');
+      expect(out).toContain('Granted permissions:');
+      expect(out).toContain('Installed');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
   test('config doctor reports config metadata', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
     const configPath = join(temp, 'opencode.json');

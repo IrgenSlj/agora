@@ -16,6 +16,7 @@ import {
   getTrendingItems,
   getTutorials,
   findTutorial,
+  clearMarketplaceItemsCache,
   describePermissionGlob,
   hasPermissions,
   renderPermissionLines,
@@ -803,6 +804,24 @@ describe('marketplace source filter logic', () => {
     const ghOnly = all.filter((i) => (i as any).source === 'github');
     expect(ghOnly).toHaveLength(1);
     expect(ghOnly[0].id).toBe('gh:owner/repo');
+  });
+});
+
+describe('getMarketplaceItems memo', () => {
+  test('two consecutive calls return the same array reference within TTL', () => {
+    clearMarketplaceItemsCache();
+    const a = getMarketplaceItems();
+    const b = getMarketplaceItems();
+    expect(a).toBe(b);
+  });
+
+  test('clearMarketplaceItemsCache invalidates the memo', () => {
+    const a = getMarketplaceItems();
+    clearMarketplaceItemsCache();
+    const b = getMarketplaceItems();
+    expect(a).not.toBe(b);
+    // But contents are still equivalent.
+    expect(a.length).toBe(b.length);
   });
 });
 
