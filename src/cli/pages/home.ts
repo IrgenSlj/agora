@@ -9,8 +9,7 @@ import { readCache } from '../../news/cache.js';
 import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
 import { rankItems } from '../../news/score.js';
 import { communityThreadsSource } from '../../community/client.js';
-import { loadAgoraState, getAuthState } from '../../state.js';
-import { vlen, sep, fmtCount, frame } from './helpers.js';
+import { vlen, sep, fmtCount, frame, pageSourceOptions } from './helpers.js';
 import { formatNumber } from '../../format.js';
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -45,23 +44,7 @@ function detectDataDir(ctx: PageContext): string {
 }
 
 function buildSourceOptions(ctx: PageContext): SourceOptions | null {
-  const dir = detectDataDir(ctx);
-  let apiUrl = process.env.AGORA_API_URL || '';
-  let token = process.env.AGORA_TOKEN || process.env.AGORA_API_TOKEN || '';
-  if (!apiUrl || !token) {
-    try {
-      const agoraState = loadAgoraState(dir);
-      const auth = getAuthState(agoraState);
-      if (auth) {
-        if (!apiUrl) apiUrl = auth.apiUrl || '';
-        if (!token) token = auth.accessToken || '';
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  if (!apiUrl || !token) return null;
-  return { useApi: true, apiUrl, token, fetcher: ctx.io.fetcher, timeoutMs: 10000 };
+  return pageSourceOptions(ctx, { requireAuth: true });
 }
 
 function fmtAge(iso: string): string {

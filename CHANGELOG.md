@@ -9,6 +9,39 @@ gained completions, history, job control, a letter-shortcut surface, and a
 broad new command surface (`export`, `watch`, `notify`, `config doctor`, …).
 No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
 
+### Changed — reviewer punch-list pass
+
+A focused quality pass driven by an internal codebase review:
+
+- **Backend hardening**: length caps on `POST /api/packages`,
+  `/api/workflows`, and the legacy `/api/discussions`; `/api/users/:username`
+  collapsed from 3 sequential COUNT queries into a single SELECT with
+  subselects; explicit `VALID_THREAD_SORTS` allowlist before
+  interpolating `sort` into the ORDER BY of `/api/community/threads`.
+- **TUI leaks / stale state**: `loadBoards` missing `ctx.repaint()` (the
+  community spinner stayed visible until the next keypress);
+  `communityPage.unmount` clears search-debounce + status timers and
+  resets composer / flagModal / search / view + module-level
+  `expandedItems` / `userVotes` Maps that grew unbounded across mounts;
+  news preview now tracks an `AbortController` + child process, kills
+  them on unmount, and bails on supersession instead of writing into a
+  stale repaint context.
+- **Perf**: `marketplacePage.render` now passes the full catalog into
+  `filtered()` so `getMarketplaceItems()` is called once per repaint
+  instead of twice (halves the hub-cache reads when
+  `AGORA_LIVE_HUBS=1`).
+- **Types**: added optional `source: 'github' | 'hf'` and `pushedAt:
+  string` to `Package`; replaced the 12 `(item as any)` casts in the
+  marketplace page with typed `itemSource` / `itemPricing` /
+  `itemRepository` / `itemPushedAt` accessors that narrow on
+  `item.kind === 'package'`.
+- **DRY**: `pageSourceOptions(ctx, { requireAuth? })` extracted into
+  `src/cli/pages/helpers.ts` — community + home pages were carrying
+  divergent copies of the same auth-fallback logic.
+- **OAuth guard**: `commandAuth login` device-code and token responses
+  are now narrowly typed and validated for required fields instead of
+  blindly destructured from `as any`.
+
 ### Changed — marketplace TUI detail view
 
 - Detail view is now a proper full-screen page instead of a five-line

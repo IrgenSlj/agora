@@ -882,8 +882,21 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
         const err = await codeRes.json().catch(() => ({ error: 'request failed' }));
         return usageError(io, `Device code request failed: ${err.error || codeRes.status}`);
       }
-      const codeData = (await codeRes.json()) as any;
-
+      const codeData = (await codeRes.json()) as {
+        verification_uri?: string;
+        user_code?: string;
+        device_code?: string;
+        interval?: number;
+      };
+      if (
+        !codeData ||
+        typeof codeData !== 'object' ||
+        typeof codeData.verification_uri !== 'string' ||
+        typeof codeData.user_code !== 'string' ||
+        typeof codeData.device_code !== 'string'
+      ) {
+        return usageError(io, 'Device code response missing required fields');
+      }
       const verificationUri = codeData.verification_uri;
       const userCode = codeData.user_code;
       const deviceCode = codeData.device_code;
@@ -927,7 +940,20 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
           });
 
           if (tokenRes.ok) {
-            const tokenData = (await tokenRes.json()) as any;
+            const tokenData = (await tokenRes.json()) as {
+              access_token?: string;
+              refresh_token?: string;
+              expires_in?: number;
+              refresh_expires_in?: number;
+            };
+            if (
+              !tokenData ||
+              typeof tokenData !== 'object' ||
+              typeof tokenData.access_token !== 'string' ||
+              typeof tokenData.refresh_token !== 'string'
+            ) {
+              return usageError(io, 'Token response missing access_token / refresh_token');
+            }
 
             process.stdout.write(`\r\x1b[K${style.dim('Authorization received.')}\n`);
 

@@ -731,29 +731,29 @@ describe('createInstallPlan — permissions', () => {
 
 describe('sourceBadge', () => {
   test('github source returns [gh] badge padded to 5 chars', () => {
-    const item = { source: 'github' } as any;
+    const item = { kind: 'package', source: 'github' } as any;
     expect(sourceBadge(item)).toBe('[gh] ');
   });
 
   test('hf source returns [hf] badge padded to 5 chars', () => {
-    const item = { source: 'hf' } as any;
+    const item = { kind: 'package', source: 'hf' } as any;
     expect(sourceBadge(item)).toBe('[hf] ');
   });
 
   test('no source (curated) returns [c] badge padded to 5 chars', () => {
-    const item = {} as any;
+    const item = { kind: 'package' } as any;
     expect(sourceBadge(item)).toBe('[c]  ');
   });
 
   test('undefined source returns curated badge', () => {
-    const item = { source: undefined } as any;
+    const item = { kind: 'package', source: undefined } as any;
     expect(sourceBadge(item)).toBe('[c]  ');
   });
 
   test('all badges are exactly 5 chars', () => {
-    expect(sourceBadge({ source: 'github' } as any)).toHaveLength(5);
-    expect(sourceBadge({ source: 'hf' } as any)).toHaveLength(5);
-    expect(sourceBadge({} as any)).toHaveLength(5);
+    expect(sourceBadge({ kind: 'package', source: 'github' } as any)).toHaveLength(5);
+    expect(sourceBadge({ kind: 'package', source: 'hf' } as any)).toHaveLength(5);
+    expect(sourceBadge({ kind: 'package' } as any)).toHaveLength(5);
   });
 });
 

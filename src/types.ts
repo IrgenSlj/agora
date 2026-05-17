@@ -24,6 +24,10 @@ export interface Package {
   permissions?: Permissions;
   flagCount?: number;
   pricing?: Pricing;
+  /** Origin of the entry: undefined = curated bundled catalog. */
+  source?: 'github' | 'hf';
+  /** Last upstream push for live hub items (HF lastModified, GH pushedAt). */
+  pushedAt?: string;
 }
 
 export interface Workflow {

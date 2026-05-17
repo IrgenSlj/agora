@@ -55,8 +55,25 @@ const state: MpState = {
   enrichmentLoading: false
 };
 
+function itemSource(item: MarketplaceItem): 'github' | 'hf' | undefined {
+  return item.kind === 'package' ? item.source : undefined;
+}
+
+function itemPricing(item: MarketplaceItem): 'free' | 'paid' {
+  if (item.kind !== 'package') return 'free';
+  return item.pricing?.kind ?? 'free';
+}
+
+function itemRepository(item: MarketplaceItem): string | undefined {
+  return item.kind === 'package' ? item.repository : undefined;
+}
+
+function itemPushedAt(item: MarketplaceItem): string | undefined {
+  return item.kind === 'package' ? item.pushedAt : undefined;
+}
+
 export function sourceBadge(item: MarketplaceItem): string {
-  const src = (item as any).source as string | undefined;
+  const src = itemSource(item);
   if (src === 'github') return '[gh] ';
   if (src === 'hf') return '[hf] ';
   return '[c]  ';
@@ -64,15 +81,14 @@ export function sourceBadge(item: MarketplaceItem): string {
 
 function matchesSourceFilter(item: MarketplaceItem, filter: SourceFilter): boolean {
   if (filter === 'all') return true;
-  const src = (item as any).source as string | undefined;
+  const src = itemSource(item);
   if (filter === 'curated') return !src;
   return src === filter;
 }
 
 function matchesPricingFilter(item: MarketplaceItem, filter: PricingFilter): boolean {
   if (filter === 'all') return true;
-  const kind = (item as any).pricing?.kind ?? 'free';
-  return kind === filter;
+  return itemPricing(item) === filter;
 }
 
 function filtered(source: ReadonlyArray<MarketplaceItem>): MarketplaceItem[] {
@@ -289,7 +305,7 @@ export const marketplacePage: Page = {
       // Header line: badge + name + pricing + author
       const badge = style.dim(sourceBadge(it));
       const pricing =
-        ((it as any).pricing?.kind ?? 'free') === 'paid' ? '  ' + style.accent('PAID') : '';
+        itemPricing(it) === 'paid' ? '  ' + style.accent('PAID') : '';
       detail.push(' ' + badge + style.bold(style.accent(it.name)) + pricing);
       const metaLine =
         (it.author ? style.dim('by ' + it.author) : '') +
@@ -313,8 +329,9 @@ export const marketplacePage: Page = {
       if (it.stars !== undefined) {
         statsParts.push(style.accent(fmtCount(it.stars)) + style.dim(' ★'));
       }
-      if ((it as any).pushedAt) {
-        const ageH = (Date.now() - new Date((it as any).pushedAt).getTime()) / 3600000;
+      const pushedAt = itemPushedAt(it);
+      if (pushedAt) {
+        const ageH = (Date.now() - new Date(pushedAt).getTime()) / 3600000;
         const age = ageH < 24 ? Math.round(ageH) + 'h' : Math.round(ageH / 24) + 'd';
         statsParts.push(style.dim('updated ' + age + ' ago'));
       }
@@ -326,8 +343,9 @@ export const marketplacePage: Page = {
       }
 
       // Repository link
-      if ((it as any).repository) {
-        detail.push(' ' + style.dim('repo  ') + (it as any).repository);
+      const repoUrl = itemRepository(it);
+      if (repoUrl) {
+        detail.push(' ' + style.dim('repo  ') + repoUrl);
       }
 
       // Permissions block (always shown — none-declared is informative)
@@ -390,10 +408,7 @@ export const marketplacePage: Page = {
       const selected = start + i === state.cursor;
       const lead = selected ? rail(style) : noRail();
       const badge = style.dim(sourceBadge(it));
-      const pricingBadge =
-        ((it as any).pricing?.kind ?? 'free') === 'paid'
-          ? style.accent('PAID') + ' '
-          : '';
+      const pricingBadge = itemPricing(it) === 'paid' ? style.accent('PAID') + ' ' : '';
       const stats =
         pricingBadge +
         style.accent(fmtCount(it.installs ?? 0).padStart(7)) +
@@ -507,7 +522,8 @@ export const marketplacePage: Page = {
         state.detail = !state.detail;
         if (state.detail) {
           const selected = items[state.cursor];
-          if (selected && (selected as any).source === 'github') {
+          const selectedSource = selected ? itemSource(selected) : undefined;
+          if (selected && selectedSource === 'github') {
             state.enrichment = null;
             state.enrichmentLoading = true;
             const repoId = selected.id.startsWith('gh:') ? selected.id.slice(3) : null;
@@ -522,7 +538,7 @@ export const marketplacePage: Page = {
             } else {
               state.enrichmentLoading = false;
             }
-          } else if (selected && (selected as any).source === 'hf') {
+          } else if (selected && selectedSource === 'hf') {
             state.enrichment = null;
             state.enrichmentLoading = true;
             const repoId = selected.id.startsWith('hf:') ? selected.id.slice(3) : null;
@@ -581,7 +597,7 @@ export const marketplacePage: Page = {
       case 'o': {
         if (state.detail) {
           const it = items[state.cursor];
-          const url = (it as any)?.repository;
+          const url = it ? itemRepository(it) : undefined;
           if (url) return { kind: 'open-url', url };
           return { kind: 'status', message: 'no repo url' };
         }

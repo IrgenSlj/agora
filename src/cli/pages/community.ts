@@ -19,8 +19,7 @@ import {
   flagSource
 } from '../../community/client.js';
 import { BOARD_LABELS } from '../../community/types.js';
-import { loadAgoraState, getAuthState } from '../../state.js';
-import { vlen, rail, noRail, sep, frame } from './helpers.js';
+import { vlen, rail, noRail, sep, frame, pageSourceOptions } from './helpers.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -163,22 +162,7 @@ function flattenReplies(replies: Reply[], depth = 0): FlatReply[] {
 }
 
 function buildSourceOptions(ctx: PageContext): SourceOptions {
-  const dir = detectDataDir();
-  let apiUrl = process.env.AGORA_API_URL || '';
-  let token = process.env.AGORA_TOKEN || process.env.AGORA_API_TOKEN || '';
-  if (!apiUrl || !token) {
-    try {
-      const agoraState = loadAgoraState(dir);
-      const auth = getAuthState(agoraState);
-      if (auth) {
-        if (!apiUrl) apiUrl = auth.apiUrl || '';
-        if (!token) token = auth.accessToken || '';
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  return { useApi: Boolean(apiUrl), apiUrl, token, fetcher: ctx.io.fetcher, timeoutMs: 10000 };
+  return pageSourceOptions(ctx)!;
 }
 
 function setStatus(msg: string): void {
