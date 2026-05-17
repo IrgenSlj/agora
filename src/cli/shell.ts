@@ -60,7 +60,8 @@ export type Dispatch =
         | 'env'
         | 'jobs'
         | 'fg'
-        | 'bg';
+        | 'bg'
+        | 'abc';
       args?: string;
     }
   | { kind: 'tui'; page?: TuiPageId }
@@ -77,6 +78,38 @@ const TUI_SLASH_ALIASES: Record<string, TuiPageId | 'default'> = {
   '/community': 'community',
   '/news': 'news',
   '/settings': 'settings'
+};
+
+type LetterDispatch =
+  | { kind: 'meta'; sub: string }
+  | { kind: 'tui'; page?: TuiPageId }
+  | { kind: 'bash'; cmd: string };
+
+const LETTER_SHORTCUTS: Record<string, LetterDispatch> = {
+  '/a': { kind: 'meta', sub: 'again' },
+  '/b': { kind: 'bash', cmd: 'agora browse' },
+  '/c': { kind: 'tui', page: 'community' },
+  '/d': { kind: 'bash', cmd: 'agora config doctor' },
+  '/e': { kind: 'meta', sub: 'env' },
+  '/f': { kind: 'meta', sub: 'fg' },
+  '/g': { kind: 'bash', cmd: 'agora search' },
+  '/h': { kind: 'tui', page: 'home' },
+  '/i': { kind: 'bash', cmd: 'agora init' },
+  '/j': { kind: 'meta', sub: 'jobs' },
+  '/k': { kind: 'bash', cmd: 'agora search' },
+  '/l': { kind: 'meta', sub: 'last' },
+  '/m': { kind: 'tui', page: 'marketplace' },
+  '/n': { kind: 'tui', page: 'news' },
+  '/p': { kind: 'bash', cmd: 'agora preferences' },
+  '/q': { kind: 'meta', sub: 'quit' },
+  '/r': { kind: 'bash', cmd: 'agora reviews' },
+  '/s': { kind: 'tui', page: 'settings' },
+  '/t': { kind: 'meta', sub: 'terminal' },
+  '/u': { kind: 'bash', cmd: 'agora use' },
+  '/v': { kind: 'meta', sub: 'verbose' },
+  '/w': { kind: 'bash', cmd: 'agora watch' },
+  '/x': { kind: 'bash', cmd: 'agora export' },
+  '/y': { kind: 'bash', cmd: 'agora history' }
 };
 
 const QUESTION_STARTERS = new Set([
@@ -147,6 +180,7 @@ export function classifyInput(line: string, isExecutable: (name: string) => bool
   const trimmed = line.trim();
   if (!trimmed) return { kind: 'noop' };
 
+  if (trimmed === '/abc') return { kind: 'meta', sub: 'abc' };
   if (trimmed === '/help') return { kind: 'meta', sub: 'help' };
   if (trimmed === '/quit') return { kind: 'meta', sub: 'quit' };
   if (trimmed === '/exit') return { kind: 'meta', sub: 'exit' };
@@ -180,7 +214,19 @@ export function classifyInput(line: string, isExecutable: (name: string) => bool
     return target === 'default' ? { kind: 'tui' } : { kind: 'tui', page: target };
   }
 
-  // Slash-prefixed inputs that weren't an exact meta or TUI match are
+  // Single-letter shortcuts (exact match only, no args).
+  const letterDisp = LETTER_SHORTCUTS[trimmed];
+  if (letterDisp) {
+    if (letterDisp.kind === 'meta') {
+      return { kind: 'meta', sub: letterDisp.sub as Dispatch extends { kind: 'meta' } ? Dispatch['sub'] : never };
+    }
+    if (letterDisp.kind === 'tui') {
+      return { kind: 'tui', page: letterDisp.page };
+    }
+    return letterDisp;
+  }
+
+  // Slash-prefixed inputs that weren't an exact meta, TUI, or letter match are
   // forwarded to the `agora` CLI: `/agora help`, `/agora search foo`,
   // `/help tutorials`, `/foo` all become `agora <args>`. Never let
   // `/anything` fall through to bash — PATH-joining an absolute name like
@@ -366,7 +412,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const mottoLine = gradientText(motto, { trueColor });
     const model = FREE_MODELS[0];
     const infoLine = style.dim(
-      `v${AGORA_VERSION} · ${model} · /terminal · /help · /menu · /search · /quit`
+      `v${AGORA_VERSION} · ${model} · /abc · /help · /menu · /search · /quit`
     );
     const slashLine = style.orange('/home · /marketplace · /community · /news · /settings');
     process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${infoLine}\n${slashLine}\n\n`);
@@ -444,6 +490,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     '/comm',
     '/news',
     '/settings',
+    '/abc',
     '/help',
     '/menu',
     '/transcript',
@@ -489,6 +536,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const history: string[] = loadShellHistory(dataDir);
 
   const tips = [
+    'type /abc for a quick letter-shortcut reference (/a /b /c ...)',
     'type /help to see all slash commands',
     'type /menu to browse the command catalog',
     'type ?<msg> to force AI chat',
@@ -602,6 +650,11 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         if (dispatch.sub === 'clear') {
           process.stdout.write('\x1b[2J\x1b[H');
           printHome();
+          continue;
+        }
+
+        if (dispatch.sub === 'abc') {
+          printLetterHelp(style);
           continue;
         }
 
@@ -1121,6 +1174,22 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   }
 }
 
+function printLetterHelp(style: Styler): void {
+  const lines: string[] = [
+    style.accent('Agora Shell — letter shortcuts'),
+    '',
+    '  /a  again     /b  browse    /c  community  /d  doctor   /e  env',
+    '  /f  fg        /g  search    /h  home       /i  init     /j  jobs',
+    '  /k  search    /l  last      /m  marketplace /n  news     /p  preferences',
+    '  /q  quit      /r  reviews   /s  settings   /t  terminal /u  use',
+    '  /v  verbose   /w  watch     /x  export     /y  history',
+    '',
+    'Shortcuts are exact matches only (no arguments).',
+    'Type /help for full command reference, /abc to show this again.'
+  ];
+  process.stdout.write(lines.join('\n') + '\n\n');
+}
+
 function printHelp(style: Styler): void {
   const lines: string[] = [
     style.accent('Agora Shell — help'),
@@ -1140,7 +1209,7 @@ function printHelp(style: Styler): void {
     '  /last         re-run most recent bash command',
     '  /again        re-send most recent chat message',
     '  /? <cmd>      dry-run an agora command (e.g. /? install mcp-github)',
-    '  /env          view/set tracked environment variables',
+    '  /abc          show letter-shortcut reference (/a /b /c ...)',
     '  /jobs         list background jobs',
     '  /fg [N]       bring job N (or last) to foreground',
     '  /bg [N]       resume job N (or last) in background',
