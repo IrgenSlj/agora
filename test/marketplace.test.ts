@@ -16,6 +16,8 @@ import {
   getTrendingItems,
   getTutorials,
   findTutorial,
+  describePermissionGlob,
+  hasPermissions,
   renderPermissionLines,
   searchMarketplaceItems,
   similarItems,
@@ -801,5 +803,34 @@ describe('marketplace source filter logic', () => {
     const ghOnly = all.filter((i) => (i as any).source === 'github');
     expect(ghOnly).toHaveLength(1);
     expect(ghOnly[0].id).toBe('gh:owner/repo');
+  });
+});
+
+describe('hasPermissions', () => {
+  test('undefined → false', () => {
+    expect(hasPermissions(undefined)).toBe(false);
+  });
+  test('all empty arrays → false', () => {
+    expect(hasPermissions({ fs: [], net: [], exec: [] })).toBe(false);
+  });
+  test('any non-empty group → true', () => {
+    expect(hasPermissions({ fs: ['./**/*'] })).toBe(true);
+    expect(hasPermissions({ net: ['api.openai.com'] })).toBe(true);
+    expect(hasPermissions({ exec: ['docker'] })).toBe(true);
+  });
+});
+
+describe('describePermissionGlob', () => {
+  test('wildcard explains unrestricted', () => {
+    expect(describePermissionGlob('*')).toBe('unrestricted');
+  });
+  test('./**/* explains current directory', () => {
+    expect(describePermissionGlob('./**/*')).toContain('current working directory');
+  });
+  test('agora config path explains agora-only', () => {
+    expect(describePermissionGlob('~/.config/agora/**/*')).toContain('agora config');
+  });
+  test('arbitrary value returns empty annotation', () => {
+    expect(describePermissionGlob('api.openai.com')).toBe('');
   });
 });

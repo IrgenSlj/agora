@@ -7,7 +7,7 @@ import {
   loadOpenCodeConfig,
   writeOpenCodeConfig
 } from '../../config-files.js';
-import { createInstallPlan, renderPermissionLines } from '../../marketplace.js';
+import { createInstallPlan, hasPermissions, renderPermissionLines } from '../../marketplace.js';
 import {
   findMarketplaceSource,
   publishPackageSource,
@@ -108,6 +108,22 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
   }
 
   if (parsed.flags.write) {
+    if (hasPermissions(plan.permissions)) {
+      if (!parsed.flags.yes && !parsed.flags.y) {
+        for (const line of renderPermissionLines(plan.permissions)) writeLine(io.stdout, line);
+        writeLine(io.stdout, '');
+        writeLine(
+          io.stdout,
+          style.dim(
+            'This package declares permissions. Re-run with --yes to grant and install.'
+          )
+        );
+        return 1;
+      }
+      writeLine(io.stdout, 'Granted permissions:');
+      for (const line of renderPermissionLines(plan.permissions)) writeLine(io.stdout, line);
+      writeLine(io.stdout, '');
+    }
     if (plan.kind === 'git-clone') {
       if (plan.cloneTarget) {
         try {

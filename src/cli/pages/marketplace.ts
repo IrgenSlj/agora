@@ -6,6 +6,8 @@ import {
   similarItems,
   createInstallPlan,
   renderPermissionLines,
+  hasPermissions,
+  describePermissionGlob,
   type MarketplaceItem,
   type InstallPlan
 } from '../../marketplace.js';
@@ -26,7 +28,7 @@ interface MpState {
   sort: SortKey;
   sourceFilter: SourceFilter;
   pricingFilter: PricingFilter;
-  view: 'list' | 'install-preview';
+  view: 'list' | 'install-preview' | 'install-perm-details';
   installPlan: InstallPlan | null;
   installStatus: string | null;
   enrichment: EnrichmentEntry | null;
@@ -151,15 +153,55 @@ export const marketplacePage: Page = {
         lines.push(' ' + style.accent(state.installStatus));
       }
       lines.push('');
-      lines.push(
-        ' ' +
-          style.accent('y') +
-          style.dim(' confirm   ') +
-          style.accent('n') +
-          style.dim('/') +
-          style.accent('Esc') +
-          style.dim(' cancel')
-      );
+      if (hasPermissions(plan.permissions)) {
+        lines.push(
+          ' ' +
+            style.accent('g') +
+            style.dim(' grant + install   ') +
+            style.accent('d') +
+            style.dim(' details   ') +
+            style.accent('n') +
+            style.dim('/') +
+            style.accent('Esc') +
+            style.dim(' cancel')
+        );
+      } else {
+        lines.push(
+          ' ' +
+            style.accent('y') +
+            style.dim(' confirm   ') +
+            style.accent('n') +
+            style.dim('/') +
+            style.accent('Esc') +
+            style.dim(' cancel')
+        );
+      }
+      return frame(lines, width, height);
+    }
+
+    if (state.view === 'install-perm-details' && state.installPlan) {
+      const perms = state.installPlan.permissions;
+      const lines: string[] = [];
+      lines.push(' ' + style.bold(style.accent('PERMISSIONS DETAIL')));
+      lines.push(' ' + sep('', width - 2, style));
+      lines.push('');
+      const renderGroup = (
+        label: string,
+        legend: string,
+        values: string[] | undefined
+      ): void => {
+        if (!values?.length) return;
+        lines.push(' ' + style.dim(label) + '  ' + style.dim(legend));
+        for (const v of values) {
+          const note = describePermissionGlob(v);
+          lines.push('   ' + v + (note ? '  ' + style.dim('— ' + note) : ''));
+        }
+        lines.push('');
+      };
+      renderGroup('fs  ', 'What the package can read or write on disk.', perms?.fs);
+      renderGroup('net ', 'Hosts the package will reach over the network.', perms?.net);
+      renderGroup('exec', 'Binaries the package will invoke.', perms?.exec);
+      lines.push(' ' + style.accent('Esc') + style.dim(' back'));
       return frame(lines, width, height);
     }
 
@@ -328,14 +370,22 @@ export const marketplacePage: Page = {
     return frame(lines, width, height);
   },
   handleKey(event, _ctx: PageContext): PageAction {
+    if (state.view === 'install-perm-details') {
+      if (event.key === 'esc') state.view = 'install-preview';
+      return { kind: 'none' };
+    }
+
     if (state.view === 'install-preview') {
-      if (event.key === 'y' && state.installPlan) {
+      const confirmKeys =
+        state.installPlan && hasPermissions(state.installPlan.permissions)
+          ? new Set(['g', 'y'])
+          : new Set(['y']);
+      if (confirmKeys.has(event.key) && state.installPlan) {
         const plan = state.installPlan;
         if (!plan.installable) {
           state.installStatus = plan.reason || 'Not installable.';
           return { kind: 'none' };
         }
-        // Spawn commands sequentially via execSync (best-effort in TUI)
         let success = true;
         for (const cmd of plan.commands) {
           try {
@@ -349,6 +399,10 @@ export const marketplacePage: Page = {
         if (success) {
           state.installStatus = `Installed ${plan.item.name}`;
         }
+        return { kind: 'none' };
+      }
+      if (event.key === 'd' && state.installPlan && hasPermissions(state.installPlan.permissions)) {
+        state.view = 'install-perm-details';
         return { kind: 'none' };
       }
       if (event.key === 'n' || event.key === 'esc') {

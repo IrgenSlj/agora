@@ -166,7 +166,10 @@ describe('CLI commands', () => {
     const setup = createIo(temp);
 
     try {
-      await runCli(['install', 'mcp-filesystem', '--write', '--config', configPath], setup.io);
+      await runCli(
+        ['install', 'mcp-filesystem', '--write', '--yes', '--config', configPath],
+        setup.io
+      );
 
       const { io, stdout } = createIo(temp);
       const code = await runCli(['config', 'doctor', '--config', configPath, '--json'], io);

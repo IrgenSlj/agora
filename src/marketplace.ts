@@ -72,6 +72,18 @@ export function renderPermissionLines(perms: Permissions | undefined): string[] 
   return ['Permissions', ...rows];
 }
 
+export function hasPermissions(perms: Permissions | undefined): boolean {
+  if (!perms) return false;
+  return Boolean(perms.fs?.length || perms.net?.length || perms.exec?.length);
+}
+
+export function describePermissionGlob(value: string): string {
+  if (value === '*') return 'unrestricted';
+  if (value === './**/*') return 'anywhere under the current working directory';
+  if (value.includes('~/.config/agora')) return 'agora config directory only';
+  return '';
+}
+
 const CONFIG_SCHEMA = 'https://opencode.ai/config.json';
 
 function hubItemToPackage(item: HubItem): PackageMarketplaceItem {
