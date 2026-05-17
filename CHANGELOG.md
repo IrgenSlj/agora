@@ -9,6 +9,21 @@ gained completions, history, job control, a letter-shortcut surface, and a
 broad new command surface (`export`, `watch`, `notify`, `config doctor`, …).
 No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
 
+### Changed — marketplace TUI detail view
+
+- Detail view is now a proper full-screen page instead of a five-line
+  block: header (source badge + name + PAID badge + author + version),
+  AI-enriched description (`(ai)` tag) with `(enriching…)` indicator,
+  stats line (installs · stars · updated age), tags, repo URL,
+  permissions section (only when declared, using the same
+  `renderPermissionLines` layout as the install preview), and a
+  related-items block with name + installs + description.
+- Footer pinned to the bottom: `i install   s save   o open repo   Esc back`.
+  `s` writes directly into `state.json` `savedItems` via
+  `saveItemToState`. `o` in detail mode opens the item's
+  `repository` URL via the existing `open-url` page action; in list
+  mode it still cycles the sort.
+
 ### Added — `agora today`
 
 - **`agora today`** — one-shot daily digest. Reads the local news cache

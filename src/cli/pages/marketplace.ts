@@ -13,7 +13,12 @@ import {
 } from '../../marketplace.js';
 import { vlen, rail, noRail, sep, fmtCount, frame, scrollbar } from './helpers.js';
 import { enrichItem, enrichHfItem, type EnrichmentEntry } from '../../hubs/enrichment.js';
-import { detectAgoraDataDir } from '../../state.js';
+import {
+  detectAgoraDataDir,
+  loadAgoraState,
+  saveItemToState,
+  writeAgoraState
+} from '../../state.js';
 
 type SortKey = 'installs' | 'stars' | 'name';
 type SourceFilter = 'all' | 'curated' | 'github' | 'hf';
@@ -92,9 +97,10 @@ export const marketplacePage: Page = {
     { key: 'j/k', label: 'nav' },
     { key: 'Enter', label: 'details' },
     { key: 'i', label: 'install' },
+    { key: 's', label: 'save' },
+    { key: 'o', label: 'sort/open' },
     { key: '/', label: 'filter' },
     { key: 'c', label: 'category' },
-    { key: 'o', label: 'sort' },
     { key: 't', label: 'source' },
     { key: 'p', label: 'price' }
   ],
@@ -277,48 +283,101 @@ export const marketplacePage: Page = {
 
     if (state.detail) {
       const it = items[state.cursor];
-      if (it) {
-        lines.push('');
-        lines.push(' ' + style.bold(it.name) + (it.author ? style.dim('   by ' + it.author) : ''));
-        lines.push(' ' + style.dim((it.tags ?? []).map((t) => '[' + t + ']').join(' ')));
-        lines.push('');
-        const displayDesc = state.enrichment?.description
-          ? state.enrichment.description + style.dim(' (ai)')
-          : (it.description ?? '');
-        lines.push(' ' + displayDesc);
-        if (state.enrichmentLoading) {
-          lines.push(' ' + style.dim('(enriching…)'));
+      if (!it) return frame(lines, width, height);
+
+      const detail: string[] = [];
+      // Header line: badge + name + pricing + author
+      const badge = style.dim(sourceBadge(it));
+      const pricing =
+        ((it as any).pricing?.kind ?? 'free') === 'paid' ? '  ' + style.accent('PAID') : '';
+      detail.push(' ' + badge + style.bold(style.accent(it.name)) + pricing);
+      const metaLine =
+        (it.author ? style.dim('by ' + it.author) : '') +
+        (it.version ? style.dim('   v' + it.version) : '');
+      if (metaLine.trim()) detail.push(' ' + metaLine);
+      detail.push(' ' + sep('', width - 2, style));
+
+      // Description block (AI-enriched when available)
+      const displayDesc = state.enrichment?.description
+        ? state.enrichment.description + style.dim(' (ai)')
+        : (it.description ?? '');
+      if (displayDesc) detail.push(' ' + displayDesc);
+      if (state.enrichmentLoading) detail.push(' ' + style.dim('(enriching…)'));
+
+      // Stats line
+      detail.push('');
+      const statsParts: string[] = [];
+      if (it.installs !== undefined) {
+        statsParts.push(style.accent(fmtCount(it.installs)) + style.dim(' installs'));
+      }
+      if (it.stars !== undefined) {
+        statsParts.push(style.accent(fmtCount(it.stars)) + style.dim(' ★'));
+      }
+      if ((it as any).pushedAt) {
+        const ageH = (Date.now() - new Date((it as any).pushedAt).getTime()) / 3600000;
+        const age = ageH < 24 ? Math.round(ageH) + 'h' : Math.round(ageH / 24) + 'd';
+        statsParts.push(style.dim('updated ' + age + ' ago'));
+      }
+      if (statsParts.length) detail.push(' ' + statsParts.join('   '));
+
+      // Tags
+      if (it.tags?.length) {
+        detail.push(' ' + style.dim((it.tags ?? []).map((t) => '[' + t + ']').join(' ')));
+      }
+
+      // Repository link
+      if ((it as any).repository) {
+        detail.push(' ' + style.dim('repo  ') + (it as any).repository);
+      }
+
+      // Permissions block (always shown — none-declared is informative)
+      const itPerms = it.kind === 'package' ? it.permissions : undefined;
+      if (hasPermissions(itPerms)) {
+        detail.push('');
+        detail.push(' ' + sep('Permissions', width - 2, style));
+        for (const row of renderPermissionLines(itPerms).slice(1)) {
+          const spaceIdx = row.indexOf(' ', 2);
+          const label = row.slice(2, spaceIdx);
+          const value = row.slice(spaceIdx + 1);
+          detail.push('   ' + style.dim(label) + '  ' + value);
         }
-        lines.push('');
-        lines.push(
-          ' ' +
-            style.accent(fmtCount(it.installs ?? 0)) +
-            style.dim(' installs   ') +
-            (it.stars !== undefined ? style.accent(fmtCount(it.stars)) + style.dim(' ★') : '')
-        );
-        lines.push('');
-        lines.push(
-          ' ' +
-            style.accent('i') +
-            style.dim(' install   ') +
-            style.accent('Esc') +
-            style.dim(' back')
-        );
-        const kind = it.kind === 'workflow' ? 'workflow' : 'package';
-        const related = similarItems(it.id, { limit: 3, type: kind as any });
-        if (related.length > 0) {
-          lines.push('');
-          lines.push(' ' + sep('Related', width - 2, style));
-          for (const rel of related) {
-            if (rel.id === it.id) continue;
-            lines.push(
-              '  · ' +
-                style.bold(rel.name.padEnd(20)) +
-                style.dim(fmtCount(rel.installs ?? 0) + ' installs')
+      }
+
+      // Related items
+      const kind = it.kind === 'workflow' ? 'workflow' : 'package';
+      const related = similarItems(it.id, { limit: 4, type: kind as any });
+      const relatedFiltered = related.filter((r) => r.id !== it.id).slice(0, 3);
+      if (relatedFiltered.length > 0) {
+        detail.push('');
+        detail.push(' ' + sep('Related', width - 2, style));
+        for (const rel of relatedFiltered) {
+          const relStats = style.dim(fmtCount(rel.installs ?? 0) + ' installs');
+          detail.push('   ' + style.bold(rel.name.padEnd(28)) + relStats);
+          if (rel.description) {
+            detail.push(
+              '   ' + style.dim((rel.description ?? '').slice(0, Math.max(0, width - 6)))
             );
           }
         }
       }
+
+      // Footer — pinned via padding
+      const footer = [
+        ' ' + sep('', width - 2, style),
+        ' ' +
+          style.accent('i') +
+          style.dim(' install   ') +
+          style.accent('s') +
+          style.dim(' save   ') +
+          style.accent('o') +
+          style.dim(' open repo   ') +
+          style.accent('Esc') +
+          style.dim(' back')
+      ];
+      const padCount = Math.max(0, height - lines.length - detail.length - footer.length);
+      lines.push(...detail);
+      for (let i = 0; i < padCount; i++) lines.push('');
+      lines.push(...footer);
       return frame(lines, width, height);
     }
 
@@ -520,9 +579,25 @@ export const marketplacePage: Page = {
         return { kind: 'none' };
       }
       case 'o': {
+        if (state.detail) {
+          const it = items[state.cursor];
+          const url = (it as any)?.repository;
+          if (url) return { kind: 'open-url', url };
+          return { kind: 'status', message: 'no repo url' };
+        }
         const order: SortKey[] = ['installs', 'stars', 'name'];
         state.sort = order[(order.indexOf(state.sort) + 1) % order.length] ?? 'installs';
         return { kind: 'none' };
+      }
+      case 's': {
+        if (!state.detail) return { kind: 'none' };
+        const it = items[state.cursor];
+        if (!it) return { kind: 'status', message: 'nothing selected' };
+        const dir = detectAgoraDataDir({ env: process.env });
+        const next = saveItemToState(loadAgoraState(dir), it);
+        if (!next.added) return { kind: 'status', message: 'already saved' };
+        writeAgoraState(dir, next.state);
+        return { kind: 'status', message: 'saved ' + it.name };
       }
       case 't': {
         const order: SourceFilter[] = ['all', 'curated', 'github', 'hf'];
