@@ -304,6 +304,79 @@ export async function voteSource(
   return { source: 'api', apiUrl: opts.apiUrl, data };
 }
 
+export interface AdminHideInput {
+  targetType: 'discussion' | 'reply';
+  reason: string;
+}
+
+export interface AdminHideResult {
+  success: boolean;
+  id: string;
+  alreadyHidden: boolean;
+}
+
+export interface AdminLogEntry {
+  id: string;
+  targetId: string;
+  targetType: string;
+  reason: string;
+  operatorId: string;
+  operatorUsername: string;
+  actedAt: string;
+}
+
+export interface AdminLogResult {
+  entries: AdminLogEntry[];
+}
+
+export async function adminHideSource(
+  opts: SourceOptions,
+  targetId: string,
+  input: AdminHideInput
+): Promise<SourceResult<AdminHideResult>> {
+  if (!opts.useApi || !opts.apiUrl || !opts.token) {
+    return {
+      source: 'offline',
+      data: { success: false, id: '', alreadyHidden: false },
+      fallbackReason: 'API required for admin hide'
+    };
+  }
+  const res = await fetcher(opts, `${opts.apiUrl}/api/admin/hide`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${opts.token}` },
+    body: JSON.stringify({ targetId, targetType: input.targetType, reason: input.reason })
+  });
+  if (res.status === 403) throw new Error('Admin access required');
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'request failed' }));
+    throw new Error((err as any).error || `Failed to hide: ${res.status}`);
+  }
+  const data = (await res.json()) as AdminHideResult;
+  return { source: 'api', apiUrl: opts.apiUrl, data };
+}
+
+export async function adminLogSource(
+  opts: SourceOptions,
+  { limit = 50 }: { limit?: number }
+): Promise<SourceResult<AdminLogResult>> {
+  if (!opts.useApi || !opts.apiUrl || !opts.token) {
+    return {
+      source: 'offline',
+      data: { entries: [] },
+      fallbackReason: 'API required for admin log'
+    };
+  }
+  const res = await fetcher(
+    opts,
+    `${opts.apiUrl}/api/admin/log?limit=${limit}`,
+    { headers: { Authorization: `Bearer ${opts.token}` } }
+  );
+  if (res.status === 403) throw new Error('Admin access required');
+  if (!res.ok) throw new Error(`Failed to fetch log: ${res.status}`);
+  const data = (await res.json()) as AdminLogResult;
+  return { source: 'api', apiUrl: opts.apiUrl, data };
+}
+
 export async function flagSource(
   opts: SourceOptions,
   targetId: string,

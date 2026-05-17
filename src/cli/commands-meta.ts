@@ -587,6 +587,30 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora vote t-mcp-1 --up', 'agora vote r-mcp-1-1 --down']
   },
   {
+    name: 'admin',
+    group: 'Community',
+    summary: 'Maintainer-only kill-switch: hide content and view the audit log',
+    usage:
+      'agora admin hide <id> --reason <r> [--type discussion|reply]\n' +
+      '  agora admin log [--limit 50]',
+    details:
+      'Requires admin privileges (AGORA_ADMIN_USER_IDS on the server). ' +
+      'Every hide action is recorded in the kill_switch_log audit table. ' +
+      'Use `agora admin log` to list recent entries.',
+    flags: [
+      { flag: '--reason', description: 'Reason for hiding content (required for hide)' },
+      { flag: '--type', description: 'Target type: discussion or reply (default discussion)' },
+      { flag: '--limit, -n', description: 'Max log entries to show (default 50)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora admin hide t-mcp-1 --reason "confirmed malware"',
+      'agora admin hide r-mcp-1-1 --reason "CSAM" --type reply',
+      'agora admin log',
+      'agora admin log --limit 20'
+    ]
+  },
+  {
     name: 'flag',
     group: 'Community',
     summary: 'Flag a thread, reply, or marketplace item',

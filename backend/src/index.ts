@@ -10,6 +10,7 @@ type Env = {
     GITHUB_CLIENT_ID: string;
     GITHUB_CLIENT_SECRET: string;
     AUTH_SECRET: string;
+    AGORA_ADMIN_USER_IDS: string;
   };
 };
 
@@ -732,6 +733,19 @@ async function requireUser(c: any): Promise<AuthUser | Response> {
 
 function isResponse(value: unknown): value is Response {
   return value instanceof Response;
+}
+
+async function requireAdmin(c: any): Promise<AuthUser | Response> {
+  const user = await requireUser(c);
+  if (isResponse(user)) return user;
+  const adminIds = (c.env.AGORA_ADMIN_USER_IDS ?? '')
+    .split(',')
+    .map((s: string) => s.trim())
+    .filter(Boolean);
+  if (!adminIds.includes(user.id)) {
+    return c.json({ error: 'Admin access required' }, 403);
+  }
+  return user;
 }
 
 function slugify(value: string): string {
@@ -2035,6 +2049,85 @@ app.get('/api/aggregate/github/:owner/:repo', async (c) => {
     topics,
     likelyMcp: topics.includes('mcp') || topics.includes('mcp-server')
   });
+});
+
+// ── Admin: kill-switch hide ──────────────────────────────────────────────────
+
+app.post('/api/admin/hide', async (c) => {
+  const admin = await requireAdmin(c);
+  if (isResponse(admin)) return admin;
+
+  const body = await c.req.json().catch(() => null);
+  if (!body) return c.json({ error: 'Invalid JSON body' }, 400);
+
+  const { targetId, targetType, reason } = body as {
+    targetId?: string;
+    targetType?: string;
+    reason?: string;
+  };
+
+  if (!targetId || typeof targetId !== 'string') {
+    return c.json({ error: 'targetId is required' }, 400);
+  }
+  if (targetType !== 'discussion' && targetType !== 'reply') {
+    return c.json({ error: 'targetType must be discussion or reply' }, 400);
+  }
+  if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+    return c.json({ error: 'reason is required' }, 400);
+  }
+  if (reason.length > 500) {
+    return c.json({ error: 'reason must be 500 characters or fewer' }, 400);
+  }
+
+  const logId = `ks-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`;
+  await c.env.DB.prepare(
+    `INSERT INTO kill_switch_log (id, target_id, target_type, reason, operator_id, acted_at)
+     VALUES (?, ?, ?, ?, ?, datetime('now'))`
+  )
+    .bind(logId, targetId, targetType, reason.trim(), admin.id)
+    .run();
+
+  const table = targetType === 'discussion' ? 'discussions' : 'discussion_replies';
+  const updated = await c.env.DB.prepare(
+    `UPDATE ${table} SET hidden = 1 WHERE id = ?`
+  )
+    .bind(targetId)
+    .run();
+
+  const alreadyHidden = (updated?.meta?.changes ?? 0) === 0;
+
+  return c.json({ success: true, id: logId, alreadyHidden });
+});
+
+app.get('/api/admin/log', async (c) => {
+  const admin = await requireAdmin(c);
+  if (isResponse(admin)) return admin;
+
+  const limitParam = c.req.query('limit') ?? '50';
+  const limit = Math.min(200, Math.max(1, parseInt(limitParam, 10) || 50));
+
+  const { results } = (await c.env.DB.prepare(
+    `SELECT k.id, k.target_id, k.target_type, k.reason, k.operator_id, k.acted_at,
+            u.username AS operator_username
+     FROM kill_switch_log k
+     LEFT JOIN users u ON u.id = k.operator_id
+     ORDER BY k.acted_at DESC
+     LIMIT ?`
+  )
+    .bind(limit)
+    .all()) as any;
+
+  const entries = (results ?? []).map((r: any) => ({
+    id: r.id,
+    targetId: r.target_id,
+    targetType: r.target_type,
+    reason: r.reason,
+    operatorId: r.operator_id,
+    operatorUsername: r.operator_username ?? r.operator_id,
+    actedAt: r.acted_at
+  }));
+
+  return c.json({ entries });
 });
 
 export default app;

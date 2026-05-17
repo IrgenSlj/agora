@@ -76,6 +76,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       reply: community.commandReply,
       vote: community.commandVote,
       flag: community.commandFlag,
+      admin: community.commandAdmin,
       discussions: community.commandDiscussions,
       discuss: community.commandDiscuss,
       tutorials: learn.commandTutorials,

@@ -6,7 +6,9 @@ import {
   createThreadSource,
   createReplySource,
   voteSource,
-  flagSource
+  flagSource,
+  adminHideSource,
+  adminLogSource
 } from '../../community/client.js';
 import { createDiscussionSource, discussionsSource, flagMarketplaceSource } from '../../live.js';
 import { normalizeNewsSource, DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
@@ -458,4 +460,101 @@ export const commandDiscuss: CommandHandler = async (parsed, io, style) => {
   writeLine(io.stdout, `Created discussion ${style.accent(result.data.id)}`);
   writeLine(io.stdout, `${result.data.title} (${sourceLabel(result)})`);
   return 0;
+};
+
+export const commandAdmin: CommandHandler = async (parsed, io, style) => {
+  const sub = parsed.args[0];
+
+  if (sub === 'hide') {
+    const id = parsed.args[1];
+    if (!id) return usageError(io, 'admin hide requires an id');
+
+    const reason = stringFlag(parsed, 'reason');
+    if (!reason) return usageError(io, 'admin hide requires --reason');
+
+    const targetType = (stringFlag(parsed, 'type') || 'discussion') as 'discussion' | 'reply';
+    if (targetType !== 'discussion' && targetType !== 'reply') {
+      return usageError(io, '--type must be discussion or reply');
+    }
+
+    const source = await writeSourceOptions(parsed, io);
+    if (!source.ok) return usageError(io, source.error);
+
+    try {
+      const result = await adminHideSource(source.options, id, { targetType, reason });
+      if (parsed.flags.json) {
+        writeJson(io.stdout, result.data);
+        return 0;
+      }
+      writeLine(io.stdout, `Hid ${style.accent(id)} (${targetType}); audit id ${style.dim(result.data.id)}`);
+      return 0;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === 'Admin access required') {
+        writeLine(io.stderr, 'Admin access required');
+        return 1;
+      }
+      throw e;
+    }
+  }
+
+  if (sub === 'log') {
+    const limit = numberFlag(parsed, 'limit') || 50;
+
+    const source = await writeSourceOptions(parsed, io);
+    if (!source.ok) return usageError(io, source.error);
+
+    try {
+      const result = await adminLogSource(source.options, { limit });
+      const entries = result.data.entries;
+
+      if (parsed.flags.json) {
+        writeJson(io.stdout, { entries });
+        return 0;
+      }
+
+      if (entries.length === 0) {
+        writeLine(io.stdout, 'No kill-switch log entries.');
+        return 0;
+      }
+
+      const COL = { at: 20, op: 16, type: 12, target: 24 };
+      writeLine(
+        io.stdout,
+        [
+          'acted_at'.padEnd(COL.at),
+          'operator'.padEnd(COL.op),
+          'type'.padEnd(COL.type),
+          'target'.padEnd(COL.target),
+          'reason'
+        ].join('  ')
+      );
+      writeLine(io.stdout, '-'.repeat(COL.at + COL.op + COL.type + COL.target + 40));
+      for (const e of entries) {
+        writeLine(
+          io.stdout,
+          [
+            e.actedAt.slice(0, COL.at).padEnd(COL.at),
+            e.operatorUsername.slice(0, COL.op).padEnd(COL.op),
+            e.targetType.slice(0, COL.type).padEnd(COL.type),
+            e.targetId.slice(0, COL.target).padEnd(COL.target),
+            e.reason
+          ].join('  ')
+        );
+      }
+      return 0;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === 'Admin access required') {
+        writeLine(io.stderr, 'Admin access required');
+        return 1;
+      }
+      throw e;
+    }
+  }
+
+  writeLine(io.stdout, 'Usage:');
+  writeLine(io.stdout, '  agora admin hide <id> --reason <r> [--type discussion|reply]');
+  writeLine(io.stdout, '  agora admin log [--limit 50]');
+  return 1;
 };
