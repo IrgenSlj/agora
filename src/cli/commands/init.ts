@@ -10,16 +10,144 @@ import {
   writeOpenCodeConfig
 } from '../../config-files.js';
 import { sampleWorkflows } from '../../data.js';
-import { writeLine, writeJson, usageError } from '../helpers.js';
+import { stringFlag, writeLine, writeJson, usageError } from '../helpers.js';
 import { header } from '../format.js';
 import { renderMeander, supportsTrueColor } from '../../ui.js';
 import type { CommandHandler } from './types.js';
 
+const TEMPLATES: Record<string, { name: string; files: Record<string, string>; config?: Record<string, unknown> }> = {
+  'node-mcp': {
+    name: 'Node.js MCP Server',
+    files: {
+      'package.json': JSON.stringify({
+        name: 'my-mcp-server',
+        version: '1.0.0',
+        type: 'module',
+        scripts: { start: 'node index.js' },
+        dependencies: { '@modelcontextprotocol/sdk': '^1.0.0' }
+      }, null, 2) + '\n',
+      'index.js': `import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+
+const server = new Server({ name: 'my-mcp-server', version: '1.0.0' }, {
+  capabilities: { tools: {} }
+});
+
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [{
+    name: 'hello',
+    description: 'A friendly greeting tool',
+    inputSchema: { type: 'object', properties: { name: { type: 'string' } } }
+  }]
+}));
+
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  if (request.params.name === 'hello') {
+    return { content: [{ type: 'text', text: \`Hello, \${request.params.arguments?.name || 'world'}!\` }] };
+  }
+  throw new Error('Unknown tool');
+});
+
+const transport = new StdioServerTransport();
+await server.connect(transport);
+`
+    },
+    config: {
+      mcp: {
+        'my-mcp-server': {
+          type: 'local' as const,
+          command: ['node', 'index.js'],
+          enabled: true
+        }
+      }
+    }
+  },
+  'python-mcp': {
+    name: 'Python MCP Server',
+    files: {
+      'requirements.txt': 'mcp\n',
+      'server.py': `from mcp.server import Server
+from mcp.server.stdio import stdio_server
+from mcp.types import Tool, TextContent
+
+app = Server("my-mcp-server")
+
+@app.list_tools()
+async def list_tools() -> list[Tool]:
+    return [Tool(name="hello", description="A friendly greeting",
+                 inputSchema={"type": "object", "properties": {"name": {"type": "string"}}})]
+
+@app.call_tool()
+async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+    if name == "hello":
+        name_val = arguments.get("name", "world")
+        return [TextContent(type="text", text=f"Hello, {name_val}!")]
+    raise ValueError(f"Unknown tool: {name}")
+
+async def main():
+    async with stdio_server() as streams:
+        await app.run(streams[0], streams[1], app.create_initialization_options())
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(main())
+`
+    },
+    config: {
+      mcp: {
+        'my-mcp-server': {
+          type: 'local' as const,
+          command: ['uv', 'run', 'server.py'],
+          enabled: true
+        }
+      }
+    }
+  }
+};
+
 export const commandInit: CommandHandler = async (parsed, io, style) => {
   const cwd = io.cwd || process.cwd();
+  const templateName = stringFlag(parsed, 'template') || '';
+  const configPath = detectOpenCodeConfigPath({ cwd, env: io.env });
+
+  if (templateName) {
+    const template = TEMPLATES[templateName];
+    if (!template) {
+      return usageError(io, `Unknown template "${templateName}". Available: ${Object.keys(TEMPLATES).join(', ')}`);
+    }
+
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { template: templateName, files: Object.keys(template.files), target: cwd });
+      return 0;
+    }
+
+    writeLine(io.stdout, `Scaffolding ${style.accent(template.name)} in ${cwd}`);
+    for (const [file, content] of Object.entries(template.files)) {
+      const fullPath = join(cwd, file);
+      mkdirSync(join(cwd, file.split('/').slice(0, -1).join('/')), { recursive: true });
+      writeFileSync(fullPath, content, 'utf8');
+      writeLine(io.stdout, `  ${style.dim('✓')} ${file}`);
+    }
+
+    if (template.config) {
+      const loaded = loadOpenCodeConfig(configPath);
+      const config = {
+        ...loaded.config,
+        mcp: { ...loaded.config.mcp, ...(template.config.mcp as Record<string, any>) }
+      };
+      writeOpenCodeConfig(configPath, config);
+      writeLine(io.stdout, `  ${style.dim('✓')} Registered MCP server in ${configPath}`);
+    }
+
+    writeLine(io.stdout, `\nDone! cd ${cwd} and check the generated files.`);
+    if (templateName === 'python-mcp') writeLine(io.stdout, 'Tip: uv sync && uv run server.py');
+    if (templateName === 'node-mcp') writeLine(io.stdout, 'Tip: npm install && npm start');
+    return 0;
+  }
+
   const scan = scanProject(cwd);
   const plan = generateInitPlan(scan);
-  const configPath = detectOpenCodeConfigPath({ cwd, env: io.env });
   const withMcp = parsed.flags.mcp === true;
 
   if (withMcp) {

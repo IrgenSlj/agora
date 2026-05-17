@@ -200,17 +200,25 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'init',
     group: 'Setup',
-    summary: 'Scaffold Agora into the current project',
-    usage: 'agora init [--dry-run] [--json] [--mcp]',
+    summary: 'Scaffold Agora into the current project, or generate MCP server templates',
+    usage: 'agora init [--dry-run] [--json] [--mcp]\n  agora init --template node-mcp|python-mcp',
     details:
-      'Scans the current directory, generates an opencode.json with recommended MCP servers, ' +
-      'and installs the /agora slash command. Use --dry-run to preview without writing.',
+      'Without --template, scans the current directory, generates an opencode.json with recommended MCP servers, ' +
+      'and installs the /agora slash command. Use --dry-run to preview without writing.\n\n' +
+      'With --template, scaffolds a complete MCP server project in the current directory.',
     flags: [
       { flag: '--dry-run', description: 'Preview what would be written without applying changes' },
       { flag: '--json', description: 'Output the generated config as JSON' },
-      { flag: '--mcp', description: 'Also register the Agora MCP server in the config' }
+      { flag: '--mcp', description: 'Also register the Agora MCP server in the config' },
+      { flag: '--template', description: 'Scaffold a project: node-mcp or python-mcp' }
     ],
-    examples: ['agora init', 'agora init --dry-run', 'agora init --mcp']
+    examples: [
+      'agora init',
+      'agora init --dry-run',
+      'agora init --mcp',
+      'agora init --template node-mcp',
+      'agora init --template python-mcp'
+    ]
   },
   {
     name: 'use',
@@ -248,23 +256,30 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'config',
     group: 'Setup',
-    summary: 'Inspect, validate, diff, or fix your OpenCode configuration',
+    summary: 'Inspect, validate, diff, fix, show, or edit your OpenCode configuration',
     usage:
-      'agora config doctor [--fix] [--config path] [--json]\n' +
+      'agora config doctor [--fix] [--deep] [--config path] [--json]\n' +
+      '  agora config show [--config path] [--json]\n' +
+      '  agora config edit [--config path]\n' +
       '  agora config diff <path1> <path2> [--json]',
     details:
       'Doctor runs a health-check on opencode.json: reports path, validity, MCP server count, and plugins. ' +
       'Add --fix to auto-heal common issues (missing $schema, duplicate plugins, empty MCP entries). ' +
+      'Add --deep for full diagnostics (opencode PATH, npm package checks, GitHub token, data dir). ' +
+      'Show prints the full compiled config. Edit opens the config in $EDITOR. ' +
       'Diff compares two config files side by side, showing MCP and plugin deltas.',
     flags: [
       { flag: '--fix', description: 'Auto-heal common config issues' },
+      { flag: '--deep', description: 'Full diagnostics (opencode PATH, npm checks, tokens)' },
       { flag: '--config', description: 'Explicit path to opencode.json' },
       { flag: '--json', description: 'Output report as JSON' }
     ],
     examples: [
       'agora config doctor',
-      'agora config doctor --config ./opencode.json --json',
       'agora config doctor --fix',
+      'agora config doctor --deep',
+      'agora config show',
+      'agora config edit',
       'agora config diff opencode.json ~/.config/opencode/opencode.json'
     ]
   },
@@ -724,6 +739,25 @@ export const COMMANDS: CommandMeta[] = [
       'agora watch 5 agora trending',
       'agora watch 10 agora search filesystem',
       'agora watch 30 agora news --count 3'
+    ]
+  },
+  {
+    name: 'notify',
+    group: 'Setup',
+    summary: 'Send a desktop notification via macOS, Linux, or Windows',
+    usage: 'agora notify <message> [--title "Agora"] [--sound] [--json]',
+    details:
+      'Sends a native desktop notification. Uses osascript on macOS, notify-send on Linux, ' +
+      'and PowerShell toast notifications on Windows.',
+    flags: [
+      { flag: '--title, -t', description: 'Notification title (default: Agora)' },
+      { flag: '--sound', description: 'Play notification sound' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora notify "Install complete"',
+      'agora notify "Deploy finished" --title "CI" --sound',
+      'agora watch 60 agora news --count 1 && agora notify "News updated"'
     ]
   }
 ];

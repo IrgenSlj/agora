@@ -57,7 +57,10 @@ export type Dispatch =
         | 'last'
         | 'again'
         | 'dry-run'
-        | 'env';
+        | 'env'
+        | 'jobs'
+        | 'fg'
+        | 'bg';
       args?: string;
     }
   | { kind: 'tui'; page?: TuiPageId }
@@ -156,6 +159,11 @@ export function classifyInput(line: string, isExecutable: (name: string) => bool
   if (trimmed === '/medium') return { kind: 'meta', sub: 'medium' };
   if (trimmed === '/last') return { kind: 'meta', sub: 'last' };
   if (trimmed === '/again') return { kind: 'meta', sub: 'again' };
+  if (trimmed === '/jobs') return { kind: 'meta', sub: 'jobs' };
+  if (trimmed === '/fg' || trimmed.startsWith('/fg '))
+    return { kind: 'meta', sub: 'fg', args: trimmed.slice(4).trim() };
+  if (trimmed === '/bg' || trimmed.startsWith('/bg '))
+    return { kind: 'meta', sub: 'bg', args: trimmed.slice(4).trim() };
   if (trimmed === '/env' || trimmed.startsWith('/env '))
     return { kind: 'meta', sub: 'env', args: trimmed.slice(5).trim() };
   if (trimmed.startsWith('/? '))
@@ -404,6 +412,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   let childActive = false;
   let totalCost = 0;
   const trackedEnv = new Map<string, string>();
+  let jobCounter = 0;
+  const jobs: Map<number, { pid: number; cmd: string; status: 'running' | 'stopped' }> = new Map();
 
   // Lazy caches for completion ids
   let cachedMarketplaceIds: string[] | null = null;
@@ -446,6 +456,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     '/last',
     '/again',
     '/env',
+    '/jobs',
+    '/fg',
+    '/bg',
     ...agoraSlashCommands
   ];
 
@@ -508,6 +521,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     'run `agora config doctor` to check your OpenCode config',
     'type VAR=val command to set env vars in bash',
     'pipe output with | or redirect with > as normal in bash',
+    'append & to run a command in the background',
+    'type /jobs to see background jobs, /fg to bring one forward',
+    'type /bg to resume a stopped job in the background',
     'run `agora shell` anywhere to re-enter this interactive mode'
   ];
   // Amber chevron when opencode unavailable, accent otherwise
@@ -666,6 +682,68 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           continue;
         }
 
+        if (dispatch.sub === 'jobs') {
+          if (jobs.size === 0) {
+            process.stdout.write(style.dim('No background jobs. Append & to run a command in the background.') + '\n');
+          } else {
+            process.stdout.write(style.accent('Background jobs') + '\n');
+            for (const [id, job] of jobs) {
+              const status = job.status === 'running' ? style.dim('running') : style.dim('stopped');
+              process.stdout.write(`  [${id}] ${status}  ${job.cmd}\n`);
+            }
+          }
+          continue;
+        }
+
+        if (dispatch.sub === 'fg') {
+          const arg = dispatch.args || '';
+          const targetId = arg ? parseInt(arg, 10) : Math.max(...jobs.keys());
+          const job = jobs.get(targetId);
+          if (!job) {
+            process.stdout.write(style.dim(`Job ${targetId} not found.`) + '\n');
+            continue;
+          }
+          try {
+            process.kill(job.pid, 0);
+            process.stdout.write(style.dim(`Foreground: ${job.cmd}`) + '\n');
+            process.stdin.resume();
+            await new Promise<void>((resolve) => {
+              const check = setInterval(() => {
+                try {
+                  process.kill(job.pid, 0);
+                } catch {
+                  clearInterval(check);
+                  jobs.delete(targetId);
+                  resolve();
+                }
+              }, 200);
+            });
+          } catch {
+            jobs.delete(targetId);
+            process.stdout.write(style.dim(`Job ${targetId} has finished.`) + '\n');
+          }
+          continue;
+        }
+
+        if (dispatch.sub === 'bg') {
+          const arg = dispatch.args || '';
+          const targetId = arg ? parseInt(arg, 10) : Math.max(...jobs.keys());
+          const job = jobs.get(targetId);
+          if (!job) {
+            process.stdout.write(style.dim(`Job ${targetId} not found.`) + '\n');
+            continue;
+          }
+          try {
+            process.kill(job.pid, 0);
+            job.status = 'running';
+            process.stdout.write(style.dim(`[${targetId}] ${job.cmd} (background)`) + '\n');
+          } catch {
+            jobs.delete(targetId);
+            process.stdout.write(style.dim(`Job ${targetId} has finished.`) + '\n');
+          }
+          continue;
+        }
+
         if (dispatch.sub === 'env') {
           const arg = dispatch.args || '';
           if (!arg) {
@@ -712,6 +790,34 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           const prefixMatch = bashLine.match(/^([A-Za-z_][A-Za-z0-9_]*)=(\S+)\s+/);
           if (prefixMatch) {
             trackedEnv.set(prefixMatch[1], prefixMatch[2].trim());
+          }
+        }
+
+        // Background job handling
+        const bgMatch = bashLine.match(/^(.*?)\s*&$/);
+        if (bgMatch) {
+          const actualCmd = bgMatch[1].trim();
+          if (actualCmd) {
+            jobCounter++;
+            const jobId = jobCounter;
+            const child = spawn(actualCmd, {
+              shell: true,
+              cwd: currentCwd,
+              env: env as Record<string, string>,
+              stdio: ['ignore', 'pipe', 'pipe']
+            });
+            jobs.set(jobId, { pid: child.pid ?? 0, cmd: actualCmd, status: 'running' });
+            process.stdout.write(style.dim(`[${jobId}] ${actualCmd} (background, pid ${child.pid ?? '?'})`) + '\n');
+            child.stdout?.on('data', (chunk: Buffer) => {
+              const text = chunk.toString();
+              const lines = text.split('\n').filter(Boolean);
+              for (const l of lines) process.stdout.write(style.dim(`[${jobId}] ${l.trimRight()} |> `));
+            });
+            child.on('close', (code) => {
+              jobs.delete(jobId);
+              process.stdout.write(style.dim(`[${jobId}] finished (exit ${code ?? 0})`) + '\n');
+            });
+            continue;
           }
         }
         await runBash(dispatch.cmd);
@@ -1035,6 +1141,9 @@ function printHelp(style: Styler): void {
     '  /again        re-send most recent chat message',
     '  /? <cmd>      dry-run an agora command (e.g. /? install mcp-github)',
     '  /env          view/set tracked environment variables',
+    '  /jobs         list background jobs',
+    '  /fg [N]       bring job N (or last) to foreground',
+    '  /bg [N]       resume job N (or last) in background',
     '',
     style.dim('Verbosity:'),
     '  /verbose  /medium  /quiet',

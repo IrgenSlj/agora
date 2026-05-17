@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { formatConfigJson } from '../../config.js';
 import {
   detectOpenCodeConfigPath,
@@ -19,6 +19,7 @@ import {
 import {
   clearAuthState,
   decodeJwtExp,
+  detectAgoraDataDir,
   getAuthState,
   getAgoraStatePath,
   loadAgoraState,
@@ -593,6 +594,46 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
   const subcommand = parsed.args[0] || 'doctor';
   const doFix = Boolean(parsed.flags.fix);
 
+  if (subcommand === 'show') {
+    const configPath = detectOpenCodeConfigPath({
+      explicitPath: stringFlag(parsed, 'config'),
+      cwd: io.cwd,
+      env: io.env
+    });
+    const loaded = loadOpenCodeConfig(configPath);
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { path: configPath, exists: loaded.exists, config: loaded.config });
+      return 0;
+    }
+    writeLine(io.stdout, style.accent('OpenCode config'));
+    writeLine(io.stdout, `${style.dim('Path')}   ${configPath}`);
+    writeLine(io.stdout, `${style.dim('Exists')} ${loaded.exists ? 'yes' : 'no'}`);
+    if (!loaded.exists) return 0;
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, formatConfigJson(loaded.config));
+    return 0;
+  }
+
+  if (subcommand === 'edit') {
+    const configPath = detectOpenCodeConfigPath({
+      explicitPath: stringFlag(parsed, 'config'),
+      cwd: io.cwd,
+      env: io.env
+    });
+    if (!existsSync(configPath)) {
+      writeFileSync(configPath, '{\n  "$schema": "https://opencode.ai/config.json"\n}\n', 'utf8');
+      writeLine(io.stdout, `Created ${configPath}`);
+    }
+    const editor = io.env?.EDITOR || io.env?.VISUAL || 'vi';
+    try {
+      execSync(`${editor} "${configPath}"`, { stdio: 'inherit' });
+      writeLine(io.stdout, style.dim('Config saved.'));
+    } catch {
+      return usageError(io, `Editor "${editor}" failed. Set $EDITOR or try manually: nano ${configPath}`);
+    }
+    return 0;
+  }
+
   if (subcommand === 'diff') {
     const paths = parsed.args.slice(1);
     if (paths.length < 2) {
@@ -721,10 +762,62 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
     io.stdout,
     `${style.dim('Packages')} ${report.packages.length ? report.packages.join(', ') : 'none'}`
   );
+
+  // Deep checks
   if (!doFix) {
     writeLine(io.stdout, '');
-    writeLine(io.stdout, style.dim('Run with --fix to auto-heal common issues.'));
+    writeLine(io.stdout, style.dim('Deep checks (--deep for details):'));
   }
+  if (parsed.flags.deep || doFix) {
+    const loaded = loadOpenCodeConfig(configPath);
+    const deepIssues: string[] = [];
+    const deepOk: string[] = [];
+
+    // Check opencode on PATH
+    try {
+      execSync('which opencode', { stdio: 'pipe', timeout: 2000 });
+      deepOk.push('opencode found on PATH');
+    } catch {
+      deepIssues.push('opencode not found on PATH — chat unavailable');
+    }
+
+    // Check npm packages in MCP commands
+    if (loaded.config.mcp) {
+      for (const [key, entry] of Object.entries(loaded.config.mcp)) {
+        for (const part of entry.command) {
+          const npmMatch = part.match(/^(@[^/]+\/[^@\s]+|[^@\s]+)$/);
+          if (npmMatch && (part.startsWith('npx ') || entry.command[0] === 'npx')) {
+            const pkgName = npmMatch[1];
+            try {
+              execSync(`npm view ${pkgName} version`, { stdio: 'pipe', timeout: 10000 });
+              deepOk.push(`${key}: npm package ${pkgName} exists`);
+            } catch {
+              deepIssues.push(`${key}: npm package "${pkgName}" not found or network error`);
+            }
+          }
+        }
+      }
+    }
+
+    // Check GitHub token
+    if (io.env?.AGORA_GITHUB_TOKEN) {
+      deepOk.push('AGORA_GITHUB_TOKEN set');
+    }
+
+    // Check data directory
+    const agoraDir = detectAgoraDataDir({ cwd: io.cwd, env: io.env });
+    if (existsSync(agoraDir)) {
+      deepOk.push(`Agora data dir: ${agoraDir}`);
+    } else {
+      deepIssues.push(`Agora data dir ${agoraDir} does not exist`);
+    }
+
+    for (const issue of deepIssues) writeLine(io.stdout, `  ${style.dim('⚠')} ${issue}`);
+    for (const ok of deepOk) writeLine(io.stdout, `  ${style.dim('✓')} ${ok}`);
+  }
+
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, style.dim('Run with --fix to auto-heal common issues, --deep for full diagnostics.'));
   return report.valid ? 0 : 1;
 };
 
