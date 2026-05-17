@@ -9,6 +9,7 @@ import { parseArgs, type CliIo } from './flags.js';
 import { writeLine, isInteractive } from './helpers.js';
 import type { CommandMap } from './commands/types.js';
 import * as marketplace from './commands/marketplace.js';
+import * as browseModule from './commands/browse.js';
 import * as community from './commands/community.js';
 import * as learn from './commands/learn.js';
 import * as chatModule from './commands/chat.js';
@@ -105,6 +106,9 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       export: exportModule.commandExport,
       watch: watchModule.commandWatch,
       notify: notifyModule.commandNotify,
+      open: browseModule.commandOpen,
+      author: marketplace.commandAuthor,
+      bookmarks: operations.commandBookmarks,
       auth: operations.commandAuth,
       login: (p, io2, style2) =>
         operations.commandAuth({ ...p, args: ['login', ...p.args], command: 'auth' }, io2, style2),

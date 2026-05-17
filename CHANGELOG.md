@@ -9,6 +9,24 @@ gained completions, history, job control, a letter-shortcut surface, and a
 broad new command surface (`export`, `watch`, `notify`, `config doctor`, …).
 No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
 
+### Added — `agora open / author / bookmarks`
+
+- **`agora open <id>`** opens a marketplace item's repository (or its
+  npm page if no repository is set) in the platform browser. Accepts
+  raw URLs too. `--print` writes the resolved URL instead of spawning
+  the browser; `--json` returns `{ id, url, opened }`. Implementation
+  is `child_process.spawn` against `open` / `xdg-open` / `start ""`.
+- **`agora author <name>`** lists marketplace items by author. Exact
+  match first; falls back to substring if exact returns nothing.
+  Sorted by installs desc, paginated via `--limit` / `--page`,
+  with `--json` mode.
+- **`agora bookmarks`** is the unified view across marketplace saves
+  (from `state.json` `savedItems`) and news saves (from `news-meta.json`
+  cross-referenced with the cached news items). `--kind {all,marketplace,news}`
+  filters; `--json` returns `{ marketplace, news }`.
+- 8 new test cases in `test/cli.test.ts` cover the happy paths,
+  unknown-id error surfacing, and `--json` shapes.
+
 ### Added — install permission acknowledgment + reputation sort + live home
 
 - **Install permission prompt** (Phase 4 trust step 1). When an item

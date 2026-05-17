@@ -766,6 +766,62 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'open',
+    group: 'Marketplace',
+    summary: 'Open a marketplace item or URL in the browser',
+    usage: 'agora open <id|url> [--print] [--json]',
+    details:
+      'Resolves the item by id and opens its repository or npm page in the default browser. ' +
+      'Pass a full URL to open it directly. Use --print to print the URL without opening.',
+    flags: [
+      { flag: '--print', description: 'Print the URL instead of opening the browser' },
+      { flag: '--json', description: 'Output { id, url, opened } as JSON' }
+    ],
+    examples: [
+      'agora open mcp-github',
+      'agora open mcp-github --print',
+      'agora open https://github.com/modelcontextprotocol/servers'
+    ]
+  },
+  {
+    name: 'author',
+    group: 'Marketplace',
+    summary: 'List marketplace items by a specific author',
+    usage: 'agora author <name> [--limit 25] [--page 1] [--json]',
+    details:
+      'Lists all items where the author matches the given name (case-insensitive). ' +
+      'Tries exact match first, then substring. Results are sorted by installs descending.',
+    flags: [
+      { flag: '--limit, -n', description: 'Items per page (default 25)' },
+      { flag: '--page, -p', description: 'Page number (default 1)' },
+      { flag: '--json', description: 'Output { author, count, items } as JSON' }
+    ],
+    examples: [
+      'agora author "Anthropic, PBC"',
+      'agora author anthropic --json',
+      'agora author github --limit 10'
+    ]
+  },
+  {
+    name: 'bookmarks',
+    group: 'Library',
+    summary: 'View all bookmarked marketplace items and news',
+    usage: 'agora bookmarks [--kind marketplace|news|all] [--data-dir path] [--json]',
+    details:
+      'Shows saved marketplace items and saved news stories in two sections. ' +
+      'Use --kind to filter to one section. News bookmarks are set in the TUI news page.',
+    flags: [
+      { flag: '--kind', description: 'Filter: marketplace, news, or all (default all)' },
+      { flag: '--data-dir', description: 'Override the Agora data directory' },
+      { flag: '--json', description: 'Output { marketplace, news } as JSON' }
+    ],
+    examples: [
+      'agora bookmarks',
+      'agora bookmarks --kind marketplace',
+      'agora bookmarks --json'
+    ]
+  },
+  {
     name: 'notify',
     group: 'Setup',
     summary: 'Send a desktop notification via macOS, Linux, or Windows',

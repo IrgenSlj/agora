@@ -1160,4 +1160,97 @@ describe('help system', () => {
       rmSync(temp, { recursive: true, force: true });
     }
   });
+
+  test('open --print writes URL to stdout', async () => {
+    const { io, stdout, stderr } = createIo();
+    const code = await runCli(['open', 'mcp-github', '--print'], io);
+
+    expect(code).toBe(0);
+    expect(stderr.join('')).toBe('');
+    expect(stdout.join('')).toContain('https://');
+  });
+
+  test('open without id is a usage error', async () => {
+    const { io, stderr } = createIo();
+    const code = await runCli(['open'], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join('')).toContain('open requires an item id');
+  });
+
+  test('open unknown id exits 1 with error', async () => {
+    const { io, stderr } = createIo();
+    const code = await runCli(['open', 'no-such-item-xyz'], io);
+
+    expect(code).toBe(1);
+    expect(stderr.join('')).toContain('Unknown item: no-such-item-xyz');
+  });
+
+  test('open --json returns id, url, opened', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['open', 'mcp-github', '--print', '--json'], io);
+    const payload = JSON.parse(stdout.join(''));
+
+    expect(code).toBe(0);
+    expect(payload.id).toBe('mcp-github');
+    expect(payload.url).toContain('https://');
+    expect(payload.opened).toBe(false);
+  });
+
+  test('author --json returns expected shape', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['author', 'Anthropic, PBC', '--json'], io);
+    const payload = JSON.parse(stdout.join(''));
+
+    expect(code).toBe(0);
+    expect(payload.author).toBe('Anthropic, PBC');
+    expect(payload.count).toBeGreaterThan(0);
+    expect(Array.isArray(payload.items)).toBe(true);
+    expect(payload.items[0].author.toLowerCase()).toContain('anthropic');
+  });
+
+  test('author unknown prints "No items by …"', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['author', 'no-such-author-xyz'], io);
+
+    expect(code).toBe(0);
+    expect(stdout.join('')).toContain('No items by no-such-author-xyz');
+  });
+
+  test('bookmarks --json on empty data dir returns { marketplace: [], news: [] }', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-bookmarks-'));
+    const dataDir = join(temp, 'state');
+    const { io, stdout } = createIo(temp);
+
+    try {
+      const code = await runCli(['bookmarks', '--data-dir', dataDir, '--json'], io);
+      const payload = JSON.parse(stdout.join(''));
+
+      expect(code).toBe(0);
+      expect(payload.marketplace).toEqual([]);
+      expect(payload.news).toEqual([]);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('bookmarks lists saved marketplace items', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-bookmarks-'));
+    const dataDir = join(temp, 'state');
+    const setup = createIo(temp);
+
+    try {
+      await runCli(['save', 'mcp-github', '--data-dir', dataDir], setup.io);
+
+      const { io, stdout } = createIo(temp);
+      const code = await runCli(['bookmarks', '--data-dir', dataDir], io);
+      const out = stdout.join('');
+
+      expect(code).toBe(0);
+      expect(out).toContain('Marketplace');
+      expect(out).toContain('mcp-github');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
 });

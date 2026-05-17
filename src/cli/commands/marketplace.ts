@@ -1,4 +1,4 @@
-import { getTrendingTags, similarItems, type MarketplaceItem } from '../../marketplace.js';
+import { getMarketplaceItems, getTrendingTags, similarItems, type MarketplaceItem } from '../../marketplace.js';
 import { formatNumber } from '../../format.js';
 import { appendHistory } from '../../history.js';
 import {
@@ -220,6 +220,81 @@ export const commandSimilar: CommandHandler = async (parsed, io, style) => {
   writeLine(io.stdout, header('agora similar', [`to ${id}`, `${results.length} results`], style));
   writeLine(io.stdout, '');
   writeLine(io.stdout, formatItemList(results, style));
+  return 0;
+};
+
+export const commandAuthor: CommandHandler = async (parsed, io, style) => {
+  const name = parsed.args[0];
+  if (!name) return usageError(io, 'author requires a name');
+
+  const limit = numberFlag(parsed, 'limit', 'n') || 25;
+  const page = numberFlag(parsed, 'page', 'p') || 1;
+  const nameLower = name.toLowerCase();
+
+  const all = getMarketplaceItems();
+  let matches = all.filter((i) => i.author.toLowerCase() === nameLower);
+  if (matches.length === 0) {
+    matches = all.filter((i) => i.author.toLowerCase().includes(nameLower));
+  }
+
+  matches.sort((a, b) => (b.installs ?? 0) - (a.installs ?? 0));
+
+  const start = (page - 1) * limit;
+  const paged = matches.slice(start, start + limit);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { author: name, count: matches.length, items: paged });
+    return 0;
+  }
+
+  if (matches.length === 0) {
+    writeLine(io.stdout, `No items by ${name}.`);
+    return 0;
+  }
+
+  writeLine(io.stdout, header('agora author', [name, `${matches.length} items`], style));
+  writeLine(io.stdout, '');
+
+  const kindW = Math.max(4, ...paged.map((i) => i.kind.length));
+  const idW = Math.max(2, ...paged.map((i) => i.id.length));
+  const installW = 8;
+  const starW = 6;
+
+  writeLine(
+    io.stdout,
+    style.dim(
+      'kind'.padEnd(kindW) +
+        '  ' +
+        'id'.padEnd(idW) +
+        '  ' +
+        'installs'.padStart(installW) +
+        '  ' +
+        'stars'.padStart(starW) +
+        '  tags'
+    )
+  );
+
+  for (const item of paged) {
+    const tags = (item.tags ?? []).slice(0, 3).join(', ');
+    writeLine(
+      io.stdout,
+      item.kind.padEnd(kindW) +
+        '  ' +
+        style.accent(item.id.padEnd(idW)) +
+        '  ' +
+        style.dim(formatNumber(item.installs ?? 0).padStart(installW)) +
+        '  ' +
+        style.dim(formatNumber(item.stars ?? 0).padStart(starW)) +
+        '  ' +
+        style.dim(tags)
+    );
+  }
+
+  if (matches.length > start + limit) {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, style.dim(`Page ${page}. Use --page ${page + 1} to see more.`));
+  }
+
   return 0;
 };
 

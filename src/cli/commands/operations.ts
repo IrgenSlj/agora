@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { readNewsMeta, readCache } from '../../news/cache.js';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { formatConfigJson } from '../../config.js';
 import {
@@ -1033,4 +1034,62 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
   }
 
   return usageError(io, `Unknown auth command: ${subcommand}`);
+};
+
+export const commandBookmarks: CommandHandler = async (parsed, io, style) => {
+  const dataDir = detectDataDir(parsed, io);
+  const kind = (parsed.flags.kind as string | undefined) || 'all';
+
+  const state = loadAgoraState(dataDir);
+  const marketplaceItems = kind === 'news' ? [] : resolveSavedItems(state);
+
+  const newsMeta = readNewsMeta(dataDir);
+  const newsCache = readCache(dataDir);
+  const newsItems =
+    kind === 'marketplace'
+      ? []
+      : newsMeta.saved
+          .map((id) => newsCache.find((n) => n.id === id))
+          .filter((n): n is NonNullable<typeof n> => n !== undefined);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, {
+      marketplace: marketplaceItems,
+      news: newsItems
+    });
+    return 0;
+  }
+
+  const hasMarketplace = marketplaceItems.length > 0;
+  const hasNews = newsItems.length > 0;
+
+  if (!hasMarketplace && !hasNews) {
+    writeLine(io.stdout, 'No bookmarks yet.');
+    writeLine(io.stdout, style.dim('Use `agora save <id>` to bookmark marketplace items.'));
+    return 0;
+  }
+
+  if (kind !== 'news' && hasMarketplace) {
+    writeLine(io.stdout, style.accent('Marketplace'));
+    writeLine(io.stdout, style.dim('─'.repeat(40)));
+    writeLine(io.stdout, formatSavedList(marketplaceItems, style));
+    writeLine(io.stdout, '');
+  }
+
+  if (kind !== 'marketplace' && hasNews) {
+    const now = Date.now();
+    writeLine(io.stdout, style.accent('News'));
+    writeLine(io.stdout, style.dim('─'.repeat(40)));
+    for (const item of newsItems) {
+      const ageMs = now - new Date(item.publishedAt).getTime();
+      const ageDays = Math.floor(ageMs / 86400000);
+      const age = ageDays === 0 ? 'today' : ageDays === 1 ? '1d ago' : `${ageDays}d ago`;
+      writeLine(
+        io.stdout,
+        `${style.dim(item.source.padEnd(16))} ${style.dim(age.padStart(8))}  ${item.title}`
+      );
+    }
+  }
+
+  return 0;
 };
