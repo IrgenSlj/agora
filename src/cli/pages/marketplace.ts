@@ -9,6 +9,8 @@ import {
   type InstallPlan
 } from '../../marketplace.js';
 import { vlen, rail, noRail, sep, fmtCount, frame, scrollbar } from './helpers.js';
+import { enrichItem, type EnrichmentEntry } from '../../hubs/enrichment.js';
+import { detectAgoraDataDir } from '../../state.js';
 
 type SortKey = 'installs' | 'stars' | 'name';
 interface MpState {
@@ -21,6 +23,8 @@ interface MpState {
   view: 'list' | 'install-preview';
   installPlan: InstallPlan | null;
   installStatus: string | null;
+  enrichment: EnrichmentEntry | null;
+  enrichmentLoading: boolean;
 }
 const state: MpState = {
   cursor: 0,
@@ -31,7 +35,9 @@ const state: MpState = {
   sort: 'installs',
   view: 'list',
   installPlan: null,
-  installStatus: null
+  installStatus: null,
+  enrichment: null,
+  enrichmentLoading: false
 };
 
 function filtered(): MarketplaceItem[] {
@@ -161,7 +167,13 @@ export const marketplacePage: Page = {
         lines.push(' ' + style.bold(it.name) + (it.author ? style.dim('   by ' + it.author) : ''));
         lines.push(' ' + style.dim((it.tags ?? []).map((t) => '[' + t + ']').join(' ')));
         lines.push('');
-        lines.push(' ' + (it.description ?? ''));
+        const displayDesc = state.enrichment?.description
+          ? state.enrichment.description + style.dim(' (ai)')
+          : (it.description ?? '');
+        lines.push(' ' + displayDesc);
+        if (state.enrichmentLoading) {
+          lines.push(' ' + style.dim('(enriching…)'));
+        }
         lines.push('');
         lines.push(
           ' ' +
@@ -233,7 +245,7 @@ export const marketplacePage: Page = {
     );
     return frame(lines, width, height);
   },
-  handleKey(event, _ctx): PageAction {
+  handleKey(event, _ctx: PageContext): PageAction {
     if (state.view === 'install-preview') {
       if (event.key === 'y' && state.installPlan) {
         const plan = state.installPlan;
@@ -296,16 +308,52 @@ export const marketplacePage: Page = {
       case 'up':
         state.cursor = Math.max(0, state.cursor - 1);
         return { kind: 'none' };
-      case 'enter':
+      case 'enter': {
         state.detail = !state.detail;
+        if (state.detail) {
+          const selected = items[state.cursor];
+          if (selected && (selected as any).source === 'github') {
+            state.enrichment = null;
+            state.enrichmentLoading = true;
+            const repoId = selected.id.startsWith('gh:') ? selected.id.slice(3) : null;
+            if (repoId) {
+              const dataDir = detectAgoraDataDir({ env: process.env });
+              const ctx = _ctx;
+              enrichItem(repoId, dataDir).then((entry) => {
+                state.enrichment = entry;
+                state.enrichmentLoading = false;
+                ctx.repaint();
+              });
+            } else {
+              state.enrichmentLoading = false;
+            }
+          } else {
+            state.enrichment = null;
+            state.enrichmentLoading = false;
+          }
+        } else {
+          state.enrichment = null;
+          state.enrichmentLoading = false;
+        }
         return { kind: 'none' };
+      }
       case 'esc':
-        if (state.detail) state.detail = false;
+        if (state.detail) {
+          state.detail = false;
+          state.enrichment = null;
+          state.enrichmentLoading = false;
+        }
         return { kind: 'none' };
       case 'i': {
         const it = items[state.cursor];
         if (!it) return { kind: 'status', message: 'nothing selected' };
-        const plan = createInstallPlan(it);
+        const plan = createInstallPlan(
+          it,
+          {},
+          {
+            aiInstallHint: state.enrichment?.installHint
+          }
+        );
         state.installPlan = plan;
         state.installStatus = null;
         state.view = 'install-preview';

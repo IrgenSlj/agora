@@ -236,7 +236,7 @@ export function getTrendingTags(limit = 8): string[] {
 export function createInstallPlan(
   item: MarketplaceItem,
   existingConfig: OpenCodeConfig = {},
-  opts?: { dataDir?: string }
+  opts?: { dataDir?: string; aiInstallHint?: string }
 ): InstallPlan {
   const installKind = getInstallKind(item);
 
@@ -272,7 +272,8 @@ export function createInstallPlan(
       config: normalizeConfig(existingConfig),
       commands: [cloneCommand],
       notes,
-      cloneTarget
+      cloneTarget,
+      postInstallHint: opts?.aiInstallHint
     };
   }
 
