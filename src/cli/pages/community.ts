@@ -1,14 +1,20 @@
 import type { Page, PageAction, PageContext } from './types.js';
-import type { BoardSummary, Thread, Reply } from '../../community/types.js';
+import type { BoardId, BoardSummary, Thread, Reply } from '../../community/types.js';
 import type { SourceOptions } from '../../live.js';
 import {
   communityBoardsSource,
   communityThreadsSource,
-  communityThreadSource
+  communityThreadSource,
+  createThreadSource,
+  createReplySource,
+  voteSource,
+  flagSource
 } from '../../community/client.js';
 import { BOARD_LABELS } from '../../community/types.js';
 import { loadAgoraState, getAuthState } from '../../state.js';
 import { vlen, rail, noRail, sep, frame } from './helpers.js';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function hoursAgo(iso: string): number {
   return Math.max(0, (Date.now() - new Date(iso).getTime()) / 3600000);
@@ -27,12 +33,31 @@ function detectDataDir(): string {
   );
 }
 
-let cachedBoards: BoardSummary[] = [];
-let cachedThreads: Thread[] = [];
-let cachedReplies: Reply[] = [];
-let boardsLoading = true;
+// ── Types ────────────────────────────────────────────────────────────────────
+
+interface ComposerState {
+  active: boolean;
+  mode: 'reply' | 'new-thread' | null;
+  lines: string[];
+  cursorLine: number;
+  cursorCol: number;
+  title?: string;
+  board?: BoardId;
+  replyTo?: string;
+  status: 'editing' | 'sending' | 'error';
+  errorMessage?: string;
+}
+
+interface FlagModalState {
+  active: boolean;
+  targetId: string;
+  targetType: 'discussion' | 'reply';
+  awaitingNotes: boolean;
+  notes: string;
+}
 
 type View = 'boards' | 'threads' | 'reader';
+
 interface ComState {
   view: View;
   boardCur: number;
@@ -42,20 +67,52 @@ interface ComState {
   thread?: string;
   filter: string;
   filtering: boolean;
+  composer: ComposerState | null;
+  flagModal: FlagModalState | null;
+  expandedItems: Set<string>;
+  userVotes: Map<string, -1 | 0 | 1>;
+  statusMessage: string;
+  statusTimer: ReturnType<typeof setTimeout> | null;
 }
+
+interface FlatReply {
+  reply: Reply;
+  depth: number;
+}
+
+// ── Module state ─────────────────────────────────────────────────────────────
+
+let cachedBoards: BoardSummary[] = [];
+let cachedThreads: Thread[] = [];
+let cachedReplies: Reply[] = [];
+let boardsLoading = true;
+
 const state: ComState = {
   view: 'boards',
   boardCur: 0,
   threadCur: 0,
   replyCur: 0,
   filter: '',
-  filtering: false
+  filtering: false,
+  composer: null,
+  flagModal: null,
+  expandedItems: new Set(),
+  userVotes: new Map(),
+  statusMessage: '',
+  statusTimer: null
 };
 
-interface FlatReply {
-  reply: Reply;
-  depth: number;
+// ── Pure helpers (exported for tests) ────────────────────────────────────────
+
+export function isCollapsed(id: string, flagCount: number, expandedItems: Set<string>): boolean {
+  return flagCount >= 3 && !expandedItems.has(id);
 }
+
+export function renderCollapsed(flagCount: number): string {
+  return `[flagged: ${flagCount} · press X to expand]`;
+}
+
+// ── Internal helpers ──────────────────────────────────────────────────────────
 
 function flattenReplies(replies: Reply[], depth = 0): FlatReply[] {
   const flat: FlatReply[] = [];
@@ -87,6 +144,17 @@ function buildSourceOptions(ctx: PageContext): SourceOptions {
   return { useApi: Boolean(apiUrl), apiUrl, token, fetcher: ctx.io.fetcher, timeoutMs: 10000 };
 }
 
+function setStatus(msg: string): void {
+  if (state.statusTimer) clearTimeout(state.statusTimer);
+  state.statusMessage = msg;
+  state.statusTimer = setTimeout(() => {
+    state.statusMessage = '';
+    state.statusTimer = null;
+  }, 3000);
+}
+
+// ── Data loading ──────────────────────────────────────────────────────────────
+
 async function loadBoards(ctx: PageContext): Promise<void> {
   try {
     const opts = buildSourceOptions(ctx);
@@ -97,6 +165,175 @@ async function loadBoards(ctx: PageContext): Promise<void> {
   }
   boardsLoading = false;
 }
+
+// ── Composer state-machine ─────────────────────────────────────────────────
+
+function composerInsertChar(ch: string): void {
+  if (!state.composer) return;
+  const c = state.composer;
+  const line = c.lines[c.cursorLine] ?? '';
+  c.lines[c.cursorLine] = line.slice(0, c.cursorCol) + ch + line.slice(c.cursorCol);
+  c.cursorCol++;
+}
+
+function composerBackspace(): void {
+  if (!state.composer) return;
+  const c = state.composer;
+  const line = c.lines[c.cursorLine] ?? '';
+  if (c.cursorCol > 0) {
+    c.lines[c.cursorLine] = line.slice(0, c.cursorCol - 1) + line.slice(c.cursorCol);
+    c.cursorCol--;
+  } else if (c.cursorLine > 0) {
+    const prev = c.lines[c.cursorLine - 1] ?? '';
+    c.lines.splice(c.cursorLine, 1);
+    c.cursorLine--;
+    c.cursorCol = prev.length;
+    c.lines[c.cursorLine] = prev + line;
+  }
+}
+
+function composerNewline(): void {
+  if (!state.composer) return;
+  const c = state.composer;
+  const line = c.lines[c.cursorLine] ?? '';
+  const rest = line.slice(c.cursorCol);
+  c.lines[c.cursorLine] = line.slice(0, c.cursorCol);
+  c.lines.splice(c.cursorLine + 1, 0, rest);
+  c.cursorLine++;
+  c.cursorCol = 0;
+}
+
+function openComposer(mode: 'reply' | 'new-thread', replyTo?: string): void {
+  state.composer = {
+    active: true,
+    mode,
+    lines: [''],
+    cursorLine: 0,
+    cursorCol: 0,
+    title: mode === 'new-thread' ? '' : undefined,
+    board: mode === 'new-thread' ? ((state.board as BoardId) ?? 'meta') : undefined,
+    replyTo,
+    status: 'editing'
+  };
+}
+
+function closeComposer(): void {
+  state.composer = null;
+}
+
+async function sendComposer(ctx: PageContext): Promise<void> {
+  if (!state.composer) return;
+  const c = state.composer;
+  const content = c.lines.join('\n').trim();
+  if (!content) return;
+
+  c.status = 'sending';
+
+  const opts = buildSourceOptions(ctx);
+
+  try {
+    if (c.mode === 'reply' && c.replyTo) {
+      await createReplySource(opts, c.replyTo, { content });
+      // Refresh thread
+      const tid = state.thread ?? '';
+      if (tid) {
+        const result = await communityThreadSource(opts, tid);
+        cachedReplies = result.data.replies;
+      }
+      closeComposer();
+      setStatus('Reply posted.');
+    } else if (c.mode === 'new-thread') {
+      const title = (c.title ?? '').trim();
+      if (!title) {
+        c.status = 'error';
+        c.errorMessage = 'Title is required.';
+        return;
+      }
+      const board = c.board ?? 'meta';
+      await createThreadSource(opts, { board, title, content });
+      // Refresh threads
+      const result = await communityThreadsSource(opts, board);
+      cachedThreads = result.data.threads;
+      state.view = 'threads';
+      closeComposer();
+      setStatus('Thread created.');
+    }
+  } catch (err) {
+    c.status = 'error';
+    c.errorMessage = err instanceof Error ? err.message : 'Unknown error';
+  }
+}
+
+// ── Voting ────────────────────────────────────────────────────────────────────
+
+async function doVote(
+  targetId: string,
+  targetType: 'discussion' | 'reply',
+  dir: 1 | -1,
+  ctx: PageContext
+): Promise<void> {
+  const current = state.userVotes.get(targetId) ?? 0;
+  const newVal: -1 | 0 | 1 = current === dir ? 0 : dir;
+
+  // Optimistic update
+  state.userVotes.set(targetId, newVal);
+  const delta = newVal - current;
+  if (targetType === 'discussion') {
+    const t = cachedThreads.find((x) => x.id === targetId);
+    if (t) t.score += delta;
+  } else {
+    const flat = flattenReplies(cachedReplies);
+    const rn = flat.find((f) => f.reply.id === targetId);
+    if (rn) rn.reply.score += delta;
+  }
+
+  try {
+    const opts = buildSourceOptions(ctx);
+    const result = await voteSource(opts, targetId, { value: newVal, targetType });
+    // Reconcile with actual score
+    if (targetType === 'discussion') {
+      const t = cachedThreads.find((x) => x.id === targetId);
+      if (t) t.score = result.data.score;
+    } else {
+      const flat = flattenReplies(cachedReplies);
+      const rn = flat.find((f) => f.reply.id === targetId);
+      if (rn) rn.reply.score = result.data.score;
+    }
+    state.userVotes.set(targetId, result.data.userVote);
+  } catch {
+    setStatus('Vote failed.');
+    // Revert optimistic
+    state.userVotes.set(targetId, current as -1 | 0 | 1);
+    if (targetType === 'discussion') {
+      const t = cachedThreads.find((x) => x.id === targetId);
+      if (t) t.score -= delta;
+    } else {
+      const flat = flattenReplies(cachedReplies);
+      const rn = flat.find((f) => f.reply.id === targetId);
+      if (rn) rn.reply.score -= delta;
+    }
+  }
+}
+
+// ── Flagging ──────────────────────────────────────────────────────────────────
+
+async function submitFlag(
+  reason: 'spam' | 'harassment' | 'undisclosed-llm' | 'malicious' | 'other',
+  ctx: PageContext
+): Promise<void> {
+  if (!state.flagModal) return;
+  const { targetId, targetType, notes } = state.flagModal;
+  const opts = buildSourceOptions(ctx);
+  try {
+    await flagSource(opts, targetId, { reason, notes: notes || undefined, targetType });
+    setStatus('Flagged.');
+  } catch {
+    setStatus('Flag failed.');
+  }
+  state.flagModal = null;
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
 
 export const communityPage: Page = {
   id: 'community',
@@ -109,8 +346,9 @@ export const communityPage: Page = {
     { key: 'n', label: 'new' },
     { key: '/', label: 'filter' },
     { key: 'r', label: 'reply' },
-    { key: 'v', label: 'vote' },
+    { key: '+/-', label: 'vote' },
     { key: 'f', label: 'flag' },
+    { key: 'X', label: 'expand' },
     { key: 'Esc', label: 'back' }
   ],
   mount(_ctx: PageContext): void {
@@ -120,10 +358,10 @@ export const communityPage: Page = {
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
     const lines: string[] = [];
-    const rule = ' ' + style.dim('\u2500'.repeat(Math.max(0, width - 2)));
+    const rule = ' ' + style.dim('─'.repeat(Math.max(0, width - 2)));
 
     if (boardsLoading) {
-      lines.push(' ' + style.dim('Loading community\u2026'));
+      lines.push(' ' + style.dim('Loading community…'));
       return frame(lines, width, height);
     }
 
@@ -132,7 +370,7 @@ export const communityPage: Page = {
       lines.push(
         ' ' +
           style.bold(style.accent('COMMUNITY')) +
-          style.dim('  ' + cachedBoards.length + ' boards \u00b7 ' + newTotal + ' new today')
+          style.dim('  ' + cachedBoards.length + ' boards · ' + newTotal + ' new today')
       );
       lines.push(rule);
       const list = cachedBoards.filter((b) => !state.filter || b.id.includes(state.filter));
@@ -171,12 +409,23 @@ export const communityPage: Page = {
         list.forEach((t, i) => {
           const sel = i === state.threadCur;
           const lead = sel ? rail(style) : noRail();
-          const title = sel ? style.bold(t.title) : t.title;
           const age = fmtAge(hoursAgo(t.createdAt));
-          const meta = style.dim(t.author + ' \u00b7 ' + age);
+
+          if (isCollapsed(t.id, t.flagCount, state.expandedItems)) {
+            const collapsed = renderCollapsed(t.flagCount);
+            const title = sel ? style.bold(collapsed) : style.dim(collapsed);
+            lines.push(' ' + lead + title);
+            lines.push(rule);
+            return;
+          }
+
+          const title = sel ? style.bold(t.title) : t.title;
+          let authorMeta = t.author;
+          if (t.authorIsLLM) authorMeta += style.dim(' [bot · ' + (t.authorModel ?? 'llm') + ']');
+          const meta = style.dim(authorMeta + ' · ' + age);
           const counts =
             style.accent(t.score.toString().padStart(3)) +
-            style.dim('\u2191  ') +
+            style.dim('↑  ') +
             style.accent(t.replyCount.toString().padStart(2)) +
             style.dim(' replies');
           lines.push(' ' + lead + title);
@@ -191,10 +440,10 @@ export const communityPage: Page = {
         lines.push(' ' + style.dim('Thread not found. Esc to go back.'));
       } else {
         const age = fmtAge(hoursAgo(t.createdAt));
-        lines.push(' ' + style.bold(t.title) + '  ' + style.accent(t.score + ' \u2191'));
-        lines.push(
-          ' ' + style.dim(t.author + ' \u00b7 ' + age + ' \u00b7 ' + t.replyCount + ' replies')
-        );
+        let authorMeta = t.author;
+        if (t.authorIsLLM) authorMeta += style.dim(' [bot · ' + (t.authorModel ?? 'llm') + ']');
+        lines.push(' ' + style.bold(t.title) + '  ' + style.accent(t.score + ' ↑'));
+        lines.push(' ' + style.dim(authorMeta + ' · ' + age + ' · ' + t.replyCount + ' replies'));
         lines.push(' ' + sep('body', width - 2, style));
         lines.push(' ' + t.content);
         lines.push(' ' + sep('replies', width - 2, style));
@@ -202,27 +451,246 @@ export const communityPage: Page = {
         flatReplies.forEach((rn, i) => {
           const sel = i === state.replyCur;
           const lead = sel ? rail(style) : noRail();
-          const indent = '\u2502 '.repeat(rn.depth);
+          const indent = '│ '.repeat(rn.depth);
           const ra = fmtAge(hoursAgo(rn.reply.createdAt));
+
+          if (isCollapsed(rn.reply.id, rn.reply.flagCount, state.expandedItems)) {
+            lines.push(' ' + indent + lead + style.dim(renderCollapsed(rn.reply.flagCount)));
+            lines.push(rule);
+            return;
+          }
+
+          let replyAuthor = rn.reply.author;
+          if (rn.reply.authorIsLLM)
+            replyAuthor += style.dim(' [bot · ' + (rn.reply.authorModel ?? 'llm') + ']');
           lines.push(
             ' ' +
               indent +
               lead +
-              style.dim(rn.reply.author + ' \u00b7 ' + ra) +
+              style.dim(replyAuthor + ' · ' + ra) +
               '  ' +
-              style.accent(rn.reply.score + ' \u2191')
+              style.accent(rn.reply.score + ' ↑')
           );
           lines.push('     ' + indent + rn.reply.content);
           lines.push(rule);
         });
       }
     }
-    if (state.filtering) {
-      lines.push(' ' + style.accent('/') + ' ' + state.filter + style.dim('\u258f'));
+
+    // Status message
+    if (state.statusMessage) {
+      lines.push(' ' + style.dim(state.statusMessage));
     }
+
+    if (state.filtering) {
+      lines.push(' ' + style.accent('/') + ' ' + state.filter + style.dim('▏'));
+    }
+
+    // Flag modal overlay (last — overwrites bottom lines in frame)
+    if (state.flagModal?.active) {
+      const fm = state.flagModal;
+      const rendered = frame(lines, width, height).split('\n');
+      const modalLines = [
+        ' ' + style.bold('Flag reason:'),
+        '   ' + style.accent('1') + style.dim('. spam'),
+        '   ' + style.accent('2') + style.dim('. harassment'),
+        '   ' + style.accent('3') + style.dim('. undisclosed-llm'),
+        '   ' + style.accent('4') + style.dim('. malicious'),
+        '   ' + style.accent('5') + style.dim('. other'),
+        ' ' + style.dim('Esc to cancel')
+      ];
+      if (fm.awaitingNotes) {
+        modalLines.push(' Notes: ' + fm.notes + style.dim('▏'));
+      }
+      const startLine = Math.max(0, height - modalLines.length - 1);
+      rendered[startLine] = ' ' + style.dim('─'.repeat(Math.max(0, width - 2)));
+      for (let i = 0; i < modalLines.length; i++) {
+        if (startLine + 1 + i < height) {
+          rendered[startLine + 1 + i] = modalLines[i]!.padEnd(width).slice(0, width);
+        }
+      }
+      return rendered.join('\n');
+    }
+
+    // Composer overlay
+    if (state.composer?.active) {
+      const comp = state.composer;
+      const rendered = frame(lines, width, height).split('\n');
+      const label =
+        comp.mode === 'reply'
+          ? '[REPLY to ' + (comp.replyTo ?? '') + ']'
+          : '[NEW THREAD in /' + (comp.board ?? 'meta') + ']';
+      const compLines: string[] = [];
+      compLines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
+      compLines.push(' ' + style.accent(label) + style.dim('  ' + comp.lines.length + ' lines'));
+      if (comp.mode === 'new-thread') {
+        compLines.push(
+          ' Title: ' + (comp.title ?? '') + (comp.status === 'editing' ? style.dim('▏') : '')
+        );
+      }
+      const visibleContentLines = Math.max(3, height - rendered.length + compLines.length - 2);
+      const contentStart = Math.max(0, comp.cursorLine - visibleContentLines + 1);
+      for (
+        let i = contentStart;
+        i < Math.min(comp.lines.length, contentStart + visibleContentLines);
+        i++
+      ) {
+        const lineText = comp.lines[i] ?? '';
+        if (i === comp.cursorLine) {
+          compLines.push(
+            ' ' +
+              lineText.slice(0, comp.cursorCol) +
+              style.dim('▏') +
+              lineText.slice(comp.cursorCol)
+          );
+        } else {
+          compLines.push(' ' + lineText);
+        }
+      }
+      if (comp.status === 'sending') {
+        compLines.push(' ' + style.dim('Sending…'));
+      } else if (comp.status === 'error') {
+        compLines.push(' ' + style.dim('Error: ' + (comp.errorMessage ?? 'unknown')));
+      } else {
+        compLines.push(' ' + style.dim('Ctrl+S send · Esc cancel'));
+      }
+
+      const startLine = Math.max(0, height - compLines.length);
+      for (let i = 0; i < compLines.length; i++) {
+        if (startLine + i < height) {
+          rendered[startLine + i] = (compLines[i] ?? '').padEnd(width).slice(0, width);
+        }
+      }
+      return rendered.join('\n');
+    }
+
     return frame(lines, width, height);
   },
   async handleKey(event, ctx): Promise<PageAction> {
+    // ── Flag modal ──────────────────────────────────────────────────────────
+    if (state.flagModal?.active) {
+      const fm = state.flagModal;
+      if (fm.awaitingNotes) {
+        if (event.key === 'esc') {
+          state.flagModal = null;
+          return { kind: 'none' };
+        }
+        if (event.key === 'enter') {
+          await submitFlag('other', ctx);
+          return { kind: 'none' };
+        }
+        if (event.key === 'backspace') {
+          fm.notes = fm.notes.slice(0, -1);
+          return { kind: 'none' };
+        }
+        if (event.key.length === 1 && !event.ctrl) {
+          fm.notes += event.key;
+          return { kind: 'none' };
+        }
+        return { kind: 'none' };
+      }
+      if (event.key === 'esc') {
+        state.flagModal = null;
+        return { kind: 'none' };
+      }
+      const reasonMap: Record<
+        string,
+        'spam' | 'harassment' | 'undisclosed-llm' | 'malicious' | 'other'
+      > = {
+        '1': 'spam',
+        '2': 'harassment',
+        '3': 'undisclosed-llm',
+        '4': 'malicious',
+        '5': 'other'
+      };
+      const reason = reasonMap[event.key];
+      if (reason) {
+        if (reason === 'other') {
+          fm.awaitingNotes = true;
+          return { kind: 'none' };
+        }
+        await submitFlag(reason, ctx);
+        return { kind: 'none' };
+      }
+      return { kind: 'none' };
+    }
+
+    // ── Composer ────────────────────────────────────────────────────────────
+    if (state.composer?.active) {
+      const comp = state.composer;
+      if (comp.status === 'sending') return { kind: 'none' };
+
+      if (event.ctrl && event.key === 's') {
+        await sendComposer(ctx);
+        return { kind: 'none' };
+      }
+      if (event.key === 'esc') {
+        const hasContent = comp.lines.some((l) => l.length > 0);
+        if (hasContent) {
+          // confirm discard — just close for now
+        }
+        closeComposer();
+        return { kind: 'none' };
+      }
+      if (event.key === 'enter') {
+        // If new-thread and title not yet set, move to content
+        if (comp.mode === 'new-thread' && comp.title === '') {
+          comp.title = comp.lines.join('').trim();
+          comp.lines = [''];
+          comp.cursorLine = 0;
+          comp.cursorCol = 0;
+          return { kind: 'none' };
+        }
+        composerNewline();
+        return { kind: 'none' };
+      }
+      if (event.key === 'backspace') {
+        if (
+          comp.mode === 'new-thread' &&
+          typeof comp.title === 'string' &&
+          comp.title.length === 0 &&
+          comp.lines.join('') === ''
+        ) {
+          // editing title still
+        }
+        composerBackspace();
+        return { kind: 'none' };
+      }
+      if (event.key === 'up' && comp.cursorLine > 0) {
+        comp.cursorLine--;
+        comp.cursorCol = Math.min(comp.cursorCol, (comp.lines[comp.cursorLine] ?? '').length);
+        return { kind: 'none' };
+      }
+      if (event.key === 'down' && comp.cursorLine < comp.lines.length - 1) {
+        comp.cursorLine++;
+        comp.cursorCol = Math.min(comp.cursorCol, (comp.lines[comp.cursorLine] ?? '').length);
+        return { kind: 'none' };
+      }
+      if (event.key === 'left' && comp.cursorCol > 0) {
+        comp.cursorCol--;
+        return { kind: 'none' };
+      }
+      if (event.key === 'right') {
+        const lineLen = (comp.lines[comp.cursorLine] ?? '').length;
+        if (comp.cursorCol < lineLen) comp.cursorCol++;
+        return { kind: 'none' };
+      }
+      if (event.key.length === 1 && !event.ctrl && !event.meta) {
+        // If new-thread mode and title not set yet, type into title field
+        if (comp.mode === 'new-thread' && typeof comp.title === 'string' && !comp.title) {
+          // title is filled by user hitting enter — for now just accumulate in lines
+        }
+        composerInsertChar(event.key);
+        return { kind: 'none' };
+      }
+      if (event.key === 'space') {
+        composerInsertChar(' ');
+        return { kind: 'none' };
+      }
+      return { kind: 'none' };
+    }
+
+    // ── Filter mode ─────────────────────────────────────────────────────────
     if (state.filtering) {
       if (event.key === 'esc') {
         state.filtering = false;
@@ -243,6 +711,8 @@ export const communityPage: Page = {
       }
       return { kind: 'none' };
     }
+
+    // ── Board view ──────────────────────────────────────────────────────────
     if (state.view === 'boards') {
       switch (event.key) {
         case 'j':
@@ -257,7 +727,7 @@ export const communityPage: Page = {
           const boardId = cachedBoards[state.boardCur]?.id;
           if (boardId) {
             const opts = buildSourceOptions(ctx);
-            const result = await communityThreadsSource(opts, boardId);
+            const result = await communityThreadsSource(opts, boardId as BoardId);
             cachedThreads = result.data.threads;
             cachedReplies = [];
             state.board = boardId;
@@ -266,8 +736,12 @@ export const communityPage: Page = {
           }
           return { kind: 'none' };
         }
-        case 'n':
-          return { kind: 'status', message: 'new thread (fixture)' };
+        case 'n': {
+          const boardId = (cachedBoards[state.boardCur]?.id ?? 'meta') as BoardId;
+          openComposer('new-thread');
+          if (state.composer) state.composer.board = boardId;
+          return { kind: 'none' };
+        }
         case '/':
           state.filtering = true;
           return { kind: 'none' };
@@ -275,18 +749,23 @@ export const communityPage: Page = {
           return { kind: 'none' };
       }
     }
+
+    // ── Thread list view ────────────────────────────────────────────────────
     if (state.view === 'threads') {
+      const list = cachedThreads.filter(
+        (t) => !state.filter || t.title.toLowerCase().includes(state.filter.toLowerCase())
+      );
       switch (event.key) {
         case 'j':
         case 'down':
-          state.threadCur = Math.min(cachedThreads.length - 1, state.threadCur + 1);
+          state.threadCur = Math.min(list.length - 1, state.threadCur + 1);
           return { kind: 'none' };
         case 'k':
         case 'up':
           state.threadCur = Math.max(0, state.threadCur - 1);
           return { kind: 'none' };
         case 'enter': {
-          const t = cachedThreads[state.threadCur];
+          const t = list[state.threadCur];
           if (t) {
             const opts = buildSourceOptions(ctx);
             const result = await communityThreadSource(opts, t.id);
@@ -297,11 +776,47 @@ export const communityPage: Page = {
           }
           return { kind: 'none' };
         }
+        case 'X': {
+          const t = list[state.threadCur];
+          if (t) {
+            if (state.expandedItems.has(t.id)) state.expandedItems.delete(t.id);
+            else state.expandedItems.add(t.id);
+          }
+          return { kind: 'none' };
+        }
+        case '+':
+        case '=': {
+          const t = list[state.threadCur];
+          if (t) await doVote(t.id, 'discussion', 1, ctx);
+          return { kind: 'none' };
+        }
+        case '-': {
+          const t = list[state.threadCur];
+          if (t) await doVote(t.id, 'discussion', -1, ctx);
+          return { kind: 'none' };
+        }
+        case 'f': {
+          const t = list[state.threadCur];
+          if (t) {
+            state.flagModal = {
+              active: true,
+              targetId: t.id,
+              targetType: 'discussion',
+              awaitingNotes: false,
+              notes: ''
+            };
+          }
+          return { kind: 'none' };
+        }
         case 'esc':
           state.view = 'boards';
           return { kind: 'none' };
-        case 'n':
-          return { kind: 'status', message: 'new thread (fixture)' };
+        case 'n': {
+          const boardId = (state.board ?? 'meta') as BoardId;
+          openComposer('new-thread');
+          if (state.composer) state.composer.board = boardId;
+          return { kind: 'none' };
+        }
         case '/':
           state.filtering = true;
           return { kind: 'none' };
@@ -309,6 +824,8 @@ export const communityPage: Page = {
           return { kind: 'none' };
       }
     }
+
+    // ── Reader view ─────────────────────────────────────────────────────────
     const flatReplies = flattenReplies(cachedReplies);
     switch (event.key) {
       case 'j':
@@ -322,12 +839,70 @@ export const communityPage: Page = {
       case 'esc':
         state.view = 'threads';
         return { kind: 'none' };
-      case 'r':
-        return { kind: 'status', message: 'reply composer (fixture)' };
-      case 'v':
-        return { kind: 'status', message: 'voted' };
-      case 'f':
-        return { kind: 'status', message: 'flagged' };
+      case 'r': {
+        const threadId = state.thread ?? '';
+        if (state.replyCur >= 0 && flatReplies.length > 0) {
+          const focused = flatReplies[state.replyCur];
+          openComposer('reply', focused?.reply.id ?? threadId);
+        } else {
+          openComposer('reply', threadId);
+        }
+        return { kind: 'none' };
+      }
+      case '+':
+      case '=': {
+        if (flatReplies.length > 0) {
+          const focused = flatReplies[state.replyCur];
+          if (focused) await doVote(focused.reply.id, 'reply', 1, ctx);
+        } else {
+          const t = cachedThreads.find((x) => x.id === state.thread);
+          if (t) await doVote(t.id, 'discussion', 1, ctx);
+        }
+        return { kind: 'none' };
+      }
+      case '-': {
+        if (flatReplies.length > 0) {
+          const focused = flatReplies[state.replyCur];
+          if (focused) await doVote(focused.reply.id, 'reply', -1, ctx);
+        } else {
+          const t = cachedThreads.find((x) => x.id === state.thread);
+          if (t) await doVote(t.id, 'discussion', -1, ctx);
+        }
+        return { kind: 'none' };
+      }
+      case 'f': {
+        const focused = flatReplies[state.replyCur];
+        if (focused) {
+          state.flagModal = {
+            active: true,
+            targetId: focused.reply.id,
+            targetType: 'reply',
+            awaitingNotes: false,
+            notes: ''
+          };
+        } else {
+          const t = cachedThreads.find((x) => x.id === state.thread);
+          if (t) {
+            state.flagModal = {
+              active: true,
+              targetId: t.id,
+              targetType: 'discussion',
+              awaitingNotes: false,
+              notes: ''
+            };
+          }
+        }
+        return { kind: 'none' };
+      }
+      case 'X': {
+        const focused = flatReplies[state.replyCur];
+        if (focused) {
+          const id = focused.reply.id;
+          if (state.expandedItems.has(id)) state.expandedItems.delete(id);
+          else state.expandedItems.add(id);
+        }
+        return { kind: 'none' };
+      }
       default:
         return { kind: 'none' };
     }

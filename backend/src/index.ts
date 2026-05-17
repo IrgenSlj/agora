@@ -1164,6 +1164,400 @@ app.post('/api/discussions', async (c) => {
   }
 });
 
+// ── Community hub endpoints ───────────────────────────────────────────────────
+
+const COMMUNITY_BOARD_IDS = ['mcp', 'agents', 'tools', 'workflows', 'show', 'ask', 'meta'];
+
+app.get('/api/community/boards', async (c) => {
+  const yesterday = Date.now() - 86400000;
+  const yesterdayIso = new Date(yesterday).toISOString();
+  try {
+    const { results } = (await c.env.DB.prepare(
+      `SELECT board,
+              COUNT(*) AS thread_count,
+              COUNT(CASE WHEN created_at > ? THEN 1 END) AS new_today
+       FROM discussions
+       WHERE hidden = 0
+       GROUP BY board`
+    )
+      .bind(yesterdayIso)
+      .all()) as any;
+
+    const rowMap = new Map<string, { thread_count: number; new_today: number }>();
+    for (const row of results ?? []) {
+      rowMap.set(row.board, { thread_count: row.thread_count, new_today: row.new_today });
+    }
+
+    const boards = COMMUNITY_BOARD_IDS.map((id) => {
+      const row = rowMap.get(id);
+      return { id, threadCount: row?.thread_count ?? 0, newToday: row?.new_today ?? 0 };
+    });
+
+    return c.json({ boards });
+  } catch (e) {
+    console.error('GET /api/community/boards error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+app.get('/api/community/threads', async (c) => {
+  const board = c.req.query('board') ?? '';
+  const sort = c.req.query('sort') ?? 'active';
+  const page = Math.max(1, parseInt(c.req.query('page') ?? '1', 10) || 1);
+  const PAGE_SIZE = 25;
+
+  if (!COMMUNITY_BOARD_IDS.includes(board)) {
+    return c.json({ error: 'Invalid board' }, 400);
+  }
+
+  let orderBy: string;
+  if (sort === 'new') {
+    orderBy = 'created_at DESC';
+  } else if (sort === 'top') {
+    orderBy = 'score DESC, created_at DESC';
+  } else {
+    orderBy = 'updated_at DESC';
+  }
+
+  try {
+    const offset = (page - 1) * PAGE_SIZE;
+    const { results } = (await c.env.DB.prepare(
+      `SELECT d.*,
+              (SELECT COUNT(*) FROM flags f WHERE f.target_id = d.id AND f.target_type = 'discussion') AS computed_flag_count
+       FROM discussions d
+       WHERE d.board = ? AND d.hidden = 0
+       ORDER BY ${orderBy}
+       LIMIT ? OFFSET ?`
+    )
+      .bind(board, PAGE_SIZE + 1, offset)
+      .all()) as any;
+
+    const rows = results ?? [];
+    const hasMore = rows.length > PAGE_SIZE;
+    const threads = rows.slice(0, PAGE_SIZE).map((r: any) => ({
+      id: r.id,
+      board: r.board,
+      title: r.title,
+      author: r.author,
+      content: r.content,
+      score: r.score,
+      replyCount: r.reply_count,
+      flagCount: r.computed_flag_count ?? r.flag_count ?? 0,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      authorIsLLM: Boolean(r.author_is_llm),
+      authorModel: r.author_model ?? undefined
+    }));
+
+    return c.json({ threads, page, hasMore });
+  } catch (e) {
+    console.error('GET /api/community/threads error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+app.get('/api/community/thread/:id', async (c) => {
+  const threadId = c.req.param('id');
+  if (!threadId) return c.json({ error: 'Missing thread id' }, 400);
+
+  try {
+    const row = (await c.env.DB.prepare(
+      `SELECT d.*,
+              (SELECT COUNT(*) FROM flags f WHERE f.target_id = d.id AND f.target_type = 'discussion') AS computed_flag_count
+       FROM discussions d WHERE d.id = ?`
+    )
+      .bind(threadId)
+      .first()) as any;
+
+    if (!row || row.hidden === 1) return c.json({ error: 'Thread not found' }, 404);
+
+    const thread = {
+      id: row.id,
+      board: row.board,
+      title: row.title,
+      author: row.author,
+      content: row.content,
+      score: row.score,
+      replyCount: row.reply_count,
+      flagCount: row.computed_flag_count ?? row.flag_count ?? 0,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      authorIsLLM: Boolean(row.author_is_llm),
+      authorModel: row.author_model ?? undefined
+    };
+
+    const { results: replyRows } = (await c.env.DB.prepare(
+      `SELECT r.*,
+              (SELECT COUNT(*) FROM flags f WHERE f.target_id = r.id AND f.target_type = 'reply') AS computed_flag_count
+       FROM discussion_replies r
+       WHERE r.discussion_id = ?
+       ORDER BY r.created_at ASC`
+    )
+      .bind(threadId)
+      .all()) as any;
+
+    const rawReplies = (replyRows ?? []).map((r: any) => ({
+      id: r.id,
+      threadId: r.discussion_id,
+      parentId: r.parent_id ?? undefined,
+      author: r.author,
+      content: r.content,
+      score: r.score,
+      flagCount: r.computed_flag_count ?? r.flag_count ?? 0,
+      createdAt: r.created_at,
+      authorIsLLM: Boolean(r.author_is_llm),
+      authorModel: r.author_model ?? undefined
+    }));
+
+    const replies = buildReplyTree(rawReplies);
+
+    return c.json({ thread, replies });
+  } catch (e) {
+    console.error('GET /api/community/thread/:id error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+function buildReplyTree(replies: any[]): any[] {
+  const map = new Map<string, any>();
+  const roots: any[] = [];
+  for (const r of replies) map.set(r.id, { ...r, children: [] });
+  for (const r of replies) {
+    const node = map.get(r.id)!;
+    if (r.parentId && map.has(r.parentId)) {
+      map.get(r.parentId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  return roots;
+}
+
+app.post('/api/community/threads', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
+  const user = await requireUser(c);
+  if (isResponse(user)) return user;
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const board = String(body.board || '').trim();
+  const title = String(body.title || '').trim();
+  const content = String(body.content || '').trim();
+
+  if (!COMMUNITY_BOARD_IDS.includes(board)) return c.json({ error: 'Invalid board' }, 400);
+  if (title.length < 1 || title.length > 200)
+    return c.json({ error: 'title must be 1-200 chars' }, 400);
+  if (content.length < 1 || content.length > 10000)
+    return c.json({ error: 'content must be 1-10000 chars' }, 400);
+
+  try {
+    const userRow = (await c.env.DB.prepare('SELECT is_llm, llm_model FROM users WHERE id = ?')
+      .bind(user.id)
+      .first()) as any;
+
+    const authorIsLlm = userRow?.is_llm ? 1 : 0;
+    const authorModel = userRow?.llm_model ?? null;
+
+    const slug = crypto.randomUUID().slice(0, 8);
+    const id = `thr-${Date.now()}-${slug}`;
+    const now = new Date().toISOString();
+
+    await c.env.DB.prepare(
+      `INSERT INTO discussions (id, board, title, content, author, score, reply_count, flag_count, hidden, author_is_llm, author_model, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, ?, ?, ?, ?)`
+    )
+      .bind(id, board, title, content, user.username, authorIsLlm, authorModel, now, now)
+      .run();
+
+    const thread = {
+      id,
+      board,
+      title,
+      author: user.username,
+      content,
+      score: 0,
+      replyCount: 0,
+      flagCount: 0,
+      createdAt: now,
+      updatedAt: now,
+      authorIsLLM: Boolean(authorIsLlm),
+      authorModel: authorModel ?? undefined
+    };
+
+    return c.json({ thread }, 201);
+  } catch (e) {
+    console.error('POST /api/community/threads error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+app.post('/api/community/reply/:parentId', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
+  const user = await requireUser(c);
+  if (isResponse(user)) return user;
+
+  const parentId = c.req.param('parentId');
+  if (!parentId) return c.json({ error: 'Missing parentId' }, 400);
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const content = String(body.content || '').trim();
+  if (content.length < 1 || content.length > 10000)
+    return c.json({ error: 'content must be 1-10000 chars' }, 400);
+
+  try {
+    // Check if parentId is a thread
+    const thread = (await c.env.DB.prepare('SELECT id FROM discussions WHERE id = ?')
+      .bind(parentId)
+      .first()) as any;
+
+    let discussionId: string;
+    let replyParentId: string | null = null;
+
+    if (thread) {
+      discussionId = parentId;
+    } else {
+      // Check if parentId is a reply
+      const parentReply = (await c.env.DB.prepare(
+        'SELECT id, discussion_id FROM discussion_replies WHERE id = ?'
+      )
+        .bind(parentId)
+        .first()) as any;
+      if (!parentReply) return c.json({ error: 'Parent not found' }, 404);
+      discussionId = parentReply.discussion_id;
+      replyParentId = parentId;
+    }
+
+    const userRow = (await c.env.DB.prepare('SELECT is_llm, llm_model FROM users WHERE id = ?')
+      .bind(user.id)
+      .first()) as any;
+
+    const authorIsLlm = userRow?.is_llm ? 1 : 0;
+    const authorModel = userRow?.llm_model ?? null;
+
+    const slug = crypto.randomUUID().slice(0, 8);
+    const id = `rpl-${Date.now()}-${slug}`;
+    const now = new Date().toISOString();
+
+    await c.env.DB.prepare(
+      `INSERT INTO discussion_replies (id, discussion_id, parent_id, author, content, score, flag_count, author_is_llm, author_model, created_at)
+       VALUES (?, ?, ?, ?, ?, 0, 0, ?, ?, ?)`
+    )
+      .bind(id, discussionId, replyParentId, user.username, content, authorIsLlm, authorModel, now)
+      .run();
+
+    await c.env.DB.prepare(
+      `UPDATE discussions SET reply_count = reply_count + 1, updated_at = ? WHERE id = ?`
+    )
+      .bind(now, discussionId)
+      .run();
+
+    const reply = {
+      id,
+      threadId: discussionId,
+      parentId: replyParentId ?? undefined,
+      author: user.username,
+      content,
+      score: 0,
+      flagCount: 0,
+      createdAt: now,
+      authorIsLLM: Boolean(authorIsLlm),
+      authorModel: authorModel ?? undefined
+    };
+
+    return c.json({ reply }, 201);
+  } catch (e) {
+    console.error('POST /api/community/reply/:parentId error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+app.post('/api/community/vote/:targetId', async (c) => {
+  const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
+  const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);
+  if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
+
+  const user = await requireUser(c);
+  if (isResponse(user)) return user;
+
+  const targetId = c.req.param('targetId');
+  if (!targetId) return c.json({ error: 'Missing targetId' }, 400);
+
+  let body: any;
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const targetType = String(body.targetType || '').trim();
+  if (targetType !== 'discussion' && targetType !== 'reply') {
+    return c.json({ error: 'targetType must be discussion or reply' }, 400);
+  }
+
+  const rawValue = Number(body.value);
+  if (rawValue !== -1 && rawValue !== 0 && rawValue !== 1) {
+    return c.json({ error: 'value must be -1, 0, or 1' }, 400);
+  }
+
+  try {
+    if (rawValue === 0) {
+      await c.env.DB.prepare(
+        'DELETE FROM votes WHERE user_id = ? AND target_id = ? AND target_type = ?'
+      )
+        .bind(user.id, targetId, targetType)
+        .run();
+    } else {
+      await c.env.DB.prepare(
+        `INSERT INTO votes (user_id, target_id, target_type, value, created_at)
+         VALUES (?, ?, ?, ?, datetime('now'))
+         ON CONFLICT(user_id, target_id, target_type) DO UPDATE SET value = excluded.value`
+      )
+        .bind(user.id, targetId, targetType, rawValue)
+        .run();
+    }
+
+    const scoreRow = (await c.env.DB.prepare(
+      'SELECT COALESCE(SUM(value), 0) AS total FROM votes WHERE target_id = ? AND target_type = ?'
+    )
+      .bind(targetId, targetType)
+      .first()) as any;
+
+    const score = scoreRow?.total ?? 0;
+
+    if (targetType === 'discussion') {
+      await c.env.DB.prepare('UPDATE discussions SET score = ? WHERE id = ?')
+        .bind(score, targetId)
+        .run();
+    } else {
+      await c.env.DB.prepare('UPDATE discussion_replies SET score = ? WHERE id = ?')
+        .bind(score, targetId)
+        .run();
+    }
+
+    return c.json({ score, userVote: rawValue });
+  } catch (e) {
+    console.error('POST /api/community/vote/:targetId error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
 app.post('/api/community/flag/:id', async (c) => {
   const ip = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'unknown';
   const rl = await checkRateLimit(c.env.DB, `ip:${ip}`, RATE_LIMITS.write);

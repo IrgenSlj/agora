@@ -71,6 +71,9 @@ CREATE TABLE IF NOT EXISTS discussions (
   score INTEGER NOT NULL DEFAULT 0,
   flag_count INTEGER NOT NULL DEFAULT 0,
   reply_count INTEGER NOT NULL DEFAULT 0,
+  hidden INTEGER NOT NULL DEFAULT 0,
+  author_is_llm INTEGER NOT NULL DEFAULT 0,
+  author_model TEXT,
   category TEXT NOT NULL DEFAULT 'discussion',
   package_id TEXT,
   workflow_id TEXT,
@@ -223,3 +226,11 @@ CREATE TABLE IF NOT EXISTS device_codes (
 
 CREATE INDEX IF NOT EXISTS idx_device_codes_user_code ON device_codes(user_code);
 CREATE INDEX IF NOT EXISTS idx_device_codes_status ON device_codes(status);
+
+-- Migrations applied to existing D1 instances (run manually via wrangler d1 execute):
+-- ALTER TABLE discussions ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+-- ALTER TABLE discussions ADD COLUMN author_is_llm INTEGER NOT NULL DEFAULT 0;
+-- ALTER TABLE discussions ADD COLUMN author_model TEXT;
+-- (users.is_llm and users.llm_model already present in schema above)
+-- (discussion_replies.author_is_llm and author_model already present in schema above)
+-- (votes PRIMARY KEY (user_id, target_id, target_type) serves as unique constraint)

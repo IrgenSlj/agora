@@ -8,7 +8,9 @@ export interface CommunityBoardsResult {
 
 export interface CommunityThreadsResult {
   threads: Thread[];
-  total: number;
+  total?: number;
+  page?: number;
+  hasMore?: boolean;
 }
 
 export interface CommunityThreadResult {
@@ -28,7 +30,7 @@ export interface CreateReplyInput {
 }
 
 export interface VoteInput {
-  value: -1 | 1;
+  value: -1 | 0 | 1;
   targetType: 'discussion' | 'reply';
 }
 
@@ -245,13 +247,22 @@ export async function createReplySource(
   return { source: 'api', apiUrl: opts.apiUrl, data };
 }
 
+export interface VoteResult {
+  score: number;
+  userVote: -1 | 0 | 1;
+}
+
 export async function voteSource(
   opts: SourceOptions,
   targetId: string,
   input: VoteInput
-): Promise<SourceResult<{ success: boolean }>> {
+): Promise<SourceResult<VoteResult>> {
   if (!opts.useApi || !opts.apiUrl || !opts.token) {
-    return { source: 'offline', data: { success: false }, fallbackReason: 'API required for vote' };
+    return {
+      source: 'offline',
+      data: { score: 0, userVote: 0 },
+      fallbackReason: 'API required for vote'
+    };
   }
   const res = await fetcher(opts, `${opts.apiUrl}/api/community/vote/${targetId}`, {
     method: 'POST',
@@ -259,7 +270,8 @@ export async function voteSource(
     body: JSON.stringify(input)
   });
   if (!res.ok) throw new Error(`Failed to vote: ${res.status}`);
-  return { source: 'api', apiUrl: opts.apiUrl, data: { success: true } };
+  const data = (await res.json()) as VoteResult;
+  return { source: 'api', apiUrl: opts.apiUrl, data };
 }
 
 export async function flagSource(
