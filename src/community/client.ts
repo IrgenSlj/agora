@@ -355,6 +355,31 @@ export async function adminHideSource(
   return { source: 'api', apiUrl: opts.apiUrl, data };
 }
 
+export interface AdminRecomputeResult {
+  recomputed: number;
+  durationMs: number;
+}
+
+export async function adminRecomputeSource(
+  opts: SourceOptions
+): Promise<SourceResult<AdminRecomputeResult>> {
+  if (!opts.useApi || !opts.apiUrl || !opts.token) {
+    return {
+      source: 'offline',
+      data: { recomputed: 0, durationMs: 0 },
+      fallbackReason: 'API required for admin recompute'
+    };
+  }
+  const res = await fetcher(opts, `${opts.apiUrl}/api/admin/reputation/recompute`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${opts.token}` }
+  });
+  if (res.status === 403) throw new Error('Admin access required');
+  if (!res.ok) throw new Error(`Failed to recompute: ${res.status}`);
+  const data = (await res.json()) as AdminRecomputeResult;
+  return { source: 'api', apiUrl: opts.apiUrl, data };
+}
+
 export async function adminLogSource(
   opts: SourceOptions,
   { limit = 50 }: { limit?: number }

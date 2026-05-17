@@ -8,7 +8,8 @@ import {
   voteSource,
   flagSource,
   adminHideSource,
-  adminLogSource
+  adminLogSource,
+  adminRecomputeSource
 } from '../../community/client.js';
 import { createDiscussionSource, discussionsSource, flagMarketplaceSource } from '../../live.js';
 import { normalizeNewsSource, DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
@@ -553,8 +554,31 @@ export const commandAdmin: CommandHandler = async (parsed, io, style) => {
     }
   }
 
+  if (sub === 'recompute') {
+    const source = await writeSourceOptions(parsed, io);
+    if (!source.ok) return usageError(io, source.error);
+
+    try {
+      const result = await adminRecomputeSource(source.options);
+      if (parsed.flags.json) {
+        writeJson(io.stdout, result.data);
+        return 0;
+      }
+      writeLine(io.stdout, `Recomputed ${result.data.recomputed} users in ${result.data.durationMs}ms`);
+      return 0;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg === 'Admin access required') {
+        writeLine(io.stderr, 'Admin access required');
+        return 1;
+      }
+      throw e;
+    }
+  }
+
   writeLine(io.stdout, 'Usage:');
   writeLine(io.stdout, '  agora admin hide <id> --reason <r> [--type discussion|reply]');
   writeLine(io.stdout, '  agora admin log [--limit 50]');
+  writeLine(io.stdout, '  agora admin recompute');
   return 1;
 };

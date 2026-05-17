@@ -33,6 +33,12 @@ app.use(
   })
 );
 
+export function computeReputation(accountAgeDays: number, netVotes: number): number {
+  const ageBonus = Math.min(accountAgeDays, 365); // cap age contribution at 1 year
+  const voteBonus = Math.log10(Math.max(1, netVotes + 1)) * 100;
+  return Math.round((ageBonus + voteBonus) * 10) / 10;
+}
+
 // ── Rate-limit middleware ───────────────────────────────────────────────────
 
 type RateLimitOpts = { limit: number; window: number }; // window in seconds
@@ -1886,7 +1892,7 @@ app.get('/api/users/:username', async (c) => {
   try {
     const user = (await c.env.DB.prepare(
       `
-      SELECT id, username, display_name, bio, avatar_url, created_at
+      SELECT id, username, display_name, bio, avatar_url, reputation, created_at
       FROM users
       WHERE username = ?
     `
@@ -1921,6 +1927,7 @@ app.get('/api/users/:username', async (c) => {
         display_name: user.display_name,
         bio: user.bio,
         avatar_url: user.avatar_url,
+        reputation: Number(user.reputation || 0),
         package_count: Number(packageCount?.count || 0),
         workflow_count: Number(workflowCount?.count || 0),
         discussion_count: Number(discussionCount?.count || 0),
@@ -2128,6 +2135,50 @@ app.get('/api/admin/log', async (c) => {
   }));
 
   return c.json({ entries });
+});
+
+// ── Admin: reputation recompute ──────────────────────────────────────────────
+
+app.post('/api/admin/reputation/recompute', async (c) => {
+  const admin = await requireAdmin(c);
+  if (isResponse(admin)) return admin;
+
+  const start = Date.now();
+
+  const { results: users } = (await c.env.DB.prepare(
+    `SELECT id, username, created_at FROM users`
+  ).all()) as any;
+
+  const { results: voteRows } = (await c.env.DB.prepare(
+    `SELECT d.author AS username, SUM(v.value) AS net
+     FROM votes v
+     JOIN discussions d ON d.id = v.target_id AND v.target_type = 'discussion'
+     GROUP BY d.author
+     UNION ALL
+     SELECT r.author AS username, SUM(v.value) AS net
+     FROM votes v
+     JOIN discussion_replies r ON r.id = v.target_id AND v.target_type = 'reply'
+     GROUP BY r.author`
+  ).all()) as any;
+
+  const voteMap = new Map<string, number>();
+  for (const row of voteRows ?? []) {
+    voteMap.set(row.username, (voteMap.get(row.username) ?? 0) + Number(row.net ?? 0));
+  }
+
+  const now = Date.now();
+  const statements = (users ?? []).map((u: any) => {
+    const ageDays = (now - new Date(u.created_at).getTime()) / 86400000;
+    const netVotes = voteMap.get(u.username) ?? 0;
+    const rep = computeReputation(ageDays, netVotes);
+    return c.env.DB.prepare(`UPDATE users SET reputation = ? WHERE id = ?`).bind(rep, u.id);
+  });
+
+  if (statements.length > 0) {
+    await c.env.DB.batch(statements);
+  }
+
+  return c.json({ recomputed: statements.length, durationMs: Date.now() - start });
 });
 
 export default app;

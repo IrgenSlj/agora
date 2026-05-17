@@ -1,5 +1,8 @@
 import { describe, test, expect } from 'bun:test';
 import { formatStars, formatInstalls } from '../src/format';
+import { formatProfileDetail } from '../src/cli/format.js';
+import { createStyler } from '../src/ui.js';
+import type { ApiProfile } from '../src/live.js';
 
 describe('Formatting Utilities', () => {
   describe('formatStars', () => {
@@ -24,5 +27,33 @@ describe('Formatting Utilities', () => {
     test('formats hundreds', () => {
       expect(formatInstalls(500)).toBe('500');
     });
+  });
+});
+
+describe('formatProfileDetail', () => {
+  const style = createStyler(false);
+
+  const baseProfile: ApiProfile = {
+    id: 'u-1',
+    username: 'alice',
+    displayName: 'Alice',
+    packages: 3,
+    workflows: 1,
+    discussions: 7,
+    reputation: 42.5,
+    joinedAt: '2025-01-01T00:00:00Z'
+  };
+
+  test('includes Reputation line', () => {
+    const output = formatProfileDetail(baseProfile, style);
+    expect(output).toContain('reputation');
+    expect(output).toContain('42.5');
+  });
+
+  test('defaults reputation to 0 when not provided', () => {
+    const profile: ApiProfile = { ...baseProfile, reputation: undefined };
+    const output = formatProfileDetail(profile, style);
+    expect(output).toContain('reputation');
+    expect(output).toContain('0');
   });
 });

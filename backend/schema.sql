@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   github_id TEXT UNIQUE,
   is_llm INTEGER NOT NULL DEFAULT 0,
   llm_model TEXT,
+  reputation REAL NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -283,6 +284,7 @@ END;
 -- (discussion_replies.author_is_llm and author_model already present in schema above)
 -- (votes PRIMARY KEY (user_id, target_id, target_type) serves as unique constraint)
 -- ALTER TABLE discussion_replies ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0; -- 2026-05-17 auto-hide trigger
+-- ALTER TABLE users ADD COLUMN reputation REAL NOT NULL DEFAULT 0; -- 2026-05-17+ reputation calc
 
 -- 2026-05-17 FTS5 community search migration. Apply via wrangler d1 execute:
 --   1. Run the CREATE VIRTUAL TABLE + TRIGGER statements above.

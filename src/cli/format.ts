@@ -155,7 +155,8 @@ export function formatProfileDetail(profile: ApiProfile, style: Styler): string 
     `${style.dim('username')} ${style.accent(profile.username)}`,
     `${style.dim('packages')} ${formatNumber(profile.packages)}`,
     `${style.dim('workflows')} ${formatNumber(profile.workflows)}`,
-    `${style.dim('discussions')} ${formatNumber(profile.discussions)}`
+    `${style.dim('discussions')} ${formatNumber(profile.discussions)}`,
+    `${style.dim('reputation')} ${profile.reputation ?? 0}`
   ];
 
   if (profile.bio) lines.splice(2, 0, `${style.dim('bio')} ${profile.bio}`);

@@ -181,6 +181,54 @@ describe('commandAdmin log', () => {
   });
 });
 
+// ── commandAdmin recompute ─────────────────────────────────────────────────────
+
+describe('commandAdmin recompute', () => {
+  test('prints recomputed count and duration on success', async () => {
+    const { io, out } = makeIo();
+
+    const savedFetch = globalThis.fetch;
+    (globalThis as any).fetch = async (url: string) => {
+      if (url.includes('/api/admin/reputation/recompute')) {
+        return { ok: true, status: 200, json: async () => ({ recomputed: 12, durationMs: 34 }) };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    };
+
+    const parsed = makeParsed(['recompute'], { token: 'tok', apiUrl: 'http://localhost' });
+    const code = await commandAdmin(parsed, io, style);
+    globalThis.fetch = savedFetch;
+
+    expect(code).toBe(0);
+    const combined = out.join('');
+    expect(combined).toContain('12');
+    expect(combined).toContain('34');
+  });
+
+  test('surfaces 403 as friendly message', async () => {
+    const { io, err } = makeIo();
+
+    const savedFetch = globalThis.fetch;
+    (globalThis as any).fetch = async (url: string) => {
+      if (url.includes('/api/admin/reputation/recompute')) {
+        return {
+          ok: false,
+          status: 403,
+          json: async () => ({ error: 'Admin access required' })
+        };
+      }
+      return { ok: false, status: 404, json: async () => ({}) };
+    };
+
+    const parsed = makeParsed(['recompute'], { token: 'tok', apiUrl: 'http://localhost' });
+    const code = await commandAdmin(parsed, io, style);
+    globalThis.fetch = savedFetch;
+
+    expect(code).toBe(1);
+    expect(err.join('')).toContain('Admin access required');
+  });
+});
+
 // ── unknown subcommand ─────────────────────────────────────────────────────────
 
 describe('commandAdmin unknown subcommand', () => {

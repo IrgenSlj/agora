@@ -114,6 +114,7 @@ export interface ApiProfile {
   packages: number;
   workflows: number;
   discussions: number;
+  reputation?: number;
   joinedAt: string;
 }
 
@@ -186,6 +187,7 @@ interface ApiUser {
   workflow_count?: number;
   discussions?: number;
   discussion_count?: number;
+  reputation?: number;
   joinedAt?: string;
   createdAt?: string;
   created_at?: string;
@@ -762,6 +764,7 @@ function mapProfile(user: ApiUser): ApiProfile {
     packages: Number(user.packages ?? user.package_count ?? 0),
     workflows: Number(user.workflows ?? user.workflow_count ?? 0),
     discussions: Number(user.discussions ?? user.discussion_count ?? 0),
+    reputation: Number(user.reputation ?? 0),
     joinedAt: String(user.joinedAt || user.createdAt || user.created_at || '')
   };
 }
