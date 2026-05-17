@@ -9,7 +9,7 @@ export const BOARD_LABELS: Record<BoardId, string> = {
   workflows: 'Workflow Templates',
   show: 'Show & Tell',
   ask: 'Questions & Help',
-  meta: 'Meta / About Agora',
+  meta: 'Meta / About Agora'
 };
 
 export interface Thread {

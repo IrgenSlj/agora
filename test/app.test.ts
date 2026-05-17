@@ -6,7 +6,8 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseArgs, runCli } from '../src/cli/app';
+import { runCli } from '../src/cli/app';
+import { parseArgs } from '../src/cli/flags';
 
 function createIo(cwd = process.cwd(), options: { env?: Record<string, string | undefined> } = {}) {
   const stdout: string[] = [];

@@ -25,15 +25,15 @@ export async function ensureFreshAccess(
 
   const now = Math.floor(Date.now() / 1000);
   const slack = opts.slack ?? 60;
-  if (auth.accessExp > now + slack) return state;  // still fresh
-  if (!auth.refreshToken) return state;             // can't refresh
+  if (auth.accessExp > now + slack) return state; // still fresh
+  if (!auth.refreshToken) return state; // can't refresh
 
   const fetcher = opts.fetcher ?? globalThis.fetch;
   try {
     const res = await fetcher(`${auth.apiUrl.replace(/\/+$/, '')}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: auth.refreshToken }),
+      body: JSON.stringify({ refresh_token: auth.refreshToken })
     });
     if (res.status === 401) {
       // Refresh revoked/expired — clear local auth so next attempt is clean
@@ -41,10 +41,12 @@ export async function ensureFreshAccess(
       writeAgoraState(opts.dataDir, cleared);
       return cleared;
     }
-    if (!res.ok) return state;  // transient; let caller retry
+    if (!res.ok) return state; // transient; let caller retry
     const data = (await res.json()) as {
-      access_token: string; refresh_token: string;
-      expires_in: number; refresh_expires_in: number;
+      access_token: string;
+      refresh_token: string;
+      expires_in: number;
+      refresh_expires_in: number;
     };
     const nowSec = Math.floor(Date.now() / 1000);
     const next = setAuthState(state, {
@@ -52,11 +54,11 @@ export async function ensureFreshAccess(
       accessExp: nowSec + (data.expires_in || 0),
       refreshToken: data.refresh_token,
       refreshExp: nowSec + (data.refresh_expires_in || 0),
-      apiUrl: auth.apiUrl,
+      apiUrl: auth.apiUrl
     });
     writeAgoraState(opts.dataDir, next);
     return next;
   } catch {
-    return state;  // network error; let caller fail naturally
+    return state; // network error; let caller fail naturally
   }
 }

@@ -30,10 +30,10 @@ export const DEFAULT_NEWS_CONFIG: NewsConfig = {
     reddit: { enabled: true, ttlMinutes: 15 },
     'github-trending': { enabled: true, ttlMinutes: 30 },
     arxiv: { enabled: false, ttlMinutes: 60 },
-    rss: { enabled: false, ttlMinutes: 60 },
+    rss: { enabled: false, ttlMinutes: 60 }
   },
   topics: ['mcp', 'ai', 'agents', 'workflows', 'llm', 'tool-use', 'coding', 'agents', 'security'],
-  weights: { recency: 1.0, engagement: 0.6, topic: 0.8 },
+  weights: { recency: 1.0, engagement: 0.6, topic: 0.8 }
 };
 
 export const NEWS_SOURCE_LABELS: Record<NewsSource, string> = {
@@ -41,16 +41,20 @@ export const NEWS_SOURCE_LABELS: Record<NewsSource, string> = {
   reddit: 'Reddit',
   'github-trending': 'GitHub Trending',
   arxiv: 'arXiv',
-  rss: 'RSS',
+  rss: 'RSS'
 };
 
 export function normalizeNewsSource(s: string): NewsSource | undefined {
   const map: Record<string, NewsSource> = {
-    hn: 'hn', hackernews: 'hn', 'hacker-news': 'hn',
+    hn: 'hn',
+    hackernews: 'hn',
+    'hacker-news': 'hn',
     reddit: 'reddit',
-    gh: 'github-trending', github: 'github-trending', 'github-trending': 'github-trending',
+    gh: 'github-trending',
+    github: 'github-trending',
+    'github-trending': 'github-trending',
     arxiv: 'arxiv',
-    rss: 'rss',
+    rss: 'rss'
   };
   return map[s.toLowerCase().trim()];
 }

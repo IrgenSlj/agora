@@ -1,7 +1,10 @@
 import type { NewsItem, NewsSource } from '../types.js';
 
 export interface SourceAdapter {
-  fetch(opts: { fetcher?: (url: string, init?: RequestInit) => Promise<Response>; signal?: AbortSignal }): Promise<NewsItem[]>;
+  fetch(opts: {
+    fetcher?: (url: string, init?: RequestInit) => Promise<Response>;
+    signal?: AbortSignal;
+  }): Promise<NewsItem[]>;
 }
 
 const LANGUAGES = ['typescript', 'python', 'go', 'rust'];
@@ -17,7 +20,7 @@ export const githubTrendingSource: SourceAdapter = {
         const url = `https://github.com/trending/${lang}?since=daily`;
         const res = await fetcher(url, {
           signal: opts.signal,
-          headers: { 'User-Agent': 'agora-cli/0.5.0' },
+          headers: { 'User-Agent': 'agora-cli/0.5.0' }
         });
         if (!res.ok) continue;
         const html = await res.text();
@@ -29,7 +32,7 @@ export const githubTrendingSource: SourceAdapter = {
     }
 
     return allItems;
-  },
+  }
 };
 
 function parseTrendingHtml(html: string, lang: string, now: string): NewsItem[] {
@@ -54,9 +57,7 @@ function parseTrendingHtml(html: string, lang: string, now: string): NewsItem[] 
       const starsStr = starsMatch ? stripHtml(starsMatch[1]).trim().replace(/,/g, '') : '0';
       const stars = parseInt(starsStr, 10) || 0;
 
-      const forksMatch = article.match(
-        /<a[^>]*href="\/[^"]+\/fork"[^>]*>([\s\S]*?)<\/a>/i
-      );
+      const forksMatch = article.match(/<a[^>]*href="\/[^"]+\/fork"[^>]*>([\s\S]*?)<\/a>/i);
       const forksStr = forksMatch ? stripHtml(forksMatch[1]).trim().replace(/,/g, '') : '0';
       const forks = parseInt(forksStr, 10) || 0;
 
@@ -74,7 +75,7 @@ function parseTrendingHtml(html: string, lang: string, now: string): NewsItem[] 
         fetchedAt: now,
         engagement,
         tags: extractGithubTags(repoPath, description, lang),
-        summary: description || undefined,
+        summary: description || undefined
       });
     } catch {
       continue;
@@ -95,7 +96,7 @@ function extractGithubTags(repoPath: string, description: string, lang: string):
     agents: ['agent', 'agents', 'autonomous'],
     tools: ['cli', 'tool', 'framework', 'sdk'],
     database: ['database', 'sql', 'nosql', 'postgres', 'redis', 'sqlite'],
-    devtools: ['devtools', 'developer-tools', 'github', 'git'],
+    devtools: ['devtools', 'developer-tools', 'github', 'git']
   };
 
   for (const [topic, keywords] of Object.entries(topicMap)) {
@@ -111,5 +112,8 @@ function extractGithubTags(repoPath: string, description: string, lang: string):
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/[\s\n]+/g, ' ').trim();
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/[\s\n]+/g, ' ')
+    .trim();
 }

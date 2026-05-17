@@ -45,14 +45,25 @@ const FLAG_VALUE_COMPLETERS: Record<string, FlagCompleter> = {
   '-t': (t) => TYPES.filter((s) => s.startsWith(t)),
   '--reason': (t) => FLAG_REASONS.filter((r) => r.startsWith(t)),
   '--category': (t) => {
-    const cats = ['mcp', 'prompt', 'workflow', 'skill', 'all', 'packages', 'question', 'idea', 'showcase', 'discussion'];
+    const cats = [
+      'mcp',
+      'prompt',
+      'workflow',
+      'skill',
+      'all',
+      'packages',
+      'question',
+      'idea',
+      'showcase',
+      'discussion'
+    ];
     return cats.filter((c) => c.startsWith(t));
   },
   '-c': (t) => {
     const cats = ['mcp', 'prompt', 'workflow', 'skill', 'all', 'packages'];
     return cats.filter((c) => c.startsWith(t));
   },
-  '--level': (t) => ['beginner', 'intermediate', 'advanced'].filter((l) => l.startsWith(t)),
+  '--level': (t) => ['beginner', 'intermediate', 'advanced'].filter((l) => l.startsWith(t))
 };
 
 export function completeShellLine(
@@ -139,7 +150,18 @@ export function completeShellLine(
     }
 
     // Flag-only commands: complete flag names
-    const flagCmds = new Set(['post', 'reply', 'vote', 'publish', 'discuss', 'review', 'auth', 'init', 'use', 'config']);
+    const flagCmds = new Set([
+      'post',
+      'reply',
+      'vote',
+      'publish',
+      'discuss',
+      'review',
+      'auth',
+      'init',
+      'use',
+      'config'
+    ]);
     if (flagCmds.has(firstToken) && secondToken.startsWith('-')) {
       const replaceFrom = upToCursor.length - secondToken.length;
       const knownFlags = getFlags(firstToken).filter((f) => f.startsWith(secondToken));
@@ -214,13 +236,28 @@ function getFlags(cmd: string): string[] {
     post: ['--board', '-b', '--title', '--content', '--content-file', '--json'],
     reply: ['--content', '--content-file', '--parent-id', '--json'],
     vote: ['--up', '--down', '--type', '--json'],
-    publish: ['--name', '--description', '-d', '--npm', '--prompt-file', '--prompt', '--version', '--category', '-c', '--tags', '--repo', '--repository', '--model', '--json'],
+    publish: [
+      '--name',
+      '--description',
+      '-d',
+      '--npm',
+      '--prompt-file',
+      '--prompt',
+      '--version',
+      '--category',
+      '-c',
+      '--tags',
+      '--repo',
+      '--repository',
+      '--model',
+      '--json'
+    ],
     discuss: ['--title', '--content', '--content-file', '--category', '-c', '--json'],
     review: ['--rating', '-r', '--content', '--type', '-t', '--json'],
     auth: ['--token', '--api-url', '--data-dir', '--json'],
     init: ['--dry-run', '--json', '--mcp'],
     use: ['--json'],
-    config: ['--config', '--json'],
+    config: ['--config', '--json']
   };
   return map[cmd] ?? [];
 }

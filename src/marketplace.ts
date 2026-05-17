@@ -7,6 +7,9 @@ import {
   trendingTags
 } from './data.js';
 import type { OpenCodeConfig } from './config.js';
+import { detectAgoraDataDir } from './state.js';
+import { readHubsCache } from './hubs/cache.js';
+import type { HubItem } from './hubs/types.js';
 
 export type MarketplaceCategory = 'all' | 'package' | 'mcp' | 'prompt' | 'workflow' | 'skill';
 export type MarketplaceItemType = 'package' | 'workflow';
@@ -56,8 +59,27 @@ export interface InstallPlan {
 
 const CONFIG_SCHEMA = 'https://opencode.ai/config.json';
 
+function hubItemToPackage(item: HubItem): PackageMarketplaceItem {
+  return {
+    kind: 'package',
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    author: item.author,
+    version: item.version,
+    category: item.category,
+    tags: item.tags,
+    stars: item.stars,
+    installs: item.installs,
+    repository: item.repository,
+    npmPackage: item.npmPackage,
+    createdAt: item.createdAt,
+    pricing: item.pricing
+  };
+}
+
 export function getMarketplaceItems(): MarketplaceItem[] {
-  return [
+  const curated: MarketplaceItem[] = [
     ...samplePackages.map((pkg) => ({ ...pkg, kind: 'package' as const })),
     ...sampleWorkflows.map((workflow) => ({
       ...workflow,
@@ -66,6 +88,18 @@ export function getMarketplaceItems(): MarketplaceItem[] {
       installs: workflow.forks
     }))
   ];
+
+  if (process.env.AGORA_LIVE_HUBS === '1') {
+    const dataDir = detectAgoraDataDir({ env: process.env });
+    const hubItems = readHubsCache(dataDir);
+    if (hubItems.length > 0) {
+      const curatedIds = new Set(curated.map((i) => i.id));
+      const live = hubItems.filter((item) => !curatedIds.has(item.id)).map(hubItemToPackage);
+      return [...curated, ...live];
+    }
+  }
+
+  return curated;
 }
 
 export function searchMarketplaceItems(options: SearchOptions = {}): MarketplaceItem[] {

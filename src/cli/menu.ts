@@ -30,10 +30,7 @@ function getFlagValueName(usage: string, flagName: string): string | null {
   return match ? match[1].replace(/[<>]/g, '') : null;
 }
 
-async function buildCommand(
-  cmd: (typeof COMMANDS)[number],
-  style: Styler
-): Promise<string | null> {
+async function buildCommand(cmd: (typeof COMMANDS)[number], style: Styler): Promise<string | null> {
   const parts: string[] = [cmd.name];
   const positional = getPositionalArgs(cmd.usage);
 
@@ -55,7 +52,9 @@ async function buildCommand(
         const takesValue = getFlagValueName(cmd.usage, primary) !== null;
         return {
           value: primary,
-          label: takesValue ? `${primary}  (value: ${getFlagValueName(cmd.usage, primary)})` : primary,
+          label: takesValue
+            ? `${primary}  (value: ${getFlagValueName(cmd.usage, primary)})`
+            : primary,
           hint: f.description,
           takesValue
         };
@@ -96,13 +95,15 @@ async function buildCommand(
 
   const fullCmd = parts.join(' ');
   const displayCmd = `agora ${fullCmd}`;
-  process.stdout.write(`\n${style.bold(style.orange('Command:'))}  ${style.accent(displayCmd)}\n\n`);
+  process.stdout.write(
+    `\n${style.bold(style.orange('Command:'))}  ${style.accent(displayCmd)}\n\n`
+  );
 
   const edited = await new Promise<string | null>((resolve) => {
     const rl = readline.createInterface({
       input: process.stdin,
       output: process.stdout,
-      terminal: true,
+      terminal: true
     });
 
     const onSigint = () => {
@@ -170,7 +171,13 @@ export async function runInteractiveMenu(io: MenuIo, style: Styler): Promise<num
         options: [
           ...(INTERACTIVE_COMMANDS.has(cmd.name)
             ? []
-            : [{ value: 'build' as const, label: 'Build this command', hint: 'Walk through args and flags' }]),
+            : [
+                {
+                  value: 'build' as const,
+                  label: 'Build this command',
+                  hint: 'Walk through args and flags'
+                }
+              ]),
           { value: 'again' as const, label: 'View another command' },
           { value: 'quit' as const, label: 'Quit' }
         ]

@@ -22,7 +22,7 @@ export function scoreItem(item: NewsItem, config: NewsConfig, now: Date): Scored
   return {
     ...item,
     score,
-    scoreBreakdown: { recency, engagement: engagement, topic: topicScore },
+    scoreBreakdown: { recency, engagement: engagement, topic: topicScore }
   };
 }
 

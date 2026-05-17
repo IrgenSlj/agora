@@ -2,7 +2,7 @@ services:
   agora-api:
     build: ./backend
     ports:
-      - "8787:8787"
+      - '8787:8787'
     environment:
       - AGORA_ENV=development
       - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}

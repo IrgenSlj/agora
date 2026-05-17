@@ -1,7 +1,10 @@
 import type { NewsItem, NewsSource } from '../types.js';
 
 export interface SourceAdapter {
-  fetch(opts: { fetcher?: (url: string, init?: RequestInit) => Promise<Response>; signal?: AbortSignal }): Promise<NewsItem[]>;
+  fetch(opts: {
+    fetcher?: (url: string, init?: RequestInit) => Promise<Response>;
+    signal?: AbortSignal;
+  }): Promise<NewsItem[]>;
 }
 
 const QUERY_CATEGORIES = ['cs.AI', 'cs.CL', 'cs.SE', 'cs.LG'];
@@ -19,7 +22,7 @@ export const arxivSource: SourceAdapter = {
     try {
       const res = await fetcher(url, {
         signal: opts.signal,
-        headers: { 'User-Agent': 'agora-cli/0.5.0' },
+        headers: { 'User-Agent': 'agora-cli/0.5.0' }
       });
       if (!res.ok) throw new Error(`arXiv API returned ${res.status}`);
       const xml = await res.text();
@@ -30,7 +33,7 @@ export const arxivSource: SourceAdapter = {
     }
 
     return allItems;
-  },
+  }
 };
 
 function parseArxivAtom(xml: string, now: string): NewsItem[] {
@@ -81,7 +84,7 @@ function parseArxivAtom(xml: string, now: string): NewsItem[] {
         fetchedAt: now,
         engagement: 0,
         tags: extractArxivTags(categories, title, summary),
-        summary: summary || undefined,
+        summary: summary || undefined
       });
     } catch {
       continue;
@@ -104,7 +107,7 @@ function extractArxivTags(categories: string[], title: string, summary: string):
     llm: ['language model', 'llm', 'gpt', 'transformer', 'attention'],
     agents: ['agent', 'tool use', 'tool-use', 'function calling'],
     coding: ['code generation', 'program synthesis', 'software engineering'],
-    security: ['security', 'safety', 'alignment', 'harmlessness'],
+    security: ['security', 'safety', 'alignment', 'harmlessness']
   };
 
   for (const [topic, keywords] of Object.entries(topicMap)) {
@@ -120,5 +123,8 @@ function extractArxivTags(categories: string[], title: string, summary: string):
 }
 
 function cleanXml(text: string): string {
-  return text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  return text
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }

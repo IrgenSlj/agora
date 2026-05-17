@@ -1,3 +1,7 @@
+export type Pricing =
+  | { kind: 'free' }
+  | { kind: 'paid'; amountCents: number; currency: string; provider: 'stripe' | 'lemon' };
+
 export interface Permissions {
   fs?: string[];
   net?: string[];
@@ -19,6 +23,7 @@ export interface Package {
   createdAt: string;
   permissions?: Permissions;
   flagCount?: number;
+  pricing?: Pricing;
 }
 
 export interface Workflow {

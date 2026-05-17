@@ -1,0 +1,724 @@
+import { execSync } from 'node:child_process';
+import { formatConfigJson } from '../../config.js';
+import {
+  detectOpenCodeConfigPath,
+  doctorOpenCodeConfig,
+  loadOpenCodeConfig,
+  writeOpenCodeConfig
+} from '../../config-files.js';
+import { createInstallPlan } from '../../marketplace.js';
+import {
+  findMarketplaceSource,
+  publishPackageSource,
+  publishWorkflowSource,
+  createReviewSource,
+  listReviewsSource,
+  profileSource
+} from '../../live.js';
+import {
+  clearAuthState,
+  decodeJwtExp,
+  getAuthState,
+  getAgoraStatePath,
+  loadAgoraState,
+  removeItemFromState,
+  resolveSavedItems,
+  saveItemToState,
+  setAuthState,
+  writeAgoraState
+} from '../../state.js';
+import { loadPreferences, writePreferences, prefsPath } from '../../preferences.js';
+import { loadHistory, clearHistory } from '../../history.js';
+import {
+  stringFlag,
+  requiredStringFlag,
+  numberFlag,
+  envString,
+  authTokenInput,
+  sourceOptions,
+  writeSourceOptions,
+  readSourceOptions,
+  sourceLabel,
+  sourcePayload,
+  warnFallback,
+  writeLine,
+  writeJson,
+  usageError,
+  detectDataDir,
+  authStatusPayload,
+  maskToken,
+  formatRelativeExp,
+  matchesSavedQuery,
+  tagsFlag,
+  promptInput,
+  itemTypeFlag
+} from '../helpers.js';
+import {
+  header,
+  formatSavedList,
+  formatReviewList,
+  formatProfileDetail,
+  formatDate
+} from '../format.js';
+import type { CommandHandler } from './types.js';
+
+export const commandInstall: CommandHandler = async (parsed, io, style) => {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'install requires an item id');
+
+  const source = await findMarketplaceSource({
+    ...(await sourceOptions(parsed, io)),
+    id,
+    type: stringFlag(parsed, 'type', 't')
+  });
+  const item = source.data;
+  warnFallback(source, io);
+  if (!item) return usageError(io, `Item not found: ${id}`);
+
+  const configPath = detectOpenCodeConfigPath({
+    explicitPath: stringFlag(parsed, 'config'),
+    cwd: io.cwd,
+    env: io.env
+  });
+  const loaded = loadOpenCodeConfig(configPath);
+  if (loaded.error) return usageError(io, `${loaded.path}: ${loaded.error}`);
+
+  const plan = createInstallPlan(item, loaded.config);
+  if (!plan.installable) return usageError(io, plan.reason || `${item.name} is not installable`);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, {
+      source: source.source,
+      apiUrl: source.apiUrl,
+      fallbackReason: source.fallbackReason,
+      item,
+      configPath,
+      write: Boolean(parsed.flags.write),
+      commands: plan.commands,
+      notes: plan.notes,
+      config: plan.config
+    });
+    return 0;
+  }
+
+  if (parsed.flags.write) {
+    writeOpenCodeConfig(configPath, plan.config);
+    writeLine(io.stdout, `Installed ${style.accent(item.name)}`);
+    writeLine(io.stdout, `${style.dim('Config')} ${configPath}`);
+    if (plan.commands.length) {
+      writeLine(io.stdout, 'Installing packages...');
+      for (const cmd of plan.commands) {
+        try {
+          execSync(cmd, { stdio: 'pipe', timeout: 120000 });
+          writeLine(io.stdout, `  ✓ ${cmd}`);
+        } catch {
+          writeLine(io.stdout, `  ! Failed: ${cmd} (may already be installed)`);
+        }
+      }
+    }
+    return 0;
+  }
+
+  writeLine(io.stdout, `Install preview: ${item.name}`);
+  writeLine(io.stdout, `Target config: ${configPath}`);
+
+  const perms = (item as any).permissions as
+    | { fs?: string[]; net?: string[]; exec?: string[] }
+    | undefined;
+  if (perms) {
+    writeLine(io.stdout, '\nDeclared permissions:');
+    if (perms.fs?.length)
+      writeLine(io.stdout, `  ${style.dim('filesystem')} ${perms.fs.join(', ')}`);
+    if (perms.net?.length)
+      writeLine(io.stdout, `  ${style.dim('network')}   ${perms.net.join(', ')}`);
+    if (perms.exec?.length)
+      writeLine(io.stdout, `  ${style.dim('exec')}     ${perms.exec.join(', ')}`);
+  }
+
+  if (plan.commands.length) {
+    writeLine(io.stdout, '\nCommands:');
+    writeLine(io.stdout, plan.commands.join('\n'));
+  }
+  writeLine(io.stdout, '\nopencode.json preview:');
+  writeLine(io.stdout, formatConfigJson(plan.config));
+  writeLine(io.stdout, '\nRun with --write to update the config file and install packages.');
+  return 0;
+};
+
+export const commandMcp: CommandHandler = async (_parsed, io, _style) => {
+  const { runMcpServer } = await import('../mcp-server.js');
+  try {
+    await runMcpServer();
+  } catch (error) {
+    writeLine(io.stderr, error instanceof Error ? error.message : String(error));
+    return 1;
+  }
+  return 0;
+};
+
+export const commandSave: CommandHandler = async (parsed, io, style) => {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'save requires an item id');
+
+  const source = await findMarketplaceSource({
+    ...(await sourceOptions(parsed, io)),
+    id,
+    type: stringFlag(parsed, 'type', 't')
+  });
+  const item = source.data;
+  warnFallback(source, io);
+  if (!item) return usageError(io, `Item not found: ${id}`);
+
+  const dataDir = detectDataDir(parsed, io);
+  const state = loadAgoraState(dataDir);
+  const result = saveItemToState(state, item);
+  writeAgoraState(dataDir, result.state);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, {
+      source: source.source,
+      apiUrl: source.apiUrl,
+      fallbackReason: source.fallbackReason,
+      dataDir,
+      statePath: getAgoraStatePath(dataDir),
+      added: result.added,
+      item
+    });
+    return 0;
+  }
+
+  writeLine(
+    io.stdout,
+    result.added ? `Saved ${style.accent(item.id)}` : `${style.accent(item.id)} is already saved`
+  );
+  writeLine(io.stdout, `${style.dim('State')} ${getAgoraStatePath(dataDir)}`);
+  return 0;
+};
+
+export const commandSaved: CommandHandler = async (parsed, io, style) => {
+  const query = parsed.args.join(' ').trim().toLowerCase();
+  const dataDir = detectDataDir(parsed, io);
+  const state = loadAgoraState(dataDir);
+  const saved = resolveSavedItems(state).filter((entry) => matchesSavedQuery(entry, query));
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, {
+      dataDir,
+      statePath: getAgoraStatePath(dataDir),
+      count: saved.length,
+      items: saved
+    });
+    return 0;
+  }
+
+  if (saved.length === 0) {
+    writeLine(io.stdout, query ? `No saved items match "${query}".` : 'No saved items yet.');
+    writeLine(io.stdout, 'Run agora save <id> to save a package or workflow.');
+    return 0;
+  }
+
+  writeLine(io.stdout, header('agora saved', [`${saved.length} items`], style));
+  writeLine(io.stdout, formatSavedList(saved, style));
+  return 0;
+};
+
+export const commandRemove: CommandHandler = async (parsed, io, style) => {
+  const id = parsed.args[0];
+  if (!id) return usageError(io, 'remove requires an item id');
+
+  const dataDir = detectDataDir(parsed, io);
+  const state = loadAgoraState(dataDir);
+  const targetId =
+    resolveSavedItems(state).find((entry) => {
+      return entry.saved.id === id || entry.item?.id === id || entry.item?.name === id;
+    })?.saved.id || id;
+  const result = removeItemFromState(state, targetId);
+  writeAgoraState(dataDir, result.state);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, {
+      dataDir,
+      statePath: getAgoraStatePath(dataDir),
+      removed: result.removed,
+      id: targetId
+    });
+    return result.removed ? 0 : 1;
+  }
+
+  if (!result.removed) {
+    return usageError(io, `Saved item not found: ${id}`);
+  }
+
+  writeLine(io.stdout, `Removed ${style.accent(targetId)}`);
+  return 0;
+};
+
+export const commandPublish: CommandHandler = async (parsed, io, style) => {
+  const kind = parsed.args[0];
+
+  if (kind !== 'package' && kind !== 'workflow') {
+    return usageError(io, 'publish requires "package" or "workflow"');
+  }
+
+  const source = await writeSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const name = requiredStringFlag(parsed, 'name');
+  const description = requiredStringFlag(parsed, 'description', 'd');
+  if (!name || !description) {
+    return usageError(io, 'publish requires --name and --description');
+  }
+
+  if (kind === 'package') {
+    const npmPackage = stringFlag(parsed, 'npm') || stringFlag(parsed, 'npmPackage');
+    const category = stringFlag(parsed, 'category', 'c') || 'mcp';
+
+    if (category === 'mcp' && !npmPackage) {
+      return usageError(io, 'publish package requires --npm for MCP packages');
+    }
+
+    const result = await publishPackageSource(source.options, {
+      id: stringFlag(parsed, 'id'),
+      name,
+      description,
+      version: stringFlag(parsed, 'version') || '1.0.0',
+      category,
+      tags: tagsFlag(parsed),
+      repository: stringFlag(parsed, 'repo') || stringFlag(parsed, 'repository'),
+      npmPackage
+    });
+
+    if (parsed.flags.json) {
+      writeJson(io.stdout, sourcePayload(result, { item: result.data }));
+      return 0;
+    }
+
+    writeLine(io.stdout, `Published package ${style.accent(result.data.id)}`);
+    writeLine(io.stdout, `${result.data.name} (${sourceLabel(result)})`);
+    return 0;
+  }
+
+  const prompt = promptInput(parsed, io);
+  if (prompt === undefined) {
+    return usageError(io, 'publish workflow requires --prompt or --prompt-file');
+  }
+
+  const result = await publishWorkflowSource(source.options, {
+    id: stringFlag(parsed, 'id'),
+    name,
+    description,
+    prompt,
+    model: stringFlag(parsed, 'model'),
+    tags: tagsFlag(parsed)
+  });
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { item: result.data }));
+    return 0;
+  }
+
+  writeLine(io.stdout, `Published workflow ${style.accent(result.data.id)}`);
+  writeLine(io.stdout, `${result.data.name} (${sourceLabel(result)})`);
+  return 0;
+};
+
+export const commandReview: CommandHandler = async (parsed, io, style) => {
+  const itemId = parsed.args[0];
+  if (!itemId) return usageError(io, 'review requires an item id');
+
+  const rating = numberFlag(parsed, 'rating', 'r');
+  const content = requiredStringFlag(parsed, 'content');
+  if (!rating || rating < 1 || rating > 5 || !content) {
+    return usageError(io, 'review requires --rating 1-5 and --content');
+  }
+
+  const source = await writeSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const result = await createReviewSource(source.options, {
+    itemId,
+    itemType: itemTypeFlag(parsed, itemId),
+    rating,
+    content
+  });
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { review: result.data }));
+    return 0;
+  }
+
+  writeLine(io.stdout, `Reviewed ${style.accent(result.data.itemId)}`);
+  writeLine(io.stdout, `${style.dim(result.data.rating + '/5 by ' + result.data.author)}`);
+  return 0;
+};
+
+export const commandReviews: CommandHandler = async (parsed, io, style) => {
+  const itemId = parsed.args[0];
+  const source = await readSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const result = await listReviewsSource(source.options, itemId, stringFlag(parsed, 'type', 't'));
+
+  if (parsed.flags.json) {
+    writeJson(
+      io.stdout,
+      sourcePayload(result, { count: result.data.length, reviews: result.data })
+    );
+    return 0;
+  }
+
+  if (result.data.length === 0) {
+    writeLine(io.stdout, itemId ? `No reviews found for ${itemId}.` : 'No reviews found.');
+    return 0;
+  }
+
+  writeLine(
+    io.stdout,
+    header('agora reviews', [`${result.data.length} results`, sourceLabel(result)], style)
+  );
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, formatReviewList(result.data, style));
+  return 0;
+};
+
+export const commandProfile: CommandHandler = async (parsed, io, style) => {
+  const username = parsed.args[0] || stringFlag(parsed, 'username');
+  if (!username) return usageError(io, 'profile requires a username');
+
+  const source = await readSourceOptions(parsed, io);
+  if (!source.ok) return usageError(io, source.error);
+
+  const result = await profileSource(source.options, username);
+  if (!result.data) return usageError(io, `Profile not found: ${username}`);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, sourcePayload(result, { profile: result.data }));
+    return 0;
+  }
+
+  writeLine(io.stdout, formatProfileDetail(result.data, style));
+  return 0;
+};
+
+export const commandPreferences: CommandHandler = async (parsed, io, _style) => {
+  const dataDir = detectDataDir(parsed, io);
+  const prefs = loadPreferences(dataDir);
+  const sub = parsed.args[0];
+
+  if (!sub) {
+    if (parsed.flags.json) {
+      writeJson(io.stdout, prefs);
+      return 0;
+    }
+    writeLine(io.stdout, `Preferences (${prefsPath(dataDir)})`);
+    writeLine(io.stdout, `  theme:      ${prefs.theme}`);
+    writeLine(io.stdout, `  verbosity:  ${prefs.verbosity}`);
+    writeLine(io.stdout, `  username:   ${prefs.username || '(not set)'}`);
+    writeLine(io.stdout, `  email:      ${prefs.email || '(not set)'}`);
+    writeLine(
+      io.stdout,
+      `  bio:        ${prefs.bio ? prefs.bio.slice(0, 60) + (prefs.bio.length > 60 ? '...' : '') : '(not set)'}`
+    );
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, '  Set values:  agora preferences <key> <value>');
+    writeLine(io.stdout, '  Keys:        theme, verbosity, username, email, bio');
+    return 0;
+  }
+
+  const key = sub as keyof typeof prefs;
+  const val = parsed.args.slice(1).join(' ');
+
+  if (!val || !(key in prefs)) {
+    return usageError(
+      io,
+      `Usage: agora preferences <key> <value>\nValid keys: theme, verbosity, username, email, bio`
+    );
+  }
+
+  if (key === 'theme' && !['dark', 'light', 'auto'].includes(val)) {
+    return usageError(io, 'theme must be: dark, light, or auto');
+  }
+  if (key === 'verbosity' && !['verbose', 'medium', 'quiet'].includes(val)) {
+    return usageError(io, 'verbosity must be: verbose, medium, or quiet');
+  }
+
+  (prefs as unknown as Record<string, string>)[key] = val;
+  writePreferences(dataDir, prefs);
+  writeLine(io.stdout, `\u2713 ${key} set to "${val}"`);
+  return 0;
+};
+
+export const commandHistory: CommandHandler = async (parsed, io, style) => {
+  const dataDir = detectDataDir(parsed, io);
+  const limit = numberFlag(parsed, 'limit', 'n') || 50;
+
+  if (parsed.flags.clear) {
+    clearHistory(dataDir);
+    writeLine(io.stdout, '\u2713 History cleared');
+    return 0;
+  }
+
+  const entries = loadHistory(dataDir, limit);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, entries);
+    return 0;
+  }
+
+  if (entries.length === 0) {
+    writeLine(io.stdout, 'No history yet.');
+    writeLine(io.stdout, 'Searches and chat messages are recorded automatically.');
+    return 0;
+  }
+
+  writeLine(io.stdout, `Recent history (${entries.length}):`);
+  for (const entry of entries) {
+    const icon = entry.type === 'search' ? '\uD83D\uDD0D' : '\uD83D\uDCAC';
+    const date = new Date(entry.timestamp).toLocaleString();
+    const query = entry.query.length > 60 ? entry.query.slice(0, 60) + '...' : entry.query;
+    writeLine(io.stdout, `  ${icon} ${style.dim(date)}  ${query}`);
+  }
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, style.dim('Use --clear to clear history, --json for JSON output.'));
+  return 0;
+};
+
+export const commandConfig: CommandHandler = async (parsed, io, style) => {
+  const subcommand = parsed.args[0] || 'doctor';
+
+  if (subcommand !== 'doctor') {
+    return usageError(io, `Unknown config command: ${subcommand}`);
+  }
+
+  const configPath = detectOpenCodeConfigPath({
+    explicitPath: stringFlag(parsed, 'config'),
+    cwd: io.cwd,
+    env: io.env
+  });
+  const report = doctorOpenCodeConfig(configPath);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, report);
+    return report.valid ? 0 : 1;
+  }
+
+  writeLine(io.stdout, `${style.dim('Config path')} ${report.path}`);
+  writeLine(io.stdout, `${style.dim('Exists')} ${report.exists ? 'yes' : 'no'}`);
+  writeLine(io.stdout, `${style.dim('Valid')} ${report.valid ? 'yes' : 'no'}`);
+  if (report.error) writeLine(io.stdout, `${style.dim('Error')} ${report.error}`);
+  writeLine(io.stdout, `${style.dim('MCP servers')} ${report.mcpServers}`);
+  writeLine(io.stdout, `${style.dim('Plugins')} ${report.plugins}`);
+  writeLine(
+    io.stdout,
+    `${style.dim('Packages')} ${report.packages.length ? report.packages.join(', ') : 'none'}`
+  );
+  return report.valid ? 0 : 1;
+};
+
+export const commandAuth: CommandHandler = async (parsed, io, style) => {
+  const subcommand = parsed.args[0] || 'status';
+  const dataDir = detectDataDir(parsed, io);
+  const state = loadAgoraState(dataDir);
+  const existingAuth = getAuthState(state);
+
+  if (subcommand === 'login') {
+    const explicitToken = authTokenInput(parsed, io);
+
+    if (explicitToken) {
+      // Token-paste flow (existing behaviour, for CI/automation)
+      const apiUrl =
+        stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
+      const nowSec = Math.floor(Date.now() / 1000);
+      const accessExp = decodeJwtExp(explicitToken) || nowSec + 3600;
+      const nextState = setAuthState(state, { accessToken: explicitToken, accessExp, apiUrl });
+      const auth = getAuthState(nextState);
+      writeAgoraState(dataDir, nextState);
+
+      if (parsed.flags.json) {
+        writeJson(io.stdout, authStatusPayload(dataDir, auth));
+        return 0;
+      }
+
+      const minutesLeft = Math.max(0, Math.round((accessExp - nowSec) / 60));
+      writeLine(io.stdout, 'Stored Agora API token');
+      writeLine(
+        io.stdout,
+        `Note: pasted token expires in ${minutesLeft}m. Use \`agora auth login\` (device-code) for a persistent session.`
+      );
+      writeLine(io.stdout, `${style.dim('API URL')} ${auth?.apiUrl || 'not stored'}`);
+      writeLine(io.stdout, `${style.dim('State')} ${getAgoraStatePath(dataDir)}`);
+      return 0;
+    }
+
+    // ── Device-code flow ─────────────────────────────────────────────────
+    const apiUrl =
+      stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
+
+    if (!apiUrl) {
+      return usageError(io, 'auth login requires --api-url, AGORA_API_URL, or stored apiUrl');
+    }
+
+    const baseUrl = apiUrl.replace(/\/+$/, '');
+
+    process.stdout.write(`\n${style.accent('Agora Login')}\n`);
+    process.stdout.write(`${style.dim('Connecting to')} ${baseUrl}...\n`);
+
+    try {
+      const codeRes = await fetch(`${baseUrl}/auth/device/code`, { method: 'POST' });
+      if (!codeRes.ok) {
+        const err = await codeRes.json().catch(() => ({ error: 'request failed' }));
+        return usageError(io, `Device code request failed: ${err.error || codeRes.status}`);
+      }
+      const codeData = (await codeRes.json()) as any;
+
+      const verificationUri = codeData.verification_uri;
+      const userCode = codeData.user_code;
+      const deviceCode = codeData.device_code;
+      const interval = (codeData.interval || 5) * 1000;
+
+      process.stdout.write(`\n${style.accent(userCode.slice(0, 4) + ' ' + userCode.slice(4))}\n\n`);
+      process.stdout.write(`  ${style.dim('Open in your browser:')} ${verificationUri}\n`);
+      process.stdout.write(`  ${style.dim('Enter code:')}         ${userCode}\n\n`);
+
+      // Try to open browser automatically
+      try {
+        const url = `${verificationUri}`;
+        if (process.platform === 'darwin') {
+          execSync(`open '${url}'`, { timeout: 3000 });
+        } else if (process.platform === 'linux') {
+          execSync(`xdg-open '${url}'`, { timeout: 3000 });
+        }
+        process.stdout.write(`  ${style.dim('Browser opened.')}\n\n`);
+      } catch {
+        process.stdout.write(`  ${style.dim('Open the URL manually.')}\n\n`);
+      }
+
+      // Poll for token
+      const pollStart = Date.now();
+      const pollTimeout = 15 * 60 * 1000; // 15 minutes
+
+      for (;;) {
+        await new Promise((r) => setTimeout(r, interval));
+
+        if (Date.now() - pollStart > pollTimeout) {
+          return usageError(io, 'Login timed out. Run `agora auth login` to try again.');
+        }
+
+        process.stdout.write(`\r\x1b[K${style.dim('Waiting for browser authorization...')}`);
+
+        try {
+          const tokenRes = await fetch(`${baseUrl}/auth/device/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ device_code: deviceCode })
+          });
+
+          if (tokenRes.ok) {
+            const tokenData = (await tokenRes.json()) as any;
+
+            process.stdout.write(`\r\x1b[K${style.dim('Authorization received.')}\n`);
+
+            const nowSec = Math.floor(Date.now() / 1000);
+            const nextState = setAuthState(state, {
+              accessToken: tokenData.access_token,
+              accessExp: nowSec + (tokenData.expires_in || 3600),
+              refreshToken: tokenData.refresh_token,
+              refreshExp: nowSec + (tokenData.refresh_expires_in || 0),
+              apiUrl
+            });
+            writeAgoraState(dataDir, nextState);
+
+            if (parsed.flags.json) {
+              writeJson(io.stdout, authStatusPayload(dataDir, getAuthState(nextState)));
+              return 0;
+            }
+
+            const expiresInMin = Math.round((tokenData.expires_in || 3600) / 60);
+            process.stdout.write(`\n${style.accent('✓ Authenticated')}\n`);
+            process.stdout.write(`${style.dim('API URL')} ${baseUrl}\n`);
+            process.stdout.write(`${style.dim('Token expires')} in ${expiresInMin}m\n`);
+            process.stdout.write(`${style.dim('State')} ${getAgoraStatePath(dataDir)}\n`);
+            return 0;
+          }
+
+          const errData = await tokenRes.json().catch(() => ({ error: 'unknown' }));
+          if (errData.error === 'expired') {
+            process.stdout.write(`\r\x1b[K`);
+            return usageError(io, 'Code expired. Run `agora auth login` again.');
+          }
+          // "authorization_pending" is expected — keep polling
+        } catch {
+          // Network error, retry
+        }
+      }
+    } catch (e: any) {
+      return usageError(io, `Login failed: ${e.message || 'connection error'}`);
+    }
+  }
+
+  if (subcommand === 'status') {
+    if (parsed.flags.json) {
+      writeJson(io.stdout, authStatusPayload(dataDir, existingAuth));
+      return 0;
+    }
+
+    writeLine(io.stdout, `${style.dim('Authenticated')} ${existingAuth ? 'yes' : 'no'}`);
+    if (existingAuth) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      writeLine(
+        io.stdout,
+        `${style.dim('Access')}         ${maskToken(existingAuth.accessToken)}  (${formatRelativeExp(existingAuth.accessExp, nowSec)})`
+      );
+      if (existingAuth.refreshToken) {
+        writeLine(
+          io.stdout,
+          `${style.dim('Refresh')}        ${maskToken(existingAuth.refreshToken)}  (${formatRelativeExp(existingAuth.refreshExp ?? 0, nowSec)})`
+        );
+      } else {
+        writeLine(io.stdout, `${style.dim('Refresh')}        (none)`);
+      }
+      writeLine(io.stdout, `${style.dim('API URL')} ${existingAuth.apiUrl || 'not stored'}`);
+      writeLine(io.stdout, `${style.dim('Saved')} ${formatDate(existingAuth.savedAt)}`);
+    }
+    writeLine(io.stdout, `${style.dim('State')} ${getAgoraStatePath(dataDir)}`);
+    return 0;
+  }
+
+  if (subcommand === 'logout') {
+    if (!existingAuth) {
+      if (parsed.flags.json) {
+        writeJson(io.stdout, authStatusPayload(dataDir, undefined));
+        return 0;
+      }
+
+      writeLine(io.stdout, 'No stored Agora API token');
+      return 0;
+    }
+
+    if (existingAuth.apiUrl && existingAuth.accessToken && existingAuth.refreshToken) {
+      try {
+        await fetch(`${existingAuth.apiUrl.replace(/\/+$/, '')}/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${existingAuth.accessToken}`
+          },
+          body: JSON.stringify({ refresh_token: existingAuth.refreshToken })
+        });
+      } catch {
+        /* network failure — clear local anyway */
+      }
+    }
+    writeAgoraState(dataDir, clearAuthState(state));
+
+    if (parsed.flags.json) {
+      writeJson(io.stdout, authStatusPayload(dataDir, undefined));
+      return 0;
+    }
+
+    writeLine(io.stdout, 'Removed stored Agora API token');
+    return 0;
+  }
+
+  return usageError(io, `Unknown auth command: ${subcommand}`);
+};

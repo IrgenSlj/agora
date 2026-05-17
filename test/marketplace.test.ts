@@ -2,7 +2,10 @@
  * Contract tests for src/marketplace.ts.
  * Calls the REAL exported functions — no re-implementation of filtering logic.
  */
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test, afterEach } from 'bun:test';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   buildOpenCodeConfig,
   createInstallPlan,
@@ -383,5 +386,90 @@ describe('createInstallPlan', () => {
     const plan = createInstallPlan(pkg, existing);
     expect(plan.config.mcp!['other-server']).toBeDefined();
     expect(plan.config.mcp!['mcp-filesystem']).toBeDefined();
+  });
+});
+
+// ── AGORA_LIVE_HUBS integration ─────────────────────────────────────────────
+
+describe('getMarketplaceItems — AGORA_LIVE_HUBS=1', () => {
+  let tmpDir: string;
+  const origEnv = { ...process.env };
+
+  afterEach(() => {
+    // Restore env
+    for (const key of Object.keys(process.env)) {
+      if (!(key in origEnv)) delete process.env[key];
+    }
+    Object.assign(process.env, origEnv);
+    if (tmpDir) {
+      try {
+        rmSync(tmpDir, { recursive: true });
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  test('with AGORA_LIVE_HUBS=1 and cached hub items, returns curated + hub items merged', () => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'agora-test-'));
+    const hubItem = {
+      id: 'gh:test/hub-repo',
+      source: 'github',
+      name: 'hub-repo',
+      description: 'A hub repo description',
+      author: 'test',
+      version: 'main',
+      category: 'mcp',
+      tags: ['mcp'],
+      stars: 100,
+      installs: 100,
+      repository: 'https://github.com/test/hub-repo',
+      createdAt: '2026-01-01T00:00:00Z',
+      pricing: { kind: 'free' },
+      fetchedAt: new Date().toISOString(),
+      pushedAt: '2026-04-01T00:00:00Z',
+      license: 'MIT',
+      topics: ['mcp']
+    };
+    writeFileSync(join(tmpDir, 'hubs-cache.jsonl'), JSON.stringify(hubItem) + '\n', 'utf8');
+
+    process.env.AGORA_LIVE_HUBS = '1';
+    process.env.AGORA_HOME = tmpDir;
+
+    const items = getMarketplaceItems();
+    const hubIds = items.map((i) => i.id);
+    expect(hubIds).toContain('gh:test/hub-repo');
+    // curated items still present
+    expect(hubIds).toContain('mcp-filesystem');
+  });
+
+  test('without AGORA_LIVE_HUBS=1, hub cache items are not included', () => {
+    tmpDir = mkdtempSync(join(tmpdir(), 'agora-test-'));
+    const hubItem = {
+      id: 'gh:test/should-not-appear',
+      source: 'github',
+      name: 'should-not-appear',
+      description: 'Should not appear without live hubs enabled',
+      author: 'test',
+      version: 'main',
+      category: 'mcp',
+      tags: ['mcp'],
+      stars: 50,
+      installs: 50,
+      repository: 'https://github.com/test/should-not-appear',
+      createdAt: '2026-01-01T00:00:00Z',
+      pricing: { kind: 'free' },
+      fetchedAt: new Date().toISOString(),
+      pushedAt: '2026-04-01T00:00:00Z',
+      license: 'MIT',
+      topics: ['mcp']
+    };
+    writeFileSync(join(tmpDir, 'hubs-cache.jsonl'), JSON.stringify(hubItem) + '\n', 'utf8');
+
+    delete process.env.AGORA_LIVE_HUBS;
+    process.env.AGORA_HOME = tmpDir;
+
+    const items = getMarketplaceItems();
+    expect(items.map((i) => i.id)).not.toContain('gh:test/should-not-appear');
   });
 });

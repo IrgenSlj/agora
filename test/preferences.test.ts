@@ -30,7 +30,16 @@ describe('loadPreferences', () => {
 
   test('writes to disk and reads back', () => {
     const dir = makeTmp();
-    writePreferences(dir, { theme: 'auto', verbosity: 'quiet', defaultNewsSource: 'hn', defaultNewsCategory: 'all', username: 'alice', email: 'alice@test.com', bio: 'tester', lastTab: 2 });
+    writePreferences(dir, {
+      theme: 'auto',
+      verbosity: 'quiet',
+      defaultNewsSource: 'hn',
+      defaultNewsCategory: 'all',
+      username: 'alice',
+      email: 'alice@test.com',
+      bio: 'tester',
+      lastTab: 2
+    });
     const prefs = loadPreferences(dir);
     expect(prefs.theme).toBe('auto');
     expect(prefs.verbosity).toBe('quiet');

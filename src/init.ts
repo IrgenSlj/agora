@@ -234,7 +234,7 @@ function readDependencies(dir: string): string[] {
       const all = { ...pkg.dependencies, ...pkg.devDependencies };
       for (const name of Object.keys(all || {})) deps.add(name);
     } catch {
-      // ignore
+      // ignore — best-effort dependency scan
     }
   }
 
@@ -269,7 +269,7 @@ function readDependencies(dir: string): string[] {
         if (content.includes(keyword)) deps.add(keyword);
       }
     } catch {
-      // ignore
+      // ignore — best-effort manifest keyword scan
     }
   }
 

@@ -12,27 +12,43 @@ import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { vlen, rail, noRail, frame, scrollbar, sep } from './helpers.js';
-import { FREE_MODELS } from '../app.js';
+import { FREE_MODELS } from '../commands/chat.js';
 
 const SOURCE_LABELS: Record<string, string> = {
   hn: 'HN',
   reddit: 'R ',
   'github-trending': 'GH',
   arxiv: 'XR',
-  rss: 'RS',
+  rss: 'RS'
 };
 
 const ITEM_LINES = 3;
 
 const TABS = [
   { id: 'all', label: 'All', match: (_tags: string[]) => true },
-  { id: 'mcp', label: 'Mcp', match: (tags: string[]) => tags.some(t => t.includes('mcp')) },
-  { id: 'tools', label: 'Tools', match: (tags: string[]) => tags.some(t => t.includes('tool')) },
-  { id: 'skills', label: 'Skills', match: (tags: string[]) => tags.some(t => t.includes('skill')) },
-  { id: 'llms', label: 'Llms', match: (tags: string[]) => tags.some(t => t.includes('llm')) },
-  { id: 'repos', label: 'Repos', match: (tags: string[]) => tags.some(t => t.includes('repo') || t.includes('github')) },
-  { id: 'market', label: 'Market', match: (tags: string[]) => tags.some(t => t.includes('market')) },
-  { id: 'search', label: 'Search', match: (tags: string[]) => tags.some(t => t.includes('search')) },
+  { id: 'mcp', label: 'Mcp', match: (tags: string[]) => tags.some((t) => t.includes('mcp')) },
+  { id: 'tools', label: 'Tools', match: (tags: string[]) => tags.some((t) => t.includes('tool')) },
+  {
+    id: 'skills',
+    label: 'Skills',
+    match: (tags: string[]) => tags.some((t) => t.includes('skill'))
+  },
+  { id: 'llms', label: 'Llms', match: (tags: string[]) => tags.some((t) => t.includes('llm')) },
+  {
+    id: 'repos',
+    label: 'Repos',
+    match: (tags: string[]) => tags.some((t) => t.includes('repo') || t.includes('github'))
+  },
+  {
+    id: 'market',
+    label: 'Market',
+    match: (tags: string[]) => tags.some((t) => t.includes('market'))
+  },
+  {
+    id: 'search',
+    label: 'Search',
+    match: (tags: string[]) => tags.some((t) => t.includes('search'))
+  }
 ];
 
 type View = 'list' | 'detail' | 'preview';
@@ -74,7 +90,7 @@ const state: NewsState = {
   previewScroll: 0,
   previewLoading: false,
   previewPhase: '',
-  dataDir: null,
+  dataDir: null
 };
 
 function detectDataDir(ctx: PageContext): string {
@@ -90,7 +106,7 @@ function fetchWithTimeout(fn: () => Promise<NewsItem[]>, timeoutMs = 8000): Prom
     fn(),
     new Promise<NewsItem[]>((_, reject) =>
       setTimeout(() => reject(new Error('timeout')), timeoutMs)
-    ),
+    )
   ]);
 }
 
@@ -104,7 +120,7 @@ async function refreshNews(ctx: PageContext): Promise<void> {
     ['hn', hnSource],
     ['reddit', redditSource],
     ['github-trending', githubTrendingSource],
-    ['arxiv', arxivSource],
+    ['arxiv', arxivSource]
   ];
 
   let merged = [...cached];
@@ -113,7 +129,7 @@ async function refreshNews(ctx: PageContext): Promise<void> {
     if (cfg?.enabled && isStale(merged, source, cfg.ttlMinutes, now)) {
       try {
         const fresh = await fetchWithTimeout(() => adapter.fetch({}));
-        merged = merged.filter(i => i.source !== source);
+        merged = merged.filter((i) => i.source !== source);
         merged.push(...fresh);
       } catch {
         // keep stale
@@ -130,7 +146,10 @@ async function refreshNews(ctx: PageContext): Promise<void> {
 function htmlToText(html: string): string {
   let text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
   text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-  text = text.replace(/<(p|div|br|h[1-6]|li|tr|blockquote|section|article|header|footer)[^>]*>/gi, '\n');
+  text = text.replace(
+    /<(p|div|br|h[1-6]|li|tr|blockquote|section|article|header|footer)[^>]*>/gi,
+    '\n'
+  );
   text = text.replace(/<a[^>]*>([\s\S]*?)<\/a>/gi, '$1');
   text = text.replace(/<[^>]*>/g, '');
   text = text.replace(/&amp;/g, '&');
@@ -140,7 +159,10 @@ function htmlToText(html: string): string {
   text = text.replace(/&#39;/g, "'");
   text = text.replace(/&nbsp;/g, ' ');
   text = text.replace(/\n{3,}/g, '\n\n');
-  text = text.split('\n').map(l => l.trim()).join('\n');
+  text = text
+    .split('\n')
+    .map((l) => l.trim())
+    .join('\n');
   return text.trim();
 }
 
@@ -164,8 +186,13 @@ function wordWrap(text: string, maxWidth: number): string[] {
       if (!word) continue;
       const test = line ? line + ' ' + word : word;
       if (test.length > maxWidth) {
-        if (line) { result.push(line); line = word; }
-        else { result.push(word.slice(0, maxWidth)); line = word.slice(maxWidth); }
+        if (line) {
+          result.push(line);
+          line = word;
+        } else {
+          result.push(word.slice(0, maxWidth));
+          line = word.slice(maxWidth);
+        }
       } else {
         line = test;
       }
@@ -186,23 +213,34 @@ function trySummarize(text: string): Promise<string | null> {
   return new Promise((resolve) => {
     const child = spawn('opencode', ['run', '--format', 'json', '--model', modelArg, prompt], {
       stdio: ['ignore', 'pipe', 'pipe'],
-      shell: false,
+      shell: false
     });
 
     let response = '';
-    const timer = setTimeout(() => { child.kill(); resolve(null); }, 30000);
+    const timer = setTimeout(() => {
+      child.kill();
+      resolve(null);
+    }, 30000);
 
     child.stdout.on('data', (chunk: Buffer) => {
       for (const line of chunk.toString().split('\n').filter(Boolean)) {
         try {
           const ev = JSON.parse(line);
           if (ev.type === 'text' && ev.part?.text) response += ev.part.text;
-        } catch { /* skip */ }
+        } catch {
+          /* skip */
+        }
       }
     });
 
-    child.on('close', () => { clearTimeout(timer); resolve(response || null); });
-    child.on('error', () => { clearTimeout(timer); resolve(null); });
+    child.on('close', () => {
+      clearTimeout(timer);
+      resolve(response || null);
+    });
+    child.on('error', () => {
+      clearTimeout(timer);
+      resolve(null);
+    });
   });
 }
 
@@ -215,10 +253,8 @@ async function fetchArticlePreview(url: string): Promise<string> {
     if (!resp.ok) return `(error: HTTP ${resp.status})`;
     const html = await resp.text();
     const text = htmlToText(html);
-    const lines = text.split('\n').filter(l => l.length > 0);
-    return lines.length > 5
-      ? text
-      : '(could not extract article content from this page)';
+    const lines = text.split('\n').filter((l) => l.length > 0);
+    return lines.length > 5 ? text : '(could not extract article content from this page)';
   } catch (e) {
     return '(failed to fetch: ' + (e instanceof Error ? e.message : String(e)) + ')';
   }
@@ -236,7 +272,11 @@ async function startPreview(item: ScoredNewsItem, ctx: PageContext): Promise<voi
   await sleep(100);
 
   const rawText = await fetchArticlePreview(item.url);
-  if (rawText.startsWith('(failed') || rawText.startsWith('(error') || rawText.startsWith('(could not')) {
+  if (
+    rawText.startsWith('(failed') ||
+    rawText.startsWith('(error') ||
+    rawText.startsWith('(could not')
+  ) {
     state.previewLines = wordWrap(rawText, ctx.width - 4);
     state.previewLoading = false;
     ctx.repaint();
@@ -254,23 +294,24 @@ async function startPreview(item: ScoredNewsItem, ctx: PageContext): Promise<voi
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(r => setTimeout(r, ms));
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 function persistMeta(): void {
   if (!state.dataDir) return;
   writeNewsMeta(state.dataDir, {
     read: [...state.read],
-    saved: [...state.saved],
+    saved: [...state.saved]
   });
 }
 
 function visible(): ScoredNewsItem[] {
   const tab = TABS[state.tab]!;
-  return state.items.filter(s =>
-    (state.source === 'all' || s.source === state.source)
-    && tab.match(s.tags)
-    && (!state.filter || s.title.toLowerCase().includes(state.filter.toLowerCase())),
+  return state.items.filter(
+    (s) =>
+      (state.source === 'all' || s.source === state.source) &&
+      tab.match(s.tags) &&
+      (!state.filter || s.title.toLowerCase().includes(state.filter.toLowerCase()))
   );
 }
 
@@ -288,7 +329,7 @@ export const newsPage: Page = {
     { key: '/', label: 'filter' },
     { key: 'Tab', label: 'category' },
     { key: 'r', label: 'refresh' },
-    { key: 'o', label: 'open' },
+    { key: 'o', label: 'open' }
   ],
   mount(ctx: PageContext): void {
     const dataDir = detectDataDir(ctx);
@@ -327,18 +368,23 @@ export const newsPage: Page = {
 
       const headerLines = [
         ' ' + style.bold(item.title),
-        ' ' + style.dim(SOURCE_LABELS[item.source] ?? item.source.toUpperCase())
-          + style.dim('  \u00b7  ' + fmtAge(new Date(item.publishedAt)))
-          + style.dim('  \u00b7  \u2191 ' + formatNumber(item.engagement))
-          + style.dim('  \u00b7  s' + item.score.toFixed(2)),
-        ' ' + sep('', width - 2, style),
+        ' ' +
+          style.dim(SOURCE_LABELS[item.source] ?? item.source.toUpperCase()) +
+          style.dim('  \u00b7  ' + fmtAge(new Date(item.publishedAt))) +
+          style.dim('  \u00b7  \u2191 ' + formatNumber(item.engagement)) +
+          style.dim('  \u00b7  s' + item.score.toFixed(2)),
+        ' ' + sep('', width - 2, style)
       ];
       lines.push(...headerLines);
 
       const footerLines = [
-        ' ' + style.accent('o') + style.dim(' open in browser  ')
-          + style.accent('Esc') + style.dim(' back  ')
-          + style.accent('j/k') + style.dim(' nav'),
+        ' ' +
+          style.accent('o') +
+          style.dim(' open in browser  ') +
+          style.accent('Esc') +
+          style.dim(' back  ') +
+          style.accent('j/k') +
+          style.dim(' nav')
       ];
 
       const hdr = headerLines.length;
@@ -365,19 +411,23 @@ export const newsPage: Page = {
 
     if (state.view === 'detail') {
       const s = visible()[state.cursor];
-      if (!s) { state.view = 'list'; }
-      else {
+      if (!s) {
+        state.view = 'list';
+      } else {
         const lines: string[] = [];
         const ageH = (Date.now() - new Date(s.publishedAt).getTime()) / 3600000;
         const age = Math.round(ageH) + 'h ago';
         lines.push(' ' + style.bold(s.title));
-        lines.push(' ' + style.dim(SOURCE_LABELS[s.source] ?? s.source.toUpperCase())
-          + style.dim('  \u00b7  ' + age)
-          + style.dim('  \u00b7  \u2191 ' + formatNumber(s.engagement))
-          + style.dim('  \u00b7  s' + s.score.toFixed(2)));
+        lines.push(
+          ' ' +
+            style.dim(SOURCE_LABELS[s.source] ?? s.source.toUpperCase()) +
+            style.dim('  \u00b7  ' + age) +
+            style.dim('  \u00b7  \u2191 ' + formatNumber(s.engagement)) +
+            style.dim('  \u00b7  s' + s.score.toFixed(2))
+        );
         lines.push(' ' + style.accent(s.url));
         if (s.tags && s.tags.length > 0) {
-          lines.push(' ' + style.dim('Tags: ') + s.tags.map(t => style.accent(t)).join(', '));
+          lines.push(' ' + style.dim('Tags: ') + s.tags.map((t) => style.accent(t)).join(', '));
         }
         if (s.summary) {
           lines.push(' ' + sep('summary', width - 2, style));
@@ -396,14 +446,17 @@ export const newsPage: Page = {
     state.cursor = Math.min(state.cursor, Math.max(0, list.length - 1));
     const lines: string[] = [];
     const head = ' ' + style.bold(style.accent('NEWS'));
-    const pos = list.length > 0 ? style.dim(' [' + (state.cursor + 1) + '/' + list.length + ']') : '';
+    const pos =
+      list.length > 0 ? style.dim(' [' + (state.cursor + 1) + '/' + list.length + ']') : '';
     const right = pos + style.dim('  ' + list.length + ' stories');
     const gap = Math.max(2, width - vlen(head) - vlen(right) - 2);
     lines.push(head + ' '.repeat(gap) + right);
 
-    const tabLine = ' ' + TABS.map((t, i) =>
-      i === state.tab ? style.accent(t.label) : style.dim(t.label)
-    ).join(style.dim('  ') + '\u00b7' + style.dim('  '));
+    const tabLine =
+      ' ' +
+      TABS.map((t, i) => (i === state.tab ? style.accent(t.label) : style.dim(t.label))).join(
+        style.dim('  ') + '\u00b7' + style.dim('  ')
+      );
     lines.push(tabLine);
     lines.push(' ' + style.dim('\u2500'.repeat(Math.max(0, width - 2))));
     if (state.filtering) {
@@ -414,8 +467,9 @@ export const newsPage: Page = {
       return frame(lines, width, height);
     }
     if (list.length === 0) {
-      lines.push(' ' + style.dim('Empty feed. Press ')
-        + style.accent('r') + style.dim(' to refresh.'));
+      lines.push(
+        ' ' + style.dim('Empty feed. Press ') + style.accent('r') + style.dim(' to refresh.')
+      );
       return frame(lines, width, height);
     }
 
@@ -439,12 +493,26 @@ export const newsPage: Page = {
       const score = style.dim('s' + s.score.toFixed(2));
       const isRead = state.read.has(s.id);
       const isSaved = state.saved.has(s.id);
-      const titleColor = isRead ? style.dim(s.title)
-        : (sel ? style.bold(s.title) : s.title);
-      lines.push(' ' + lead + style.dim(rank + '. ') + src + ' ' + age + '  '
-        + up + '  ' + score + '   ' + titleColor + ' ' + sbar[si - start]!);
-      lines.push('         ' + style.dim(hostFromUrl(s.url))
-        + (isSaved ? style.accent('  saved') : ''));
+      const titleColor = isRead ? style.dim(s.title) : sel ? style.bold(s.title) : s.title;
+      lines.push(
+        ' ' +
+          lead +
+          style.dim(rank + '. ') +
+          src +
+          ' ' +
+          age +
+          '  ' +
+          up +
+          '  ' +
+          score +
+          '   ' +
+          titleColor +
+          ' ' +
+          sbar[si - start]!
+      );
+      lines.push(
+        '         ' + style.dim(hostFromUrl(s.url)) + (isSaved ? style.accent('  saved') : '')
+      );
       lines.push(' ' + style.dim('\u2500'.repeat(Math.max(0, width - 2))));
     }
 
@@ -452,7 +520,10 @@ export const newsPage: Page = {
   },
   handleKey(event, ctx): PageAction {
     if (state.view === 'preview') {
-      if (event.key === 'esc') { state.view = 'detail'; return { kind: 'none' }; }
+      if (event.key === 'esc') {
+        state.view = 'detail';
+        return { kind: 'none' };
+      }
       if (event.key === 'o') {
         const pi = state.previewItem;
         return pi ? { kind: 'open-url', url: pi.url } : { kind: 'none' };
@@ -465,15 +536,30 @@ export const newsPage: Page = {
         state.previewScroll = Math.max(0, state.previewScroll - 1);
         return { kind: 'none' };
       }
-      if (event.key === 'pageup') { state.previewScroll = Math.max(0, state.previewScroll - 20); return { kind: 'none' }; }
-      if (event.key === 'pagedown') { state.previewScroll = Math.min(state.previewLines.length - 1, state.previewScroll + 20); return { kind: 'none' }; }
-      if (event.key === 'home') { state.previewScroll = 0; return { kind: 'none' }; }
-      if (event.key === 'end') { state.previewScroll = state.previewLines.length - 1; return { kind: 'none' }; }
+      if (event.key === 'pageup') {
+        state.previewScroll = Math.max(0, state.previewScroll - 20);
+        return { kind: 'none' };
+      }
+      if (event.key === 'pagedown') {
+        state.previewScroll = Math.min(state.previewLines.length - 1, state.previewScroll + 20);
+        return { kind: 'none' };
+      }
+      if (event.key === 'home') {
+        state.previewScroll = 0;
+        return { kind: 'none' };
+      }
+      if (event.key === 'end') {
+        state.previewScroll = state.previewLines.length - 1;
+        return { kind: 'none' };
+      }
       return { kind: 'none' };
     }
 
     if (state.view === 'detail') {
-      if (event.key === 'esc') { state.view = 'list'; return { kind: 'none' }; }
+      if (event.key === 'esc') {
+        state.view = 'list';
+        return { kind: 'none' };
+      }
       if (event.key === 'o') {
         const s = visible()[state.cursor];
         return s ? { kind: 'open-url', url: s.url } : { kind: 'none' };
@@ -487,10 +573,23 @@ export const newsPage: Page = {
     }
 
     if (state.filtering) {
-      if (event.key === 'esc') { state.filtering = false; state.filter = ''; return { kind: 'none' }; }
-      if (event.key === 'enter') { state.filtering = false; return { kind: 'none' }; }
-      if (event.key === 'backspace') { state.filter = state.filter.slice(0, -1); return { kind: 'none' }; }
-      if (event.key.length === 1 && !event.ctrl) { state.filter += event.key; return { kind: 'none' }; }
+      if (event.key === 'esc') {
+        state.filtering = false;
+        state.filter = '';
+        return { kind: 'none' };
+      }
+      if (event.key === 'enter') {
+        state.filtering = false;
+        return { kind: 'none' };
+      }
+      if (event.key === 'backspace') {
+        state.filter = state.filter.slice(0, -1);
+        return { kind: 'none' };
+      }
+      if (event.key.length === 1 && !event.ctrl) {
+        state.filter += event.key;
+        return { kind: 'none' };
+      }
       return { kind: 'none' };
     }
 
@@ -508,20 +607,30 @@ export const newsPage: Page = {
         state.tab = (state.tab + 1) % TABS.length;
         state.cursor = 0;
         return { kind: 'none' };
-      case 'j': case 'down':
-        state.cursor = Math.min(list.length - 1, state.cursor + 1); return { kind: 'none' };
-      case 'k': case 'up':
-        state.cursor = Math.max(0, state.cursor - 1); return { kind: 'none' };
+      case 'j':
+      case 'down':
+        state.cursor = Math.min(list.length - 1, state.cursor + 1);
+        return { kind: 'none' };
+      case 'k':
+      case 'up':
+        state.cursor = Math.max(0, state.cursor - 1);
+        return { kind: 'none' };
       case 'pageup':
-        state.cursor = Math.max(0, state.cursor - 20); return { kind: 'none' };
+        state.cursor = Math.max(0, state.cursor - 20);
+        return { kind: 'none' };
       case 'pagedown':
-        state.cursor = Math.min(list.length - 1, state.cursor + 20); return { kind: 'none' };
+        state.cursor = Math.min(list.length - 1, state.cursor + 20);
+        return { kind: 'none' };
       case 'home':
-        state.cursor = 0; return { kind: 'none' };
+        state.cursor = 0;
+        return { kind: 'none' };
       case 'end':
-        state.cursor = list.length - 1; return { kind: 'none' };
+        state.cursor = list.length - 1;
+        return { kind: 'none' };
       case 'enter':
-        if (list.length > 0) { state.view = 'detail'; }
+        if (list.length > 0) {
+          state.view = 'detail';
+        }
         return { kind: 'none' };
       case 's': {
         const it = list[state.cursor];
@@ -534,10 +643,15 @@ export const newsPage: Page = {
       }
       case 'm': {
         const it = list[state.cursor];
-        if (it) { state.read.add(it.id); persistMeta(); }
+        if (it) {
+          state.read.add(it.id);
+          persistMeta();
+        }
         return { kind: 'none' };
       }
-      case '/': state.filtering = true; return { kind: 'none' };
+      case '/':
+        state.filtering = true;
+        return { kind: 'none' };
       case 'p': {
         const pi = list[state.cursor];
         if (pi && state.previewContent !== pi.url) startPreview(pi, ctx);
@@ -551,7 +665,8 @@ export const newsPage: Page = {
         state.loading = true;
         refreshNews(ctx);
         return { kind: 'status', message: 'refreshing...' };
-      default: return { kind: 'none' };
+      default:
+        return { kind: 'none' };
     }
-  },
+  }
 };

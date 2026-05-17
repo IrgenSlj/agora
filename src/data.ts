@@ -17,7 +17,8 @@ export const samplePackages: Package[] = [
     installs: 264237,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-filesystem',
-    createdAt: '2024-11-21'
+    createdAt: '2024-11-21',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-everything',
@@ -32,7 +33,8 @@ export const samplePackages: Package[] = [
     installs: 82229,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-everything',
-    createdAt: '2024-11-19'
+    createdAt: '2024-11-19',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Version Control & DevTools ──
@@ -49,7 +51,8 @@ export const samplePackages: Package[] = [
     installs: 119750,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-github',
-    createdAt: '2024-11-21'
+    createdAt: '2024-11-21',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-gitlab',
@@ -63,7 +66,8 @@ export const samplePackages: Package[] = [
     installs: 6568,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-gitlab',
-    createdAt: '2024-12-04'
+    createdAt: '2024-12-04',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Database Servers ──
@@ -79,7 +83,8 @@ export const samplePackages: Package[] = [
     installs: 182440,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-postgres',
-    createdAt: '2024-11-19'
+    createdAt: '2024-11-19',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-redis',
@@ -93,7 +98,8 @@ export const samplePackages: Package[] = [
     installs: 2888,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-redis',
-    createdAt: '2025-04-07'
+    createdAt: '2025-04-07',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-mongodb',
@@ -108,7 +114,8 @@ export const samplePackages: Package[] = [
     installs: 51183,
     repository: 'https://github.com/mongodb-js/mongodb-mcp-server',
     npmPackage: 'mongodb-mcp-server',
-    createdAt: '2025-04-23'
+    createdAt: '2025-04-23',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-elasticsearch',
@@ -122,7 +129,8 @@ export const samplePackages: Package[] = [
     installs: 1007,
     repository: 'https://github.com/elastic/mcp-server-elasticsearch',
     npmPackage: '@elastic/mcp-server-elasticsearch',
-    createdAt: '2025-03-24'
+    createdAt: '2025-03-24',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-supabase',
@@ -136,7 +144,8 @@ export const samplePackages: Package[] = [
     installs: 68083,
     repository: 'https://github.com/supabase-community/supabase-mcp',
     npmPackage: '@supabase/mcp-server-supabase',
-    createdAt: '2025-03-28'
+    createdAt: '2025-03-28',
+    pricing: { kind: 'free' as const }
   },
 
   // ── AI & Memory ──
@@ -152,7 +161,8 @@ export const samplePackages: Package[] = [
     installs: 345890,
     repository: 'https://github.com/openai/openai-mcp-server',
     npmPackage: 'openai-mcp-server',
-    createdAt: '2025-01-15'
+    createdAt: '2025-01-15',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-anthropic',
@@ -165,7 +175,8 @@ export const samplePackages: Package[] = [
     stars: 5678,
     installs: 289000,
     repository: 'https://github.com/anthropics/anthropic-mcp-server',
-    createdAt: '2025-04-01'
+    createdAt: '2025-04-01',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-replicate',
@@ -179,7 +190,8 @@ export const samplePackages: Package[] = [
     installs: 34560,
     repository: 'https://github.com/replicate/replicate-mcp-server',
     npmPackage: 'replicate-mcp',
-    createdAt: '2025-02-10'
+    createdAt: '2025-02-10',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-huggingface',
@@ -192,7 +204,8 @@ export const samplePackages: Package[] = [
     stars: 2340,
     installs: 56780,
     repository: 'https://github.com/huggingface/hf-mcp-server',
-    createdAt: '2025-03-05'
+    createdAt: '2025-03-05',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-sequential-thinking',
@@ -206,7 +219,8 @@ export const samplePackages: Package[] = [
     installs: 105931,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-sequential-thinking',
-    createdAt: '2024-12-03'
+    createdAt: '2024-12-03',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-memory',
@@ -220,7 +234,8 @@ export const samplePackages: Package[] = [
     installs: 73433,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-memory',
-    createdAt: '2024-11-21'
+    createdAt: '2024-11-21',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-context7',
@@ -234,7 +249,8 @@ export const samplePackages: Package[] = [
     installs: 1141616,
     repository: 'https://github.com/upstash/context7',
     npmPackage: '@upstash/context7-mcp',
-    createdAt: '2025-04-08'
+    createdAt: '2025-04-08',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Search & Web ──
@@ -250,7 +266,8 @@ export const samplePackages: Package[] = [
     installs: 24941,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-brave-search',
-    createdAt: '2024-11-21'
+    createdAt: '2024-11-21',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-tavily',
@@ -264,7 +281,8 @@ export const samplePackages: Package[] = [
     installs: 28859,
     repository: 'https://github.com/tavily-ai/tavily-mcp',
     npmPackage: 'tavily-mcp',
-    createdAt: '2025-01-27'
+    createdAt: '2025-01-27',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-exa',
@@ -278,7 +296,8 @@ export const samplePackages: Package[] = [
     installs: 12842,
     repository: 'https://github.com/exa-labs/exa-mcp-server',
     npmPackage: 'exa-mcp-server',
-    createdAt: '2024-12-17'
+    createdAt: '2024-12-17',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-perplexity',
@@ -292,7 +311,8 @@ export const samplePackages: Package[] = [
     installs: 1452,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: 'server-perplexity-ask',
-    createdAt: '2025-02-19'
+    createdAt: '2025-02-19',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-firecrawl',
@@ -306,7 +326,8 @@ export const samplePackages: Package[] = [
     installs: 54574,
     repository: 'https://github.com/firecrawl/firecrawl-mcp-server',
     npmPackage: 'firecrawl-mcp',
-    createdAt: '2025-02-21'
+    createdAt: '2025-02-21',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-google-maps',
@@ -320,7 +341,8 @@ export const samplePackages: Package[] = [
     installs: 10487,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-google-maps',
-    createdAt: '2024-11-21'
+    createdAt: '2024-11-21',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Browser Automation ──
@@ -337,7 +359,8 @@ export const samplePackages: Package[] = [
     installs: 29680,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-puppeteer',
-    createdAt: '2024-11-19'
+    createdAt: '2024-11-19',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-playwright',
@@ -352,7 +375,8 @@ export const samplePackages: Package[] = [
     installs: 2613994,
     repository: 'https://github.com/microsoft/playwright-mcp',
     npmPackage: '@playwright/mcp',
-    createdAt: '2025-03-13'
+    createdAt: '2025-03-13',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-playwright-ea',
@@ -366,7 +390,8 @@ export const samplePackages: Package[] = [
     installs: 79058,
     repository: 'https://github.com/executeautomation/mcp-playwright',
     npmPackage: '@executeautomation/playwright-mcp-server',
-    createdAt: '2024-12-05'
+    createdAt: '2024-12-05',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-browsermcp',
@@ -379,14 +404,16 @@ export const samplePackages: Package[] = [
     stars: 0,
     installs: 7461,
     npmPackage: '@browsermcp/mcp',
-    createdAt: '2025-04-05'
+    createdAt: '2025-04-05',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Project Management ──
   {
     id: 'mcp-linear',
     name: '@linear/mcp-server',
-    description: 'Linear issue tracking — create and update issues, search projects, manage sprints',
+    description:
+      'Linear issue tracking — create and update issues, search projects, manage sprints',
     author: 'Linear',
     version: '1.1.0',
     category: 'mcp',
@@ -394,12 +421,14 @@ export const samplePackages: Package[] = [
     stars: 6543,
     installs: 189000,
     repository: 'https://github.com/linear/linear-mcp-server',
-    createdAt: '2025-02-25'
+    createdAt: '2025-02-25',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-jira',
     name: 'jira-mcp-server',
-    description: 'Jira and Confluence — issue creation, search, project management, and wiki access',
+    description:
+      'Jira and Confluence — issue creation, search, project management, and wiki access',
     author: 'atlassian-labs',
     version: '0.9.0',
     category: 'mcp',
@@ -408,7 +437,8 @@ export const samplePackages: Package[] = [
     installs: 98700,
     repository: 'https://github.com/atlassian-labs/jira-mcp-server',
     npmPackage: 'jira-mcp-server',
-    createdAt: '2025-03-01'
+    createdAt: '2025-03-01',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-asana',
@@ -421,14 +451,16 @@ export const samplePackages: Package[] = [
     stars: 450,
     installs: 12300,
     repository: 'https://github.com/asana-community/asana-mcp-server',
-    createdAt: '2025-04-10'
+    createdAt: '2025-04-10',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Knowledge & Notes ──
   {
     id: 'mcp-obsidian',
     name: 'obsidian-mcp-server',
-    description: 'Obsidian vault access — read, search, and create notes across your knowledge base',
+    description:
+      'Obsidian vault access — read, search, and create notes across your knowledge base',
     author: 'obsidian-mcp',
     version: '1.5.0',
     category: 'mcp',
@@ -437,12 +469,14 @@ export const samplePackages: Package[] = [
     installs: 345000,
     repository: 'https://github.com/obsidian-mcp/obsidian-mcp-server',
     npmPackage: 'obsidian-mcp-server',
-    createdAt: '2025-01-25'
+    createdAt: '2025-01-25',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-confluence',
     name: 'confluence-mcp-server',
-    description: 'Confluence wiki — pages, search, spaces, and content management for documentation',
+    description:
+      'Confluence wiki — pages, search, spaces, and content management for documentation',
     author: 'atlassian-labs',
     version: '0.3.0',
     category: 'mcp',
@@ -451,7 +485,8 @@ export const samplePackages: Package[] = [
     installs: 23400,
     repository: 'https://github.com/atlassian-labs/confluence-mcp-server',
     npmPackage: 'confluence-mcp-server',
-    createdAt: '2025-04-05'
+    createdAt: '2025-04-05',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Development Tools ──
@@ -466,12 +501,14 @@ export const samplePackages: Package[] = [
     stars: 560,
     installs: 18900,
     repository: 'https://github.com/SonarSource/sonarqube-mcp-server',
-    createdAt: '2025-03-20'
+    createdAt: '2025-03-20',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-snyk',
     name: 'snyk-mcp-server',
-    description: 'Snyk vulnerability scanning — dependency checks, container scanning, and IaC analysis',
+    description:
+      'Snyk vulnerability scanning — dependency checks, container scanning, and IaC analysis',
     author: 'snyk-labs',
     version: '0.3.0',
     category: 'mcp',
@@ -479,7 +516,8 @@ export const samplePackages: Package[] = [
     stars: 780,
     installs: 34500,
     repository: 'https://github.com/snyk-labs/snyk-mcp-server',
-    createdAt: '2025-04-15'
+    createdAt: '2025-04-15',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Cloud Platforms ──
@@ -494,12 +532,14 @@ export const samplePackages: Package[] = [
     stars: 4500,
     installs: 156000,
     repository: 'https://github.com/awslabs/aws-mcp-server',
-    createdAt: '2025-02-01'
+    createdAt: '2025-02-01',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-vercel',
     name: '@vercel/mcp-server',
-    description: 'Vercel deployment management — projects, deployments, domains, and environment variables',
+    description:
+      'Vercel deployment management — projects, deployments, domains, and environment variables',
     author: 'Vercel',
     version: '0.4.0',
     category: 'mcp',
@@ -507,12 +547,14 @@ export const samplePackages: Package[] = [
     stars: 3400,
     installs: 89000,
     repository: 'https://github.com/vercel/vercel-mcp-server',
-    createdAt: '2025-03-01'
+    createdAt: '2025-03-01',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-netlify',
     name: '@netlify/mcp-server',
-    description: 'Netlify deployment management — sites, deploys, functions, and environment config',
+    description:
+      'Netlify deployment management — sites, deploys, functions, and environment config',
     author: 'Netlify',
     version: '0.3.0',
     category: 'mcp',
@@ -521,7 +563,8 @@ export const samplePackages: Package[] = [
     installs: 23400,
     repository: 'https://github.com/netlify/netlify-mcp-server',
     npmPackage: '@netlify/mcp',
-    createdAt: '2025-04-01'
+    createdAt: '2025-04-01',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Communication & Community ──
@@ -537,12 +580,14 @@ export const samplePackages: Package[] = [
     installs: 98700,
     repository: 'https://github.com/discord-community/discord-mcp-server',
     npmPackage: 'discord-mcp-server',
-    createdAt: '2025-03-05'
+    createdAt: '2025-03-05',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-email',
     name: '@sendgrid/mcp-server',
-    description: 'Email delivery via SendGrid — send transactional emails, manage templates, and analytics',
+    description:
+      'Email delivery via SendGrid — send transactional emails, manage templates, and analytics',
     author: 'sendgrid-community',
     version: '0.3.0',
     category: 'mcp',
@@ -551,7 +596,8 @@ export const samplePackages: Package[] = [
     installs: 23400,
     repository: 'https://github.com/sendgrid-community/sendgrid-mcp-server',
     npmPackage: 'sendgrid-mcp',
-    createdAt: '2025-04-15'
+    createdAt: '2025-04-15',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Productivity & Office ──
@@ -567,7 +613,8 @@ export const samplePackages: Package[] = [
     installs: 62239,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-slack',
-    createdAt: '2024-11-19'
+    createdAt: '2024-11-19',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-notion',
@@ -581,7 +628,8 @@ export const samplePackages: Package[] = [
     installs: 67119,
     repository: 'https://github.com/makenotion/notion-mcp-server',
     npmPackage: '@notionhq/notion-mcp-server',
-    createdAt: '2025-04-03'
+    createdAt: '2025-04-03',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-gdrive',
@@ -595,7 +643,8 @@ export const samplePackages: Package[] = [
     installs: 8678,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-gdrive',
-    createdAt: '2024-11-19'
+    createdAt: '2024-11-19',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Design & Frontend ──
@@ -612,7 +661,8 @@ export const samplePackages: Package[] = [
     installs: 53549,
     repository: 'https://github.com/GLips/Figma-Context-MCP',
     npmPackage: 'figma-developer-mcp',
-    createdAt: '2025-02-22'
+    createdAt: '2025-02-22',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-magic',
@@ -626,7 +676,8 @@ export const samplePackages: Package[] = [
     installs: 11231,
     repository: 'https://github.com/21st-dev/magic-mcp',
     npmPackage: '@21st-dev/magic',
-    createdAt: '2025-03-11'
+    createdAt: '2025-03-11',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Containers & Virtualisation ──
@@ -642,7 +693,8 @@ export const samplePackages: Package[] = [
     installs: 234500,
     repository: 'https://github.com/docker-labs/mcp-docker-server',
     npmPackage: 'mcp-docker-server',
-    createdAt: '2025-01-20'
+    createdAt: '2025-01-20',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-sqlite',
@@ -656,7 +708,8 @@ export const samplePackages: Package[] = [
     installs: 128000,
     repository: 'https://github.com/sqlite-community/sqlite-mcp',
     npmPackage: '@easy-mcps/sqlite-mcp-server',
-    createdAt: '2025-02-15'
+    createdAt: '2025-02-15',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-pinecone',
@@ -670,7 +723,8 @@ export const samplePackages: Package[] = [
     installs: 23450,
     repository: 'https://github.com/pinecone-io/pinecone-mcp-server',
     npmPackage: 'pinecone-mcp',
-    createdAt: '2025-03-10'
+    createdAt: '2025-03-10',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-qdrant',
@@ -684,7 +738,8 @@ export const samplePackages: Package[] = [
     installs: 18900,
     repository: 'https://github.com/qdrant/qdrant-mcp-server',
     npmPackage: 'qdrant-mcp-server',
-    createdAt: '2025-03-15'
+    createdAt: '2025-03-15',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-chromadb',
@@ -698,7 +753,8 @@ export const samplePackages: Package[] = [
     installs: 45600,
     repository: 'https://github.com/chroma-core/chromadb-mcp-server',
     npmPackage: 'chromadb-mcp',
-    createdAt: '2025-04-01'
+    createdAt: '2025-04-01',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-neo4j',
@@ -711,7 +767,8 @@ export const samplePackages: Package[] = [
     stars: 2100,
     installs: 56700,
     repository: 'https://github.com/neo4j/neo4j-mcp-server',
-    createdAt: '2025-02-20'
+    createdAt: '2025-02-20',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Cloud, Infra & DevOps ──
@@ -726,7 +783,8 @@ export const samplePackages: Package[] = [
     stars: 0,
     installs: 2249,
     npmPackage: '@cloudflare/mcp-server-cloudflare',
-    createdAt: '2024-11-27'
+    createdAt: '2024-11-27',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-kubernetes',
@@ -740,7 +798,8 @@ export const samplePackages: Package[] = [
     installs: 13585,
     repository: 'https://github.com/Flux159/mcp-server-kubernetes',
     npmPackage: 'mcp-server-kubernetes',
-    createdAt: '2024-12-10'
+    createdAt: '2024-12-10',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-heroku',
@@ -754,7 +813,8 @@ export const samplePackages: Package[] = [
     installs: 5693,
     repository: 'https://github.com/heroku/heroku-mcp-server',
     npmPackage: '@heroku/mcp-server',
-    createdAt: '2025-04-07'
+    createdAt: '2025-04-07',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-aws-kb',
@@ -768,7 +828,8 @@ export const samplePackages: Package[] = [
     installs: 403,
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-aws-kb-retrieval',
-    createdAt: '2025-01-14'
+    createdAt: '2025-01-14',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-remote',
@@ -782,7 +843,8 @@ export const samplePackages: Package[] = [
     installs: 354615,
     repository: 'https://github.com/geelen/mcp-remote',
     npmPackage: 'mcp-remote',
-    createdAt: '2025-03-17'
+    createdAt: '2025-03-17',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Monitoring & Observability ──
@@ -798,12 +860,14 @@ export const samplePackages: Package[] = [
     installs: 45600,
     repository: 'https://github.com/DataDog/datadog-mcp-server',
     npmPackage: 'datadog-mcp',
-    createdAt: '2025-03-10'
+    createdAt: '2025-03-10',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-grafana',
     name: 'grafana-mcp-server',
-    description: 'Grafana dashboards — query metrics, manage alerts, and explore observability data',
+    description:
+      'Grafana dashboards — query metrics, manage alerts, and explore observability data',
     author: 'grafana-community',
     version: '0.4.0',
     category: 'mcp',
@@ -811,12 +875,14 @@ export const samplePackages: Package[] = [
     stars: 2340,
     installs: 67800,
     repository: 'https://github.com/grafana-community/grafana-mcp-server',
-    createdAt: '2025-02-20'
+    createdAt: '2025-02-20',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-pagerduty',
     name: 'pagerduty-mcp-server',
-    description: 'PagerDuty incident management — incidents, on-call schedules, and escalation policies',
+    description:
+      'PagerDuty incident management — incidents, on-call schedules, and escalation policies',
     author: 'PagerDuty',
     version: '0.3.5',
     category: 'mcp',
@@ -824,12 +890,14 @@ export const samplePackages: Package[] = [
     stars: 560,
     installs: 18900,
     repository: 'https://github.com/PagerDuty/pagerduty-mcp-server',
-    createdAt: '2025-04-01'
+    createdAt: '2025-04-01',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-newrelic',
     name: '@newrelic/mcp-server',
-    description: 'New Relic observability — APM, infrastructure, logs, and query NRQL across services',
+    description:
+      'New Relic observability — APM, infrastructure, logs, and query NRQL across services',
     author: 'New Relic',
     version: '0.3.0',
     category: 'mcp',
@@ -837,7 +905,8 @@ export const samplePackages: Package[] = [
     stars: 340,
     installs: 12300,
     repository: 'https://github.com/newrelic/newrelic-mcp-server',
-    createdAt: '2025-04-10'
+    createdAt: '2025-04-10',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Payments & Commerce ──
@@ -853,7 +922,8 @@ export const samplePackages: Package[] = [
     installs: 90109,
     repository: 'https://github.com/getsentry/sentry-mcp',
     npmPackage: '@sentry/mcp-server',
-    createdAt: '2025-04-24'
+    createdAt: '2025-04-24',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'mcp-stripe',
@@ -867,7 +937,8 @@ export const samplePackages: Package[] = [
     installs: 22628,
     repository: 'https://github.com/stripe/ai',
     npmPackage: '@stripe/mcp',
-    createdAt: '2025-02-19'
+    createdAt: '2025-02-19',
+    pricing: { kind: 'free' as const }
   },
 
   {
@@ -881,7 +952,8 @@ export const samplePackages: Package[] = [
     stars: 2840,
     installs: 12400,
     repository: 'https://github.com/modelcontextprotocol/servers',
-    createdAt: '2025-03-10'
+    createdAt: '2025-03-10',
+    pricing: { kind: 'free' as const }
   },
 
   // ── Prompts ──
@@ -896,7 +968,8 @@ export const samplePackages: Package[] = [
     tags: ['review', 'security', 'best-practices', 'quality'],
     stars: 1200,
     installs: 8900,
-    createdAt: '2025-01-10'
+    createdAt: '2025-01-10',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'prompt-api-design',
@@ -909,7 +982,8 @@ export const samplePackages: Package[] = [
     tags: ['api', 'design', 'rest', 'graphql'],
     stars: 560,
     installs: 3400,
-    createdAt: '2025-02-20'
+    createdAt: '2025-02-20',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'prompt-refactor-plan',
@@ -921,7 +995,8 @@ export const samplePackages: Package[] = [
     tags: ['refactor', 'planning', 'safety', 'testing'],
     stars: 780,
     installs: 4500,
-    createdAt: '2025-03-01'
+    createdAt: '2025-03-01',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'prompt-debug-session',
@@ -934,7 +1009,8 @@ export const samplePackages: Package[] = [
     tags: ['debug', 'root-cause', 'analysis', 'troubleshooting'],
     stars: 920,
     installs: 6200,
-    createdAt: '2025-04-10'
+    createdAt: '2025-04-10',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'prompt-test-strategy',
@@ -947,7 +1023,8 @@ export const samplePackages: Package[] = [
     tags: ['testing', 'strategy', 'quality', 'coverage'],
     stars: 410,
     installs: 2100,
-    createdAt: '2025-04-20'
+    createdAt: '2025-04-20',
+    pricing: { kind: 'free' as const }
   },
   {
     id: 'prompt-migration-plan',
@@ -960,7 +1037,8 @@ export const samplePackages: Package[] = [
     tags: ['migration', 'planning', 'safety', 'rollback'],
     stars: 340,
     installs: 1800,
-    createdAt: '2025-05-01'
+    createdAt: '2025-05-01',
+    pricing: { kind: 'free' as const }
   }
 ];
 
@@ -1087,7 +1165,8 @@ Provide a score (1-10) for each dimension with actionable improvements.`,
   {
     id: 'wf-doc-generator',
     name: 'Documentation Generator',
-    description: 'Generate comprehensive documentation for codebases — API docs, README, and inline comments',
+    description:
+      'Generate comprehensive documentation for codebases — API docs, README, and inline comments',
     author: 'doc-master',
     prompt: `Generate thorough documentation for the codebase:
 1. Create or update README with setup, usage, and architecture
@@ -1391,7 +1470,8 @@ npx tsx src/my-server.ts
     steps: [
       {
         title: 'Install the Docker MCP Server',
-        content: 'First, install the Docker MCP server globally. This lets your AI assistant manage containers.',
+        content:
+          'First, install the Docker MCP server globally. This lets your AI assistant manage containers.',
         code: `npm install -g mcp-docker-server`
       },
       {
@@ -1408,7 +1488,8 @@ npx tsx src/my-server.ts
       },
       {
         title: 'Common Docker Tasks',
-        content: 'Now you can ask your AI to: list running containers, view logs, restart services, build images, manage Docker Compose, and clean up unused resources — all from your terminal via natural language.'
+        content:
+          'Now you can ask your AI to: list running containers, view logs, restart services, build images, manage Docker Compose, and clean up unused resources — all from your terminal via natural language.'
       }
     ]
   },
@@ -1421,16 +1502,19 @@ npx tsx src/my-server.ts
     steps: [
       {
         title: 'Set Up API Testing Tools',
-        content: 'Install the necessary MCP servers for API testing. The Brave Search and GitHub servers are useful for testing external APIs.',
+        content:
+          'Install the necessary MCP servers for API testing. The Brave Search and GitHub servers are useful for testing external APIs.',
         code: `agora install mcp-github`
       },
       {
         title: 'Test REST Endpoints',
-        content: 'With the MCP tools configured, you can ask OpenCode to test API endpoints: "Make a GET request to https://api.example.com/health" or "Test the POST /users endpoint with this payload."'
+        content:
+          'With the MCP tools configured, you can ask OpenCode to test API endpoints: "Make a GET request to https://api.example.com/health" or "Test the POST /users endpoint with this payload."'
       },
       {
         title: 'Automate API Tests',
-        content: 'Use the TDD workflow combined with API tools to write automated tests: "Create a test suite that verifies all API endpoints return correct status codes and response shapes."'
+        content:
+          'Use the TDD workflow combined with API tools to write automated tests: "Create a test suite that verifies all API endpoints return correct status codes and response shapes."'
       }
     ]
   },
@@ -1443,7 +1527,8 @@ npx tsx src/my-server.ts
     steps: [
       {
         title: 'Choose a Vector Database',
-        content: 'Agora supports several vector databases. For local development, ChromaDB is the easiest to start with. For production, Pinecone or Qdrant are recommended.',
+        content:
+          'Agora supports several vector databases. For local development, ChromaDB is the easiest to start with. For production, Pinecone or Qdrant are recommended.',
         code: `agora search vector
 agora browse mcp-chromadb`
       },
@@ -1454,7 +1539,8 @@ agora browse mcp-chromadb`
       },
       {
         title: 'Semantic Search in Action',
-        content: 'With vector search configured, you can ask OpenCode to: "Search for documents similar to this text" or "Find the most relevant code examples for implementing OAuth." The AI will use the vector database to find semantically similar content.'
+        content:
+          'With vector search configured, you can ask OpenCode to: "Search for documents similar to this text" or "Find the most relevant code examples for implementing OAuth." The AI will use the vector database to find semantically similar content.'
       }
     ]
   },
@@ -1594,7 +1680,7 @@ agora browse mcp-chromadb`
       {
         title: 'Prerequisites',
         content:
-          'To deploy the backend you need: a Cloudflare account, the Wrangler CLI installed, and Node.js 18+. The backend is a Cloudflare Workers app using Hono and D1 (Cloudflare\'s serverless SQLite).'
+          "To deploy the backend you need: a Cloudflare account, the Wrangler CLI installed, and Node.js 18+. The backend is a Cloudflare Workers app using Hono and D1 (Cloudflare's serverless SQLite)."
       },
       {
         title: 'Set Up D1 Database',

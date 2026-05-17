@@ -20,11 +20,11 @@ export const DEFAULT_SETTINGS: AgoraSettings = {
       reddit: { enabled: true, ttl_minutes: 15 },
       'github-trending': { enabled: true, ttl_minutes: 30 },
       arxiv: { enabled: false, ttl_minutes: 60 },
-      rss: { enabled: false, ttl_minutes: 60 },
+      rss: { enabled: false, ttl_minutes: 60 }
     },
-    feeds: [],
+    feeds: []
   },
-  community: { default_board: 'mcp', collapse_flag_threshold: 3 },
+  community: { default_board: 'mcp', collapse_flag_threshold: 3 }
 };
 
 const SETTINGS_FILE = 'settings.toml';
@@ -122,9 +122,20 @@ function parseInlineTable(raw: string): Record<string, any> {
   let mode: 'key' | 'value' = 'key';
 
   for (const ch of raw) {
-    if (ch === '{') { depth++; current += ch; continue; }
-    if (ch === '}') { depth--; current += ch; continue; }
-    if (depth > 0) { current += ch; continue; }
+    if (ch === '{') {
+      depth++;
+      current += ch;
+      continue;
+    }
+    if (ch === '}') {
+      depth--;
+      current += ch;
+      continue;
+    }
+    if (depth > 0) {
+      current += ch;
+      continue;
+    }
 
     if (mode === 'key') {
       if (ch === '=') {
@@ -157,9 +168,20 @@ function parseTomlArray(raw: string): any[] {
   let current = '';
 
   for (const ch of raw) {
-    if (ch === '[' || ch === '{') { depth++; current += ch; continue; }
-    if (ch === ']' || ch === '}') { depth--; current += ch; continue; }
-    if (depth > 0) { current += ch; continue; }
+    if (ch === '[' || ch === '{') {
+      depth++;
+      current += ch;
+      continue;
+    }
+    if (ch === ']' || ch === '}') {
+      depth--;
+      current += ch;
+      continue;
+    }
+    if (depth > 0) {
+      current += ch;
+      continue;
+    }
 
     if (ch === ',') {
       const v = current.trim();
@@ -177,7 +199,11 @@ function parseTomlArray(raw: string): any[] {
 // ── Minimal TOML serializer ──────────────────────────────────────────────────
 
 function serializeToml(settings: AgoraSettings): string {
-  const lines: string[] = ['# Agora settings', `# Generated ${new Date().toISOString().slice(0, 10)}`, ''];
+  const lines: string[] = [
+    '# Agora settings',
+    `# Generated ${new Date().toISOString().slice(0, 10)}`,
+    ''
+  ];
 
   lines.push('[account]');
   lines.push(`username = ${JSON.stringify(settings.account.username)}`);
@@ -212,12 +238,16 @@ function serializeToml(settings: AgoraSettings): string {
 
 function mergeSettings(defaults: AgoraSettings, parsed: Record<string, any>): AgoraSettings {
   if (parsed.account) {
-    if (typeof parsed.account.username === 'string') defaults.account.username = parsed.account.username;
-    if (typeof parsed.account.backend === 'string') defaults.account.backend = parsed.account.backend;
-    if (typeof parsed.account.declared_llm === 'string') defaults.account.declared_llm = parsed.account.declared_llm;
+    if (typeof parsed.account.username === 'string')
+      defaults.account.username = parsed.account.username;
+    if (typeof parsed.account.backend === 'string')
+      defaults.account.backend = parsed.account.backend;
+    if (typeof parsed.account.declared_llm === 'string')
+      defaults.account.declared_llm = parsed.account.declared_llm;
   }
   if (parsed.display) {
-    if (['auto', 'truecolor', 'none'].includes(parsed.display.color)) defaults.display.color = parsed.display.color;
+    if (['auto', 'truecolor', 'none'].includes(parsed.display.color))
+      defaults.display.color = parsed.display.color;
     if (typeof parsed.display.banner === 'boolean') defaults.display.banner = parsed.display.banner;
   }
   if (parsed.news) {
@@ -228,15 +258,17 @@ function mergeSettings(defaults: AgoraSettings, parsed: Record<string, any>): Ag
         if (src && typeof src === 'object') {
           defaults.news.sources[key] = {
             enabled: typeof src.enabled === 'boolean' ? src.enabled : true,
-            ttl_minutes: typeof src.ttl_minutes === 'number' ? src.ttl_minutes : 60,
+            ttl_minutes: typeof src.ttl_minutes === 'number' ? src.ttl_minutes : 60
           };
         }
       }
     }
   }
   if (parsed.community) {
-    if (typeof parsed.community.default_board === 'string') defaults.community.default_board = parsed.community.default_board;
-    if (typeof parsed.community.collapse_flag_threshold === 'number') defaults.community.collapse_flag_threshold = parsed.community.collapse_flag_threshold;
+    if (typeof parsed.community.default_board === 'string')
+      defaults.community.default_board = parsed.community.default_board;
+    if (typeof parsed.community.collapse_flag_threshold === 'number')
+      defaults.community.collapse_flag_threshold = parsed.community.collapse_flag_threshold;
   }
   return defaults;
 }
@@ -246,11 +278,9 @@ function cloneSettings(s: AgoraSettings): AgoraSettings {
     account: { ...s.account },
     display: { ...s.display },
     news: {
-      sources: Object.fromEntries(
-        Object.entries(s.news.sources).map(([k, v]) => [k, { ...v }])
-      ),
-      feeds: [...(s.news.feeds ?? [])],
+      sources: Object.fromEntries(Object.entries(s.news.sources).map(([k, v]) => [k, { ...v }])),
+      feeds: [...(s.news.feeds ?? [])]
     },
-    community: { ...s.community },
+    community: { ...s.community }
   };
 }

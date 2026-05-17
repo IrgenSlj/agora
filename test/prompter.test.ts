@@ -471,7 +471,7 @@ describe('renderPromptFrame — wrap-aware redraw (narrow terminals)', () => {
     const prev = { totalRows: 3, cursorRow: 1, promptRows: 1 };
     const { frame } = renderPromptFrame(s, '> ', '', 80, prev);
     expect(frame).toContain('\x1b[1A'); // up to top of prev frame
-    expect(frame).toContain('\x1b[J');  // clear from there to end of screen
+    expect(frame).toContain('\x1b[J'); // clear from there to end of screen
     // And critically, the legacy single-row clear is NOT what runs:
     expect(frame.startsWith('\r\x1b[K')).toBe(false);
   });

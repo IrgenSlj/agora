@@ -6,7 +6,10 @@ const { version } = JSON.parse(
 ) as { version: string };
 
 export interface SourceAdapter {
-  fetch(opts: { fetcher?: (url: string, init?: RequestInit) => Promise<Response>; signal?: AbortSignal }): Promise<NewsItem[]>;
+  fetch(opts: {
+    fetcher?: (url: string, init?: RequestInit) => Promise<Response>;
+    signal?: AbortSignal;
+  }): Promise<NewsItem[]>;
 }
 
 const SUBREDDITS = ['mcp', 'LocalLLaMA', 'programming', 'MachineLearning'];
@@ -22,7 +25,7 @@ export const redditSource: SourceAdapter = {
         const url = `https://www.reddit.com/r/${sub}/hot.json?limit=25`;
         const res = await fetcher(url, {
           signal: opts.signal,
-          headers: { 'User-Agent': `agora-cli/${version}` },
+          headers: { 'User-Agent': `agora-cli/${version}` }
         });
         if (!res.ok) continue;
         const data = (await res.json()) as any;
@@ -40,7 +43,7 @@ export const redditSource: SourceAdapter = {
             fetchedAt: now,
             engagement: post.ups ?? 0,
             tags: extractRedditTags(post, sub),
-            summary: post.selftext ? post.selftext.slice(0, 200) : undefined,
+            summary: post.selftext ? post.selftext.slice(0, 200) : undefined
           });
         }
       } catch {
@@ -49,7 +52,7 @@ export const redditSource: SourceAdapter = {
     }
 
     return allItems;
-  },
+  }
 };
 
 function extractRedditTags(post: any, subreddit: string): string[] {
@@ -65,7 +68,7 @@ function extractRedditTags(post: any, subreddit: string): string[] {
     ai: ['ai', 'artificial intelligence'],
     agents: ['agent'],
     coding: ['code', 'programming', 'coding', 'developer'],
-    tools: ['tool', 'framework', 'library'],
+    tools: ['tool', 'framework', 'library']
   };
 
   for (const [topic, keywords] of Object.entries(topicMap)) {

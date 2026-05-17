@@ -38,7 +38,7 @@ type RateLimitOpts = { limit: number; window: number }; // window in seconds
 
 const RATE_LIMITS: Record<string, RateLimitOpts> = {
   default: { limit: 60, window: 60 },
-  write: { limit: 10, window: 60 },
+  write: { limit: 10, window: 60 }
 };
 
 async function rateLimit(
@@ -52,20 +52,22 @@ async function rateLimit(
   const windowKey = `${key}:${Math.floor(Date.now() / (opts.window * 1000))}`;
 
   try {
-    const row = (await c.env.DB.prepare(
-      'SELECT requests FROM rate_limits WHERE key = ?'
-    ).bind(windowKey).first()) as any;
+    const row = (await c.env.DB.prepare('SELECT requests FROM rate_limits WHERE key = ?')
+      .bind(windowKey)
+      .first()) as any;
 
     const count = row ? row.requests + 1 : 1;
 
     if (count === 1) {
       await c.env.DB.prepare(
         'INSERT OR REPLACE INTO rate_limits (key, requests, reset_at) VALUES (?, 1, datetime("now", ? || " seconds"))'
-      ).bind(windowKey, String(opts.window)).run();
+      )
+        .bind(windowKey, String(opts.window))
+        .run();
     } else {
-      await c.env.DB.prepare(
-        'UPDATE rate_limits SET requests = ? WHERE key = ?'
-      ).bind(count, windowKey).run();
+      await c.env.DB.prepare('UPDATE rate_limits SET requests = ? WHERE key = ?')
+        .bind(count, windowKey)
+        .run();
     }
 
     const adjusted = auth ? opts.limit : Math.floor(opts.limit / 2);
@@ -173,15 +175,7 @@ app.get('/auth/callback', async (c) => {
         updated_at = excluded.updated_at
     `
     )
-      .bind(
-        githubId,
-        username,
-        userData.name || username,
-        avatarUrl,
-        githubId,
-        now,
-        now
-      )
+      .bind(githubId, username, userData.name || username, avatarUrl, githubId, now, now)
       .run();
 
     const tokens = await mintTokenPair(c, githubId);
@@ -212,7 +206,11 @@ app.post('/auth/refresh', async (c) => {
   if (!rl.allowed) return c.json({ error: 'Rate limit exceeded', resetIn: rl.resetIn }, 429);
 
   let body: any;
-  try { body = await c.req.json(); } catch { return c.json({ error: 'invalid_refresh' }, 401); }
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'invalid_refresh' }, 401);
+  }
 
   const refreshToken = String(body.refresh_token || '').trim();
   if (!refreshToken) return c.json({ error: 'invalid_refresh' }, 401);
@@ -224,9 +222,9 @@ app.post('/auth/refresh', async (c) => {
   }
 
   const jtiHash = await hashToken(String(payload.jti));
-  const row = (await c.env.DB.prepare(
-    'SELECT jti_hash FROM refresh_tokens WHERE jti_hash = ?'
-  ).bind(jtiHash).first()) as any;
+  const row = (await c.env.DB.prepare('SELECT jti_hash FROM refresh_tokens WHERE jti_hash = ?')
+    .bind(jtiHash)
+    .first()) as any;
 
   if (!row) return c.json({ error: 'revoked_refresh' }, 401);
 
@@ -245,7 +243,11 @@ app.post('/auth/logout', async (c) => {
   if (isResponse(user)) return user;
 
   let body: any;
-  try { body = await c.req.json(); } catch { body = {}; }
+  try {
+    body = await c.req.json();
+  } catch {
+    body = {};
+  }
 
   const refreshToken = body.refresh_token ? String(body.refresh_token).trim() : null;
 
@@ -269,7 +271,10 @@ app.post('/auth/logout', async (c) => {
 
 async function jwtSecret(secret: string): Promise<CryptoKey> {
   const enc = new TextEncoder().encode(secret);
-  return crypto.subtle.importKey('raw', enc, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign', 'verify']);
+  return crypto.subtle.importKey('raw', enc, { name: 'HMAC', hash: 'SHA-256' }, false, [
+    'sign',
+    'verify'
+  ]);
 }
 
 function base64Url(buf: ArrayBuffer): string {
@@ -303,7 +308,10 @@ async function verifyJwt(token: string, secret: string): Promise<Record<string, 
     const key = await jwtSecret(secret);
     const enc = new TextEncoder();
     const valid = await crypto.subtle.verify(
-      'HMAC', key, base64UrlDecode(sigB64), enc.encode(`${headerB64}.${payloadB64}`)
+      'HMAC',
+      key,
+      base64UrlDecode(sigB64),
+      enc.encode(`${headerB64}.${payloadB64}`)
     );
     if (!valid) return null;
     const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(payloadB64)));
@@ -327,9 +335,14 @@ async function hashToken(token: string): Promise<string> {
 const ACCESS_TTL_SECONDS = 3600;
 const REFRESH_TTL_SECONDS = 90 * 86400;
 
-async function mintTokenPair(c: any, userId: string): Promise<{
-  access_token: string; refresh_token: string;
-  expires_in: number; refresh_expires_in: number;
+async function mintTokenPair(
+  c: any,
+  userId: string
+): Promise<{
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  refresh_expires_in: number;
 }> {
   const now = Math.floor(Date.now() / 1000);
   const jti = crypto.randomUUID();
@@ -345,10 +358,14 @@ async function mintTokenPair(c: any, userId: string): Promise<{
   const expiresAt = new Date((now + REFRESH_TTL_SECONDS) * 1000).toISOString();
   await c.env.DB.prepare(
     'INSERT INTO refresh_tokens (jti_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)'
-  ).bind(jtiHash, userId, new Date().toISOString(), expiresAt).run();
+  )
+    .bind(jtiHash, userId, new Date().toISOString(), expiresAt)
+    .run();
   return {
-    access_token: access, refresh_token: refresh,
-    expires_in: ACCESS_TTL_SECONDS, refresh_expires_in: REFRESH_TTL_SECONDS,
+    access_token: access,
+    refresh_token: refresh,
+    expires_in: ACCESS_TTL_SECONDS,
+    refresh_expires_in: REFRESH_TTL_SECONDS
   };
 }
 
@@ -370,20 +387,25 @@ async function checkRateLimit(
 ): Promise<{ allowed: boolean; resetIn: number }> {
   const windowKey = `${key}:${Math.floor(Date.now() / (opts.window * 1000))}`;
   try {
-    const row = (await db.prepare(
-      'SELECT requests FROM rate_limits WHERE key = ?'
-    ).bind(windowKey).first()) as any;
+    const row = (await db
+      .prepare('SELECT requests FROM rate_limits WHERE key = ?')
+      .bind(windowKey)
+      .first()) as any;
 
     const count = row ? row.requests + 1 : 1;
 
     if (count === 1) {
-      await db.prepare(
-        'INSERT OR REPLACE INTO rate_limits (key, requests, reset_at) VALUES (?, 1, datetime("now", ? || " seconds"))'
-      ).bind(windowKey, String(opts.window)).run();
+      await db
+        .prepare(
+          'INSERT OR REPLACE INTO rate_limits (key, requests, reset_at) VALUES (?, 1, datetime("now", ? || " seconds"))'
+        )
+        .bind(windowKey, String(opts.window))
+        .run();
     } else {
-      await db.prepare(
-        'UPDATE rate_limits SET requests = ? WHERE key = ?'
-      ).bind(count, windowKey).run();
+      await db
+        .prepare('UPDATE rate_limits SET requests = ? WHERE key = ?')
+        .bind(count, windowKey)
+        .run();
     }
 
     if (count > opts.limit) {
@@ -495,9 +517,15 @@ async function verify(){
  */
 app.post('/auth/device/verify', async (c) => {
   let body: any;
-  try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON' }, 400); }
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
 
-  const userCode = String(body.user_code || '').trim().toUpperCase();
+  const userCode = String(body.user_code || '')
+    .trim()
+    .toUpperCase();
   if (!userCode || userCode.length < 8) {
     return c.json({ error: 'Invalid code' }, 400);
   }
@@ -505,13 +533,16 @@ app.post('/auth/device/verify', async (c) => {
   try {
     const record = (await c.env.DB.prepare(
       `SELECT device_code, status, expires_at FROM device_codes WHERE user_code = ?`
-    ).bind(userCode).first()) as any;
+    )
+      .bind(userCode)
+      .first()) as any;
 
     if (!record) return c.json({ error: 'Invalid code' }, 404);
     if (record.status !== 'pending') return c.json({ error: 'Code already used' }, 400);
     if (new Date(record.expires_at) < new Date()) {
       await c.env.DB.prepare(`UPDATE device_codes SET status = 'expired' WHERE device_code = ?`)
-        .bind(record.device_code).run();
+        .bind(record.device_code)
+        .run();
       return c.json({ error: 'Code expired. Generate a new one.' }, 400);
     }
 
@@ -538,16 +569,22 @@ app.get('/auth/device/callback', async (c) => {
   const deviceCode = c.req.query('device_code') || state;
 
   if (!code || !deviceCode) {
-    return c.html('<html><body><h1>Authentication failed</h1><p>Missing code or state.</p></body></html>');
+    return c.html(
+      '<html><body><h1>Authentication failed</h1><p>Missing code or state.</p></body></html>'
+    );
   }
 
   try {
     const record = (await c.env.DB.prepare(
       `SELECT status, expires_at FROM device_codes WHERE device_code = ?`
-    ).bind(deviceCode).first()) as any;
+    )
+      .bind(deviceCode)
+      .first()) as any;
 
     if (!record || record.status !== 'pending' || new Date(record.expires_at) < new Date()) {
-      return c.html('<html><body><h1>Expired or invalid session</h1><p>Please generate a new code.</p></body></html>');
+      return c.html(
+        '<html><body><h1>Expired or invalid session</h1><p>Please generate a new code.</p></body></html>'
+      );
     }
 
     // Exchange code for GitHub access token
@@ -560,7 +597,9 @@ app.get('/auth/device/callback', async (c) => {
     });
     const tokenData = (await tokenRes.json()) as any;
     if (tokenData.error) {
-      return c.html(`<html><body><h1>GitHub auth failed</h1><p>${tokenData.error_description || tokenData.error}</p></body></html>`);
+      return c.html(
+        `<html><body><h1>GitHub auth failed</h1><p>${tokenData.error_description || tokenData.error}</p></body></html>`
+      );
     }
 
     const accessToken = tokenData.access_token;
@@ -580,11 +619,16 @@ app.get('/auth/device/callback', async (c) => {
        VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(github_id) DO UPDATE SET
          updated_at = excluded.updated_at`
-    ).bind(githubId, username, userData.name || username, userData.avatar_url, githubId, now, now).run();
+    )
+      .bind(githubId, username, userData.name || username, userData.avatar_url, githubId, now, now)
+      .run();
 
     // Mark device code as authorized; store github_id so /auth/device/token can find the user
-    await c.env.DB.prepare(`UPDATE device_codes SET status = 'authorized', github_id = ? WHERE device_code = ?`)
-      .bind(githubId, deviceCode).run();
+    await c.env.DB.prepare(
+      `UPDATE device_codes SET status = 'authorized', github_id = ? WHERE device_code = ?`
+    )
+      .bind(githubId, deviceCode)
+      .run();
 
     return c.html(`<html><body style="font-family:sans-serif;text-align:center;padding:60px 20px">
       <h1 style="color:#D4A85A">✓ Authorized!</h1>
@@ -603,7 +647,11 @@ app.get('/auth/device/callback', async (c) => {
  */
 app.post('/auth/device/token', async (c) => {
   let body: any;
-  try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON' }, 400); }
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON' }, 400);
+  }
 
   const deviceCode = String(body.device_code || '').trim();
   if (!deviceCode) return c.json({ error: 'device_code required' }, 400);
@@ -611,13 +659,16 @@ app.post('/auth/device/token', async (c) => {
   try {
     const record = (await c.env.DB.prepare(
       `SELECT status, github_id, expires_at FROM device_codes WHERE device_code = ?`
-    ).bind(deviceCode).first()) as any;
+    )
+      .bind(deviceCode)
+      .first()) as any;
 
     if (!record) return c.json({ error: 'Invalid device_code' }, 404);
 
     if (new Date(record.expires_at) < new Date()) {
       await c.env.DB.prepare(`UPDATE device_codes SET status = 'expired' WHERE device_code = ?`)
-        .bind(deviceCode).run();
+        .bind(deviceCode)
+        .run();
       return c.json({ error: 'expired' }, 400);
     }
 
@@ -626,9 +677,9 @@ app.post('/auth/device/token', async (c) => {
     }
 
     if (record.status === 'authorized' && record.github_id) {
-      const user = (await c.env.DB.prepare(
-        'SELECT id FROM users WHERE github_id = ?'
-      ).bind(record.github_id).first()) as any;
+      const user = (await c.env.DB.prepare('SELECT id FROM users WHERE github_id = ?')
+        .bind(record.github_id)
+        .first()) as any;
 
       if (!user) {
         return c.json({ error: 'User not found' }, 404);
@@ -636,7 +687,8 @@ app.post('/auth/device/token', async (c) => {
 
       // Mark as completed (one-time use)
       await c.env.DB.prepare(`UPDATE device_codes SET status = 'completed' WHERE device_code = ?`)
-        .bind(deviceCode).run();
+        .bind(deviceCode)
+        .run();
 
       const tokens = await mintTokenPair(c, user.id);
       return c.json({ ...tokens, token_type: 'Bearer' });
@@ -662,12 +714,19 @@ async function requireUser(c: any): Promise<AuthUser | Response> {
     return c.json({ error: 'Invalid or expired token' }, 401);
   }
 
-  const user = await c.env.DB.prepare(
+  const user = (await c.env.DB.prepare(
     'SELECT id, username, display_name, avatar_url FROM users WHERE id = ?'
-  ).bind(String(payload.sub)).first() as any;
+  )
+    .bind(String(payload.sub))
+    .first()) as any;
   if (!user) return c.json({ error: 'User not found' }, 401);
 
-  return { id: user.id, username: user.username, displayName: user.display_name, avatarUrl: user.avatar_url };
+  return {
+    id: user.id,
+    username: user.username,
+    displayName: user.display_name,
+    avatarUrl: user.avatar_url
+  };
 }
 
 function isResponse(value: unknown): value is Response {
@@ -963,7 +1022,11 @@ app.post('/api/marketplace/flag/:id', async (c) => {
   if (!targetId) return c.json({ error: 'Missing target id' }, 400);
 
   let body: any;
-  try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON body' }, 400); }
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
 
   const targetType = String(body.targetType || '').trim();
   if (targetType !== 'package' && targetType !== 'workflow') {
@@ -981,7 +1044,9 @@ app.post('/api/marketplace/flag/:id', async (c) => {
   try {
     const existing = await c.env.DB.prepare(
       'SELECT id FROM flags WHERE reporter_id = ? AND target_id = ? AND target_type = ?'
-    ).bind(user.id, targetId, targetType).first();
+    )
+      .bind(user.id, targetId, targetType)
+      .first();
     if (existing) {
       return c.json({ success: true, deduplicated: true });
     }
@@ -990,7 +1055,9 @@ app.post('/api/marketplace/flag/:id', async (c) => {
     await c.env.DB.prepare(
       `INSERT INTO flags (id, target_id, target_type, reporter_id, reason, notes, created_at)
        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
-    ).bind(id, targetId, targetType, user.id, reason, notes).run();
+    )
+      .bind(id, targetId, targetType, user.id, reason, notes)
+      .run();
 
     return c.json({ success: true });
   } catch (e) {
@@ -1109,7 +1176,11 @@ app.post('/api/community/flag/:id', async (c) => {
   if (!targetId) return c.json({ error: 'Missing target id' }, 400);
 
   let body: any;
-  try { body = await c.req.json(); } catch { return c.json({ error: 'Invalid JSON body' }, 400); }
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
 
   const targetType = String(body.targetType || '').trim();
   if (targetType !== 'discussion' && targetType !== 'reply') {
@@ -1128,7 +1199,9 @@ app.post('/api/community/flag/:id', async (c) => {
     // Dedup: if this user already flagged this target with any reason, return success without insert.
     const existing = await c.env.DB.prepare(
       'SELECT id FROM flags WHERE reporter_id = ? AND target_id = ? AND target_type = ?'
-    ).bind(user.id, targetId, targetType).first();
+    )
+      .bind(user.id, targetId, targetType)
+      .first();
     if (existing) {
       return c.json({ success: true, deduplicated: true });
     }
@@ -1137,7 +1210,9 @@ app.post('/api/community/flag/:id', async (c) => {
     await c.env.DB.prepare(
       `INSERT INTO flags (id, target_id, target_type, reporter_id, reason, notes, created_at)
        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`
-    ).bind(id, targetId, targetType, user.id, reason, notes).run();
+    )
+      .bind(id, targetId, targetType, user.id, reason, notes)
+      .run();
 
     return c.json({ success: true });
   } catch (e) {

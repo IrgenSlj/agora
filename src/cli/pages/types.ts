@@ -1,14 +1,24 @@
 import type { Styler } from '../../ui.js';
-import type { CliIo } from '../app.js';
+import type { CliIo } from '../flags.js';
 
 export type PageId = 'home' | 'marketplace' | 'community' | 'news' | 'settings';
 
 export interface KeyEvent {
   raw: string;
   key:
-    | 'up' | 'down' | 'left' | 'right'
-    | 'enter' | 'esc' | 'tab' | 'backspace' | 'space'
-    | 'pageup' | 'pagedown' | 'home' | 'end'
+    | 'up'
+    | 'down'
+    | 'left'
+    | 'right'
+    | 'enter'
+    | 'esc'
+    | 'tab'
+    | 'backspace'
+    | 'space'
+    | 'pageup'
+    | 'pagedown'
+    | 'home'
+    | 'end'
     | string;
   ctrl: boolean;
   shift: boolean;

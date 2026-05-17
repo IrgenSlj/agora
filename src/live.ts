@@ -195,15 +195,17 @@ export async function searchMarketplaceSource(
   options: SearchSourceOptions = {}
 ): Promise<SourceResult<MarketplaceItem[]>> {
   if (!shouldUseApi(options)) {
-    return offline(searchMarketplaceItems({
-      query: options.query,
-      category: options.category,
-      limit: options.limit,
-      sortBy: options.sortBy,
-      sortOrder: options.sortOrder,
-      page: options.page,
-      perPage: options.perPage
-    }));
+    return offline(
+      searchMarketplaceItems({
+        query: options.query,
+        category: options.category,
+        limit: options.limit,
+        sortBy: options.sortBy,
+        sortOrder: options.sortOrder,
+        page: options.page,
+        perPage: options.perPage
+      })
+    );
   }
 
   try {
@@ -469,7 +471,7 @@ export async function flagMarketplaceSource(
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${opts.token}` },
       body: JSON.stringify(input),
-      signal: controller.signal,
+      signal: controller.signal
     });
     if (!res.ok) throw new Error(`Failed to flag: ${res.status}`);
     const data = (await res.json()) as { success: boolean; deduplicated?: boolean };

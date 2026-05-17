@@ -20,7 +20,7 @@ const DEFAULTS: LocalPreferences = {
   username: '',
   email: '',
   bio: '',
-  lastTab: 0,
+  lastTab: 0
 };
 
 export function prefsPath(dataDir: string): string {

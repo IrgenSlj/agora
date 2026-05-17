@@ -135,15 +135,16 @@ export function applyKeyEvent(
       chars.splice(state.cursor, 0, ...Array.from(event.data));
       const newCursor = state.cursor + Array.from(event.data).length;
       const newLine = chars.join('');
-      const next = withGhost(
-        { ...state, line: newLine, cursor: newCursor, tabCycle: null },
-        opts
-      );
+      const next = withGhost({ ...state, line: newLine, cursor: newCursor, tabCycle: null }, opts);
       // Auto-complete: show slash-command completions as soon as '/' is typed
       if (newLine.startsWith('/') && opts.completer) {
         const result = opts.completer(newLine, newCursor);
         if (result.matches.length > 0) {
-          return { state: next, sideEffect: 'show-completions', completionsToShow: result.matches.slice(0, 6) };
+          return {
+            state: next,
+            sideEffect: 'show-completions',
+            completionsToShow: result.matches.slice(0, 6)
+          };
         }
       }
       return { state: next };
@@ -162,7 +163,11 @@ export function applyKeyEvent(
       if (newLine.startsWith('/') && opts.completer) {
         const result = opts.completer(newLine, Math.min(newLine.length, state.cursor - 1));
         if (result.matches.length > 0) {
-          return { state: next, sideEffect: 'show-completions', completionsToShow: result.matches.slice(0, 6) };
+          return {
+            state: next,
+            sideEffect: 'show-completions',
+            completionsToShow: result.matches.slice(0, 6)
+          };
         }
       }
       return { state: next };
@@ -522,12 +527,8 @@ export function renderPromptFrame(
     : 1;
 
   const cursorLogicalCol = promptVisible + beforeLen;
-  const cursorRow = Number.isFinite(safeWidth)
-    ? Math.floor(cursorLogicalCol / safeWidth)
-    : 0;
-  const cursorCol = Number.isFinite(safeWidth)
-    ? cursorLogicalCol % safeWidth
-    : cursorLogicalCol;
+  const cursorRow = Number.isFinite(safeWidth) ? Math.floor(cursorLogicalCol / safeWidth) : 0;
+  const cursorCol = Number.isFinite(safeWidth) ? cursorLogicalCol % safeWidth : cursorLogicalCol;
 
   const footerLines = footer ? footer.split('\n') : [];
   const footerRowsPhysical = footerLines.reduce((sum, line) => sum + wrapRows(line), 0);

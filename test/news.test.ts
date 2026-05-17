@@ -10,10 +10,10 @@ const BASE_CONFIG: NewsConfig = {
     reddit: { enabled: true, ttlMinutes: 15 },
     'github-trending': { enabled: true, ttlMinutes: 30 },
     arxiv: { enabled: false, ttlMinutes: 60 },
-    rss: { enabled: false, ttlMinutes: 60 },
+    rss: { enabled: false, ttlMinutes: 60 }
   },
   topics: ['mcp', 'ai', 'agents'],
-  weights: { recency: 1.0, engagement: 0.6, topic: 0.8 },
+  weights: { recency: 1.0, engagement: 0.6, topic: 0.8 }
 };
 
 const makeItem = (overrides: Partial<NewsItem> & { id: string }): NewsItem => ({
@@ -24,7 +24,7 @@ const makeItem = (overrides: Partial<NewsItem> & { id: string }): NewsItem => ({
   fetchedAt: new Date().toISOString(),
   engagement: 100,
   tags: [],
-  ...overrides,
+  ...overrides
 });
 
 // ── scoreItem ────────────────────────────────────────────────────────────────
@@ -103,8 +103,20 @@ describe('rankItems', () => {
   test('items sorted by score descending', () => {
     const now = new Date('2026-05-15T12:00:00Z');
     const items = [
-      makeItem({ id: 'a', tags: ['mcp'], url: 'https://example.com/a', publishedAt: '2026-05-15T11:00:00Z', engagement: 500 }),
-      makeItem({ id: 'b', tags: ['unrelated'], url: 'https://example.com/b', publishedAt: '2026-05-15T10:00:00Z', engagement: 10 }),
+      makeItem({
+        id: 'a',
+        tags: ['mcp'],
+        url: 'https://example.com/a',
+        publishedAt: '2026-05-15T11:00:00Z',
+        engagement: 500
+      }),
+      makeItem({
+        id: 'b',
+        tags: ['unrelated'],
+        url: 'https://example.com/b',
+        publishedAt: '2026-05-15T10:00:00Z',
+        engagement: 10
+      })
     ];
     const ranked = rankItems(items, BASE_CONFIG, now);
     expect(ranked).toHaveLength(2);
@@ -115,8 +127,20 @@ describe('rankItems', () => {
   test('dedup by host+slug, keeps higher score', () => {
     const now = new Date('2026-05-15T12:00:00Z');
     const items = [
-      makeItem({ id: 'a', url: 'https://example.com/story', engagement: 100, publishedAt: '2026-05-15T11:00:00Z', tags: [] }),
-      makeItem({ id: 'b', url: 'https://example.com/story', engagement: 10, publishedAt: '2026-05-15T10:00:00Z', tags: [] }),
+      makeItem({
+        id: 'a',
+        url: 'https://example.com/story',
+        engagement: 100,
+        publishedAt: '2026-05-15T11:00:00Z',
+        tags: []
+      }),
+      makeItem({
+        id: 'b',
+        url: 'https://example.com/story',
+        engagement: 10,
+        publishedAt: '2026-05-15T10:00:00Z',
+        tags: []
+      })
     ];
     const ranked = rankItems(items, BASE_CONFIG, now);
     expect(ranked).toHaveLength(1);
@@ -169,9 +193,7 @@ describe('readCache / writeCache', () => {
 
   test('writeCache + readCache round-trips', () => {
     const dir = '/tmp/agora-cache-test';
-    const items: NewsItem[] = [
-      makeItem({ id: 'test:1', title: 'Test' }),
-    ];
+    const items: NewsItem[] = [makeItem({ id: 'test:1', title: 'Test' })];
     writeCache(dir, items);
     const loaded = readCache(dir);
     expect(loaded).toHaveLength(1);

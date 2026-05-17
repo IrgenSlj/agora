@@ -5,7 +5,9 @@ import { join, resolve, sep } from 'node:path';
 import { COMMANDS } from './commands-meta.js';
 import { runInteractiveMenu } from './menu.js';
 import { runTui } from './tui.js';
-import { AGORA_VERSION, FREE_MODELS } from './app.js';
+import { AGORA_VERSION } from './app.js';
+import { FREE_MODELS } from './commands/chat.js';
+import type { CliIo } from './flags.js';
 import { detectAgoraDataDir, loadAgoraState, resolveSavedItems } from '../state.js';
 import {
   appendTranscript,
@@ -14,17 +16,11 @@ import {
   recentBashContext,
   writeSessionMeta
 } from '../transcript.js';
-import {
-  gradientText,
-  renderBanner,
-  supportsTrueColor,
-  type Styler
-} from '../ui.js';
+import { gradientText, renderBanner, supportsTrueColor, type Styler } from '../ui.js';
 import { createChatRenderer, type Verbosity } from './chat-renderer.js';
 import { readLine } from './prompter.js';
 import { completeShellLine, ghostFromHistory } from './completions.js';
 import { getMarketplaceItems } from '../marketplace.js';
-import type { CliIo } from './app.js';
 
 const SHELL_BUILTINS = new Set(['cd', 'export', 'alias', 'source', 'unset', 'umask', 'exec']);
 const MAX_BASH_BUFFER = 16 * 1024;
@@ -303,7 +299,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const motto = "Developers' CLI marketplace and community hub - type a command, bash or chat:";
     const mottoLine = gradientText(motto, { trueColor });
     const model = FREE_MODELS[0];
-    const infoLine = style.dim(`v${AGORA_VERSION} · ${model} · /terminal · /help · /menu · /search · /quit`);
+    const infoLine = style.dim(
+      `v${AGORA_VERSION} · ${model} · /terminal · /help · /menu · /search · /quit`
+    );
     const slashLine = style.orange('/home · /marketplace · /community · /news · /settings');
     process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${infoLine}\n${slashLine}\n\n`);
   }
@@ -935,7 +933,12 @@ function printHelp(style: Styler): void {
     }
   }
 
-  lines.push('', style.dim(`agora v${AGORA_VERSION} · run \`agora help <command>\` or \`/<command> --help\` for details`));
+  lines.push(
+    '',
+    style.dim(
+      `agora v${AGORA_VERSION} · run \`agora help <command>\` or \`/<command> --help\` for details`
+    )
+  );
 
   process.stdout.write(lines.join('\n') + '\n\n');
 }

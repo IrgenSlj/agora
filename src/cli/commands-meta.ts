@@ -238,7 +238,7 @@ export const COMMANDS: CommandMeta[] = [
     usage: 'agora tui',
     details:
       'Opens the keyboard-driven TUI with five pages, switched by 1-5 or Tab. ' +
-      "j/k navigates, Enter drills in, Esc backs out, ? toggles help, q quits. " +
+      'j/k navigates, Enter drills in, Esc backs out, ? toggles help, q quits. ' +
       'Pages: Home (recommendation engine), Marketplace (browse + install preview), ' +
       'Community (boards/threads/reader against fixtures until backend lands), ' +
       'News (ranked feed against fixtures until news adapters land), ' +
@@ -497,11 +497,7 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--sort', description: 'Sort order: top, new, active (default active)' },
       { flag: '--json', description: 'Output as JSON' }
     ],
-    examples: [
-      'agora community',
-      'agora community mcp',
-      'agora community agents --sort top'
-    ]
+    examples: ['agora community', 'agora community mcp', 'agora community agents --sort top']
   },
   {
     name: 'thread',
@@ -516,7 +512,8 @@ export const COMMANDS: CommandMeta[] = [
     name: 'post',
     group: 'Community',
     summary: 'Create a new community thread',
-    usage: 'agora post --board <board> --title <title> (--content <text>|--content-file <path>) [--json]',
+    usage:
+      'agora post --board <board> --title <title> (--content <text>|--content-file <path>) [--json]',
     details:
       'Posts a new thread to a community board. Requires --api-url and a token ' +
       '(via --token, AGORA_TOKEN, or `agora auth login`). ' +
@@ -538,9 +535,7 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Community',
     summary: 'Reply to a thread or another reply',
     usage: 'agora reply <id> (--content <text>|--content-file <path>) [--parent-id <id>] [--json]',
-    details:
-      'Posts a reply to an existing thread or reply. ' +
-      'Requires --api-url and a token.',
+    details: 'Posts a reply to an existing thread or reply. ' + 'Requires --api-url and a token.',
     flags: [
       { flag: '--content', description: 'Reply body as inline text' },
       { flag: '--content-file', description: 'Read body from a file' },
@@ -557,8 +552,7 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Community',
     summary: 'Upvote or downvote a thread or reply',
     usage: 'agora vote <id> --up|--down [--type discussion|reply] [--json]',
-    details:
-      'Cast a vote on a community item. Requires --api-url and a token.',
+    details: 'Cast a vote on a community item. Requires --api-url and a token.',
     flags: [
       { flag: '--up', description: 'Upvote' },
       { flag: '--down', description: 'Downvote' },
@@ -571,20 +565,21 @@ export const COMMANDS: CommandMeta[] = [
     name: 'flag',
     group: 'Community',
     summary: 'Flag a thread, reply, or marketplace item',
-    usage: 'agora flag <id> [--reason spam|harassment|undisclosed-llm|malicious|other] [--type discussion|reply|package|workflow] [--notes <text>] [--json]',
+    usage:
+      'agora flag <id> [--reason spam|harassment|undisclosed-llm|malicious|other] [--type discussion|reply|package|workflow] [--notes <text>] [--json]',
     details:
       'Flags content for moderator review. Community items require --api-url and a token. ' +
       'Marketplace items (packages/workflows) can be flagged without API auth.',
     flags: [
-      { flag: '--reason', description: 'Reason: spam, harassment, undisclosed-llm, malicious, other' },
+      {
+        flag: '--reason',
+        description: 'Reason: spam, harassment, undisclosed-llm, malicious, other'
+      },
       { flag: '--type', description: 'Target type: discussion, reply, package, workflow' },
       { flag: '--notes', description: 'Optional notes for moderators' },
       { flag: '--json', description: 'Output as JSON' }
     ],
-    examples: [
-      'agora flag t-mcp-1 --reason spam',
-      'agora flag mcp-github --reason malicious'
-    ]
+    examples: ['agora flag t-mcp-1 --reason spam', 'agora flag mcp-github --reason malicious']
   },
   {
     name: 'auth',
@@ -623,9 +618,7 @@ export const COMMANDS: CommandMeta[] = [
       'Preferences are stored locally on disk and work without an account. ' +
       'Keys: theme (dark|light|auto), verbosity (verbose|medium|quiet), ' +
       'username, email, bio.',
-    flags: [
-      { flag: '--json', description: 'Output preferences as JSON' }
-    ],
+    flags: [{ flag: '--json', description: 'Output preferences as JSON' }],
     examples: [
       'agora preferences',
       'agora preferences theme light',
@@ -646,10 +639,6 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--clear', description: 'Clear all history' },
       { flag: '--json', description: 'Output as JSON' }
     ],
-    examples: [
-      'agora history',
-      'agora history --limit 10',
-      'agora history --clear'
-    ]
+    examples: ['agora history', 'agora history --limit 10', 'agora history --clear']
   }
 ];

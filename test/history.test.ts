@@ -17,9 +17,24 @@ describe('history', () => {
 
   test('appends and loads entries in reverse order', () => {
     const dir = makeTmp();
-    appendHistory(dir, { type: 'search', query: 'mcp', timestamp: '2025-01-01T00:00:00Z', results: 5 });
-    appendHistory(dir, { type: 'chat', query: 'hello', timestamp: '2025-01-02T00:00:00Z', model: 'deepseek' });
-    appendHistory(dir, { type: 'search', query: 'tools', timestamp: '2025-01-03T00:00:00Z', results: 3 });
+    appendHistory(dir, {
+      type: 'search',
+      query: 'mcp',
+      timestamp: '2025-01-01T00:00:00Z',
+      results: 5
+    });
+    appendHistory(dir, {
+      type: 'chat',
+      query: 'hello',
+      timestamp: '2025-01-02T00:00:00Z',
+      model: 'deepseek'
+    });
+    appendHistory(dir, {
+      type: 'search',
+      query: 'tools',
+      timestamp: '2025-01-03T00:00:00Z',
+      results: 3
+    });
 
     const entries = loadHistory(dir);
     expect(entries.length).toBe(3);

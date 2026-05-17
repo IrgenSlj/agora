@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { parseArgs, runCli } from '../src/cli/app';
+import { runCli } from '../src/cli/app';
+import { parseArgs } from '../src/cli/flags';
 import type { FetchLike } from '../src/live';
 
 function createIo(
@@ -1046,7 +1047,10 @@ describe('CLI commands', () => {
     const { io, stdout } = createIo(temp);
 
     try {
-      const code = await runCli(['login', '--token', 'test-token', '--api-url', 'https://api.test', '--data-dir', dataDir], io);
+      const code = await runCli(
+        ['login', '--token', 'test-token', '--api-url', 'https://api.test', '--data-dir', dataDir],
+        io
+      );
       expect(code).toBe(0);
       expect(stdout.join('')).toContain('Stored Agora API token');
     } finally {
@@ -1060,7 +1064,18 @@ describe('CLI commands', () => {
     const setup = createIo(temp);
 
     try {
-      await runCli(['login', '--token', 'whoami-token', '--api-url', 'https://api.test', '--data-dir', dataDir], setup.io);
+      await runCli(
+        [
+          'login',
+          '--token',
+          'whoami-token',
+          '--api-url',
+          'https://api.test',
+          '--data-dir',
+          dataDir
+        ],
+        setup.io
+      );
 
       const { io, stdout } = createIo(temp);
       const code = await runCli(['whoami', '--data-dir', dataDir], io);

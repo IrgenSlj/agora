@@ -1,7 +1,10 @@
 import type { NewsItem, NewsSource } from '../types.js';
 
 export interface SourceAdapter {
-  fetch(opts: { fetcher?: (url: string, init?: RequestInit) => Promise<Response>; signal?: AbortSignal }): Promise<NewsItem[]>;
+  fetch(opts: {
+    fetcher?: (url: string, init?: RequestInit) => Promise<Response>;
+    signal?: AbortSignal;
+  }): Promise<NewsItem[]>;
 }
 
 export const hnSource: SourceAdapter = {
@@ -25,11 +28,11 @@ export const hnSource: SourceAdapter = {
         publishedAt: new Date(hit.created_at).toISOString(),
         fetchedAt: now,
         engagement: hit.points ?? 0,
-        tags: extractHnTags(hit),
+        tags: extractHnTags(hit)
       };
       return item;
     });
-  },
+  }
 };
 
 function extractHnTags(hit: any): string[] {
@@ -44,7 +47,7 @@ function extractHnTags(hit: any): string[] {
     agents: ['agent', 'agents', 'autonomous'],
     coding: ['coding', 'programming', 'software', 'developer'],
     security: ['security', 'vulnerability', 'exploit'],
-    devtools: ['devtools', 'developer-tools', 'sdk', 'api'],
+    devtools: ['devtools', 'developer-tools', 'sdk', 'api']
   };
 
   for (const [topic, keywords] of Object.entries(topicMap)) {

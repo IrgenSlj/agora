@@ -41,7 +41,7 @@ export interface FlagInput {
 const FIXTURE_BOARDS: BoardSummary[] = BOARD_IDS.map((id) => ({
   id,
   threadCount: id === 'mcp' ? 236 : id === 'agents' ? 112 : id === 'ask' ? 201 : 64,
-  newToday: id === 'mcp' ? 14 : id === 'agents' ? 8 : id === 'ask' ? 6 : 2,
+  newToday: id === 'mcp' ? 14 : id === 'agents' ? 8 : id === 'ask' ? 6 : 2
 }));
 
 const FIXTURE_THREADS: Record<string, Thread[]> = {
@@ -51,25 +51,27 @@ const FIXTURE_THREADS: Record<string, Thread[]> = {
       board: 'mcp',
       title: 'How are you composing servers?',
       author: 'ada',
-      content: 'I am stacking mcp-postgres, mcp-filesystem and a thin orchestrator. Anyone using a different pattern?',
+      content:
+        'I am stacking mcp-postgres, mcp-filesystem and a thin orchestrator. Anyone using a different pattern?',
       score: 12,
       replyCount: 7,
       flagCount: 0,
       createdAt: new Date(Date.now() - 6 * 3600000).toISOString(),
-      updatedAt: new Date(Date.now() - 2 * 3600000).toISOString(),
+      updatedAt: new Date(Date.now() - 2 * 3600000).toISOString()
     },
     {
       id: 't-mcp-2',
       board: 'mcp',
       title: 'Lifecycle hooks: keep them or drop them?',
       author: 'lin',
-      content: 'The spec is ambiguous about init/shutdown ordering when multiple servers share transports.',
+      content:
+        'The spec is ambiguous about init/shutdown ordering when multiple servers share transports.',
       score: 8,
       replyCount: 4,
       flagCount: 0,
       createdAt: new Date(Date.now() - 14 * 3600000).toISOString(),
-      updatedAt: new Date(Date.now() - 10 * 3600000).toISOString(),
-    },
+      updatedAt: new Date(Date.now() - 10 * 3600000).toISOString()
+    }
   ],
   agents: [
     {
@@ -82,9 +84,9 @@ const FIXTURE_THREADS: Record<string, Thread[]> = {
       replyCount: 12,
       flagCount: 1,
       createdAt: new Date(Date.now() - 4 * 3600000).toISOString(),
-      updatedAt: new Date(Date.now() - 1 * 3600000).toISOString(),
-    },
-  ],
+      updatedAt: new Date(Date.now() - 1 * 3600000).toISOString()
+    }
+  ]
 };
 
 const FIXTURE_REPLIES: Record<string, Reply[]> = {
@@ -96,7 +98,7 @@ const FIXTURE_REPLIES: Record<string, Reply[]> = {
       content: 'We compose at the orchestrator and keep servers single-purpose.',
       score: 4,
       flagCount: 0,
-      createdAt: new Date(Date.now() - 5 * 3600000).toISOString(),
+      createdAt: new Date(Date.now() - 5 * 3600000).toISOString()
     },
     {
       id: 'r-mcp-1-2',
@@ -106,9 +108,9 @@ const FIXTURE_REPLIES: Record<string, Reply[]> = {
       content: 'Useful, thanks. Do you use a shared schema package?',
       score: 2,
       flagCount: 0,
-      createdAt: new Date(Date.now() - 4 * 3600000).toISOString(),
-    },
-  ],
+      createdAt: new Date(Date.now() - 4 * 3600000).toISOString()
+    }
+  ]
 };
 
 export async function communityBoardsSource(
@@ -128,7 +130,7 @@ export async function communityBoardsSource(
   return {
     source: 'offline',
     data: { boards: FIXTURE_BOARDS },
-    fallbackReason: 'using fixture data',
+    fallbackReason: 'using fixture data'
   };
 }
 
@@ -155,7 +157,7 @@ export async function communityThreadsSource(
   return {
     source: 'offline',
     data: { threads, total: threads.length },
-    fallbackReason: 'using fixture data',
+    fallbackReason: 'using fixture data'
   };
 }
 
@@ -184,13 +186,13 @@ export async function communityThreadSource(
     return {
       source: 'offline',
       data: { thread: null as any, replies: [] },
-      fallbackReason: 'thread not found',
+      fallbackReason: 'thread not found'
     };
   }
 
   return {
     source: 'offline',
-    data: { thread, replies: buildReplyTree(replies) },
+    data: { thread, replies: buildReplyTree(replies) }
   };
 }
 
@@ -199,12 +201,16 @@ export async function createThreadSource(
   input: CreateThreadInput
 ): Promise<SourceResult<{ thread: Thread }>> {
   if (!opts.useApi || !opts.apiUrl || !opts.token) {
-    return { source: 'offline', data: { thread: null as any }, fallbackReason: 'API required for create' };
+    return {
+      source: 'offline',
+      data: { thread: null as any },
+      fallbackReason: 'API required for create'
+    };
   }
   const res = await fetcher(opts, `${opts.apiUrl}/api/community/threads`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${opts.token}` },
-    body: JSON.stringify(input),
+    body: JSON.stringify(input)
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'request failed' }));
@@ -220,12 +226,16 @@ export async function createReplySource(
   input: CreateReplyInput
 ): Promise<SourceResult<{ reply: Reply }>> {
   if (!opts.useApi || !opts.apiUrl || !opts.token) {
-    return { source: 'offline', data: { reply: null as any }, fallbackReason: 'API required for reply' };
+    return {
+      source: 'offline',
+      data: { reply: null as any },
+      fallbackReason: 'API required for reply'
+    };
   }
   const res = await fetcher(opts, `${opts.apiUrl}/api/community/reply/${parentId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${opts.token}` },
-    body: JSON.stringify(input),
+    body: JSON.stringify(input)
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'request failed' }));
@@ -246,7 +256,7 @@ export async function voteSource(
   const res = await fetcher(opts, `${opts.apiUrl}/api/community/vote/${targetId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${opts.token}` },
-    body: JSON.stringify(input),
+    body: JSON.stringify(input)
   });
   if (!res.ok) throw new Error(`Failed to vote: ${res.status}`);
   return { source: 'api', apiUrl: opts.apiUrl, data: { success: true } };
@@ -263,7 +273,7 @@ export async function flagSource(
   const res = await fetcher(opts, `${opts.apiUrl}/api/community/flag/${targetId}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${opts.token}` },
-    body: JSON.stringify(input),
+    body: JSON.stringify(input)
   });
   if (!res.ok) throw new Error(`Failed to flag: ${res.status}`);
   return { source: 'api', apiUrl: opts.apiUrl, data: { success: true } };
@@ -277,8 +287,10 @@ function sortThreads(threads: Thread[], sort: string): Thread[] {
     sorted.sort((a, b) => b.score - a.score);
   } else {
     sorted.sort((a, b) => {
-      const scoreA = a.score / Math.pow((Date.now() - new Date(a.createdAt).getTime()) / 3600000 + 2, 1.8);
-      const scoreB = b.score / Math.pow((Date.now() - new Date(b.createdAt).getTime()) / 3600000 + 2, 1.8);
+      const scoreA =
+        a.score / Math.pow((Date.now() - new Date(a.createdAt).getTime()) / 3600000 + 2, 1.8);
+      const scoreB =
+        b.score / Math.pow((Date.now() - new Date(b.createdAt).getTime()) / 3600000 + 2, 1.8);
       return scoreB - scoreA;
     });
   }
@@ -305,11 +317,7 @@ function buildReplyTree(replies: Reply[]): Reply[] {
   return roots;
 }
 
-async function fetcher(
-  opts: SourceOptions,
-  url: string,
-  init?: RequestInit
-): Promise<Response> {
+async function fetcher(opts: SourceOptions, url: string, init?: RequestInit): Promise<Response> {
   const f = (opts as any).fetcher ?? globalThis.fetch;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10000);

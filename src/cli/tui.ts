@@ -1,9 +1,15 @@
 import { spawn } from 'node:child_process';
 import type { Styler } from '../ui.js';
 import { createStyler, supportsTrueColor } from '../ui.js';
-import type { CliIo } from './app.js';
+import type { CliIo } from './flags.js';
 import type {
-  Page, PageId, KeyEvent, PageContext, AppState, PageAction, Hotkey,
+  Page,
+  PageId,
+  KeyEvent,
+  PageContext,
+  AppState,
+  PageAction,
+  Hotkey
 } from './pages/types.js';
 import { homePage } from './pages/home.js';
 import { marketplacePage } from './pages/marketplace.js';
@@ -23,11 +29,16 @@ const PAGE_ORDER: ReadonlyArray<PageId> = ['home', 'marketplace', 'community', '
 
 function getPage(id: PageId): Page {
   switch (id) {
-    case 'home': return homePage;
-    case 'marketplace': return marketplacePage;
-    case 'community': return communityPage;
-    case 'news': return newsPage;
-    case 'settings': return settingsPage;
+    case 'home':
+      return homePage;
+    case 'marketplace':
+      return marketplacePage;
+    case 'community':
+      return communityPage;
+    case 'news':
+      return newsPage;
+    case 'settings':
+      return settingsPage;
   }
 }
 
@@ -43,8 +54,10 @@ function parseKey(chunk: string): KeyEvent {
     else if (c === 9) key = 'tab';
     else if (c === 127 || c === 8) key = 'backspace';
     else if (c === 32) key = 'space';
-    else if (c < 32) { ctrl = true; key = String.fromCharCode(c + 96); }
-    else key = chunk;
+    else if (c < 32) {
+      ctrl = true;
+      key = String.fromCharCode(c + 96);
+    } else key = chunk;
   } else if (chunk === '\x1b[A') key = 'up';
   else if (chunk === '\x1b[B') key = 'down';
   else if (chunk === '\x1b[C') key = 'right';
@@ -60,11 +73,21 @@ function parseKey(chunk: string): KeyEvent {
 
 function superscript(n: number): string {
   const m: Record<string, string> = {
-    '0': '\u2070', '1': '\u00b9', '2': '\u00b2', '3': '\u00b3',
-    '4': '\u2074', '5': '\u2075', '6': '\u2076', '7': '\u2077',
-    '8': '\u2078', '9': '\u2079',
+    '0': '\u2070',
+    '1': '\u00b9',
+    '2': '\u00b2',
+    '3': '\u00b3',
+    '4': '\u2074',
+    '5': '\u2075',
+    '6': '\u2076',
+    '7': '\u2077',
+    '8': '\u2078',
+    '9': '\u2079'
   };
-  return String(n).split('').map((c) => m[c] ?? c).join('');
+  return String(n)
+    .split('')
+    .map((c) => m[c] ?? c)
+    .join('');
 }
 
 function fmtTime(d: Date): string {
@@ -95,8 +118,7 @@ function renderHeader(o: HeaderOpts): [string, string] {
   for (const id of PAGE_ORDER) {
     const p = getPage(id);
     const lab = narrow ? (p.navIcon ?? p.navLabel.slice(0, 1)) : p.navLabel;
-    const badgeN = id === 'news' ? app.unread.news
-      : id === 'community' ? app.unread.community : 0;
+    const badgeN = id === 'news' ? app.unread.news : id === 'community' ? app.unread.community : 0;
     const badge = badgeN > 0 ? style.accent(superscript(badgeN)) : '';
     if (id === current) tabParts.push(style.accent('[' + lab + ']') + badge);
     else tabParts.push(style.dim(lab) + badge);
@@ -112,9 +134,10 @@ function renderHeader(o: HeaderOpts): [string, string] {
   const rightCap = '\u2500\u2510';
   const inner = width - vlen(leftCap) - vlen(rightCap);
   const gap = inner - vlen(tabs) - vlen(right);
-  const middle = gap >= 0
-    ? tabs + style.dim('\u2500'.repeat(gap)) + right
-    : padRight(truncate(tabs, inner), inner);
+  const middle =
+    gap >= 0
+      ? tabs + style.dim('\u2500'.repeat(gap)) + right
+      : padRight(truncate(tabs, inner), inner);
   const row1 = leftCap + middle + rightCap;
 
   const div =
@@ -126,7 +149,12 @@ function renderHeader(o: HeaderOpts): [string, string] {
   return [row1, div];
 }
 
-function renderFooter(width: number, style: Styler, hotkeys: ReadonlyArray<Hotkey>, status: { msg: string; tone?: 'info' | 'warn' | 'error' } | null): [string, string] {
+function renderFooter(
+  width: number,
+  style: Styler,
+  hotkeys: ReadonlyArray<Hotkey>,
+  status: { msg: string; tone?: 'info' | 'warn' | 'error' } | null
+): [string, string] {
   const parts: string[] = [];
   parts.push(style.accent('Esc') + ' back');
   parts.push(style.accent('q') + ' quit');
@@ -172,7 +200,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
   const app: AppState = {
     user: { username: env.USER || env.USERNAME || 'anon' },
     cwd,
-    unread: { news: 0, community: 0 },
+    unread: { news: 0, community: 0 }
   };
 
   let current: PageId = opts.initial ?? 'home';
@@ -183,7 +211,11 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
   function setStatus(msg: string, tone?: 'info' | 'warn' | 'error'): void {
     status = { msg, tone };
     if (statusTimer) clearTimeout(statusTimer);
-    statusTimer = setTimeout(() => { status = null; statusTimer = null; paint(); }, 2000);
+    statusTimer = setTimeout(() => {
+      status = null;
+      statusTimer = null;
+      paint();
+    }, 2000);
     paint();
   }
 
@@ -232,11 +264,19 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
     while (lines.length < ctx.height) lines.push('');
     if (lines.length > ctx.height) lines.length = ctx.height;
     const [statusLine, footerLine] = renderFooter(w, style, page.hotkeys, status);
-    const rendered = [r1, r2, ...lines.map((l) => padRight(truncate(l, w), w)), statusLine, footerLine].join('\n');
+    const rendered = [
+      r1,
+      r2,
+      ...lines.map((l) => padRight(truncate(l, w), w)),
+      statusLine,
+      footerLine
+    ].join('\n');
     return rendered;
   }
 
-  function paint(): void { out.write(HOME_CUR + compose()); }
+  function paint(): void {
+    out.write(HOME_CUR + compose());
+  }
 
   if (stdin.isTTY && stdin.setRawMode) stdin.setRawMode(true);
   stdin.resume?.();
@@ -246,19 +286,27 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
   out.write(ALT_ON + CUR_HIDE + CLEAR);
 
   let resolveDone: (n: number) => void = () => undefined;
-  const done = new Promise<number>((res) => { resolveDone = res; });
+  const done = new Promise<number>((res) => {
+    resolveDone = res;
+  });
 
   async function applyAction(a: PageAction): Promise<void> {
     switch (a.kind) {
-      case 'none': return;
-      case 'quit': finish(0); return;
+      case 'none':
+        return;
+      case 'quit':
+        finish(0);
+        return;
       case 'switch':
         if (a.to !== current) {
           await getPage(current).unmount?.(ctxFor());
           current = a.to;
           await getPage(current).mount?.(ctxFor());
           status = null;
-          if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
+          if (statusTimer) {
+            clearTimeout(statusTimer);
+            statusTimer = null;
+          }
         }
         return;
       case 'open-url': {
@@ -267,8 +315,12 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
         setStatus('opened: ' + a.url);
         return;
       }
-      case 'run-shell': setStatus('would run: ' + a.cmd); return;
-      case 'status': setStatus(a.message, a.tone); return;
+      case 'run-shell':
+        setStatus('would run: ' + a.cmd);
+        return;
+      case 'status':
+        setStatus(a.message, a.tone);
+        return;
     }
   }
 
@@ -277,12 +329,28 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
       const txt = typeof chunk === 'string' ? chunk : chunk.toString('utf8');
       const ev = parseKey(txt);
 
-      if (ev.ctrl && ev.key === 'c') { finish(130); return; }
-      if (!helpOpen && ev.key === 'q') { finish(0); return; }
-      if (ev.ctrl && ev.key === 'l') { paint(); return; }
-      if (ev.key === '?') { helpOpen = !helpOpen; paint(); return; }
+      if (ev.ctrl && ev.key === 'c') {
+        finish(130);
+        return;
+      }
+      if (!helpOpen && ev.key === 'q') {
+        finish(0);
+        return;
+      }
+      if (ev.ctrl && ev.key === 'l') {
+        paint();
+        return;
+      }
+      if (ev.key === '?') {
+        helpOpen = !helpOpen;
+        paint();
+        return;
+      }
       if (helpOpen) {
-        if (ev.key === 'esc' || ev.key === '?' || ev.key === 'q') { helpOpen = false; paint(); }
+        if (ev.key === 'esc' || ev.key === '?' || ev.key === 'q') {
+          helpOpen = false;
+          paint();
+        }
         return;
       }
       if (/^[1-5]$/.test(ev.key)) {
@@ -293,13 +361,15 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
           await getPage(current).mount?.(ctxFor());
           status = null;
         }
-        paint(); return;
+        paint();
+        return;
       }
       if (ev.key === 'tab') {
         if (getPage(current).handlesTab) {
           const action = await Promise.resolve(getPage(current).handleKey(ev, ctxFor()));
           await applyAction(action);
-          paint(); return;
+          paint();
+          return;
         }
         const i = PAGE_ORDER.indexOf(current);
         const step = ev.shift ? -1 : 1;
@@ -310,12 +380,14 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
           await getPage(current).mount?.(ctxFor());
           status = null;
         }
-        paint(); return;
+        paint();
+        return;
       }
       if (ev.key === 'esc') {
         const action = await Promise.resolve(getPage(current).handleKey(ev, ctxFor()));
         await applyAction(action);
-        paint(); return;
+        paint();
+        return;
       }
       const action = await Promise.resolve(getPage(current).handleKey(ev, ctxFor()));
       await applyAction(action);
@@ -325,13 +397,19 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
       // Without this, stdin stays raw, alt screen stays active,
       // cursor stays hidden, and the shell's next readLine breaks.
       try {
-        process.stderr.write('\n\x1b[31mTUI error:\x1b[0m ' + (err instanceof Error ? err.message : String(err)) + '\n');
-      } catch { /* ignore */ }
+        process.stderr.write(
+          '\n\x1b[31mTUI error:\x1b[0m ' + (err instanceof Error ? err.message : String(err)) + '\n'
+        );
+      } catch {
+        /* ignore */
+      }
       finish(1);
     }
   };
 
-  const onResize = (): void => { paint(); };
+  const onResize = (): void => {
+    paint();
+  };
 
   stdin.on('data', onData);
   stdout.on?.('resize', onResize);
@@ -340,12 +418,23 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
   paint();
 
   function finish(code: number): void {
-    try { stdin.off('data', onData); } catch { /* ignore */ }
-    try { stdout.off?.('resize', onResize); } catch { /* ignore */ }
+    try {
+      stdin.off('data', onData);
+    } catch {
+      /* ignore */
+    }
+    try {
+      stdout.off?.('resize', onResize);
+    } catch {
+      /* ignore */
+    }
     if (stdin.isTTY && stdin.setRawMode) stdin.setRawMode(false);
     out.write(CUR_SHOW + ALT_OFF);
     stdin.pause?.();
-    if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
+    if (statusTimer) {
+      clearTimeout(statusTimer);
+      statusTimer = null;
+    }
     resolveDone(code);
   }
 

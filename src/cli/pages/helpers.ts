@@ -46,7 +46,14 @@ export function frame(lines: ReadonlyArray<string>, width: number, height: numbe
 }
 
 /** Box-drawing characters (with ASCII fallback if useAscii) */
-export function box(useAscii: boolean): { tl: string; tr: string; bl: string; br: string; h: string; v: string } {
+export function box(useAscii: boolean): {
+  tl: string;
+  tr: string;
+  bl: string;
+  br: string;
+  h: string;
+  v: string;
+} {
   if (useAscii) return { tl: '+', tr: '+', bl: '+', br: '+', h: '-', v: '|' };
   return { tl: '\u250c', tr: '\u2510', bl: '\u2514', br: '\u2518', h: '\u2500', v: '\u2502' };
 }
@@ -60,7 +67,7 @@ export function scrollbar(
   listLength: number,
   viewportHeight: number,
   cursorIndex: number,
-  style: { dim(s: string): string; accent(s: string): string },
+  style: { dim(s: string): string; accent(s: string): string }
 ): string[] {
   const bar: string[] = [];
   if (listLength <= viewportHeight) {

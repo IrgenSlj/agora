@@ -19,9 +19,9 @@ export interface SavedItem {
 
 export interface AuthState {
   accessToken: string;
-  accessExp: number;        // unix seconds
+  accessExp: number; // unix seconds
   refreshToken?: string;
-  refreshExp?: number;      // unix seconds
+  refreshExp?: number; // unix seconds
   apiUrl?: string;
   savedAt: string;
 }
@@ -137,7 +137,13 @@ export function removeItemFromState(
 
 export function setAuthState(
   state: AgoraState,
-  auth: { accessToken: string; accessExp: number; refreshToken?: string; refreshExp?: number; apiUrl?: string },
+  auth: {
+    accessToken: string;
+    accessExp: number;
+    refreshToken?: string;
+    refreshExp?: number;
+    apiUrl?: string;
+  },
   now = new Date()
 ): AgoraState {
   return normalizeState({
@@ -230,8 +236,7 @@ function normalizeAuthState(auth: unknown): AuthState | undefined {
     typeof candidate.refreshToken === 'string' && candidate.refreshToken.trim()
       ? candidate.refreshToken.trim()
       : undefined;
-  const refreshExp =
-    typeof candidate.refreshExp === 'number' ? candidate.refreshExp : undefined;
+  const refreshExp = typeof candidate.refreshExp === 'number' ? candidate.refreshExp : undefined;
   const apiUrl =
     typeof candidate.apiUrl === 'string' && candidate.apiUrl.trim()
       ? candidate.apiUrl.trim()
@@ -258,7 +263,9 @@ export function decodeJwtExp(token: string): number {
     const padded = part.replace(/-/g, '+').replace(/_/g, '/');
     const payload = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
     return Number(payload.exp) || 0;
-  } catch { return 0; }
+  } catch {
+    return 0;
+  }
 }
 
 function resolvePath(filePath: string, cwd: string, home: string): string {

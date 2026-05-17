@@ -219,4 +219,6 @@ console.log(`\nUpdated src/data.ts  (dataRefreshedAt = '${TODAY}')`);
 const updatedCount = results.filter((r) => r.status === 'updated').length;
 const skippedCount = results.filter((r) => r.status === 'skipped').length;
 const installsUpdatedCount = installsUpdates.size;
-console.log(`\nSummary: ${updatedCount} updated, ${skippedCount} skipped/not-found, ${installsUpdatedCount} installs fields updated`);
+console.log(
+  `\nSummary: ${updatedCount} updated, ${skippedCount} skipped/not-found, ${installsUpdatedCount} installs fields updated`
+);

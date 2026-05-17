@@ -1,7 +1,10 @@
 import type { NewsItem, NewsSource } from '../types.js';
 
 export interface SourceAdapter {
-  fetch(opts: { fetcher?: (url: string, init?: RequestInit) => Promise<Response>; signal?: AbortSignal }): Promise<NewsItem[]>;
+  fetch(opts: {
+    fetcher?: (url: string, init?: RequestInit) => Promise<Response>;
+    signal?: AbortSignal;
+  }): Promise<NewsItem[]>;
 }
 
 /**
@@ -21,7 +24,7 @@ export const rssSource: SourceAdapter = {
       try {
         const res = await fetcher(feedUrl, {
           signal: opts.signal,
-          headers: { 'User-Agent': 'agora-cli/0.5.0' },
+          headers: { 'User-Agent': 'agora-cli/0.5.0' }
         });
         if (!res.ok) continue;
         const xml = await res.text();
@@ -38,9 +41,7 @@ export const rssSource: SourceAdapter = {
 
           if (!title || !link) continue;
 
-          const published = pubDate
-            ? new Date(pubDate).toISOString()
-            : now;
+          const published = pubDate ? new Date(pubDate).toISOString() : now;
 
           items.push({
             id: `rss:${Buffer.from(link).toString('base64').slice(0, 32)}`,
@@ -52,7 +53,7 @@ export const rssSource: SourceAdapter = {
             fetchedAt: now,
             engagement: 0,
             tags: ['rss', ...extractRssTags(title, description || '')],
-            summary: description ? stripHtml(description).slice(0, 200) : undefined,
+            summary: description ? stripHtml(description).slice(0, 200) : undefined
           });
         }
       } catch {
@@ -61,7 +62,7 @@ export const rssSource: SourceAdapter = {
     }
 
     return items;
-  },
+  }
 };
 
 async function getConfiguredFeeds(): Promise<string[]> {
@@ -93,7 +94,7 @@ function extractRssTags(title: string, description: string): string[] {
     ai: ['ai', 'artificial intelligence'],
     llm: ['llm', 'language model', 'gpt', 'claude'],
     coding: ['coding', 'programming', 'software'],
-    devtools: ['devtools', 'developer tools'],
+    devtools: ['devtools', 'developer tools']
   };
 
   for (const [topic, keywords] of Object.entries(topicMap)) {
@@ -108,7 +109,10 @@ function extractRssTags(title: string, description: string): string[] {
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '').replace(/[\s\n]+/g, ' ').trim();
+  return html
+    .replace(/<[^>]*>/g, '')
+    .replace(/[\s\n]+/g, ' ')
+    .trim();
 }
 
 function joinHome(...parts: string[]): string {
