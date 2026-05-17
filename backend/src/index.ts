@@ -1615,6 +1615,141 @@ app.post('/api/community/flag/:id', async (c) => {
   }
 });
 
+// TODO: Switch from LIKE to FTS5 (content tables + triggers) once volume warrants it.
+app.get('/api/community/search', async (c) => {
+  const q = c.req.query('q') ?? '';
+  const boardParam = c.req.query('board') ?? '';
+  const limitParam = c.req.query('limit') ?? '';
+
+  if (q.length < 2 || q.length > 200) {
+    return c.json({ error: 'q must be between 2 and 200 characters' }, 400);
+  }
+
+  if (boardParam && !COMMUNITY_BOARD_IDS.includes(boardParam)) {
+    return c.json({ error: 'board must be one of: ' + COMMUNITY_BOARD_IDS.join(', ') }, 400);
+  }
+
+  const limit = Math.min(100, Math.max(1, parseInt(limitParam || '25', 10) || 25));
+
+  // User input is passed via .bind() — D1 prepared statement binding handles escaping.
+  const pattern = '%' + q.toLowerCase() + '%';
+
+  try {
+    const threadConditions = boardParam
+      ? 'WHERE d.hidden = 0 AND d.board = ? AND (LOWER(d.title) LIKE ? OR LOWER(d.content) LIKE ?)'
+      : 'WHERE d.hidden = 0 AND (LOWER(d.title) LIKE ? OR LOWER(d.content) LIKE ?)';
+
+    const threadBindArgs: (string | number)[] = boardParam
+      ? [boardParam, pattern, pattern]
+      : [pattern, pattern];
+
+    const { results: threadRows } = (await c.env.DB.prepare(
+      `SELECT d.id, d.board, d.title, d.content, d.author, d.score, d.flag_count, d.created_at, d.author_is_llm,
+              (SELECT COUNT(*) FROM flags f WHERE f.target_id = d.id AND f.target_type = 'discussion') AS computed_flag_count
+       FROM discussions d
+       ${threadConditions}
+       ORDER BY d.score DESC, d.created_at DESC
+       LIMIT ?`
+    )
+      .bind(...threadBindArgs, limit + 1)
+      .all()) as any;
+
+    const threadRowsArr = threadRows ?? [];
+    const truncatedThreads = threadRowsArr.length > limit;
+    const threadSlice = threadRowsArr.slice(0, limit);
+
+    const threads = threadSlice.map((r: any) => ({
+      kind: 'thread' as const,
+      id: r.id,
+      threadId: r.id,
+      board: r.board,
+      title: r.title,
+      snippet: extractSnippet(r.content, q),
+      score: r.score,
+      flagCount: r.computed_flag_count ?? r.flag_count ?? 0,
+      createdAt: r.created_at,
+      author: r.author,
+      authorIsLLM: Boolean(r.author_is_llm)
+    }));
+
+    const replyConditions = boardParam
+      ? `WHERE dr.hidden IS NULL OR dr.hidden = 0`
+      : `WHERE dr.hidden IS NULL OR dr.hidden = 0`;
+
+    const replyBoardJoin = boardParam ? 'AND d2.board = ?' : '';
+    const replyBindArgs: (string | number)[] = boardParam ? [pattern, boardParam] : [pattern];
+
+    const { results: replyRows } = (await c.env.DB.prepare(
+      `SELECT dr.id, dr.discussion_id, dr.author, dr.content, dr.score, dr.flag_count, dr.created_at, dr.author_is_llm,
+              d2.board, d2.title AS thread_title,
+              (SELECT COUNT(*) FROM flags f WHERE f.target_id = dr.id AND f.target_type = 'reply') AS computed_flag_count
+       FROM discussion_replies dr
+       JOIN discussions d2 ON d2.id = dr.discussion_id
+       WHERE LOWER(dr.content) LIKE ?
+         AND d2.hidden = 0
+         ${replyBoardJoin}
+       ORDER BY dr.score DESC, dr.created_at DESC
+       LIMIT ?`
+    )
+      .bind(...replyBindArgs, limit + 1)
+      .all()) as any;
+
+    const replyRowsArr = replyRows ?? [];
+    const truncatedReplies = replyRowsArr.length > limit;
+    const replySlice = replyRowsArr.slice(0, limit);
+
+    const replies = replySlice.map((r: any) => ({
+      kind: 'reply' as const,
+      id: r.id,
+      threadId: r.discussion_id,
+      board: r.board,
+      title: r.thread_title,
+      snippet: extractSnippet(r.content, q),
+      score: r.score,
+      flagCount: r.computed_flag_count ?? r.flag_count ?? 0,
+      createdAt: r.created_at,
+      author: r.author,
+      authorIsLLM: Boolean(r.author_is_llm)
+    }));
+
+    return c.json({
+      query: q,
+      results: { threads, replies },
+      truncated: truncatedThreads || truncatedReplies
+    });
+  } catch (e) {
+    console.error('GET /api/community/search error:', e);
+    return c.json({ error: 'Internal server error' }, 500);
+  }
+});
+
+/**
+ * Extract a ~120-char snippet from content centred on the first
+ * case-insensitive occurrence of query. Matched substring is wrapped with [].
+ * Falls back to first 120 chars when no match found in content.
+ */
+function extractSnippet(content: string, query: string): string {
+  if (!content) return '';
+  const HALF = 60;
+  const MAX = 120;
+  const lower = content.toLowerCase();
+  const lowerQ = query.toLowerCase();
+  const idx = lower.indexOf(lowerQ);
+  if (idx === -1) {
+    const plain = content.slice(0, MAX);
+    return plain.length < content.length ? plain + '…' : plain;
+  }
+  const start = Math.max(0, idx - HALF);
+  const end = Math.min(content.length, idx + query.length + HALF);
+  const before = content.slice(start, idx);
+  const matched = content.slice(idx, idx + query.length);
+  const after = content.slice(idx + query.length, end);
+  let snippet = before + '[' + matched + ']' + after;
+  if (start > 0) snippet = '…' + snippet;
+  if (end < content.length) snippet = snippet + '…';
+  return snippet;
+}
+
 app.get('/api/reviews', async (c) => {
   const itemId = c.req.query('item_id') || c.req.query('itemId');
   const itemType = c.req.query('item_type') || c.req.query('itemType');

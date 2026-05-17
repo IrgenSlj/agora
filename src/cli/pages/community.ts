@@ -1,10 +1,18 @@
 import type { Page, PageAction, PageContext } from './types.js';
-import type { BoardId, BoardSummary, Thread, Reply } from '../../community/types.js';
+import type {
+  BoardId,
+  BoardSummary,
+  Thread,
+  Reply,
+  SearchHit,
+  SearchResult
+} from '../../community/types.js';
 import type { SourceOptions } from '../../live.js';
 import {
   communityBoardsSource,
   communityThreadsSource,
   communityThreadSource,
+  communitySearchSource,
   createThreadSource,
   createReplySource,
   voteSource,
@@ -58,6 +66,16 @@ interface FlagModalState {
 
 type View = 'boards' | 'threads' | 'reader';
 
+interface SearchState {
+  active: boolean;
+  query: string;
+  cursorCol: number;
+  results: SearchResult | null;
+  loading: boolean;
+  selectedIndex: number;
+  scope: 'all' | BoardId;
+}
+
 interface ComState {
   view: View;
   boardCur: number;
@@ -73,6 +91,7 @@ interface ComState {
   userVotes: Map<string, -1 | 0 | 1>;
   statusMessage: string;
   statusTimer: ReturnType<typeof setTimeout> | null;
+  search: SearchState | null;
 }
 
 interface FlatReply {
@@ -99,8 +118,12 @@ const state: ComState = {
   expandedItems: new Set(),
   userVotes: new Map(),
   statusMessage: '',
-  statusTimer: null
+  statusTimer: null,
+  search: null
 };
+
+// Debounce timer for search API calls
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // ── Pure helpers (exported for tests) ────────────────────────────────────────
 
@@ -333,6 +356,134 @@ async function submitFlag(
   state.flagModal = null;
 }
 
+// ── Search ────────────────────────────────────────────────────────────────────
+
+function openSearch(scope: 'all' | BoardId): void {
+  state.search = {
+    active: true,
+    query: '',
+    cursorCol: 0,
+    results: null,
+    loading: false,
+    selectedIndex: 0,
+    scope
+  };
+}
+
+function closeSearch(): void {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+  }
+  state.search = null;
+}
+
+function scheduleSearch(ctx: PageContext): void {
+  if (!state.search) return;
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  const q = state.search.query;
+  if (q.length < 2) {
+    state.search.results = null;
+    state.search.loading = false;
+    return;
+  }
+  state.search.loading = true;
+  // Debounce: fire the API call only when the user pauses typing for 400ms
+  searchDebounceTimer = setTimeout(async () => {
+    searchDebounceTimer = null;
+    if (!state.search || state.search.query !== q) return;
+    try {
+      const opts = buildSourceOptions(ctx);
+      const board = state.search.scope === 'all' ? undefined : (state.search.scope as BoardId);
+      const result = await communitySearchSource(opts, q, board);
+      if (state.search && state.search.query === q) {
+        state.search.results = result.data;
+        state.search.loading = false;
+        state.search.selectedIndex = 0;
+      }
+    } catch {
+      if (state.search) state.search.loading = false;
+    }
+  }, 400);
+}
+
+function searchFlatList(results: SearchResult): SearchHit[] {
+  return [...results.results.threads, ...results.results.replies];
+}
+
+function renderSearchView(ctx: PageContext, width: number, height: number): string {
+  const { style } = ctx;
+  const s = state.search;
+  if (!s) return frame([], width, height);
+  const lines: string[] = [];
+  const rule = ' ' + style.dim('─'.repeat(Math.max(0, width - 2)));
+
+  // Header
+  const scopeLabel = 'scope: ' + s.scope;
+  const headerLeft = style.bold('─ SEARCH ─');
+  const headerRight = style.dim(scopeLabel);
+  const gap = Math.max(2, width - vlen(' ' + headerLeft) - vlen(headerRight) - 2);
+  lines.push(' ' + headerLeft + ' '.repeat(gap) + headerRight);
+
+  // Query input line
+  const cursor = style.dim('▏');
+  const queryBefore = s.query.slice(0, s.cursorCol);
+  const queryAfter = s.query.slice(s.cursorCol);
+  lines.push(' ' + style.accent('> ') + queryBefore + cursor + queryAfter);
+  lines.push(rule);
+
+  if (!s.results && !s.loading) {
+    lines.push(' ' + style.dim('type to search (min 2 chars) · Tab to change scope'));
+  } else if (s.loading) {
+    lines.push(' ' + style.dim('(loading…)'));
+  } else if (s.results) {
+    const flat = searchFlatList(s.results);
+    if (flat.length === 0) {
+      lines.push(' ' + style.dim('(no results)'));
+    } else {
+      if (s.results.truncated) {
+        lines.push(' ' + style.dim('(truncated — refine query)'));
+      }
+      const threads = s.results.results.threads;
+      const replies = s.results.results.replies;
+
+      if (threads.length > 0) {
+        lines.push(' ' + style.bold('THREADS (' + threads.length + ')'));
+        threads.forEach((hit, i) => {
+          const absIdx = i;
+          const sel = absIdx === s.selectedIndex;
+          const lead = sel ? style.accent('> ') : '  ';
+          lines.push(
+            lead + style.dim('/' + hit.board + ' · ') + (sel ? style.bold(hit.title) : hit.title)
+          );
+          lines.push('  ' + style.dim('  ') + renderSnippet(hit.snippet, style));
+        });
+      }
+
+      if (replies.length > 0) {
+        lines.push(' ' + style.bold('REPLIES (' + replies.length + ')'));
+        replies.forEach((hit, i) => {
+          const absIdx = threads.length + i;
+          const sel = absIdx === s.selectedIndex;
+          const lead = sel ? style.accent('> ') : '  ';
+          lines.push(lead + style.dim('/' + hit.board + ' · in "' + hit.title + '"'));
+          lines.push('  ' + style.dim('  ') + renderSnippet(hit.snippet, style));
+        });
+      }
+    }
+  }
+
+  return frame(lines, width, height);
+}
+
+function renderSnippet(
+  snippet: string,
+  style: { accent(s: string): string; dim(s: string): string }
+): string {
+  // Highlight [matched] text with accent style; keep surrounding text dim
+  return snippet.replace(/\[([^\]]*)\]/g, (_match, inner) => style.accent(inner));
+}
+
 // ── Render ────────────────────────────────────────────────────────────────────
 
 export const communityPage: Page = {
@@ -344,7 +495,7 @@ export const communityPage: Page = {
     { key: 'j/k', label: 'nav' },
     { key: 'Enter', label: 'open' },
     { key: 'n', label: 'new' },
-    { key: '/', label: 'filter' },
+    { key: '/', label: 'search' },
     { key: 'r', label: 'reply' },
     { key: '+/-', label: 'vote' },
     { key: 'f', label: 'flag' },
@@ -359,6 +510,11 @@ export const communityPage: Page = {
     const { style, width, height } = ctx;
     const lines: string[] = [];
     const rule = ' ' + style.dim('─'.repeat(Math.max(0, width - 2)));
+
+    // Search overlay takes priority over all other views
+    if (state.search?.active) {
+      return renderSearchView(ctx, width, height);
+    }
 
     if (boardsLoading) {
       lines.push(' ' + style.dim('Loading community…'));
@@ -567,6 +723,90 @@ export const communityPage: Page = {
     return frame(lines, width, height);
   },
   async handleKey(event, ctx): Promise<PageAction> {
+    // ── Search ──────────────────────────────────────────────────────────────
+    if (state.search?.active) {
+      const s = state.search;
+      const flat = s.results ? searchFlatList(s.results) : [];
+
+      if (event.key === 'esc') {
+        closeSearch();
+        return { kind: 'none' };
+      }
+      if (event.key === 'enter') {
+        const hit = flat[s.selectedIndex];
+        if (hit) {
+          closeSearch();
+          // Fetch thread if not in cache
+          const opts = buildSourceOptions(ctx);
+          let thread = cachedThreads.find((t) => t.id === hit.threadId);
+          if (!thread) {
+            const result = await communityThreadSource(opts, hit.threadId);
+            if (result.data.thread) {
+              cachedThreads = [...cachedThreads, result.data.thread];
+              cachedReplies = result.data.replies;
+              thread = result.data.thread;
+            }
+          } else {
+            const result = await communityThreadSource(opts, hit.threadId);
+            cachedReplies = result.data.replies;
+          }
+          if (thread) {
+            state.board = thread.board;
+            state.thread = hit.threadId;
+            state.view = 'reader';
+            const flatR = flattenReplies(cachedReplies);
+            if (hit.kind === 'reply') {
+              const idx = flatR.findIndex((r) => r.reply.id === hit.id);
+              state.replyCur = idx >= 0 ? idx : 0;
+            } else {
+              state.replyCur = 0;
+            }
+          }
+        }
+        return { kind: 'none' };
+      }
+      if (event.key === 'j' || event.key === 'down') {
+        s.selectedIndex = Math.min(flat.length - 1, s.selectedIndex + 1);
+        return { kind: 'none' };
+      }
+      if (event.key === 'k' || event.key === 'up') {
+        s.selectedIndex = Math.max(0, s.selectedIndex - 1);
+        return { kind: 'none' };
+      }
+      if (event.key === 'tab') {
+        // Cycle scope: 'all' ↔ current board
+        const currentBoard = (state.board as BoardId) ?? undefined;
+        if (s.scope === 'all' && currentBoard) {
+          s.scope = currentBoard;
+        } else {
+          s.scope = 'all';
+        }
+        scheduleSearch(ctx);
+        return { kind: 'none' };
+      }
+      if (event.key === 'backspace') {
+        if (s.cursorCol > 0) {
+          s.query = s.query.slice(0, s.cursorCol - 1) + s.query.slice(s.cursorCol);
+          s.cursorCol--;
+          scheduleSearch(ctx);
+        }
+        return { kind: 'none' };
+      }
+      if (event.key.length === 1 && !event.ctrl && !event.meta) {
+        s.query = s.query.slice(0, s.cursorCol) + event.key + s.query.slice(s.cursorCol);
+        s.cursorCol++;
+        scheduleSearch(ctx);
+        return { kind: 'none' };
+      }
+      if (event.key === 'space') {
+        s.query = s.query.slice(0, s.cursorCol) + ' ' + s.query.slice(s.cursorCol);
+        s.cursorCol++;
+        scheduleSearch(ctx);
+        return { kind: 'none' };
+      }
+      return { kind: 'none' };
+    }
+
     // ── Flag modal ──────────────────────────────────────────────────────────
     if (state.flagModal?.active) {
       const fm = state.flagModal;
@@ -743,7 +983,7 @@ export const communityPage: Page = {
           return { kind: 'none' };
         }
         case '/':
-          state.filtering = true;
+          openSearch('all');
           return { kind: 'none' };
         default:
           return { kind: 'none' };
@@ -817,9 +1057,11 @@ export const communityPage: Page = {
           if (state.composer) state.composer.board = boardId;
           return { kind: 'none' };
         }
-        case '/':
-          state.filtering = true;
+        case '/': {
+          const scope = (state.board as BoardId) ?? 'all';
+          openSearch(scope);
           return { kind: 'none' };
+        }
         default:
           return { kind: 'none' };
       }
@@ -839,6 +1081,11 @@ export const communityPage: Page = {
       case 'esc':
         state.view = 'threads';
         return { kind: 'none' };
+      case '/': {
+        const scope = (state.board as BoardId) ?? 'all';
+        openSearch(scope);
+        return { kind: 'none' };
+      }
       case 'r': {
         const threadId = state.thread ?? '';
         if (state.replyCur >= 0 && flatReplies.length > 0) {

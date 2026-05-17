@@ -62,3 +62,26 @@ export interface BoardSummary {
   threadCount: number;
   newToday: number;
 }
+
+export interface SearchHit {
+  kind: 'thread' | 'reply';
+  id: string;
+  threadId: string;
+  board: BoardId;
+  title: string;
+  snippet: string;
+  score: number;
+  flagCount: number;
+  createdAt: string;
+  author: string;
+  authorIsLLM: boolean;
+}
+
+export interface SearchResult {
+  query: string;
+  results: {
+    threads: SearchHit[];
+    replies: SearchHit[];
+  };
+  truncated: boolean;
+}

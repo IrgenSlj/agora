@@ -1,4 +1,4 @@
-import type { BoardId, BoardSummary, Thread, Reply, Flag } from './types.js';
+import type { BoardId, BoardSummary, Thread, Reply, Flag, SearchResult } from './types.js';
 import type { SourceOptions, SourceResult } from '../live.js';
 import { BOARD_IDS } from './types.js';
 
@@ -245,6 +245,36 @@ export async function createReplySource(
   }
   const data = (await res.json()) as { reply: Reply };
   return { source: 'api', apiUrl: opts.apiUrl, data };
+}
+
+export interface CommunitySearchResult extends SearchResult {}
+
+export async function communitySearchSource(
+  opts: SourceOptions,
+  query: string,
+  board?: BoardId,
+  limit?: number
+): Promise<SourceResult<CommunitySearchResult>> {
+  if (opts.useApi && opts.apiUrl) {
+    try {
+      const params = new URLSearchParams({ q: query });
+      if (board) params.set('board', board);
+      if (limit != null) params.set('limit', String(limit));
+      const url = `${opts.apiUrl}/api/community/search?${params.toString()}`;
+      const res = await fetcher(opts, url);
+      if (res.ok) {
+        const data = (await res.json()) as CommunitySearchResult;
+        return { source: 'api', apiUrl: opts.apiUrl, data };
+      }
+    } catch (e) {
+      process.stderr.write('[communitySearchSource] fetch error: ' + String(e) + '\n');
+    }
+  }
+  return {
+    source: 'offline',
+    data: { query, results: { threads: [], replies: [] }, truncated: false },
+    fallbackReason: 'using fixture data'
+  };
 }
 
 export interface VoteResult {
