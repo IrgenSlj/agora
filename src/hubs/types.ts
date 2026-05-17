@@ -8,7 +8,7 @@ export interface HubItem {
   // Mirrors Package's required fields so it can be merged into the marketplace list.
   // The 'source' field distinguishes it from curated items.
   id: string; // e.g. "gh:owner/repo"
-  source: 'github'; // future: 'hf' | 'gitlab'
+  source: 'github' | 'hf'; // future: 'gitlab'
   name: string;
   description: string;
   author: string;

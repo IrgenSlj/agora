@@ -360,7 +360,11 @@ export function buildOpenCodeConfig(
 export function getInstallKind(item: MarketplaceItem): InstallKind | 'workflow' | 'unsupported' {
   if (item.kind === 'workflow') return 'workflow';
   if (item.kind === 'package' && item.npmPackage) return 'mcp-config-patch';
-  if (item.kind === 'package' && item.repository && (item as any).source === 'github')
+  if (
+    item.kind === 'package' &&
+    item.repository &&
+    ((item as any).source === 'github' || (item as any).source === 'hf')
+  )
     return 'git-clone';
   // package-install reserved for future pypi/cargo detection — unreachable in v1
   return 'unsupported';
