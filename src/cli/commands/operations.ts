@@ -7,7 +7,7 @@ import {
   loadOpenCodeConfig,
   writeOpenCodeConfig
 } from '../../config-files.js';
-import { createInstallPlan } from '../../marketplace.js';
+import { createInstallPlan, renderPermissionLines } from '../../marketplace.js';
 import {
   findMarketplaceSource,
   publishPackageSource,
@@ -166,6 +166,10 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
 
   writeLine(io.stdout, `Install preview: ${item.name}`);
 
+  const permLines = renderPermissionLines(plan.permissions);
+  writeLine(io.stdout, '');
+  for (const line of permLines) writeLine(io.stdout, line);
+
   if (plan.kind === 'git-clone') {
     writeLine(io.stdout, `Kind: git-clone`);
     if (plan.cloneTarget) writeLine(io.stdout, `Target directory: ${plan.cloneTarget}`);
@@ -182,20 +186,6 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
     }
   } else {
     writeLine(io.stdout, `Target config: ${configPath}`);
-
-    const perms = (item as any).permissions as
-      | { fs?: string[]; net?: string[]; exec?: string[] }
-      | undefined;
-    if (perms) {
-      writeLine(io.stdout, '\nDeclared permissions:');
-      if (perms.fs?.length)
-        writeLine(io.stdout, `  ${style.dim('filesystem')} ${perms.fs.join(', ')}`);
-      if (perms.net?.length)
-        writeLine(io.stdout, `  ${style.dim('network')}   ${perms.net.join(', ')}`);
-      if (perms.exec?.length)
-        writeLine(io.stdout, `  ${style.dim('exec')}     ${perms.exec.join(', ')}`);
-    }
-
     if (plan.commands.length) {
       writeLine(io.stdout, '\nCommands:');
       writeLine(io.stdout, plan.commands.join('\n'));

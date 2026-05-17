@@ -219,6 +219,83 @@ describe('trendingTags', () => {
   });
 });
 
+// ── Permissions backfill ──────────────────────────────────────────────────────
+
+describe('samplePackages — permissions backfill', () => {
+  const byId = (id: string) => samplePackages.find((p) => p.id === id)!;
+
+  test('mcp-filesystem has fs permission', () => {
+    const pkg = byId('mcp-filesystem');
+    expect(pkg.permissions).toBeDefined();
+    expect(pkg.permissions!.fs).toEqual(['./**/*']);
+    expect(pkg.permissions!.net).toBeUndefined();
+    expect(pkg.permissions!.exec).toBeUndefined();
+  });
+
+  test('mcp-brave-search has net permissions with api.brave.com', () => {
+    const pkg = byId('mcp-brave-search');
+    expect(pkg.permissions).toBeDefined();
+    expect(pkg.permissions!.net).toContain('api.brave.com');
+    expect(pkg.permissions!.fs).toBeUndefined();
+  });
+
+  test('mcp-openai has net permissions with api.openai.com', () => {
+    const pkg = byId('mcp-openai');
+    expect(pkg.permissions).toBeDefined();
+    expect(pkg.permissions!.net).toContain('api.openai.com');
+    expect(pkg.permissions!.net).toContain('api.anthropic.com');
+    expect(pkg.permissions!.fs).toBeUndefined();
+  });
+
+  test('mcp-docker has exec and fs permissions', () => {
+    const pkg = byId('mcp-docker');
+    expect(pkg.permissions).toBeDefined();
+    expect(pkg.permissions!.exec).toContain('docker');
+    expect(pkg.permissions!.fs).toContain('./**/*');
+  });
+
+  test('mcp-firecrawl has wildcard net permission', () => {
+    const pkg = byId('mcp-firecrawl');
+    expect(pkg.permissions).toBeDefined();
+    expect(pkg.permissions!.net).toEqual(['*']);
+    expect(pkg.permissions!.exec).toBeUndefined();
+  });
+
+  test('mcp-kubernetes has exec permissions for kubectl and helm', () => {
+    const pkg = byId('mcp-kubernetes');
+    expect(pkg.permissions).toBeDefined();
+    expect(pkg.permissions!.exec).toContain('kubectl');
+    expect(pkg.permissions!.exec).toContain('helm');
+    expect(pkg.permissions!.fs).toBeUndefined();
+  });
+
+  test('mcp-obsidian has fs permissions for vault access', () => {
+    const pkg = byId('mcp-obsidian');
+    expect(pkg.permissions).toBeDefined();
+    expect(pkg.permissions!.fs).toBeDefined();
+    expect(pkg.permissions!.fs!.some((p) => p.includes('.obsidian'))).toBe(true);
+    expect(pkg.permissions!.net).toBeUndefined();
+  });
+
+  test('permissions shape is valid — all values are string arrays', () => {
+    for (const pkg of samplePackages) {
+      if (!pkg.permissions) continue;
+      if (pkg.permissions.fs !== undefined) {
+        expect(Array.isArray(pkg.permissions.fs)).toBe(true);
+        for (const v of pkg.permissions.fs) expect(typeof v).toBe('string');
+      }
+      if (pkg.permissions.net !== undefined) {
+        expect(Array.isArray(pkg.permissions.net)).toBe(true);
+        for (const v of pkg.permissions.net) expect(typeof v).toBe('string');
+      }
+      if (pkg.permissions.exec !== undefined) {
+        expect(Array.isArray(pkg.permissions.exec)).toBe(true);
+        for (const v of pkg.permissions.exec) expect(typeof v).toBe('string');
+      }
+    }
+  });
+});
+
 // ── Network-gated test — only runs when AGORA_NETWORK_TESTS=1 ──────────────
 describe('samplePackages — npm registry reachability (network-gated)', () => {
   test.if(!!process.env.AGORA_NETWORK_TESTS)(

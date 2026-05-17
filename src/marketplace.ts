@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import type { Package, Workflow, Discussion, Tutorial } from './types.js';
+import type { Package, Permissions, Workflow, Discussion, Tutorial } from './types.js';
 import {
   samplePackages,
   sampleWorkflows,
@@ -59,6 +59,17 @@ export interface InstallPlan {
   notes: string[];
   cloneTarget?: string;
   postInstallHint?: string;
+  permissions?: Permissions;
+}
+
+export function renderPermissionLines(perms: Permissions | undefined): string[] {
+  if (!perms) return ['Permissions  none declared'];
+  const rows: string[] = [];
+  if (perms.fs?.length) rows.push(`  fs    ${perms.fs.join(', ')}`);
+  if (perms.net?.length) rows.push(`  net   ${perms.net.join(', ')}`);
+  if (perms.exec?.length) rows.push(`  exec  ${perms.exec.join(', ')}`);
+  if (rows.length === 0) return ['Permissions  none declared'];
+  return ['Permissions', ...rows];
 }
 
 const CONFIG_SCHEMA = 'https://opencode.ai/config.json';
@@ -245,6 +256,8 @@ export function createInstallPlan(
 ): InstallPlan {
   const installKind = getInstallKind(item);
 
+  const itemPerms = item.kind === 'package' ? item.permissions : undefined;
+
   if (installKind === 'unsupported') {
     return {
       item,
@@ -253,7 +266,8 @@ export function createInstallPlan(
       reason: `${item.name} does not expose an install target yet`,
       config: normalizeConfig(existingConfig),
       commands: [],
-      notes: ['This item can be browsed, but Agora cannot install it automatically yet.']
+      notes: ['This item can be browsed, but Agora cannot install it automatically yet.'],
+      permissions: itemPerms
     };
   }
 
@@ -278,7 +292,8 @@ export function createInstallPlan(
       commands: [cloneCommand],
       notes,
       cloneTarget,
-      postInstallHint: opts?.aiInstallHint
+      postInstallHint: opts?.aiInstallHint,
+      permissions: itemPerms
     };
   }
 
@@ -290,7 +305,8 @@ export function createInstallPlan(
       installable: true,
       config: normalizeConfig(existingConfig),
       commands,
-      notes: ['Package will be installed via the appropriate package manager.']
+      notes: ['Package will be installed via the appropriate package manager.'],
+      permissions: itemPerms
     };
   }
 
@@ -313,7 +329,8 @@ export function createInstallPlan(
     installable: true,
     config,
     commands,
-    notes
+    notes,
+    permissions: itemPerms
   };
 }
 

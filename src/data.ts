@@ -18,7 +18,8 @@ export const samplePackages: Package[] = [
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-filesystem',
     createdAt: '2024-11-21',
-    pricing: { kind: 'free' as const }
+    pricing: { kind: 'free' as const },
+    permissions: { fs: ['./**/*'] }
   },
   {
     id: 'mcp-everything',
@@ -162,7 +163,8 @@ export const samplePackages: Package[] = [
     repository: 'https://github.com/openai/openai-mcp-server',
     npmPackage: 'openai-mcp-server',
     createdAt: '2025-01-15',
-    pricing: { kind: 'free' as const }
+    pricing: { kind: 'free' as const },
+    permissions: { net: ['api.openai.com', 'api.anthropic.com'] }
   },
   {
     id: 'mcp-anthropic',
@@ -267,7 +269,8 @@ export const samplePackages: Package[] = [
     repository: 'https://github.com/modelcontextprotocol/servers',
     npmPackage: '@modelcontextprotocol/server-brave-search',
     createdAt: '2024-11-21',
-    pricing: { kind: 'free' as const }
+    pricing: { kind: 'free' as const },
+    permissions: { net: ['api.brave.com', 'api.duckduckgo.com', 'serpapi.com'] }
   },
   {
     id: 'mcp-tavily',
@@ -327,7 +330,8 @@ export const samplePackages: Package[] = [
     repository: 'https://github.com/firecrawl/firecrawl-mcp-server',
     npmPackage: 'firecrawl-mcp',
     createdAt: '2025-02-21',
-    pricing: { kind: 'free' as const }
+    pricing: { kind: 'free' as const },
+    permissions: { net: ['*'] }
   },
   {
     id: 'mcp-google-maps',
@@ -470,7 +474,8 @@ export const samplePackages: Package[] = [
     repository: 'https://github.com/obsidian-mcp/obsidian-mcp-server',
     npmPackage: 'obsidian-mcp-server',
     createdAt: '2025-01-25',
-    pricing: { kind: 'free' as const }
+    pricing: { kind: 'free' as const },
+    permissions: { fs: ['~/.obsidian/**/*', './**/*.md'] }
   },
   {
     id: 'mcp-confluence',
@@ -694,7 +699,8 @@ export const samplePackages: Package[] = [
     repository: 'https://github.com/docker-labs/mcp-docker-server',
     npmPackage: 'mcp-docker-server',
     createdAt: '2025-01-20',
-    pricing: { kind: 'free' as const }
+    pricing: { kind: 'free' as const },
+    permissions: { exec: ['docker'], fs: ['./**/*'] }
   },
   {
     id: 'mcp-sqlite',
@@ -799,7 +805,8 @@ export const samplePackages: Package[] = [
     repository: 'https://github.com/Flux159/mcp-server-kubernetes',
     npmPackage: 'mcp-server-kubernetes',
     createdAt: '2024-12-10',
-    pricing: { kind: 'free' as const }
+    pricing: { kind: 'free' as const },
+    permissions: { exec: ['kubectl', 'helm'] }
   },
   {
     id: 'mcp-heroku',

@@ -5,6 +5,7 @@ import {
   searchMarketplaceItems,
   similarItems,
   createInstallPlan,
+  renderPermissionLines,
   type MarketplaceItem,
   type InstallPlan
 } from '../../marketplace.js';
@@ -130,6 +131,19 @@ export const marketplacePage: Page = {
         if (plan.notes.length) {
           lines.push('');
           for (const note of plan.notes) lines.push(' ' + style.dim(note));
+        }
+      }
+      lines.push('');
+      const permLines = renderPermissionLines(plan.permissions);
+      if (permLines.length === 1) {
+        lines.push(' ' + style.dim(permLines[0]));
+      } else {
+        lines.push(' ' + style.dim(permLines[0]));
+        for (const row of permLines.slice(1)) {
+          const spaceIdx = row.indexOf(' ', 2);
+          const label = row.slice(2, spaceIdx);
+          const value = row.slice(spaceIdx + 1);
+          lines.push('   ' + style.dim(label) + '  ' + value);
         }
       }
       if (state.installStatus) {
@@ -287,7 +301,12 @@ export const marketplacePage: Page = {
           ? '  ' + style.accent(fmtCount(it.stars).padStart(5)) + style.dim(' ★')
           : '');
       const nameCell = selected ? style.bold(it.name) : it.name;
-      const left = ' ' + lead + badge + nameCell;
+      const perms = it.kind === 'package' ? it.permissions : undefined;
+      const permCats = perms
+        ? (['fs', 'net', 'exec'] as const).filter((k) => perms[k]?.length).join(' ')
+        : '';
+      const permSuffix = permCats ? ' ' + style.dim('[' + permCats + ']') : '';
+      const left = ' ' + lead + badge + nameCell + permSuffix;
       const room = width - vlen(left) - vlen(stats) - 2;
       const desc = style.dim((it.description ?? '').slice(0, Math.max(0, room - 2)));
       const pad = ' '.repeat(Math.max(1, room - vlen(desc) - 1));

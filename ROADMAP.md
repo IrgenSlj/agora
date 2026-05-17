@@ -110,8 +110,12 @@ Make the existing marketplace the strongest part of the app.
   description + install hint), cached on disk keyed by `repo@sha`.
 - **`agora flag <id>`** for marketplace items — ✓ **shipped** (204e7f5). Wired to the same
   `flags` table on the backend (2d4ab18) with CLI in `src/cli/app.ts` `commandFlag`.
-- **Permission manifests** — **pending**. Add `permissions: { fs?, net?, exec? }` to the
-  `Package` type, display on `install` as an app-store-style prompt.
+- **Permission manifests** — ✓ **display scaffold shipped**. `Permissions`
+  type carried through `InstallPlan`; TUI install-preview + CLI dry-run
+  render `fs / net / exec` lines via shared `renderPermissionLines`
+  helper; 7 curated entries backfilled with realistic manifests; list-row
+  badge `[fs net exec]` flags non-empty manifests. Install confirm is NOT
+  yet gated on permissions — that's the Phase 4 trust prompt.
 - **Automated publish scan** — **pending**. Backend pre-publish check.
 - **Live npm download counts** — ✓ **shipped** (97ffd12). `scripts/refresh-data.ts` hits
   `api.npmjs.org/downloads/point/last-week/<pkg>` for every npm-backed entry.
@@ -175,10 +179,12 @@ and shippable on its own; no ordering constraint.
   `enrichHfItem` in `src/hubs/enrichment.ts` mirror the GitHub flow; cache
   key is `hf:<repoId>@<lastModified>`, falls back `models → datasets → spaces`
   on 404. Wired into the marketplace TUI for HF detail views.
-- **Reputation calculation** — **pending**. Backend job that computes
-  `account_age + log(net_votes)` per user nightly, written to a `users.reputation`
-  column. Displayed on `agora profile`. Does NOT gate participation per the
-  guidelines; affects sort weight only on `top-week` and `active`.
+- **Reputation calculation** — ✓ **shipped**. `users.reputation REAL NOT
+  NULL DEFAULT 0` column; `computeReputation(ageDays, netVotes) =
+  min(ageDays, 365) + log10(max(1, netVotes+1)) * 100`; admin-only
+  `POST /api/admin/reputation/recompute` and `agora admin recompute`.
+  Returned by `/api/users/:username` and rendered on `agora profile`.
+  Sort-weight integration on `top-week` / `active` is the follow-up.
 - **Kill-switch operator UI** — ✓ **shipped**. `agora admin hide <id>
   --reason …` writes to `kill_switch_log` and flips `hidden = 1`; `agora
   admin log` lists recent audit entries. Backend gates on

@@ -16,6 +16,7 @@ import {
   getTrendingItems,
   getTutorials,
   findTutorial,
+  renderPermissionLines,
   searchMarketplaceItems,
   similarItems,
   type MarketplaceItem,
@@ -625,6 +626,102 @@ describe('getMarketplaceItems — AGORA_LIVE_HUBS=1', () => {
 
     const items = getMarketplaceItems();
     expect(items.map((i) => i.id)).not.toContain('gh:test/should-not-appear');
+  });
+});
+
+// ── renderPermissionLines ────────────────────────────────────────────────────
+
+describe('renderPermissionLines', () => {
+  test('undefined permissions → single "none declared" line', () => {
+    const lines = renderPermissionLines(undefined);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('none declared');
+  });
+
+  test('empty permissions object → single "none declared" line', () => {
+    const lines = renderPermissionLines({});
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('none declared');
+  });
+
+  test('all-empty arrays → single "none declared" line', () => {
+    const lines = renderPermissionLines({ fs: [], net: [], exec: [] });
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('none declared');
+  });
+
+  test('fs only → header line + fs row', () => {
+    const lines = renderPermissionLines({ fs: ['./**/*'] });
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toBe('Permissions');
+    expect(lines[1]).toContain('fs');
+    expect(lines[1]).toContain('./**/*');
+  });
+
+  test('net only → header line + net row', () => {
+    const lines = renderPermissionLines({ net: ['api.openai.com'] });
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toBe('Permissions');
+    expect(lines[1]).toContain('net');
+    expect(lines[1]).toContain('api.openai.com');
+  });
+
+  test('exec only → header line + exec row', () => {
+    const lines = renderPermissionLines({ exec: ['bash', 'zsh'] });
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toBe('Permissions');
+    expect(lines[1]).toContain('exec');
+    expect(lines[1]).toContain('bash');
+  });
+
+  test('full permissions → header + 3 rows', () => {
+    const lines = renderPermissionLines({ fs: ['./**/*'], net: ['api.openai.com'], exec: ['node'] });
+    expect(lines).toHaveLength(4);
+    expect(lines[0]).toBe('Permissions');
+    expect(lines[1]).toContain('fs');
+    expect(lines[2]).toContain('net');
+    expect(lines[3]).toContain('exec');
+  });
+
+  test('multiple values are joined with ", "', () => {
+    const lines = renderPermissionLines({ net: ['api.openai.com', 'api.anthropic.com'] });
+    expect(lines[1]).toContain('api.openai.com, api.anthropic.com');
+  });
+});
+
+// ── createInstallPlan permissions passthrough ─────────────────────────────────
+
+describe('createInstallPlan — permissions', () => {
+  test('plan carries permissions from item', () => {
+    const item = findMarketplaceItem('mcp-filesystem') as PackageMarketplaceItem;
+    expect(item).not.toBeNull();
+    const plan = createInstallPlan(item);
+    expect(plan.permissions).toBeDefined();
+    expect(plan.permissions!.fs).toEqual(['./**/*']);
+  });
+
+  test('plan permissions is undefined when item has none', () => {
+    const item = findMarketplaceItem('mcp-github') as PackageMarketplaceItem;
+    expect(item).not.toBeNull();
+    const plan = createInstallPlan(item);
+    expect(plan.permissions).toBeUndefined();
+  });
+
+  test('unsupported plan still carries permissions', () => {
+    const promptPkg = samplePackages.find((p) => p.category === 'prompt' && !p.npmPackage);
+    if (!promptPkg) return;
+    const item: PackageMarketplaceItem = { ...promptPkg, kind: 'package' };
+    const plan = createInstallPlan(item);
+    expect(plan.kind).toBe('unsupported');
+    expect(plan.permissions).toBeUndefined();
+  });
+
+  test('net permissions are carried on mcp-openai plan', () => {
+    const item = findMarketplaceItem('mcp-openai') as PackageMarketplaceItem;
+    expect(item).not.toBeNull();
+    const plan = createInstallPlan(item);
+    expect(plan.permissions).toBeDefined();
+    expect(plan.permissions!.net).toContain('api.openai.com');
   });
 });
 

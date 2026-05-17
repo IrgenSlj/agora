@@ -114,6 +114,41 @@ No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
   `test/community/admin.test.ts` cover the happy path, 403 surfacing,
   and the log renderer.
 
+### Added — reputation calculation
+
+- **`users.reputation REAL NOT NULL DEFAULT 0`** column on the backend.
+  Migration comment in `backend/schema.sql` for existing D1 instances.
+- **`computeReputation(accountAgeDays, netVotes)`** in
+  `backend/src/index.ts` — `min(ageDays, 365) + log10(max(1, netVotes+1)) * 100`,
+  rounded to one decimal. Exported and unit-tested
+  (`test/community/reputation.test.ts`, 5 boundary cases).
+- **`POST /api/admin/reputation/recompute`** (admin-only via
+  `requireAdmin`). Sums signed votes across each user's discussions +
+  replies in a single UNION-ALL query, then `DB.batch()`-updates the
+  `reputation` column. Returns `{ recomputed, durationMs }`.
+- **`/api/users/:username`** now includes `reputation` in the response.
+- **`agora admin recompute`** subcommand and `adminRecomputeSource`
+  helper. `formatProfileDetail` renders a `Reputation` line.
+- Per the guidelines, reputation does NOT gate participation; it's a
+  display field today and will weight the `top-week` / `active`
+  community sort in a follow-up.
+
+### Added — permission manifests (display scaffold)
+
+- **`InstallPlan.permissions`** carried through `createInstallPlan` from
+  the existing `Package.permissions` field (`src/marketplace.ts`).
+- **`renderPermissionLines(perms)`** shared helper renders
+  `fs / net / exec` rows (or a `none declared` line when absent), used
+  by both the TUI install-preview and the CLI install dry-run.
+- **TUI list-row badge** `[fs net exec]` (only present categories) on
+  any item with a non-empty manifest — gives the dangerous-side
+  discoverability without clutter.
+- **Catalog backfill** on 7 representative entries: `mcp-filesystem`,
+  `mcp-openai`, `mcp-brave-search`, `mcp-firecrawl`, `mcp-docker`,
+  `mcp-kubernetes`, `mcp-obsidian`.
+- Install confirm is NOT gated on permissions yet — that's Phase 4
+  trust work. This change is declaration + display only.
+
 ### Added — TUI page UX
 
 - **Marketplace**: `[gh]` / `[hf]` / `[c]` source badge on every row,
