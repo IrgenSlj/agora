@@ -248,15 +248,25 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'config',
     group: 'Setup',
-    summary: 'Inspect or validate your OpenCode configuration',
-    usage: 'agora config doctor [--config path] [--json]',
+    summary: 'Inspect, validate, diff, or fix your OpenCode configuration',
+    usage:
+      'agora config doctor [--fix] [--config path] [--json]\n' +
+      '  agora config diff <path1> <path2> [--json]',
     details:
-      'Runs a health-check on opencode.json: reports path, validity, MCP server count, and registered plugins.',
+      'Doctor runs a health-check on opencode.json: reports path, validity, MCP server count, and plugins. ' +
+      'Add --fix to auto-heal common issues (missing $schema, duplicate plugins, empty MCP entries). ' +
+      'Diff compares two config files side by side, showing MCP and plugin deltas.',
     flags: [
+      { flag: '--fix', description: 'Auto-heal common config issues' },
       { flag: '--config', description: 'Explicit path to opencode.json' },
       { flag: '--json', description: 'Output report as JSON' }
     ],
-    examples: ['agora config doctor', 'agora config doctor --config ./opencode.json --json']
+    examples: [
+      'agora config doctor',
+      'agora config doctor --config ./opencode.json --json',
+      'agora config doctor --fix',
+      'agora config diff opencode.json ~/.config/opencode/opencode.json'
+    ]
   },
 
   // Library
@@ -666,11 +676,54 @@ export const COMMANDS: CommandMeta[] = [
       'Opens an interactive REPL that dispatches between bash and AI chat. ' +
       'Commands found on PATH run as bash; questions and everything else go to AI. ' +
       'Special prefixes: !<cmd> force bash, ?<msg> force chat. ' +
-      'Type /help to see all meta commands. History is persisted across sessions.',
+      'Type /help to see all meta commands. History is persisted across sessions. ' +
+      'Shell meta-commands: /env to view or set tracked environment variables.',
     flags: [
       { flag: '--verbose', description: 'Detailed AI responses' },
       { flag: '--quiet', description: 'Minimal AI responses' }
     ],
     examples: ['agora shell']
+  },
+  {
+    name: 'export',
+    group: 'Marketplace',
+    summary: 'Export marketplace data in various formats',
+    usage: 'agora export [query] [--category all|mcp|prompt|workflow] [--format json|csv|markdown|table] [--limit N] [--api]',
+    details:
+      'Exports all marketplace items matching the optional query and category filters. ' +
+      'Use --format to choose the output format. ' +
+      'Add --api to query the live Agora API instead of the bundled offline data.',
+    flags: [
+      { flag: '--format, -f', description: 'Output format: json (default), csv, markdown, table' },
+      { flag: '--category, -c', description: 'Filter by category: all, mcp, prompt, workflow' },
+      { flag: '--limit, -n', description: 'Maximum items to export' },
+      { flag: '--api', description: 'Query the live Agora API' },
+      { flag: '--json', description: 'Alias for --format json' }
+    ],
+    examples: [
+      'agora export',
+      'agora export --format csv',
+      'agora export --format markdown',
+      'agora export --category mcp --limit 20'
+    ]
+  },
+  {
+    name: 'watch',
+    group: 'Marketplace',
+    summary: 'Repeat a command at a regular interval (like UNIX watch)',
+    usage: 'agora watch <interval> <command...> [--count N] [--once]',
+    details:
+      'Repeatedly runs an agora command at the given interval in seconds. ' +
+      'Clears the screen between runs. Use --count to limit the number of iterations. ' +
+      'Example: agora watch 5 agora trending watches trending every 5 seconds.',
+    flags: [
+      { flag: '--count, -n', description: 'Stop after N iterations' },
+      { flag: '--once', description: 'Run once and exit' }
+    ],
+    examples: [
+      'agora watch 5 agora trending',
+      'agora watch 10 agora search filesystem',
+      'agora watch 30 agora news --count 3'
+    ]
   }
 ];

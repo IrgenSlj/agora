@@ -367,6 +367,89 @@ Or run \`agora install ${item.id} --write\` in your terminal to do both automati
         }
       }),
 
+      agora_config: tool({
+        description: 'Check your OpenCode config health, optionally auto-fix issues',
+        args: {
+          fix: tool.schema
+            .boolean()
+            .optional()
+            .describe('Auto-heal common issues (missing $schema, duplicate plugins, empty MCP entries)'),
+          configPath: tool.schema
+            .string()
+            .optional()
+            .describe('Explicit path to opencode.json (auto-detected if not set)')
+        },
+        async execute(args) {
+          const { detectOpenCodeConfigPath, doctorOpenCodeConfig, loadOpenCodeConfig, writeOpenCodeConfig } = await import('./config-files.js');
+          const configPath = detectOpenCodeConfigPath({
+            explicitPath: args.configPath || process.env.OPENCODE_CONFIG,
+            cwd: process.cwd(),
+            env: process.env
+          });
+          let report = doctorOpenCodeConfig(configPath);
+
+          if (args.fix) {
+            const loaded = loadOpenCodeConfig(configPath);
+            const fixes: string[] = [];
+            let changed = false;
+            if (!loaded.config.$schema) {
+              loaded.config.$schema = 'https://opencode.ai/config.json';
+              fixes.push('Added missing $schema');
+              changed = true;
+            }
+            if (loaded.config.plugin) {
+              const deduped = [...new Set(loaded.config.plugin)];
+              if (deduped.length !== loaded.config.plugin.length) {
+                loaded.config.plugin = deduped;
+                fixes.push('Removed duplicate plugins');
+                changed = true;
+              }
+            }
+            if (loaded.config.mcp) {
+              for (const [key, entry] of Object.entries(loaded.config.mcp)) {
+                if (!entry.command || !entry.command.length) {
+                  delete loaded.config.mcp[key];
+                  fixes.push(`Removed empty MCP entry "${key}"`);
+                  changed = true;
+                }
+              }
+            }
+            if (changed) {
+              writeOpenCodeConfig(configPath, loaded.config);
+              report = doctorOpenCodeConfig(configPath);
+            }
+            return `## Config Health Report\n\n**Path**: ${report.path}\n**Status**: ${report.valid ? '✅ Valid' : '⚠️ Issues'}${report.error ? `\n**Error**: ${report.error}` : ''}\n**MCP Servers**: ${report.mcpServers}\n**Plugins**: ${report.plugins}\n**Packages**: ${report.packages.length ? report.packages.join(', ') : '(none)'}${fixes.length ? `\n\n**Auto-fixes applied**:\n${fixes.map((f) => `- ${f}`).join('\n')}` : ''}\n\nRun \`agora config doctor --fix\` in your terminal for a more detailed output.`;
+          }
+
+          return `## Config Health Report\n\n**Path**: ${report.path}\n**Status**: ${report.valid ? '✅ Valid' : '⚠️ Issues'}${report.error ? `\n**Error**: ${report.error}` : ''}\n**MCP Servers**: ${report.mcpServers}\n**Plugins**: ${report.plugins}\n**Packages**: ${report.packages.length ? report.packages.join(', ') : '(none)'}\n\nRun \`agora config doctor --fix\` in your terminal to auto-heal common issues.`;
+        }
+      }),
+
+      agora_news: tool({
+        description: 'Get the latest tech news from HN, Reddit, GitHub, and arXiv',
+        args: {
+          query: tool.schema.string().optional().describe('Search query to filter news'),
+          source: tool.schema.string().optional().describe('Source filter: hn, reddit, gh, arxiv'),
+          limit: tool.schema.number().optional().describe('Number of results (default 10)'),
+          refresh: tool.schema.boolean().optional().describe('Force re-fetch all sources')
+        },
+        async execute(args) {
+          const { execSync } = await import('node:child_process');
+          const agoraFlags = [
+            args.query ? `"${args.query}"` : '',
+            args.source ? `--source ${args.source}` : '',
+            args.limit ? `--limit ${args.limit}` : '',
+            args.refresh ? '--refresh' : ''
+          ].filter(Boolean).join(' ');
+          try {
+            const out = execSync(`agora news ${agoraFlags}`, { encoding: 'utf8', timeout: 30000 });
+            return out || 'No news found.';
+          } catch (e: any) {
+            return `Failed to fetch news: ${e.message || 'unknown error'}. Try running \`agora news\` directly in your terminal.`;
+          }
+        }
+      }),
+
       agora_info: tool({
         description: 'Show information about Agora plugin',
         args: {},
@@ -383,6 +466,8 @@ Type \`/agora <request>\` in OpenCode and it routes to the right tool:
 - \`/agora install <id>\` - Install steps / config for a package
 - \`/agora tutorial <id> [step]\` - Interactive tutorials
 - \`/agora chat <message>\` - Free AI chat via opencode run
+- \`/agora config\` - Check OpenCode config health (with optional --fix)
+- \`/agora news\` - Latest tech news from HN, Reddit, GitHub, arXiv
 - \`/agora info\` - This help
 
 The \`/agora\` slash command is installed by \`agora init\` (or copy
@@ -391,8 +476,10 @@ The \`/agora\` slash command is installed by \`agora init\` (or copy
 
 **CLI-only features** (not plugin tools):
 - \`agora mcp\` — Run an MCP server exposing marketplace tools
+- \`agora shell\` — Interactive bash+chat hybrid shell
 - \`agora review\`, \`agora discuss\`, \`agora profile\`, \`agora publish\`
 - \`agora init\`, \`agora use\`, \`agora config doctor\`
+- \`agora export\`, \`agora watch\`, \`agora completions\`
 
 Community features need a connected backend (\`AGORA_API_URL\` + token).
 

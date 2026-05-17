@@ -14,6 +14,8 @@ import * as learn from './commands/learn.js';
 import * as chatModule from './commands/chat.js';
 import * as initModule from './commands/init.js';
 import * as operations from './commands/operations.js';
+import * as exportModule from './commands/export.js';
+import * as watchModule from './commands/watch.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -92,6 +94,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       preferences: operations.commandPreferences,
       history: operations.commandHistory,
       config: operations.commandConfig,
+      diff: (p, io2, style2) =>
+        operations.commandConfig({ ...p, args: ['diff', ...p.args], command: 'config' }, io2, style2),
+      export: exportModule.commandExport,
+      watch: watchModule.commandWatch,
       auth: operations.commandAuth,
       login: (p, io2, style2) =>
         operations.commandAuth({ ...p, args: ['login', ...p.args], command: 'auth' }, io2, style2),

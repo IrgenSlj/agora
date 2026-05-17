@@ -591,6 +591,56 @@ export const commandHistory: CommandHandler = async (parsed, io, style) => {
 
 export const commandConfig: CommandHandler = async (parsed, io, style) => {
   const subcommand = parsed.args[0] || 'doctor';
+  const doFix = Boolean(parsed.flags.fix);
+
+  if (subcommand === 'diff') {
+    const paths = parsed.args.slice(1);
+    if (paths.length < 2) {
+      return usageError(io, 'config diff requires two paths.\nUsage: agora config diff <path1> <path2>');
+    }
+    const [loaded1, loaded2] = await Promise.all([
+      Promise.resolve(loadOpenCodeConfig(paths[0])),
+      Promise.resolve(loadOpenCodeConfig(paths[1]))
+    ]);
+
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { path1: loaded1, path2: loaded2 });
+      return 0;
+    }
+
+    const diffLines: string[] = [];
+    const c1 = loaded1.config;
+    const c2 = loaded2.config;
+
+    diffLines.push(style.accent('Config diff'));
+    diffLines.push(`${style.dim(paths[0])} vs ${style.dim(paths[1])}`);
+    diffLines.push('');
+
+    if (c1.$schema !== c2.$schema) {
+      diffLines.push(`  $schema: ${style.dim(c1.$schema || '(none)')} → ${style.accent(c2.$schema || '(none)')}`);
+    }
+
+    const mcpKeys1 = Object.keys(c1.mcp || {});
+    const mcpKeys2 = Object.keys(c2.mcp || {});
+    const mcpAdded = mcpKeys2.filter((k) => !mcpKeys1.includes(k));
+    const mcpRemoved = mcpKeys1.filter((k) => !mcpKeys2.includes(k));
+    if (mcpRemoved.length > 0) diffLines.push(`  MCP removed: ${style.dim(mcpRemoved.join(', '))}`);
+    if (mcpAdded.length > 0) diffLines.push(`  MCP added:   ${style.accent(mcpAdded.join(', '))}`);
+
+    const plug1 = new Set(c1.plugin || []);
+    const plug2 = new Set(c2.plugin || []);
+    const plugAdded = [...plug2].filter((p) => !plug1.has(p));
+    const plugRemoved = [...plug1].filter((p) => !plug2.has(p));
+    if (plugRemoved.length > 0) diffLines.push(`  Plugin removed: ${style.dim(plugRemoved.join(', '))}`);
+    if (plugAdded.length > 0) diffLines.push(`  Plugin added:   ${style.accent(plugAdded.join(', '))}`);
+
+    diffLines.push('');
+    diffLines.push(style.dim('MCP server count: ' + mcpKeys1.length + ' → ' + mcpKeys2.length));
+    diffLines.push(style.dim('Plugin count:     ' + (c1.plugin?.length || 0) + ' → ' + (c2.plugin?.length || 0)));
+
+    for (const line of diffLines) writeLine(io.stdout, line);
+    return 0;
+  }
 
   if (subcommand !== 'doctor') {
     return usageError(io, `Unknown config command: ${subcommand}`);
@@ -601,9 +651,62 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
     cwd: io.cwd,
     env: io.env
   });
-  const report = doctorOpenCodeConfig(configPath);
+  let report = doctorOpenCodeConfig(configPath);
 
-  if (parsed.flags.json) {
+  if (doFix) {
+    const fixes: string[] = [];
+    const loaded = loadOpenCodeConfig(configPath);
+    let changed = false;
+    const config = loaded.config;
+
+    // Fix 1: Add missing $schema
+    if (!config.$schema) {
+      config.$schema = 'https://opencode.ai/config.json';
+      fixes.push('Added missing $schema field');
+      changed = true;
+    }
+
+    // Fix 2: Deduplicate plugins
+    if (config.plugin) {
+      const deduped = [...new Set(config.plugin)];
+      if (deduped.length !== config.plugin.length) {
+        config.plugin = deduped;
+        fixes.push(`Removed ${config.plugin.length - deduped.length} duplicate plugin entries`);
+        changed = true;
+      }
+    }
+
+    // Fix 3: Remove MCP entries with empty or invalid commands
+    if (config.mcp) {
+      for (const [key, entry] of Object.entries(config.mcp)) {
+        if (!entry.command || entry.command.length === 0) {
+          delete config.mcp[key];
+          fixes.push(`Removed MCP entry "${key}" with empty command`);
+          changed = true;
+        }
+      }
+    }
+
+    if (changed) {
+      writeOpenCodeConfig(configPath, config);
+      report = doctorOpenCodeConfig(configPath);
+    }
+
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { ...report, fixes, fixed: changed });
+      return changed ? 0 : 1;
+    }
+
+    if (fixes.length > 0) {
+      writeLine(io.stdout, style.accent('Config fixed:'));
+      for (const f of fixes) writeLine(io.stdout, `  ✓ ${f}`);
+      writeLine(io.stdout, '');
+    } else {
+      writeLine(io.stdout, style.dim('No fixes needed.'));
+    }
+  }
+
+  if (parsed.flags.json && !doFix) {
     writeJson(io.stdout, report);
     return report.valid ? 0 : 1;
   }
@@ -618,6 +721,10 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
     io.stdout,
     `${style.dim('Packages')} ${report.packages.length ? report.packages.join(', ') : 'none'}`
   );
+  if (!doFix) {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, style.dim('Run with --fix to auto-heal common issues.'));
+  }
   return report.valid ? 0 : 1;
 };
 

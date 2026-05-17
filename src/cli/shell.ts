@@ -56,7 +56,8 @@ export type Dispatch =
         | 'medium'
         | 'last'
         | 'again'
-        | 'dry-run';
+        | 'dry-run'
+        | 'env';
       args?: string;
     }
   | { kind: 'tui'; page?: TuiPageId }
@@ -155,6 +156,8 @@ export function classifyInput(line: string, isExecutable: (name: string) => bool
   if (trimmed === '/medium') return { kind: 'meta', sub: 'medium' };
   if (trimmed === '/last') return { kind: 'meta', sub: 'last' };
   if (trimmed === '/again') return { kind: 'meta', sub: 'again' };
+  if (trimmed === '/env' || trimmed.startsWith('/env '))
+    return { kind: 'meta', sub: 'env', args: trimmed.slice(5).trim() };
   if (trimmed.startsWith('/? '))
     return { kind: 'meta', sub: 'dry-run', args: trimmed.slice(3).trim() };
 
@@ -400,6 +403,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   let verbosity: Verbosity = 'medium';
   let childActive = false;
   let totalCost = 0;
+  const trackedEnv = new Map<string, string>();
 
   // Lazy caches for completion ids
   let cachedMarketplaceIds: string[] | null = null;
@@ -441,6 +445,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     '/exit',
     '/last',
     '/again',
+    '/env',
     ...agoraSlashCommands
   ];
 
@@ -483,6 +488,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     'type ?how do I use MCP? to ask about the marketplace',
     'type /verbose for detailed AI responses',
     'type /quiet for minimal AI responses',
+    'type /env to view tracked env vars, /env FOO=val to set one',
     'press Tab to auto-complete commands and paths',
     'press Ctrl-R to reverse-search your history',
     'press Ctrl-L to clear the screen',
@@ -660,6 +666,34 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           continue;
         }
 
+        if (dispatch.sub === 'env') {
+          const arg = dispatch.args || '';
+          if (!arg) {
+            if (trackedEnv.size === 0) {
+              process.stdout.write(style.dim('No tracked environment variables. Use /env VAR=value to set one.') + '\n');
+            } else {
+              process.stdout.write(style.accent('Tracked environment') + '\n');
+              for (const [k, v] of [...trackedEnv.entries()].sort()) {
+                process.stdout.write(`  ${k}=${v}\n`);
+              }
+            }
+          } else if (arg.includes('=')) {
+            const eqIdx = arg.indexOf('=');
+            const key = arg.slice(0, eqIdx).trim();
+            const val = arg.slice(eqIdx + 1).trim();
+            trackedEnv.set(key, val);
+            process.stdout.write(style.dim(`${key}=${val} (tracked)`) + '\n');
+          } else {
+            const val = trackedEnv.get(arg);
+            if (val === undefined) {
+              process.stdout.write(style.dim(`${arg} is not tracked.`) + '\n');
+            } else {
+              process.stdout.write(`${arg}=${val}\n`);
+            }
+          }
+          continue;
+        }
+
         continue;
       }
 
@@ -669,6 +703,17 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       }
 
       if (dispatch.kind === 'bash') {
+        // Track env vars from export statements and VAR=val prefix
+        const bashLine = dispatch.cmd;
+        const exportMatch = bashLine.match(/^export\s+([A-Za-z_][A-Za-z0-9_]*)=(.+)$/);
+        if (exportMatch) {
+          trackedEnv.set(exportMatch[1], exportMatch[2].trim());
+        } else {
+          const prefixMatch = bashLine.match(/^([A-Za-z_][A-Za-z0-9_]*)=(\S+)\s+/);
+          if (prefixMatch) {
+            trackedEnv.set(prefixMatch[1], prefixMatch[2].trim());
+          }
+        }
         await runBash(dispatch.cmd);
         continue;
       }
@@ -989,6 +1034,7 @@ function printHelp(style: Styler): void {
     '  /last         re-run most recent bash command',
     '  /again        re-send most recent chat message',
     '  /? <cmd>      dry-run an agora command (e.g. /? install mcp-github)',
+    '  /env          view/set tracked environment variables',
     '',
     style.dim('Verbosity:'),
     '  /verbose  /medium  /quiet',
