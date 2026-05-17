@@ -719,10 +719,11 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
 
     // Fix 2: Deduplicate plugins
     if (config.plugin) {
+      const originalLen = config.plugin.length;
       const deduped = [...new Set(config.plugin)];
-      if (deduped.length !== config.plugin.length) {
+      if (deduped.length !== originalLen) {
+        fixes.push(`Removed ${originalLen - deduped.length} duplicate plugin entries`);
         config.plugin = deduped;
-        fixes.push(`Removed ${config.plugin.length - deduped.length} duplicate plugin entries`);
         changed = true;
       }
     }

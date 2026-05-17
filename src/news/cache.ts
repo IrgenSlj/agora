@@ -1,6 +1,24 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  renameSync,
+  chmodSync
+} from 'node:fs';
 import { join } from 'node:path';
 import type { NewsItem, NewsSource } from './types.js';
+
+function atomicWrite(path: string, body: string, mode = 0o600): void {
+  const tmp = `${path}.tmp`;
+  writeFileSync(tmp, body, { mode });
+  renameSync(tmp, path);
+  try {
+    chmodSync(path, mode);
+  } catch {
+    /* ignore */
+  }
+}
 
 const MAX_ITEMS = 2000;
 
@@ -37,7 +55,7 @@ export function writeCache(dataDir: string, items: NewsItem[]): void {
   const trimmed = sorted.slice(0, MAX_ITEMS);
 
   const lines = trimmed.map((item) => JSON.stringify(item));
-  writeFileSync(path, lines.join('\n') + '\n', 'utf8');
+  atomicWrite(path, lines.join('\n') + '\n');
 }
 
 export interface NewsMeta {
@@ -61,7 +79,7 @@ export function readNewsMeta(dataDir: string): NewsMeta {
 
 export function writeNewsMeta(dataDir: string, meta: NewsMeta): void {
   mkdirSync(dataDir, { recursive: true });
-  writeFileSync(metaPath(dataDir), JSON.stringify(meta, null, 2), 'utf8');
+  atomicWrite(metaPath(dataDir), JSON.stringify(meta, null, 2));
 }
 
 export function isStale(

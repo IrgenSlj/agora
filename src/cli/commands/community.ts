@@ -1,4 +1,5 @@
 import type { BoardId, Flag } from '../../community/types.js';
+import { BOARD_IDS } from '../../community/types.js';
 import {
   communityBoardsSource,
   communityThreadsSource,
@@ -157,8 +158,16 @@ export const commandNews: CommandHandler = async (parsed, io, style) => {
 };
 
 export const commandCommunity: CommandHandler = async (parsed, io, style) => {
-  const board = parsed.args[0] as BoardId | undefined;
-  const sort = (stringFlag(parsed, 'sort') || 'active') as 'top' | 'new' | 'active';
+  const boardArg = parsed.args[0];
+  if (boardArg !== undefined && !BOARD_IDS.includes(boardArg as BoardId)) {
+    return usageError(io, `Unknown board "${boardArg}". Valid: ${BOARD_IDS.join(', ')}`);
+  }
+  const board = boardArg as BoardId | undefined;
+  const sortRaw = stringFlag(parsed, 'sort') || 'active';
+  if (!['top', 'new', 'active'].includes(sortRaw)) {
+    return usageError(io, `Unknown sort "${sortRaw}". Valid: top, new, active`);
+  }
+  const sort = sortRaw as 'top' | 'new' | 'active';
 
   const opts = await sourceOptions(parsed, io);
 
