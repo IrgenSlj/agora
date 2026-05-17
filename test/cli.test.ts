@@ -1188,6 +1188,26 @@ describe('help system', () => {
     expect(stderr.join('')).toContain('Unknown command: bogus');
   });
 
+  test('unknown command suggests the nearest match', async () => {
+    const { io, stderr } = createIo();
+    const code = await runCli(['serch', 'mcp'], io);
+
+    expect(code).toBe(1);
+    const err = stderr.join('');
+    expect(err).toContain('Unknown command: serch');
+    expect(err).toContain('Did you mean: search');
+  });
+
+  test('unknown command far from any registered name skips the suggestion', async () => {
+    const { io, stderr } = createIo();
+    const code = await runCli(['xyzzy'], io);
+
+    expect(code).toBe(1);
+    const err = stderr.join('');
+    expect(err).toContain('Unknown command: xyzzy');
+    expect(err).not.toContain('Did you mean');
+  });
+
   test('agora install --help shows manual not the normal install preview', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-help-'));
     const { io, stdout } = createIo(temp);
