@@ -25,7 +25,7 @@ _A terminal recording is in the works — see ROADMAP.md._
 
 Agora is a **standalone terminal marketplace** for the agentic-coding ecosystem — MCP servers, workflows, and tutorials, browsable and installable from your shell with no login and no backend. Run `npx opencode-agora init` in any project and it scans your stack, generates the right `opencode.json`, and installs matched MCP servers.
 
-It bundles **62 MCP servers**, **12 production workflows**, **12 tutorials**, and **6 prompts**, all usable offline.
+It bundles **67 curated MCP servers**, **12 production workflows**, **12 tutorials**, and **6 prompts**, all usable offline. Set `AGORA_LIVE_HUBS=1` to layer live results from **GitHub** and **HuggingFace** on top of the curated catalog.
 
 **Where it's headed:** Agora is evolving into an **open, self-regulating marketplace** where third-party developers publish and sell advanced skills, tools, and kits — with Agora providing the square and the rules (discovery, trust, delivery), not the goods. See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the direction and [`ROADMAP.md`](./ROADMAP.md) for the plan.
 
@@ -69,11 +69,18 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
 - No manual copy-pasting — one command and the workflow is live
 
 ### Rich Offline Marketplace
-- **62 MCP servers** across 12 categories (filesystem, databases, cloud, browser automation, monitoring, etc.) — every `npmPackage` is verified against the live npm registry
+- **67 curated MCP servers** across 12 categories (filesystem, databases, cloud, browser automation, monitoring, etc.) — every `npmPackage` is verified against the live npm registry
 - All official `@modelcontextprotocol/*` servers plus top community servers
 - Fully functional offline — no backend required
 - Search, browse, trending — all work with bundled data
 - Sort by stars/installs/name with `--sort`, render tables with `--table`, paginate with `--page` / `--per-page`
+
+### Live hubs (opt-in)
+- Set `AGORA_LIVE_HUBS=1` to merge live results from **GitHub** (REST search across `mcp`, `claude-skill`, `agent-tools`, `langchain`, `opencode`, etc.) and **HuggingFace** (models, datasets, spaces).
+- Quality gate filters archived, license-less, and low-engagement results so the catalog stays useful.
+- Run `bun scripts/refresh-hubs.ts` to refresh the local cache (`~/.config/agora/hubs-cache.jsonl`). Optional `AGORA_GITHUB_TOKEN` raises the GitHub rate limit from 60 to 5000 req/hr.
+- Pricing scaffolded for future paid items via a `Pricing` type on `Package`; all live items are free in v1 and render with a dim `FREE` badge.
+- Opening a GitHub item's detail view fetches its README and runs opencode-powered enrichment (1-sentence description + install hint), cached on disk keyed by `repo@sha` so re-opens are instant.
 
 ### Config-Aware Installs
 - `agora install mcp-github --write` installs the npm package **and** writes to config
@@ -111,13 +118,14 @@ the agora shell: a persistent REPL with mixed bash/chat dispatch.
 ### Learn
 - 12 interactive tutorials on MCP, auth, catalog-contrib, backend deploy, and more
 
-### Phase 1.5: "Destination" — substantially shipped
+### Phase 1.5: "Destination" — shipped
 
-The three pillars are now built into the CLI. See [`ROADMAP.md`](./ROADMAP.md) for remaining items (backend deploy, demo recording):
+All three pillars are now built end-to-end. See [`ROADMAP.md`](./ROADMAP.md) for the Phase 1.6 polish list (HF README enrichment, reputation, FTS5 search, kill-switch UI):
 
 - **`agora news`** — curated tech news feed (HN, Reddit, GitHub Trending, arXiv, RSS) with scoring, caching, category tabs (All/Mcp/Tools/Skills/Llms/Repos/Market/Search), detail view, and AI-powered article summarization via `opencode run`. TUI reader with scrollable preview.
-- **`agora community` / `agora thread` / `agora post` / `agora reply` / `agora vote` / `agora flag`** — Reddit-style community hub with boards, threaded replies, votes, and flag-don't-delete moderation. CLI commands exist; needs a deployed backend.
-- **`agora similar <id>` / `agora compare <id1> <id2>`** — discovery polish: Jaccard similarity and side-by-side comparison tables. Both shipped.
+- **Live marketplace hubs** — `AGORA_LIVE_HUBS=1` merges live GitHub + HuggingFace results into the catalog. Topic-driven discovery, quality-gated, free pricing badge, install flow with three kinds (`git-clone`, `mcp-config-patch`, `package-install`) and preview-then-confirm UX in the TUI.
+- **`agora community`** — Reddit-style hub with 7 boards, nested replies, inline multi-line composer (`n` new thread, `r` reply, `Ctrl+S` send), `+`/`-` voting, flag-with-reason modal, automatic `[flagged: N]` collapse at threshold 3, `[bot · model]` chip on LLM authors, and `/` cross-thread search with debounced query. Backed by 7 community endpoints on the Cloudflare Worker.
+- **`agora similar <id>` / `agora compare <id1> <id2>`** — discovery polish: Jaccard similarity and side-by-side comparison tables.
 - **`agora preferences` / `agora history`** — local persistence for settings, search history, and chat history (no account required).
 - **Full-screen TUI** — 5 pages (Home, Marketplace, Community, News, Settings) with alt-screen frame, key dispatch, scrollbar, status toasts, help panel, and `agora tui` entrypoint.
 - **`/menu` command builder** — interactive wizard that walks through positional args, flags, and value flags, then opens a pre-filled readline prompt for editing.
@@ -290,7 +298,7 @@ agora config doctor --json
 
 Saved items and optional auth credentials are stored in `~/.config/agora/state.json` by default. Use `AGORA_HOME=/path/to/agora` or `--data-dir /path/to/agora` to override.
 
-The CLI uses bundled offline marketplace data (62 MCP servers, 12 workflows) by default. Add `--api`, `--live`, `AGORA_USE_API=true`, or `AGORA_API_URL` to use the live backend. Falls back to offline data if the API is unavailable.
+The CLI uses bundled offline marketplace data (67 curated MCP servers, 12 workflows) by default. Add `--api`, `--live`, `AGORA_USE_API=true`, or `AGORA_API_URL` to use the live backend. Falls back to offline data if the API is unavailable. Set `AGORA_LIVE_HUBS=1` to additionally merge live GitHub + HuggingFace results into the marketplace catalog.
 
 ### OpenCode Plugin Commands
 
@@ -360,7 +368,7 @@ agora/
 ├── src/              # CLI, plugin, and shared marketplace core
 ├── backend/          # Cloudflare Workers API
 ├── hub/              # Optional local web Hub
-├── test/             # Tests (~500, 20 files)
+├── test/             # Tests (604, 27 files)
 ├── dist/             # Built output
 └── docs/             # Architecture, roadmap, design docs
 ```
@@ -409,7 +417,14 @@ agora/
 │   ├── ui.ts             # Terminal styling: styler, gradient banner, header frame
 │   ├── format.ts         # Count formatting helpers
 │   ├── config.ts         # MCP config generation
-│   ├── data.ts           # 62 MCP servers, 12 workflows, 12 tutorials, 6 prompts
+│   ├── data.ts           # 67 curated MCP servers, 12 workflows, 12 tutorials, 6 prompts
+│   ├── hubs/             # Live catalog sources (GitHub + HuggingFace)
+│   │   ├── types.ts      # HubItem, Pricing, InstallKind
+│   │   ├── github.ts     # GitHub Search REST connector
+│   │   ├── huggingface.ts# HuggingFace API connector (models, datasets, spaces)
+│   │   ├── quality.ts    # Stars/recency/license quality gate
+│   │   ├── enrichment.ts # opencode-powered README enrichment (cached by repo@sha)
+│   │   └── cache.ts      # Shared on-disk cache for live items
 │   ├── commands.ts       # OpenCode /agora slash command installer
 │   └── types.ts          # Shared TypeScript types
 │
@@ -420,7 +435,7 @@ agora/
 │
 ├── hub/                  # Local Hub app
 │
-├── test/                 # ~500 tests across 20 files
+├── test/                 # 604 tests across 27 files
 │   ├── cli.test.ts       # CLI integration tests
 │   ├── news.test.ts      # News scoring, cache, sources
 │   ├── history.test.ts   # History persistence tests
@@ -442,13 +457,14 @@ agora/
 | `agora chat` | Ready | TUI + one-shot inference via `opencode run` |
 | Full-screen TUI | Ready | 5 pages (Home, Marketplace, Community, News, Settings), alt-screen frame, scrollbar, tabs |
 | CLI | Ready | 30+ commands: `search`, `browse`, `trending`, `workflows`, `similar`, `compare`, `news`, `install`, `save`, `saved`, `remove`, `preferences`, `history`, `init`, `use`, `menu`, `tui`, `chat`, `mcp`, `community`, `discussions`, `discuss`, `thread`, `post`, `reply`, `vote`, `flag`, `auth`, `login`, `logout`, `whoami`, `profile`, `publish`, `review`, `reviews`, `config doctor` |
-| Offline data | Ready | 62 MCP servers, 12 workflows, 12 tutorials, 6 prompts (npm-validated) |
+| Offline data | Ready | 67 curated MCP servers, 12 workflows, 12 tutorials, 6 prompts (npm-validated) |
 | Live API mode | Ready | Opt-in via `--api`, `AGORA_API_URL`; falls back offline |
 | Shared core | Ready | CLI and plugin share marketplace logic |
 | Local state | Ready | Saved items, auth tokens, preferences, history under `~/.config/agora` |
 | Plugin (offline) | Ready | Works with bundled data |
 | News feed (`agora news`) | Ready | HN + Reddit + GitHub Trending + arXiv + RSS, scoring, caching, category tabs, TUI reader, AI summarization |
-| Community hub (`agora community`) | Ready (CLI) | Boards, threads, votes, flag-don't-delete, LLM participants — needs deployed backend |
+| Live hubs (GitHub + HF) | Ready | `AGORA_LIVE_HUBS=1` merges live results into the marketplace; install flow handles git-clone, mcp-config-patch, package-install |
+| Community hub (`agora community`) | Ready | 7 boards, nested replies, inline composer, vote, flag-with-reason, auto-collapse, bot chip, cross-thread search — backend endpoints wired |
 | Discovery (`similar`/`compare`) | Ready | Jaccard similarity, side-by-side comparison tables |
 | Preferences & History | Ready | `agora preferences` (theme, verbosity, username), `agora history` (search/chat log) — local, no account needed |
 | Backend | 🚧 Not deployed — self-host required (see backend/) | Cloudflare Workers + D1 ready for deployment; auth rework blocks public deploy |

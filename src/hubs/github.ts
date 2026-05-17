@@ -1,3 +1,6 @@
+// Catalog source: GitHub Search REST API. Returns installable HubItems for the
+// marketplace. Distinct from src/news/sources/github-trending.ts, which scrapes
+// the human Trending page for news-feed cards.
 import type { HubItem } from './types.js';
 import { passes, toHubItem, type RawGithubRepo } from './quality.js';
 

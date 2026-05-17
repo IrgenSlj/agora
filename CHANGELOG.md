@@ -1,5 +1,91 @@
 # Changelog
 
+## [Unreleased]
+
+The "live hubs & community deepening" cycle. Six PRs landed on 2026-05-17 that
+take the catalog from curated-only to curated + live, make the community hub
+end-to-end usable, and close out the long-standing backend CI failure. No
+version bump yet — sculpting toward the 0.5.0 "Destination" cut.
+
+### Added
+
+- **Live marketplace hubs** (`AGORA_LIVE_HUBS=1`). New `src/hubs/` module with
+  GitHub Search REST and HuggingFace API connectors, a shared quality gate
+  (stars × recency × license × topic match), and a single on-disk cache at
+  `~/.config/agora/hubs-cache.jsonl`. Topic seeds: `mcp`, `claude-skill`,
+  `agent-tools`, `langchain`, `opencode`, and more. Optional
+  `AGORA_GITHUB_TOKEN` raises the unauth 60 req/hr limit to 5000. Refresh via
+  `bun scripts/refresh-hubs.ts`.
+- **`Pricing` scaffold on `Package`** (`{ kind: 'free' } | { kind: 'paid', … }`).
+  All 67 curated entries and all live items backfilled to free; CLI renders a
+  dim `FREE` / accent `PAID` badge next to item names. Paid branch is a typed
+  no-op pending Phase 3 commerce — no payment SDKs in the dep tree.
+- **Install flow rework**. Three install kinds (`git-clone`, `mcp-config-patch`,
+  `package-install`) replace the single-branch `'mcp'` handler. TUI marketplace
+  page gets preview-then-confirm (`y`/`n`) before any execution; CLI gains a
+  `--yes` flag for scripting. `extractPostInstallHint()` parses README headings
+  to surface a one-liner in the preview.
+- **Opencode-powered README enrichment** for GitHub hub items. On detail-view
+  open, fetches the README, runs two opencode calls in parallel (1-sentence
+  description + install hint), and renders the AI description with an `(ai)`
+  tag. Cached on disk in `~/.config/agora/hubs-enrichment.json` keyed by
+  `<repoId>@<commit-sha>` — re-opens are instant; re-runs only after the repo
+  is updated.
+- **HuggingFace hub** mirroring the GitHub pattern. Pulls top models,
+  datasets, and spaces matching the agentic-coding audience
+  (`text-generation`, `feature-extraction`, `text2text-generation`,
+  `instruction-tuning`, `chatbot`). Auth-free, single-cache shared with
+  GitHub items.
+- **Community endpoints on the backend** (`backend/src/index.ts`).
+  Implemented the six community endpoints the client expected but the
+  backend didn't have: `GET /api/community/boards`, `GET /threads` (paginated,
+  sortable), `GET /thread/:id` (with nested replies), `POST /threads`,
+  `POST /reply/:parentId`, `POST /vote/:targetId`. All mutations require
+  Bearer auth and atomically bump score / reply_count.
+- **Cross-thread community search** (`GET /api/community/search?q=&board=&limit=`).
+  LIKE-based for v1 with a TODO to migrate to FTS5; returns matched threads
+  and replies with content snippets where matches are wrapped in
+  `[brackets]` for the TUI to highlight.
+- **Community TUI deepening** in `src/cli/pages/community.ts`:
+  - Inline multi-line composer (`n` new thread, `r` reply, `Ctrl+S` send,
+    `Esc` cancel).
+  - `+` / `-` voting with optimistic update.
+  - `f` flag modal with 5-reason picker (matches the guidelines).
+  - Automatic collapse rendering at `flagCount >= 3`, per
+    `COMMUNITY_GUIDELINES.md`. `X` to expand a collapsed item.
+  - `[bot · <model>]` chip on `authorIsLLM` posts.
+  - `/` opens a search view from any community sub-view; query is debounced
+    400ms, `Tab` toggles scope between "current board" and "all".
+- **`agora community search …` CLI** parity to the TUI search.
+- **Schema additions** to `backend/schema.sql`: `discussions.hidden`,
+  `discussions.author_is_llm`, `discussions.author_model`. Manual `ALTER
+  TABLE` statements appended for existing D1 instances.
+
+### Fixed
+
+- **Backend `signJwt` TS errors** at `backend/src/index.ts:296-297`
+  (`Uint8Array` not assignable to `ArrayBuffer`). Widened `base64Url` to
+  accept both. Unblocks the `backend` CI job that has been red since 2026-05-16.
+- **Eight pre-existing `noUnusedLocals` / `noUnusedParameters` build errors**
+  across `src/cli/commands/{chat,init,learn,marketplace,operations}.ts` that
+  blocked `bun run build`. The CI `check` job passes again.
+- **Prettier debt** across 52 files; `bun run format:check` is now green.
+
+### Changed
+
+- `Package` interface gains optional `pricing?: Pricing`.
+- `InstallPlan` gains `kind`, `cloneTarget`, `postInstallHint` fields.
+- `getInstallKind()` renamed branch `'mcp'` → `'mcp-config-patch'`.
+- `getMarketplaceItems()` merges live hub items when `AGORA_LIVE_HUBS=1` and
+  the cache has data.
+
+### Internal
+
+- 95 new tests today; suite now 604 pass / 0 fail across 27 files (up from
+  509 across 22).
+- 6 commits on `main`: `9b07266`, `b779332`, `027b62e`, `2f239db`,
+  `b552d7a`, `3f21ebe`.
+
 ## [0.4.0] - 2026-05-16
 
 The "interactive shell & destination scaffold" release — the largest in Agora's

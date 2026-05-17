@@ -1,3 +1,6 @@
+// News source: scrapes github.com/trending HTML for news-feed cards. Distinct
+// from src/hubs/github.ts, which uses the REST API to find installable repos
+// for the marketplace catalog.
 import type { NewsItem, NewsSource } from '../types.js';
 
 export interface SourceAdapter {

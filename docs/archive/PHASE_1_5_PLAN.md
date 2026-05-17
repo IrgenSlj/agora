@@ -9,9 +9,11 @@ Target outcome: at the end of Phase 1.5, `agora` is a destination. Open it,
 read your news, drop into a thread, install a server, all without leaving
 the terminal. Version bump `0.4.x → 0.5.0` lands with the final PR.
 
-> **Phase 1.5 is substantially shipped.** This plan was the working spec; most
-> sections below are ✓ implemented. Remaining items are marked **pending**.
-> See [ROADMAP.md](../ROADMAP.md) for the current status.
+> **Archived 2026-05-17 — Phase 1.5 is shipped.** This plan was the working
+> spec from 2026-05 onward. The six final PRs (live GitHub hub, install
+> rework, README enrichment, HuggingFace hub, community deepening, cross-thread
+> search) landed on 2026-05-17. Remaining loose ends moved to **Phase 1.6**
+> in [ROADMAP.md](../ROADMAP.md) — see the polish section there.
 
 ## Repo layout (✓ all shipped)
 

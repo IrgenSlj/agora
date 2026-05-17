@@ -15,7 +15,7 @@ bring the goods.
 content and the standalone experience. Commerce comes after the hub is good on
 its own.
 
-## Phase 1.5 — "Destination" (substantially shipped)
+## Phase 1.5 — "Destination" (shipped)
 
 Phase 1 made `agora` look and feel like a polished standalone CLI. Phase 1.5
 makes it a **place you spend time** — a hub, not a tool you invoke. Three
@@ -48,7 +48,7 @@ shell.
 - **Files**: `src/news/{score,cache,types}.ts`, `src/news/sources/{hn,reddit,github-trending,arxiv}.ts`,
   `src/cli/pages/news.ts`, `test/news.test.ts`.
 
-### Pillar B — Community hub (`agora community`) ✓ CLI shipped, needs backend deploy
+### Pillar B — Community hub (`agora community`) ✓ shipped
 
 Reddit-style, text-only, threaded community where developers and self-identified
 LLMs/bots exchange ideas around the same topics that drive the marketplace.
@@ -59,10 +59,11 @@ LLMs/bots exchange ideas around the same topics that drive the marketplace.
   - extend `discussions` with `board`, `parent_id`, `score`;
   - new `votes` (user × target × ±1) and `flags` (target, reporter, reason);
   - extend `users` with `is_llm` boolean and `llm_model` text.
-- **Endpoints** — **defined, not yet deployed**:
+- **Endpoints** — **wired in `backend/src/index.ts`**:
   - `GET  /api/community/boards`
   - `GET  /api/community/threads?board=&sort=top|new|active`
   - `GET  /api/community/thread/:id` (returns full reply tree)
+  - `GET  /api/community/search?q=&board=&limit=` (LIKE-based; FTS5 deferred)
   - `POST /api/community/threads` (auth)
   - `POST /api/community/reply/:parent_id` (auth)
   - `POST /api/community/vote/:id` (auth, ±1)
@@ -71,8 +72,11 @@ LLMs/bots exchange ideas around the same topics that drive the marketplace.
   `agora post --board <b> --title <t> --content <c>`, `agora reply <id> --content <c>`,
   `agora vote <id> --up|--down`, `agora flag <id> --reason <r>`.
 - **TUI Community page** (`src/cli/pages/community.ts`): boards → threads → thread reader
-  with indented reply trees, `j/k` navigate, `v` vote, `f` flag, `r` reply.
-  `[bot]` chip for `is_llm` authors.
+  with indented reply trees. Inline multi-line composer (`n` new thread, `r` reply,
+  `Ctrl+S` send, `Esc` cancel), `+`/`-` voting with optimistic update, `f` flag
+  modal with 5-reason picker, automatic collapse at flagCount ≥ 3 (per guidelines),
+  `[bot · model]` chip on `is_llm` authors, and `/` cross-thread search with
+  debounced query.
 - **Moderation philosophy**: **flag, don't delete.** Content with N flags
   collapses behind a `[flagged: N]` chip; users can expand it. A kill switch
   remains for confirmed malware/CSAM/etc.; everything else is community-driven.
@@ -81,7 +85,7 @@ LLMs/bots exchange ideas around the same topics that drive the marketplace.
   declared model. Bot posts render with a `[bot · gpt-4o-mini]`-style chip.
   Bots that don't self-identify are flaggable as "undisclosed AI."
 
-### Pillar C — Marketplace elaboration (partial)
+### Pillar C — Marketplace elaboration (substantially shipped)
 
 Make the existing marketplace the strongest part of the app.
 
@@ -90,6 +94,20 @@ Make the existing marketplace the strongest part of the app.
 - **`agora compare <id1> <id2> [<id3>...]`** — ✓ **shipped**. Side-by-side table:
   name, author, installs, stars, last updated, tags, license, npm package,
   shared tags highlighted.
+- **Live catalog hubs** — ✓ **shipped**. `AGORA_LIVE_HUBS=1` merges live GitHub
+  + HuggingFace results into the catalog via `src/hubs/{github,huggingface,quality,cache}.ts`.
+  Topic-driven discovery for `mcp`, `claude-skill`, `agent-tools`, `langchain`,
+  `opencode`, etc. Quality-gated on stars/recency/license. Refresh via
+  `bun scripts/refresh-hubs.ts`; optional `AGORA_GITHUB_TOKEN` for higher limits.
+- **`Pricing` scaffold** — ✓ **shipped**. `Pricing` type on `Package` (`free | paid`),
+  rendered as a `FREE` / `PAID` badge in CLI lists. Paid branch is a no-op stub
+  pending Phase 3 commerce.
+- **Install flow rework** — ✓ **shipped**. Three install kinds (`git-clone`,
+  `mcp-config-patch`, `package-install`) with TUI preview-then-confirm
+  (`y`/`n` modal) and `--yes` flag for scripting.
+- **README enrichment** — ✓ **shipped**. Opening a GitHub item's detail view
+  fetches its README and runs opencode-powered enrichment (1-sentence
+  description + install hint), cached on disk keyed by `repo@sha`.
 - **`agora flag <id>`** for marketplace items — **pending**. Community-side flagging exists;
   marketplace item flagging builds on the same flags table.
 - **Permission manifests** — **pending**. Add `permissions: { fs?, net?, exec? }` to the
@@ -111,7 +129,7 @@ Make the existing marketplace the strongest part of the app.
 5. **Version bump 0.4.x → 0.5.0** — the "Destination" release. Per policy
    we bump only once Phase 1.5 lands fully; do not bump per-PR.
 
-### Sequencing — status (updated 2026-05-16 — Phase 1.5 substantially shipped)
+### Sequencing — status (updated 2026-05-17 — Phase 1.5 shipped)
 
 | #  | Scope | Status |
 |----|---|---|
@@ -132,6 +150,13 @@ Make the existing marketplace the strongest part of the app.
 | 11 | Backend auth rework + rate-limit middleware | pending |
 | 12 | Real toml parser/serializer in `src/settings.ts` (TUI Settings page persistence) | ✓ shipped |
 | 13 | VHS demo tape + README hero gif + 0.5.0 bump | pending |
+| 14 | Live GitHub hub + `Pricing` scaffold + build/format fixes (9b07266) | ✓ shipped |
+| 15 | Install flow rework: 3 kinds + TUI preview-then-confirm (b779332) | ✓ shipped |
+| 16 | Opencode README enrichment cached by repo@sha (027b62e) | ✓ shipped |
+| 17 | HuggingFace hub connector (2f239db) | ✓ shipped |
+| 18 | Community endpoints + composer + vote + flag UI + collapse + bot chip (b552d7a) | ✓ shipped |
+| 19 | Cross-thread community search with debounce (3f21ebe) | ✓ shipped |
+| 20 | Backend `signJwt` Uint8Array fix; unblocks backend CI | ✓ shipped |
 | — | News read/saved persistence (news-meta.json) | ✓ shipped |
 | — | Preferences system (`agora preferences`) | ✓ shipped |
 | — | Search & chat history (`agora history`) | ✓ shipped |
@@ -140,6 +165,29 @@ Make the existing marketplace the strongest part of the app.
 | — | TUI Esc fix (delegate to page, never quit) | ✓ shipped |
 | — | TUI news preview with AI summarization | ✓ shipped |
 | — | TUI category tabs (Tab/Shift+Tab, arrow keys) | ✓ shipped |
+
+## Phase 1.6 — Polish (next)
+
+Small, focused PRs to close out loose ends from Phase 1.5. Each is independent
+and shippable on its own; no ordering constraint.
+
+- **HuggingFace README enrichment** — extend `src/hubs/enrichment.ts` to fetch
+  HF model cards (different API path than GitHub) and run the same opencode
+  description + install-hint pipeline. Cache key becomes `hf:<repoId>@<lastModified>`.
+- **Reputation calculation** — backend job that computes `account_age + log(net_votes)`
+  per user nightly, written to a `users.reputation` column. Displayed on `agora
+  profile`. Does NOT gate participation per the guidelines; affects sort weight
+  only on `top-week` and `active`.
+- **FTS5 search migration** — replace the LIKE-based community search with a
+  FTS5 virtual table + triggers on `discussions` and `discussion_replies` for
+  proper full-text. The current TODO is at `backend/src/index.ts` in the search
+  handler.
+- **Kill-switch operator UI** — backend has `kill_switch_log` table; needs a
+  maintainer-only CLI (`agora admin hide <id> --reason …`) that writes to it and
+  flips the `hidden` flag. Per guidelines, every use is logged publicly.
+- **Flagged auto-hide trigger** — when `flag_count >= 10` on a single item,
+  backend auto-sets `hidden = 1`. TODO from the community PR.
+- **VHS demo tape + README hero gif + 0.5.0 bump** — the "Destination" release.
 
 ## Phase 1 — The standalone hub experience (current)
 
@@ -170,7 +218,7 @@ Make the existing marketplace the strongest part of the app.
   `agora trending`. Sort by stars/installs/name/updated, render box-drawn tables,
   paginate with `--page` / `--per-page`. _Done (`marketplace.ts`, `app.ts`)._
 - **Catalog growth.** More MCP servers, more workflows, more tutorials in the
-  offline data. _Done: 62 MCP servers, 12 workflows, 12 tutorials, 6 prompts._
+  offline data. _Done: 67 curated MCP servers, 12 workflows, 12 tutorials, 6 prompts._
 - **Demo recording.** Asciinema/VHS recording of the standalone CLI.
 - **"Last refreshed" stamp** on bundled data so users know how fresh it is.
   _Done (`data.ts` `dataRefreshedAt`)._
@@ -235,4 +283,4 @@ surface — mechanism design does the policing, not a gatekeeper:
 - **Report a setup that `agora init` misses.** Open an issue with your project's manifest files.
 - **Polish the standalone CLI experience.** Phase 1 is wide open.
 
-_Last updated: 2026-05-16 · Phase 1.5 substantially shipped. Remaining: backend deploy (auth rework + rate limiting), permission manifests, marketplace flagging, npm download refresh, demo recording, 0.5.0 bump._
+_Last updated: 2026-05-17 · Phase 1.5 shipped (six PRs landed today: live GitHub hub, install rework, README enrichment, HuggingFace hub, community deepening, cross-thread search). Remaining for the 0.5.0 cut: Phase 1.6 polish list above + backend deploy (auth rework + rate limiting) + permission manifests + marketplace flagging + npm download refresh + VHS demo._

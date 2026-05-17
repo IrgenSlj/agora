@@ -21,7 +21,7 @@ import {
   type MarketplaceItem,
   type PackageMarketplaceItem
 } from '../src/marketplace';
-import { samplePackages, sampleWorkflows } from '../src/data';
+import { samplePackages } from '../src/data';
 
 // ── searchMarketplaceItems ──────────────────────────────────────────────────
 
