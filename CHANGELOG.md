@@ -9,6 +9,33 @@ gained completions, history, job control, a letter-shortcut surface, and a
 broad new command surface (`export`, `watch`, `notify`, `config doctor`, …).
 No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
 
+### Added — install permission acknowledgment + reputation sort + live home
+
+- **Install permission prompt** (Phase 4 trust step 1). When an item
+  declares non-empty permissions, the TUI install-preview footer flips
+  from `y confirm` to `g grant + install   d details   n/Esc cancel`
+  (`y` still works as an alias). A new `install-perm-details` view
+  enumerates each fs / net / exec entry with a one-line annotation
+  (`*` → unrestricted, `./**/*` → current working directory, agora
+  config path → agora-only). The CLI install `--write` path refuses
+  without `--yes` when permissions are declared, prints the manifest,
+  and exits with `Re-run with --yes to grant and install.`; with
+  `--yes`, prints `Granted permissions:` before any exec.
+- **Reputation-weighted thread sort.** The `top` and `active` sort
+  orders on `/api/community/threads` now factor the author's
+  `users.reputation` via a `weightedThreadScore` helper
+  (`base + log10(max(1, rep + 1)) * 5`). `new` stays purely
+  chronological. Implementation pre-fetches 200 rows and re-sorts in
+  JS to avoid D1 SQL-side `log10` portability concerns.
+- **Home page live data.** The TUI home is now a real landing
+  experience: top news stories (from the local cache), top community
+  threads on `/mcp` (best-effort fetched on mount, gated on
+  auth), and trending marketplace items. Two-column layout at ≥100
+  cols, stacked otherwise. New hotkeys: `n` / `c` / `m` jump to news
+  / community / marketplace; `r` refreshes; `Enter` opens the focused
+  section. The old static "Recommended for you" + "Why" block was
+  removed.
+
 ### Added — shell & CLI polish (2026-05-17 onward)
 
 - **Shell completions** (`agora completions {bash,zsh,fish}`). Generates static
