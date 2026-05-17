@@ -66,6 +66,8 @@ interface FlagModalState {
 
 type View = 'boards' | 'threads' | 'reader';
 
+type ThreadSort = 'top' | 'new' | 'active';
+
 interface SearchState {
   active: boolean;
   query: string;
@@ -85,6 +87,7 @@ interface ComState {
   thread?: string;
   filter: string;
   filtering: boolean;
+  threadSort: ThreadSort;
   composer: ComposerState | null;
   flagModal: FlagModalState | null;
   expandedItems: Set<string>;
@@ -113,6 +116,7 @@ const state: ComState = {
   replyCur: 0,
   filter: '',
   filtering: false,
+  threadSort: 'top',
   composer: null,
   flagModal: null,
   expandedItems: new Set(),
@@ -133,6 +137,16 @@ export function isCollapsed(id: string, flagCount: number, expandedItems: Set<st
 
 export function renderCollapsed(flagCount: number): string {
   return `[flagged: ${flagCount} · press X to expand]`;
+}
+
+export function voteGlyph(
+  yourVote: -1 | 0 | 1 | undefined,
+  score: number,
+  style: { accent(s: string): string; dim(s: string): string }
+): string {
+  if (yourVote === 1) return style.accent('▲') + style.accent(String(score));
+  if (yourVote === -1) return style.accent('▼') + style.accent(String(score));
+  return style.dim('↑') + String(score);
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
@@ -187,6 +201,12 @@ async function loadBoards(ctx: PageContext): Promise<void> {
     /* keep empty */
   }
   boardsLoading = false;
+}
+
+async function loadThreads(boardId: string, ctx: PageContext): Promise<void> {
+  const opts = buildSourceOptions(ctx);
+  const result = await communityThreadsSource(opts, boardId as BoardId, state.threadSort);
+  cachedThreads = result.data.threads;
 }
 
 // ── Composer state-machine ─────────────────────────────────────────────────
@@ -493,8 +513,10 @@ export const communityPage: Page = {
   navIcon: 'C',
   hotkeys: [
     { key: 'j/k', label: 'nav' },
+    { key: 'g/G', label: 'top/end' },
     { key: 'Enter', label: 'open' },
     { key: 'n', label: 'new' },
+    { key: 'o', label: 'sort' },
     { key: '/', label: 'search' },
     { key: 'r', label: 'reply' },
     { key: '+/-', label: 'vote' },
@@ -556,7 +578,12 @@ export const communityPage: Page = {
         (t) => !state.filter || t.title.toLowerCase().includes(state.filter.toLowerCase())
       );
       lines.push(
-        ' ' + style.bold(style.accent('/' + board)) + style.dim('  ' + list.length + ' threads')
+        ' ' +
+          style.bold(style.accent('/' + board)) +
+          style.dim('  ' + list.length + ' threads') +
+          '   ' +
+          style.dim('sort: ') +
+          style.accent(state.threadSort)
       );
       lines.push(rule);
       if (list.length === 0) {
@@ -579,9 +606,11 @@ export const communityPage: Page = {
           let authorMeta = t.author;
           if (t.authorIsLLM) authorMeta += style.dim(' [bot · ' + (t.authorModel ?? 'llm') + ']');
           const meta = style.dim(authorMeta + ' · ' + age);
+          const myVote = state.userVotes.get(t.id) ?? 0;
+          const voteStr = voteGlyph(myVote as -1 | 0 | 1, t.score, style);
           const counts =
-            style.accent(t.score.toString().padStart(3)) +
-            style.dim('↑  ') +
+            voteStr +
+            style.dim('  ') +
             style.accent(t.replyCount.toString().padStart(2)) +
             style.dim(' replies');
           lines.push(' ' + lead + title);
@@ -598,7 +627,9 @@ export const communityPage: Page = {
         const age = fmtAge(hoursAgo(t.createdAt));
         let authorMeta = t.author;
         if (t.authorIsLLM) authorMeta += style.dim(' [bot · ' + (t.authorModel ?? 'llm') + ']');
-        lines.push(' ' + style.bold(t.title) + '  ' + style.accent(t.score + ' ↑'));
+        const myVoteThread = state.userVotes.get(t.id) ?? 0;
+        const threadVoteStr = voteGlyph(myVoteThread as -1 | 0 | 1, t.score, style);
+        lines.push(' ' + style.bold(t.title) + '  ' + threadVoteStr);
         lines.push(' ' + style.dim(authorMeta + ' · ' + age + ' · ' + t.replyCount + ' replies'));
         lines.push(' ' + sep('body', width - 2, style));
         lines.push(' ' + t.content);
@@ -619,13 +650,15 @@ export const communityPage: Page = {
           let replyAuthor = rn.reply.author;
           if (rn.reply.authorIsLLM)
             replyAuthor += style.dim(' [bot · ' + (rn.reply.authorModel ?? 'llm') + ']');
+          const myVoteReply = state.userVotes.get(rn.reply.id) ?? 0;
+          const replyVoteStr = voteGlyph(myVoteReply as -1 | 0 | 1, rn.reply.score, style);
           lines.push(
             ' ' +
               indent +
               lead +
               style.dim(replyAuthor + ' · ' + ra) +
               '  ' +
-              style.accent(rn.reply.score + ' ↑')
+              replyVoteStr
           );
           lines.push('     ' + indent + rn.reply.content);
           lines.push(rule);
@@ -952,6 +985,28 @@ export const communityPage: Page = {
       return { kind: 'none' };
     }
 
+    // ── g/G global jumps ────────────────────────────────────────────────────
+    if (event.key === 'g') {
+      if (state.view === 'boards') state.boardCur = 0;
+      else if (state.view === 'threads') state.threadCur = 0;
+      else state.replyCur = 0;
+      return { kind: 'none' };
+    }
+    if (event.key === 'G') {
+      if (state.view === 'boards') {
+        state.boardCur = Math.max(0, cachedBoards.length - 1);
+      } else if (state.view === 'threads') {
+        const list = cachedThreads.filter(
+          (t) => !state.filter || t.title.toLowerCase().includes(state.filter.toLowerCase())
+        );
+        state.threadCur = Math.max(0, list.length - 1);
+      } else {
+        const flatReplies = flattenReplies(cachedReplies);
+        state.replyCur = Math.max(0, flatReplies.length - 1);
+      }
+      return { kind: 'none' };
+    }
+
     // ── Board view ──────────────────────────────────────────────────────────
     if (state.view === 'boards') {
       switch (event.key) {
@@ -1004,6 +1059,16 @@ export const communityPage: Page = {
         case 'up':
           state.threadCur = Math.max(0, state.threadCur - 1);
           return { kind: 'none' };
+        case 'o': {
+          const sortOrder: ThreadSort[] = ['top', 'new', 'active'];
+          state.threadSort =
+            sortOrder[(sortOrder.indexOf(state.threadSort) + 1) % sortOrder.length] ?? 'top';
+          const board = state.board ?? cachedBoards[state.boardCur]?.id;
+          if (board) {
+            loadThreads(board, ctx).then(() => ctx.repaint()).catch(() => {});
+          }
+          return { kind: 'none' };
+        }
         case 'enter': {
           const t = list[state.threadCur];
           if (t) {

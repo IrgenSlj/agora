@@ -2,7 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { scoreItem, rankItems } from '../src/news/score.js';
 import { readCache, writeCache, isStale } from '../src/news/cache.js';
 import { hostFromUrl, slugFromUrl } from '../src/news/types.js';
-import type { NewsItem, NewsConfig } from '../src/news/types.js';
+import type { NewsItem, NewsConfig, ScoredNewsItem } from '../src/news/types.js';
+import { visible } from '../src/cli/pages/news.js';
 
 const BASE_CONFIG: NewsConfig = {
   sources: {
@@ -215,5 +216,113 @@ describe('isStale', () => {
     const old = new Date(Date.now() - 3600000).toISOString();
     const items = [makeItem({ id: 'a', fetchedAt: old })];
     expect(isStale(items, 'hn', 10, new Date())).toBe(true);
+  });
+});
+
+// ── visible() boolean filters ────────────────────────────────────────────────
+
+function makeScoredItem(overrides: Partial<ScoredNewsItem> & { id: string }): ScoredNewsItem {
+  return {
+    source: 'hn',
+    title: 'Test Story',
+    url: 'https://example.com/test',
+    publishedAt: new Date().toISOString(),
+    fetchedAt: new Date().toISOString(),
+    engagement: 100,
+    tags: [],
+    score: 1.0,
+    scoreBreakdown: { recency: 1, engagement: 1, topic: 0 },
+    ...overrides
+  };
+}
+
+function makeState(
+  overrides: Partial<{
+    items: ScoredNewsItem[];
+    source: string;
+    tab: number;
+    filter: string;
+    savedOnly: boolean;
+    unreadOnly: boolean;
+    saved: Set<string>;
+    read: Set<string>;
+  }> = {}
+) {
+  return {
+    items: overrides.items ?? [],
+    source: overrides.source ?? 'all',
+    tab: overrides.tab ?? 0,
+    filter: overrides.filter ?? '',
+    savedOnly: overrides.savedOnly ?? false,
+    unreadOnly: overrides.unreadOnly ?? false,
+    saved: overrides.saved ?? new Set<string>(),
+    read: overrides.read ?? new Set<string>()
+  } as any;
+}
+
+describe('visible() — boolean filters', () => {
+  const hnItem = makeScoredItem({ id: 'hn:1', source: 'hn', title: 'HN Story' });
+  const redditItem = makeScoredItem({ id: 'reddit:1', source: 'reddit', title: 'Reddit Story' });
+
+  test('savedOnly=false shows all items', () => {
+    const st = makeState({ items: [hnItem, redditItem] });
+    expect(visible(st)).toHaveLength(2);
+  });
+
+  test('savedOnly=true shows only saved items', () => {
+    const st = makeState({
+      items: [hnItem, redditItem],
+      savedOnly: true,
+      saved: new Set(['hn:1'])
+    });
+    const result = visible(st);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('hn:1');
+  });
+
+  test('savedOnly=true with no saved items returns empty', () => {
+    const st = makeState({ items: [hnItem, redditItem], savedOnly: true });
+    expect(visible(st)).toHaveLength(0);
+  });
+
+  test('unreadOnly=false shows all items', () => {
+    const st = makeState({ items: [hnItem, redditItem] });
+    expect(visible(st)).toHaveLength(2);
+  });
+
+  test('unreadOnly=true hides read items', () => {
+    const st = makeState({
+      items: [hnItem, redditItem],
+      unreadOnly: true,
+      read: new Set(['hn:1'])
+    });
+    const result = visible(st);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('reddit:1');
+  });
+
+  test('savedOnly + unreadOnly AND together', () => {
+    const both = makeScoredItem({ id: 'both:1', source: 'hn', title: 'Both' });
+    const onlySaved = makeScoredItem({ id: 'saved:1', source: 'hn', title: 'Saved only' });
+    const st = makeState({
+      items: [both, onlySaved, hnItem],
+      savedOnly: true,
+      unreadOnly: true,
+      saved: new Set(['both:1', 'saved:1']),
+      read: new Set(['saved:1'])
+    });
+    const result = visible(st);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('both:1');
+  });
+
+  test('source filter still works alongside savedOnly', () => {
+    const st = makeState({
+      items: [hnItem, redditItem],
+      source: 'hn',
+      savedOnly: true,
+      saved: new Set(['reddit:1'])
+    });
+    expect(visible(st)).toHaveLength(0);
   });
 });

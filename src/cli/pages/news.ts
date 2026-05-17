@@ -22,6 +22,15 @@ const SOURCE_LABELS: Record<string, string> = {
   rss: 'RS'
 };
 
+const SOURCE_CYCLE: Array<NewsSource | 'all'> = [
+  'all',
+  'hn',
+  'reddit',
+  'github-trending',
+  'arxiv',
+  'rss'
+];
+
 const ITEM_LINES = 3;
 
 const TABS = [
@@ -59,6 +68,8 @@ interface NewsState {
   source: NewsSource | 'all';
   filter: string;
   filtering: boolean;
+  savedOnly: boolean;
+  unreadOnly: boolean;
   items: ScoredNewsItem[];
   read: Set<string>;
   saved: Set<string>;
@@ -79,6 +90,8 @@ const state: NewsState = {
   source: 'all',
   filter: '',
   filtering: false,
+  savedOnly: false,
+  unreadOnly: false,
   items: [],
   read: new Set(),
   saved: new Set(),
@@ -267,7 +280,7 @@ async function startPreview(item: ScoredNewsItem, ctx: PageContext): Promise<voi
   state.previewContent = item.url;
   state.previewLines = [];
   state.previewLoading = true;
-  state.previewPhase = 'Fetching article\u2026';
+  state.previewPhase = 'Fetching article…';
   ctx.repaint();
   await sleep(100);
 
@@ -283,7 +296,7 @@ async function startPreview(item: ScoredNewsItem, ctx: PageContext): Promise<voi
     return;
   }
 
-  state.previewPhase = 'Summarizing\u2026';
+  state.previewPhase = 'Summarizing…';
   ctx.repaint();
   await sleep(100);
 
@@ -305,13 +318,15 @@ function persistMeta(): void {
   });
 }
 
-function visible(): ScoredNewsItem[] {
-  const tab = TABS[state.tab]!;
-  return state.items.filter(
+export function visible(st: NewsState = state): ScoredNewsItem[] {
+  const tab = TABS[st.tab]!;
+  return st.items.filter(
     (s) =>
-      (state.source === 'all' || s.source === state.source) &&
+      (st.source === 'all' || s.source === st.source) &&
       tab.match(s.tags) &&
-      (!state.filter || s.title.toLowerCase().includes(state.filter.toLowerCase()))
+      (!st.filter || s.title.toLowerCase().includes(st.filter.toLowerCase())) &&
+      (!st.savedOnly || st.saved.has(s.id)) &&
+      (!st.unreadOnly || !st.read.has(s.id))
   );
 }
 
@@ -323,8 +338,12 @@ export const newsPage: Page = {
   handlesTab: true,
   hotkeys: [
     { key: 'j/k/Pg', label: 'nav' },
+    { key: 'g/G', label: 'jump' },
     { key: 'Enter', label: 'detail' },
     { key: 's', label: 'save' },
+    { key: 'b', label: 'saved' },
+    { key: 'u', label: 'unread' },
+    { key: 'S', label: 'source' },
     { key: 'p', label: 'preview' },
     { key: '/', label: 'filter' },
     { key: 'Tab', label: 'category' },
@@ -357,8 +376,8 @@ export const newsPage: Page = {
       const item = state.previewItem;
 
       if (state.previewLoading) {
-        const dots = state.previewPhase === 'Summarizing\u2026' ? '\u25D4' : '\u25D9';
-        lines.push(' ' + dots + '  ' + style.dim(state.previewPhase || 'Loading\u2026'));
+        const dots = state.previewPhase === 'Summarizing…' ? '◔' : '◙';
+        lines.push(' ' + dots + '  ' + style.dim(state.previewPhase || 'Loading…'));
         return frame(lines, width, height);
       }
       if (!item) {
@@ -370,9 +389,9 @@ export const newsPage: Page = {
         ' ' + style.bold(item.title),
         ' ' +
           style.dim(SOURCE_LABELS[item.source] ?? item.source.toUpperCase()) +
-          style.dim('  \u00b7  ' + fmtAge(new Date(item.publishedAt))) +
-          style.dim('  \u00b7  \u2191 ' + formatNumber(item.engagement)) +
-          style.dim('  \u00b7  s' + item.score.toFixed(2)),
+          style.dim('  ·  ' + fmtAge(new Date(item.publishedAt))) +
+          style.dim('  ·  ↑ ' + formatNumber(item.engagement)) +
+          style.dim('  ·  s' + item.score.toFixed(2)),
         ' ' + sep('', width - 2, style)
       ];
       lines.push(...headerLines);
@@ -421,9 +440,9 @@ export const newsPage: Page = {
         lines.push(
           ' ' +
             style.dim(SOURCE_LABELS[s.source] ?? s.source.toUpperCase()) +
-            style.dim('  \u00b7  ' + age) +
-            style.dim('  \u00b7  \u2191 ' + formatNumber(s.engagement)) +
-            style.dim('  \u00b7  s' + s.score.toFixed(2))
+            style.dim('  ·  ' + age) +
+            style.dim('  ·  ↑ ' + formatNumber(s.engagement)) +
+            style.dim('  ·  s' + s.score.toFixed(2))
         );
         lines.push(' ' + style.accent(s.url));
         if (s.tags && s.tags.length > 0) {
@@ -445,25 +464,35 @@ export const newsPage: Page = {
     ctx.app.unread.news = state.loading ? 0 : list.length;
     state.cursor = Math.min(state.cursor, Math.max(0, list.length - 1));
     const lines: string[] = [];
+
+    const srcLabel =
+      state.source === 'all' ? 'all' : (SOURCE_LABELS[state.source] ?? state.source);
     const head = ' ' + style.bold(style.accent('NEWS'));
     const pos =
       list.length > 0 ? style.dim(' [' + (state.cursor + 1) + '/' + list.length + ']') : '';
-    const right = pos + style.dim('  ' + list.length + ' stories');
+    const filterBadge =
+      (state.savedOnly ? style.accent(' saved-only') : '') +
+      (state.unreadOnly ? style.accent(' unread-only') : '');
+    const right =
+      pos +
+      style.dim('  ' + list.length + ' stories · src: ') +
+      style.accent(srcLabel) +
+      filterBadge;
     const gap = Math.max(2, width - vlen(head) - vlen(right) - 2);
     lines.push(head + ' '.repeat(gap) + right);
 
     const tabLine =
       ' ' +
       TABS.map((t, i) => (i === state.tab ? style.accent(t.label) : style.dim(t.label))).join(
-        style.dim('  ') + '\u00b7' + style.dim('  ')
+        style.dim('  ') + '·' + style.dim('  ')
       );
     lines.push(tabLine);
-    lines.push(' ' + style.dim('\u2500'.repeat(Math.max(0, width - 2))));
+    lines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
     if (state.filtering) {
-      lines.push(' ' + style.accent('/') + ' ' + state.filter + style.dim('\u258f'));
+      lines.push(' ' + style.accent('/') + ' ' + state.filter + style.dim('▏'));
     }
     if (state.loading) {
-      lines.push(' ' + style.dim('Loading news\u2026'));
+      lines.push(' ' + style.dim('Loading news…'));
       return frame(lines, width, height);
     }
     if (list.length === 0) {
@@ -489,7 +518,7 @@ export const newsPage: Page = {
       const src = style.accent((SOURCE_LABELS[s.source] ?? s.source.toUpperCase()).padEnd(6));
       const ageH = (Date.now() - new Date(s.publishedAt).getTime()) / 3600000;
       const age = style.dim((Math.round(ageH) + 'h').padEnd(4));
-      const up = style.accent(('\u2191 ' + formatNumber(s.engagement)).padStart(7));
+      const up = style.accent(('↑ ' + formatNumber(s.engagement)).padStart(7));
       const score = style.dim('s' + s.score.toFixed(2));
       const isRead = state.read.has(s.id);
       const isSaved = state.saved.has(s.id);
@@ -513,7 +542,7 @@ export const newsPage: Page = {
       lines.push(
         '         ' + style.dim(hostFromUrl(s.url)) + (isSaved ? style.accent('  saved') : '')
       );
-      lines.push(' ' + style.dim('\u2500'.repeat(Math.max(0, width - 2))));
+      lines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
     }
 
     return frame(lines, width, height);
@@ -615,6 +644,12 @@ export const newsPage: Page = {
       case 'up':
         state.cursor = Math.max(0, state.cursor - 1);
         return { kind: 'none' };
+      case 'g':
+        state.cursor = 0;
+        return { kind: 'none' };
+      case 'G':
+        state.cursor = Math.max(0, list.length - 1);
+        return { kind: 'none' };
       case 'pageup':
         state.cursor = Math.max(0, state.cursor - 20);
         return { kind: 'none' };
@@ -641,6 +676,20 @@ export const newsPage: Page = {
         }
         return { kind: 'none' };
       }
+      case 'S': {
+        const idx = SOURCE_CYCLE.indexOf(state.source);
+        state.source = SOURCE_CYCLE[(idx + 1) % SOURCE_CYCLE.length] ?? 'all';
+        state.cursor = 0;
+        return { kind: 'none' };
+      }
+      case 'b':
+        state.savedOnly = !state.savedOnly;
+        state.cursor = 0;
+        return { kind: 'none' };
+      case 'u':
+        state.unreadOnly = !state.unreadOnly;
+        state.cursor = 0;
+        return { kind: 'none' };
       case 'm': {
         const it = list[state.cursor];
         if (it) {

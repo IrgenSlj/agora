@@ -13,6 +13,9 @@ import { enrichItem, enrichHfItem, type EnrichmentEntry } from '../../hubs/enric
 import { detectAgoraDataDir } from '../../state.js';
 
 type SortKey = 'installs' | 'stars' | 'name';
+type SourceFilter = 'all' | 'curated' | 'github' | 'hf';
+type PricingFilter = 'all' | 'free' | 'paid';
+
 interface MpState {
   cursor: number;
   detail: boolean;
@@ -20,6 +23,8 @@ interface MpState {
   filtering: boolean;
   category: string;
   sort: SortKey;
+  sourceFilter: SourceFilter;
+  pricingFilter: PricingFilter;
   view: 'list' | 'install-preview';
   installPlan: InstallPlan | null;
   installStatus: string | null;
@@ -33,12 +38,34 @@ const state: MpState = {
   filtering: false,
   category: 'all',
   sort: 'installs',
+  sourceFilter: 'all',
+  pricingFilter: 'all',
   view: 'list',
   installPlan: null,
   installStatus: null,
   enrichment: null,
   enrichmentLoading: false
 };
+
+export function sourceBadge(item: MarketplaceItem): string {
+  const src = (item as any).source as string | undefined;
+  if (src === 'github') return '[gh] ';
+  if (src === 'hf') return '[hf] ';
+  return '[c]  ';
+}
+
+function matchesSourceFilter(item: MarketplaceItem, filter: SourceFilter): boolean {
+  if (filter === 'all') return true;
+  const src = (item as any).source as string | undefined;
+  if (filter === 'curated') return !src;
+  return src === filter;
+}
+
+function matchesPricingFilter(item: MarketplaceItem, filter: PricingFilter): boolean {
+  if (filter === 'all') return true;
+  const kind = (item as any).pricing?.kind ?? 'free';
+  return kind === filter;
+}
 
 function filtered(): MarketplaceItem[] {
   const all = state.query ? searchMarketplaceItems({ query: state.query }) : getMarketplaceItems();
@@ -47,9 +74,10 @@ function filtered(): MarketplaceItem[] {
     if (state.sort === 'stars') return (b.stars ?? 0) - (a.stars ?? 0);
     return (b.installs ?? 0) - (a.installs ?? 0);
   });
-  return state.category === 'all'
-    ? sorted
-    : sorted.filter((i) => (i.tags ?? []).includes(state.category));
+  return sorted
+    .filter((i) => state.category === 'all' || (i.tags ?? []).includes(state.category))
+    .filter((i) => matchesSourceFilter(i, state.sourceFilter))
+    .filter((i) => matchesPricingFilter(i, state.pricingFilter));
 }
 
 export const marketplacePage: Page = {
@@ -61,10 +89,11 @@ export const marketplacePage: Page = {
     { key: 'j/k', label: 'nav' },
     { key: 'Enter', label: 'details' },
     { key: 'i', label: 'install' },
-    { key: 's', label: 'save' },
     { key: '/', label: 'filter' },
     { key: 'c', label: 'category' },
-    { key: 'o', label: 'sort' }
+    { key: 'o', label: 'sort' },
+    { key: 't', label: 'source' },
+    { key: 'p', label: 'price' }
   ],
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
@@ -120,24 +149,44 @@ export const marketplacePage: Page = {
       return frame(lines, width, height);
     }
 
+    const allItems = getMarketplaceItems();
     const items = filtered();
     state.cursor = Math.min(state.cursor, Math.max(0, items.length - 1));
     const lines: string[] = [];
+
+    // Source breakdown counts
+    let sourceBreakdown = '';
+    if (state.sourceFilter === 'all') {
+      const nCurated = allItems.filter((i) => !(i as any).source).length;
+      const nGh = allItems.filter((i) => (i as any).source === 'github').length;
+      const nHf = allItems.filter((i) => (i as any).source === 'hf').length;
+      const parts: string[] = [];
+      if (nCurated) parts.push(nCurated + ' curated');
+      if (nGh) parts.push(nGh + ' gh');
+      if (nHf) parts.push(nHf + ' hf');
+      if (parts.length) sourceBreakdown = '   ' + style.dim(parts.join(' · '));
+    }
+
     const top =
       ' ' +
       style.bold(style.accent('MARKETPLACE')) +
       '   ' +
       style.dim('category: ') +
       style.accent(state.category) +
-      style.dim('  \u00b7  sort: ') +
+      style.dim('  ·  sort: ') +
       style.accent(state.sort) +
+      style.dim('  ·  src: ') +
+      style.accent(state.sourceFilter) +
+      style.dim('  ·  price: ') +
+      style.accent(state.pricingFilter) +
       '   ' +
-      style.dim(items.length + (items.length === 1 ? ' item' : ' items'));
+      style.dim(items.length + (items.length === 1 ? ' item' : ' items')) +
+      sourceBreakdown;
     lines.push(top);
     lines.push(' ' + sep('', width - 2, style));
 
     if (state.filtering) {
-      lines.push(' ' + style.accent('/') + ' ' + state.query + style.dim('\u258f'));
+      lines.push(' ' + style.accent('/') + ' ' + state.query + style.dim('▏'));
       lines.push('');
     }
 
@@ -157,6 +206,16 @@ export const marketplacePage: Page = {
           style.accent('c') +
           style.dim(' to reset category.')
       );
+      if (
+        process.env.AGORA_LIVE_HUBS !== '1' &&
+        state.sourceFilter !== 'curated'
+      ) {
+        lines.push('');
+        lines.push(
+          '   ' +
+            style.dim('Tip: set AGORA_LIVE_HUBS=1 to pull live GitHub + HuggingFace items.')
+        );
+      }
       return frame(lines, width, height);
     }
 
@@ -179,15 +238,13 @@ export const marketplacePage: Page = {
           ' ' +
             style.accent(fmtCount(it.installs ?? 0)) +
             style.dim(' installs   ') +
-            (it.stars !== undefined ? style.accent(fmtCount(it.stars)) + style.dim(' \u2605') : '')
+            (it.stars !== undefined ? style.accent(fmtCount(it.stars)) + style.dim(' ★') : '')
         );
         lines.push('');
         lines.push(
           ' ' +
             style.accent('i') +
             style.dim(' install   ') +
-            style.accent('s') +
-            style.dim(' save   ') +
             style.accent('Esc') +
             style.dim(' back')
         );
@@ -199,7 +256,7 @@ export const marketplacePage: Page = {
           for (const rel of related) {
             if (rel.id === it.id) continue;
             lines.push(
-              '  \u00b7 ' +
+              '  · ' +
                 style.bold(rel.name.padEnd(20)) +
                 style.dim(fmtCount(rel.installs ?? 0) + ' installs')
             );
@@ -217,14 +274,20 @@ export const marketplacePage: Page = {
       if (!it) continue;
       const selected = start + i === state.cursor;
       const lead = selected ? rail(style) : noRail();
+      const badge = style.dim(sourceBadge(it));
+      const pricingBadge =
+        ((it as any).pricing?.kind ?? 'free') === 'paid'
+          ? style.accent('PAID') + ' '
+          : '';
       const stats =
+        pricingBadge +
         style.accent(fmtCount(it.installs ?? 0).padStart(7)) +
         style.dim(' installs') +
         (it.stars !== undefined
-          ? '  ' + style.accent(fmtCount(it.stars).padStart(5)) + style.dim(' \u2605')
+          ? '  ' + style.accent(fmtCount(it.stars).padStart(5)) + style.dim(' ★')
           : '');
       const nameCell = selected ? style.bold(it.name) : it.name;
-      const left = ' ' + lead + nameCell;
+      const left = ' ' + lead + badge + nameCell;
       const room = width - vlen(left) - vlen(stats) - 2;
       const desc = style.dim((it.description ?? '').slice(0, Math.max(0, room - 2)));
       const pad = ' '.repeat(Math.max(1, room - vlen(desc) - 1));
@@ -236,7 +299,7 @@ export const marketplacePage: Page = {
           ? style.dim(
               'items ' +
                 (start + 1) +
-                '\u2013' +
+                '–' +
                 Math.min(start + limit, items.length) +
                 ' of ' +
                 items.length
@@ -374,8 +437,6 @@ export const marketplacePage: Page = {
         state.view = 'install-preview';
         return { kind: 'none' };
       }
-      case 's':
-        return { kind: 'status', message: 'saved' };
       case '/':
         state.filtering = true;
         return { kind: 'none' };
@@ -388,6 +449,20 @@ export const marketplacePage: Page = {
       case 'o': {
         const order: SortKey[] = ['installs', 'stars', 'name'];
         state.sort = order[(order.indexOf(state.sort) + 1) % order.length] ?? 'installs';
+        return { kind: 'none' };
+      }
+      case 't': {
+        const order: SourceFilter[] = ['all', 'curated', 'github', 'hf'];
+        state.sourceFilter =
+          order[(order.indexOf(state.sourceFilter) + 1) % order.length] ?? 'all';
+        state.cursor = 0;
+        return { kind: 'none' };
+      }
+      case 'p': {
+        const order: PricingFilter[] = ['all', 'free', 'paid'];
+        state.pricingFilter =
+          order[(order.indexOf(state.pricingFilter) + 1) % order.length] ?? 'all';
+        state.cursor = 0;
         return { kind: 'none' };
       }
       default:

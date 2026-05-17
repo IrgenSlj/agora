@@ -179,15 +179,18 @@ and shippable on its own; no ordering constraint.
   `account_age + log(net_votes)` per user nightly, written to a `users.reputation`
   column. Displayed on `agora profile`. Does NOT gate participation per the
   guidelines; affects sort weight only on `top-week` and `active`.
+- **Kill-switch operator UI** — ✓ **shipped**. `agora admin hide <id>
+  --reason …` writes to `kill_switch_log` and flips `hidden = 1`; `agora
+  admin log` lists recent audit entries. Backend gates on
+  `AGORA_ADMIN_USER_IDS` env via the new `requireAdmin` middleware (no
+  schema change).
 - **FTS5 search migration** — ✓ **shipped**. Virtual tables + sync triggers
   landed in `backend/schema.sql` (70feea6); search-handler cutover in
   `backend/src/index.ts /api/community/search` now joins
   `discussions_fts` / `discussion_replies_fts` via `MATCH`. User input is
   wrapped as a quoted FTS5 phrase (`sanitizeFtsQuery` in
   `src/community/search.ts`).
-- **Kill-switch operator UI** — **pending**. Backend has `kill_switch_log` table;
-  needs a maintainer-only CLI (`agora admin hide <id> --reason …`) that writes
-  to it and flips the `hidden` flag. Per guidelines, every use is logged publicly.
+- **Kill-switch operator UI** — _(see entry above; shipped this cycle)_.
 - **Flagged auto-hide trigger** — ✓ **shipped** (ec0e68e). When a flag insert
   pushes a target's total to ≥10, backend sets `hidden = 1` on the underlying
   discussion or reply.

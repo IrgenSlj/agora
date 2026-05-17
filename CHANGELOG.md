@@ -98,6 +98,46 @@ No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
   and `enrichHfItem` now accept an optional `opencode?: (prompt) => Promise<string|null>`
   override so tests can stub out the subprocess.
 
+### Added — kill-switch operator UI
+
+- **`POST /api/admin/hide`** and **`GET /api/admin/log`** on the backend.
+  Gated by a new `requireAdmin` middleware that checks the caller's user
+  id against the comma-separated `AGORA_ADMIN_USER_IDS` env (no schema
+  change). `hide` inserts into `kill_switch_log` and flips `hidden = 1`
+  on the target; `log` returns the most recent audit entries joined
+  against `users` for operator usernames.
+- **`agora admin hide <id> --reason <r> [--type discussion|reply]`** and
+  **`agora admin log [--limit 50]`** in `src/cli/commands/community.ts`,
+  wired through `app.ts` and registered in `commands-meta.ts`.
+- **`adminHideSource` / `adminLogSource`** in `src/community/client.ts`
+  match the existing `flagSource` / `voteSource` shape. 11 new tests in
+  `test/community/admin.test.ts` cover the happy path, 403 surfacing,
+  and the log renderer.
+
+### Added — TUI page UX
+
+- **Marketplace**: `[gh]` / `[hf]` / `[c]` source badge on every row,
+  `PAID` badge in accent when an item's pricing isn't free, new `t`
+  source-filter cycle (`all → curated → github → hf`) and `p` pricing-filter
+  cycle (`all → free → paid`), source breakdown in the header (`12 curated
+  · 8 gh · 3 hf`), and a one-line `AGORA_LIVE_HUBS=1` hint on the empty
+  state when hubs are disabled. The stub `s save` hotkey was removed.
+- **Community**: `o` cycles thread sort (`top → new → active`) and re-fetches
+  via `communityThreadsSource`; vote arrows render `▲` / `▼` in accent
+  when you've voted, dim `↑` otherwise (uses `voteGlyph()` helper); `g` /
+  `G` jumps to first / last in any view; reader keeps the thread title +
+  separator pinned while replies scroll.
+- **News**: `S` cycles the source filter (`all → hn → reddit →
+  github-trending → arxiv → rss`), `b` toggles saved-only, `u` toggles
+  unread-only (the two AND together when both on), `g` / `G` jumps;
+  `visible()` was refactored to a pure helper accepting state for unit
+  tests.
+- **Settings**: 5 new news-source toggle fields (one per `news.sources` key)
+  added via a generator helper, inline dim help line under the selected
+  field (`FIELD_HELP` map), `r` reverts unsaved changes back to disk, `?`
+  toggles a full-screen help overlay listing hotkeys + descriptions,
+  blank-line spacing between sections.
+
 ### Added — live hubs & community deepening (initial 2026-05-17 wave)
 
 - **Live marketplace hubs** (`AGORA_LIVE_HUBS=1`). New `src/hubs/` module with

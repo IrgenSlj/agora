@@ -22,6 +22,7 @@ import {
   type PackageMarketplaceItem
 } from '../src/marketplace';
 import { samplePackages } from '../src/data';
+import { sourceBadge } from '../src/cli/pages/marketplace';
 
 // ── searchMarketplaceItems ──────────────────────────────────────────────────
 
@@ -624,5 +625,84 @@ describe('getMarketplaceItems — AGORA_LIVE_HUBS=1', () => {
 
     const items = getMarketplaceItems();
     expect(items.map((i) => i.id)).not.toContain('gh:test/should-not-appear');
+  });
+});
+
+// ── sourceBadge helper ───────────────────────────────────────────────────────
+
+describe('sourceBadge', () => {
+  test('github source returns [gh] badge padded to 5 chars', () => {
+    const item = { source: 'github' } as any;
+    expect(sourceBadge(item)).toBe('[gh] ');
+  });
+
+  test('hf source returns [hf] badge padded to 5 chars', () => {
+    const item = { source: 'hf' } as any;
+    expect(sourceBadge(item)).toBe('[hf] ');
+  });
+
+  test('no source (curated) returns [c] badge padded to 5 chars', () => {
+    const item = {} as any;
+    expect(sourceBadge(item)).toBe('[c]  ');
+  });
+
+  test('undefined source returns curated badge', () => {
+    const item = { source: undefined } as any;
+    expect(sourceBadge(item)).toBe('[c]  ');
+  });
+
+  test('all badges are exactly 5 chars', () => {
+    expect(sourceBadge({ source: 'github' } as any)).toHaveLength(5);
+    expect(sourceBadge({ source: 'hf' } as any)).toHaveLength(5);
+    expect(sourceBadge({} as any)).toHaveLength(5);
+  });
+});
+
+// ── source filter logic ───────────────────────────────────────────────────────
+
+describe('marketplace source filter logic', () => {
+  test('curated items have no source field', () => {
+    const items = getMarketplaceItems();
+    const curated = items.filter((i) => !(i as any).source);
+    expect(curated.length).toBeGreaterThan(0);
+  });
+
+  test('sourceBadge distinguishes curated from hub items', () => {
+    const curatedItem = getMarketplaceItems()[0]!;
+    // All curated items have no source field
+    expect((curatedItem as any).source).toBeUndefined();
+    expect(sourceBadge(curatedItem)).toBe('[c]  ');
+  });
+
+  test('filter "curated" matches items with no source field', () => {
+    const items = getMarketplaceItems();
+    const curated = items.filter((i) => !(i as any).source);
+    const nonCurated = items.filter((i) => (i as any).source);
+    expect(curated.length).toBeGreaterThan(0);
+    // Without AGORA_LIVE_HUBS, all items should be curated
+    expect(nonCurated.length).toBe(0);
+  });
+
+  test('filter "github" matches items with source=github', () => {
+    const fakeGhItem = {
+      id: 'gh:owner/repo',
+      source: 'github',
+      name: 'repo',
+      description: 'test',
+      author: 'owner',
+      kind: 'package' as const,
+      version: 'main',
+      category: 'mcp',
+      tags: [],
+      stars: 1,
+      installs: 1,
+      repository: '',
+      createdAt: '2026-01-01T00:00:00Z',
+      pricing: { kind: 'free' as const }
+    };
+    const all = [fakeGhItem, ...getMarketplaceItems()];
+    const ghOnly = all.filter((i) => (i as any).source === 'github');
+    expect(ghOnly).toHaveLength(1);
+    expect(ghOnly[0].id).toBe('gh:owner/repo');
   });
 });

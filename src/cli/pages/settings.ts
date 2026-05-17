@@ -12,6 +12,47 @@ interface Field {
   write(s: AgoraSettings, v: string): AgoraSettings;
 }
 
+const NEWS_SOURCE_IDS = ['hn', 'reddit', 'github-trending', 'arxiv', 'rss'] as const;
+type NewsSourceId = (typeof NEWS_SOURCE_IDS)[number];
+
+function makeNewsSourceField(src: NewsSourceId): Field {
+  return {
+    section: 'News',
+    key: `news_${src}`,
+    label: `source.${src}`,
+    kind: 'toggle',
+    read: (s) => (s.news.sources[src]?.enabled ? 'on' : 'off'),
+    write: (s, _v) => ({
+      ...s,
+      news: {
+        ...s.news,
+        sources: {
+          ...s.news.sources,
+          [src]: {
+            ...s.news.sources[src],
+            enabled: !s.news.sources[src]?.enabled
+          }
+        }
+      }
+    })
+  };
+}
+
+const FIELD_HELP: Record<string, string> = {
+  username: 'Public name shown on posts and reviews.',
+  backend: 'API backend URL (leave blank for default).',
+  declared_llm: 'LLM identity to disclose on posts (optional).',
+  color: 'Terminal color mode: auto, truecolor, or none.',
+  banner: 'Show/hide the ASCII banner on startup.',
+  default_board: 'Community board opened by default.',
+  collapse_flag_threshold: 'Posts flagged this many times are collapsed.',
+  news_hn: 'Fetch stories from Hacker News.',
+  news_reddit: 'Fetch posts from relevant subreddits.',
+  'news_github-trending': 'Fetch trending GitHub repositories.',
+  news_arxiv: 'Fetch AI/ML papers from arXiv.',
+  news_rss: 'Fetch items from configured RSS feeds.'
+};
+
 const FIELDS: ReadonlyArray<Field> = [
   {
     section: 'Account',
@@ -57,6 +98,7 @@ const FIELDS: ReadonlyArray<Field> = [
     read: (s) => (s.display.banner ? 'on' : 'off'),
     write: (s, _v) => ({ ...s, display: { ...s.display, banner: !s.display.banner } })
   },
+  ...NEWS_SOURCE_IDS.map(makeNewsSourceField),
   {
     section: 'Community',
     key: 'default_board',
@@ -84,13 +126,15 @@ interface SettState {
   editing: boolean;
   buffer: string;
   dirty: boolean;
+  helpOpen: boolean;
 }
 const state: SettState = {
   cursor: 0,
   current: undefined,
   editing: false,
   buffer: '',
-  dirty: false
+  dirty: false,
+  helpOpen: false
 };
 
 function ensureLoaded(_ctx: PageContext): AgoraSettings {
@@ -109,11 +153,38 @@ export const settingsPage: Page = {
     { key: 'Enter', label: 'edit' },
     { key: '+/-', label: 'inc/dec' },
     { key: 'Esc', label: 'cancel' },
-    { key: 'w', label: 'write' }
+    { key: 'w', label: 'write' },
+    { key: 'r', label: 'revert' },
+    { key: '?', label: 'help' }
   ],
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
     const s = ensureLoaded(ctx);
+
+    if (state.helpOpen) {
+      const lines: string[] = [];
+      lines.push(' ' + style.bold(style.accent('SETTINGS HELP')));
+      lines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
+      lines.push('');
+      lines.push(' ' + style.bold('Hotkeys'));
+      lines.push('   ' + style.accent('j/k') + style.dim('        navigate fields'));
+      lines.push('   ' + style.accent('Space') + style.dim('      toggle on/off or cycle select'));
+      lines.push('   ' + style.accent('Enter') + style.dim('      edit text field'));
+      lines.push('   ' + style.accent('+/-') + style.dim('        increment/decrement number'));
+      lines.push('   ' + style.accent('w') + style.dim('          write (save) to disk'));
+      lines.push('   ' + style.accent('r') + style.dim('          revert unsaved changes'));
+      lines.push('   ' + style.accent('Esc') + style.dim('        cancel edit'));
+      lines.push('   ' + style.accent('?') + style.dim('          toggle this help'));
+      lines.push('');
+      lines.push(' ' + style.bold('Fields'));
+      for (const [key, desc] of Object.entries(FIELD_HELP)) {
+        lines.push('   ' + style.accent(key.padEnd(26)) + style.dim(desc));
+      }
+      lines.push('');
+      lines.push(' ' + style.dim('Press ? or Esc to dismiss.'));
+      return frame(lines, width, height);
+    }
+
     const lines: string[] = [];
     const head =
       ' ' + style.bold(style.accent('SETTINGS')) + style.dim('  ~/.config/agora/settings.toml');
@@ -122,11 +193,12 @@ export const settingsPage: Page = {
       : style.dim('clean');
     const gap = Math.max(2, width - vlen(head) - vlen(right) - 2);
     lines.push(head + ' '.repeat(gap) + right);
-    lines.push(' ' + style.dim('\u2500'.repeat(Math.max(0, width - 2))));
+    lines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
 
     let lastSection = '';
     FIELDS.forEach((f, i) => {
       if (f.section !== lastSection) {
+        if (lastSection !== '') lines.push('');
         lines.push(' ' + style.dim('[' + f.section.toLowerCase() + ']'));
         lastSection = f.section;
       }
@@ -135,8 +207,8 @@ export const settingsPage: Page = {
       const raw = state.editing && sel ? state.buffer : f.read(s);
       const value =
         state.editing && sel
-          ? style.accent(raw) + style.dim('\u258f')
-          : style.accent(raw.length ? raw : '\u2014');
+          ? style.accent(raw) + style.dim('▏')
+          : style.accent(raw.length ? raw : '—');
       const hintText =
         f.kind === 'toggle'
           ? 'space'
@@ -147,12 +219,25 @@ export const settingsPage: Page = {
               : 'Enter';
       const hint = sel ? '   ' + style.dim(hintText) : '';
       lines.push(' ' + lead + style.bold(f.label.padEnd(28)) + '= ' + value + hint);
+      if (sel) {
+        const helpText = FIELD_HELP[f.key];
+        if (helpText) {
+          lines.push('     ' + style.dim(helpText));
+        }
+      }
     });
-    lines.push(' ' + style.dim('\u2500'.repeat(Math.max(0, width - 2))));
+    lines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
     lines.push(' ' + style.dim('TOML is hand-editable; the TUI re-reads on next launch.'));
     return frame(lines, width, height);
   },
   handleKey(event, ctx): PageAction {
+    if (state.helpOpen) {
+      if (event.key === '?' || event.key === 'esc') {
+        state.helpOpen = false;
+      }
+      return { kind: 'none' };
+    }
+
     const s = ensureLoaded(ctx);
     const field = FIELDS[state.cursor];
     if (state.editing && field) {
@@ -224,6 +309,16 @@ export const settingsPage: Page = {
         if (state.current) writeSettings('~/.config/agora', state.current);
         state.dirty = false;
         return { kind: 'status', message: 'wrote settings.toml' };
+      case 'r':
+        if (state.dirty) {
+          state.current = loadSettings('~/.config/agora');
+          state.dirty = false;
+          return { kind: 'status', message: 'reverted' };
+        }
+        return { kind: 'none' };
+      case '?':
+        state.helpOpen = true;
+        return { kind: 'none' };
       default:
         return { kind: 'none' };
     }
