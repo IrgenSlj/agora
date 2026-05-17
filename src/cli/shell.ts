@@ -601,10 +601,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   }
 
   const sigintHandler = () => {
+    // SIGINT while idle: prompter handles Ctrl-C bytes directly via raw mode
     if (childActive) return;
-    // Ctrl-C while idle: the prompter handles abort; SIGINT from outside is rare
-    process.stdout.write('\n');
-    process.exit(0);
   };
   process.on('SIGINT', sigintHandler);
 
