@@ -1609,7 +1609,27 @@ app.post('/api/community/flag/:id', async (c) => {
       .bind(id, targetId, targetType, user.id, reason, notes)
       .run();
 
-    return c.json({ success: true });
+    // Auto-hide threshold: at >=10 flags, hide the item from default views.
+    // Maintainers can still review via the kill_switch_log audit table.
+    const FLAG_AUTO_HIDE_THRESHOLD = 10;
+    const countRow = (await c.env.DB.prepare(
+      'SELECT COUNT(*) AS n FROM flags WHERE target_id = ? AND target_type = ?'
+    )
+      .bind(targetId, targetType)
+      .first()) as { n: number } | null;
+    const total = countRow?.n ?? 0;
+    let autoHidden = false;
+    if (total >= FLAG_AUTO_HIDE_THRESHOLD) {
+      const table = targetType === 'discussion' ? 'discussions' : 'discussion_replies';
+      const updated = await c.env.DB.prepare(
+        `UPDATE ${table} SET hidden = 1 WHERE id = ? AND hidden = 0`
+      )
+        .bind(targetId)
+        .run();
+      autoHidden = (updated?.meta?.changes ?? 0) > 0;
+    }
+
+    return c.json({ success: true, flagCount: total, autoHidden });
   } catch (e) {
     console.error('POST /api/community/flag/:id error:', e);
     return c.json({ error: 'Internal server error' }, 500);

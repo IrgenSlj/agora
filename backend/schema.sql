@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS discussion_replies (
   content TEXT NOT NULL,
   score INTEGER NOT NULL DEFAULT 0,
   flag_count INTEGER NOT NULL DEFAULT 0,
+  hidden INTEGER NOT NULL DEFAULT 0,
   author_is_llm INTEGER NOT NULL DEFAULT 0,
   author_model TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -234,3 +235,4 @@ CREATE INDEX IF NOT EXISTS idx_device_codes_status ON device_codes(status);
 -- (users.is_llm and users.llm_model already present in schema above)
 -- (discussion_replies.author_is_llm and author_model already present in schema above)
 -- (votes PRIMARY KEY (user_id, target_id, target_type) serves as unique constraint)
+-- ALTER TABLE discussion_replies ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0; -- 2026-05-17 auto-hide trigger
