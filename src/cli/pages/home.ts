@@ -145,13 +145,22 @@ function renderTrendingColumn(items: MarketplaceItem[], style: PageContext['styl
   return { title: 'Trending', lines };
 }
 
-function composeStacked(width: number, cols: RenderColumn[], style: PageContext['style']): string[] {
+function focusedTitle(title: string, focused: boolean, style: PageContext['style']): string {
+  return focused ? style.accent('▸ ' + title) : title;
+}
+
+function composeStacked(
+  width: number,
+  cols: RenderColumn[],
+  focusedIdx: number,
+  style: PageContext['style']
+): string[] {
   const out: string[] = [];
-  for (const col of cols) {
-    out.push(' ' + sep(col.title, width - 2, style));
+  cols.forEach((col, i) => {
+    out.push(' ' + sep(focusedTitle(col.title, i === focusedIdx, style), width - 2, style));
     for (const line of col.lines) out.push(' ' + line);
     out.push('');
-  }
+  });
   return out;
 }
 
@@ -160,17 +169,21 @@ function composeTwoColumn(
   left: RenderColumn,
   rightTop: RenderColumn,
   rightBottom: RenderColumn,
+  focusedIdx: number,
   style: PageContext['style']
 ): string[] {
   const leftWidth = Math.floor((width - 3) * 0.55);
   const rightWidth = width - leftWidth - 3;
-  const leftLines = [' ' + sep(left.title, leftWidth - 1, style), ...left.lines.map((l) => ' ' + l)];
+  const leftLines = [
+    ' ' + sep(focusedTitle(left.title, focusedIdx === 0, style), leftWidth - 1, style),
+    ...left.lines.map((l) => ' ' + l)
+  ];
   const rightTopLines = [
-    sep(rightTop.title, rightWidth - 1, style),
+    sep(focusedTitle(rightTop.title, focusedIdx === 1, style), rightWidth - 1, style),
     ...rightTop.lines.map((l) => ' ' + l)
   ];
   const rightBottomLines = [
-    sep(rightBottom.title, rightWidth - 1, style),
+    sep(focusedTitle(rightBottom.title, focusedIdx === 2, style), rightWidth - 1, style),
     ...rightBottom.lines.map((l) => ' ' + l)
   ];
   const rightLines = [...rightTopLines, '', ...rightBottomLines];
@@ -218,8 +231,8 @@ export const homePage: Page = {
 
     const body =
       width >= 100
-        ? composeTwoColumn(width, newsCol, commCol, trendCol, style)
-        : composeStacked(width, [newsCol, commCol, trendCol], style);
+        ? composeTwoColumn(width, newsCol, commCol, trendCol, state.cursor, style)
+        : composeStacked(width, [newsCol, commCol, trendCol], state.cursor, style);
     lines.push(...body);
 
     return frame(lines, width, height);
