@@ -1188,6 +1188,11 @@ app.post('/api/discussions', async (c) => {
 // ── Community hub endpoints ───────────────────────────────────────────────────
 
 const COMMUNITY_BOARD_IDS = ['mcp', 'agents', 'tools', 'workflows', 'show', 'ask', 'meta'];
+const REP_WEIGHT = 5;
+
+export function weightedThreadScore(base: number, reputation: number, weight = REP_WEIGHT): number {
+  return base + Math.log10(Math.max(1, reputation + 1)) * weight;
+}
 
 app.get('/api/community/boards', async (c) => {
   const yesterday = Date.now() - 86400000;
@@ -1231,29 +1236,45 @@ app.get('/api/community/threads', async (c) => {
     return c.json({ error: 'Invalid board' }, 400);
   }
 
-  let orderBy: string;
-  if (sort === 'new') {
-    orderBy = 'created_at DESC';
-  } else if (sort === 'top') {
-    orderBy = 'score DESC, created_at DESC';
-  } else {
-    orderBy = 'updated_at DESC';
-  }
+  // `new` is purely chronological. `top` and `active` weight in the author's
+  // reputation via weightedThreadScore so high-rep users surface higher.
+  const useRepWeight = sort === 'top' || sort === 'active';
 
   try {
     const offset = (page - 1) * PAGE_SIZE;
-    const { results } = (await c.env.DB.prepare(
-      `SELECT d.*,
+    const baseSql = `SELECT d.*,
+              (SELECT reputation FROM users WHERE username = d.author) AS author_reputation,
               (SELECT COUNT(*) FROM flags f WHERE f.target_id = d.id AND f.target_type = 'discussion') AS computed_flag_count
        FROM discussions d
-       WHERE d.board = ? AND d.hidden = 0
-       ORDER BY ${orderBy}
-       LIMIT ? OFFSET ?`
+       WHERE d.board = ? AND d.hidden = 0`;
+
+    let sqlOrder: string;
+    if (sort === 'new') {
+      sqlOrder = 'd.created_at DESC';
+    } else if (sort === 'top') {
+      sqlOrder = 'd.score DESC, d.created_at DESC';
+    } else {
+      sqlOrder = 'd.updated_at DESC';
+    }
+
+    const fetchSize = useRepWeight ? 200 : PAGE_SIZE + 1;
+    const { results } = (await c.env.DB.prepare(
+      `${baseSql} ORDER BY ${sqlOrder} LIMIT ? OFFSET ?`
     )
-      .bind(board, PAGE_SIZE + 1, offset)
+      .bind(board, fetchSize, useRepWeight ? 0 : offset)
       .all()) as any;
 
-    const rows = results ?? [];
+    let rows = (results ?? []) as any[];
+    if (useRepWeight) {
+      const base = (r: any): number =>
+        sort === 'top' ? Number(r.score ?? 0) : Number(r.score ?? 0) + Number(r.reply_count ?? 0);
+      rows = rows
+        .map((r) => ({ row: r, w: weightedThreadScore(base(r), Number(r.author_reputation ?? 0)) }))
+        .sort((a, b) => b.w - a.w)
+        .slice(offset, offset + PAGE_SIZE + 1)
+        .map((x) => x.row);
+    }
+
     const hasMore = rows.length > PAGE_SIZE;
     const threads = rows.slice(0, PAGE_SIZE).map((r: any) => ({
       id: r.id,

@@ -7,6 +7,33 @@ function computeReputation(accountAgeDays: number, netVotes: number): number {
   return Math.round((ageBonus + voteBonus) * 10) / 10;
 }
 
+function weightedThreadScore(base: number, reputation: number, weight = 5): number {
+  return base + Math.log10(Math.max(1, reputation + 1)) * weight;
+}
+
+describe('weightedThreadScore', () => {
+  test('zero reputation yields base unchanged', () => {
+    expect(weightedThreadScore(10, 0)).toBe(10);
+  });
+
+  test('negative reputation clamped to 0 bonus', () => {
+    expect(weightedThreadScore(10, -50)).toBe(10);
+  });
+
+  test('high reputation lifts the base by log10(rep+1) * weight', () => {
+    // rep = 999 → log10(1000) * 5 = 15
+    expect(weightedThreadScore(20, 999)).toBeCloseTo(35, 5);
+  });
+
+  test('weight override scales the bonus', () => {
+    expect(weightedThreadScore(0, 999, 10)).toBeCloseTo(30, 5);
+  });
+
+  test('rep = 9 yields exactly log10(10)*5 = 5 bonus', () => {
+    expect(weightedThreadScore(0, 9)).toBeCloseTo(5, 5);
+  });
+});
+
 describe('computeReputation', () => {
   test('0 age + 0 votes yields 0', () => {
     expect(computeReputation(0, 0)).toBe(0);
