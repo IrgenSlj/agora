@@ -1,88 +1,24 @@
-# Agora Hub
+# `agora` hub
 
-<p align="center">
-  An optional local web console for curating the Agora marketplace.
-</p>
+Optional local web console for browsing the `agora` marketplace visually. The CLI is the primary product; the Hub is a companion surface for visual browsing and install-plan preview.
 
-Agora is CLI-first. The Hub is a companion surface for visual browsing, install-plan review, and moderation workflows.
-
-## Purpose
-
-Allows users to:
-- Browse and preview Agora packages, skills, prompts, and workflows
-- Build an OpenCode install plan and copy generated `opencode.json`
-- Moderate community discussions
-- View lightweight marketplace analytics
-
-## Architecture
-
-```text
-AGORA HUB
-|-- Overview: stats, activity, analytics
-|-- Marketplace: package search, filters, details
-|-- Workflows: prompt preview and install planning
-|-- Community: discussion moderation and drafts
-`-- Install plan: generated opencode.json and commands
-
-Future connected mode:
-Cloudflare Workers API + D1 database
-```
-
-## Tech Stack
-
-- **Frontend**: static HTML, CSS, and JavaScript
-- **Local server**: Bun
-- **Backend**: Cloudflare Workers API in `/backend` for a future connected mode
-- **Database**: Cloudflare D1 schema in `/backend/schema.sql`
-
-## Pages
-
-### Dashboard
-- Stats: total packages, users, discussions
-- Recent activity feed
-- Package analytics
-
-### Packages
-- Search, filter, and sort package listings
-- Inspect package metadata
-- Add installable items to an install plan
-
-### Discussions
-- View all discussions
-- Moderate by pinning or marking reviewed
-- Create local discussion drafts
-
-### Install Plan
-- Review selected packages and workflows
-- Preview `opencode.json`
-- Copy generated config and install commands
-
-## Development
+## Run
 
 ```bash
 bun run hub:dev
+# open http://localhost:4173
 ```
 
-Then open:
+Static HTML / CSS / JS served by Bun. No build step. Uses `localStorage` + sample data — wire it to the backend in `../backend/` once that's hosted.
 
-```text
-http://localhost:4173
-```
+## Pages
 
-## Data Model
-
-```text
-Users -> Discussions -> Replies
-Users -> Reviews -> Packages
-Users -> Reviews -> Workflows
-```
-
-## Security
-
-- This local version uses sample data and `localStorage`
-- A deployed version should use GitHub OAuth
-- Role-based permissions, rate limiting, and audit logging belong in the connected backend
+- **Overview** — total packages / discussions / activity
+- **Packages** — search, filter, sort the catalog; click through for metadata
+- **Workflows** — prompt preview + install planning
+- **Community** — discussion browsing + local moderation drafts
+- **Install plan** — review selected items, preview generated `opencode.json`
 
 ## Status
 
-Local-only for now. Run with `bun run hub:dev` from the project root. A public deploy is on the [roadmap](../ROADMAP.md).
+Local-only. A public deploy is on the [roadmap](../ROADMAP.md) (Phase 5 — reach surface).

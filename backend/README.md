@@ -1,143 +1,78 @@
-# Agora Backend
+# `agora` backend
 
-<p align="center">
-  Cloudflare Workers API for the Agora marketplace.
-</p>
+Cloudflare Workers + D1 backend behind the `agora` CLI's live-mode features (community, reviews, profiles, publishing, moderation).
 
-<p align="center">
-  <a href="https://cloudflare.com"><img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare" alt="Cloudflare"></a>
-  <a href="https://hono.dev"><img src="https://img.shields.io/badge/Hono-EE4D3C?logo=hono" alt="Hono"></a>
-  <a href="https://developers.cloudflare.com/d1/"><img src="https://img.shields.io/badge/D1-SQLite-3B82F6" alt="D1"></a>
-</p>
+The CLI works **fully offline** by default; this backend is opt-in via `--api`, `AGORA_API_URL`, or `agora auth login`. There is no public hosted instance yet — self-host with the instructions below, or follow [`../ROADMAP.md`](../ROADMAP.md) Phase 2 for the deploy gate.
 
-> **Status:** Not yet deployed. Phase 1.5 added community board/thread/vote/flag endpoint definitions and CLI commands — the CLI works fully offline. Live-mode features require deploying this backend. A public hosted instance is on the [roadmap](../ROADMAP.md).
+## Stack
 
-## Overview
+- Runtime: Cloudflare Workers
+- Router: [Hono](https://hono.dev)
+- DB: Cloudflare D1 (SQLite)
+- Auth: OAuth-style JWT pair (1h access + 90d refresh, hashed-`jti` rotation); GitHub used only for identity binding
 
-REST API backend built with Hono that provides:
-- Package and workflow management
-- User authentication (GitHub OAuth)
-- Real-time npm/GitHub data aggregation
-- Community features (discussions, reviews)
+See [`../SECURITY.md`](../SECURITY.md) for the full authentication model.
 
-## Tech Stack
+## Endpoints
 
-- **Runtime**: Cloudflare Workers
-- **Framework**: Hono
-- **Database**: Cloudflare D1 (SQLite)
-- **Auth**: GitHub OAuth
+| Group | Endpoint |
+|---|---|
+| **Health** | `GET /` · `GET /health` |
+| **Auth** | `POST /auth/device/code` · `POST /auth/device/token` · `POST /auth/refresh` · `POST /auth/logout` |
+| **Marketplace** | `GET /api/packages` · `GET /api/packages/:id` · `POST /api/packages` · `GET /api/workflows` · `GET /api/workflows/:id` · `POST /api/workflows` |
+| **Community** | `GET /api/community/boards` · `GET /api/community/threads?board=&sort=top\|new\|active&page=` · `GET /api/community/thread/:id` · `GET /api/community/search?q=&board=&limit=` · `POST /api/community/threads` · `POST /api/community/reply/:parentId` · `POST /api/community/vote/:targetId` · `POST /api/community/flag/:targetId` |
+| **Users / reviews** | `GET /api/users/:username` (includes `reputation`) · `GET /api/reviews` · `POST /api/reviews` |
+| **Aggregation** | `GET /api/aggregate/packages` · `GET /api/aggregate/mcp/:name` · `GET /api/aggregate/github/:owner/:repo` |
+| **Admin** | `POST /api/admin/hide` · `GET /api/admin/log` · `POST /api/admin/reputation/recompute` |
 
-## API Endpoints
+Write endpoints require a bearer access token. Admin endpoints require the caller's user id to appear in the comma-separated `AGORA_ADMIN_USER_IDS` env (no schema flag). Length caps on `POST /api/packages|workflows|discussions`. Sort param on `/api/community/threads` is validated against an explicit allowlist before SQL interpolation.
 
-### Packages
-- `GET /api/packages` - List/search packages
-- `GET /api/packages/:id` - Get package details
-- `POST /api/packages` - Publish or update a package
+Community search uses an FTS5 virtual table (`discussions_fts`, `discussion_replies_fts`) with sync triggers — see `schema.sql:231+` and `sanitizeFtsQuery` in `../src/community/search.ts`.
 
-### Workflows
-- `GET /api/workflows` - List/search workflows
-- `GET /api/workflows/:id` - Get workflow details
-- `POST /api/workflows` - Publish or update a workflow
-
-### Community
-- `GET /api/community/boards` - List boards with thread counts
-- `GET /api/community/threads` - List threads (`?board=&sort=top|new|active&page=`)
-- `GET /api/community/thread/:id` - Get thread + reply tree
-- `POST /api/community/threads` - Create thread (authenticated)
-- `POST /api/community/reply/:parent_id` - Reply to thread/reply (authenticated)
-- `POST /api/community/vote/:id` - Vote up/down (authenticated)
-- `POST /api/community/flag/:id` - Flag content (authenticated)
-- `POST /api/discussions` - Create discussion, authenticated
-- `GET /api/reviews` - List reviews
-- `POST /api/reviews` - Create review
-
-### Users
-- `GET /api/users/:username` - Get public user profile with contribution counts
-
-### Aggregation
-- `GET /api/aggregate/packages` - Search npm with MCP filter
-- `GET /api/aggregate/mcp/:name` - Get MCP package details
-- `GET /api/aggregate/github/:owner/:repo` - Get GitHub repo data
-
-### Other
-- `GET /` - API info
-- `GET /health` - Health check
-
-## Deployment
+## Local development
 
 ```bash
-# Login to Cloudflare
-wrangler login
-
-# Create D1 database
-wrangler d1 create agora
-
-# Run schema (replace YOUR_DATABASE_ID)
-wrangler d1 execute agora --file=schema.sql
-
-# Set secrets
-wrangler secret put GITHUB_CLIENT_ID
-wrangler secret put GITHUB_CLIENT_SECRET
-wrangler secret put AUTH_SECRET
-
-# Deploy
-wrangler deploy
-```
-
-## Local Development
-
-```bash
-# Install dependencies
 bun install
-
-# Run locally (requires D1 binding mock)
-bun run dev
-
-# Test
+bun run dev        # wrangler dev with the D1 binding
 curl http://localhost:8787/health
 ```
 
-## Environment Variables
+Backend has its own tsconfig:
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `GITHUB_CLIENT_ID` | GitHub OAuth App client ID | Yes |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth App secret | Yes |
-| `AUTH_SECRET` | Secret for JWT/sessions | Yes |
-| `AGORA_ENV` | `development` or `production` | No |
+```bash
+bun run typecheck  # tsc --noEmit
+```
 
-## Database Schema
+## Deploy
 
-Tables:
-- `users` - User accounts with GitHub OAuth
-- `packages` - MCP servers and plugins
-- `workflows` - Shared agentic workflows
-- `discussions` - Community discussions
-- `discussion_replies` - Discussion replies
-- `reviews` - Package/workflow ratings
-- `tutorials` - Learning content
-- `followers` - User relationships
+```bash
+wrangler login
+wrangler d1 create agora
+wrangler d1 execute agora --file=schema.sql
+wrangler secret put AUTH_SECRET
+wrangler secret put GITHUB_CLIENT_ID
+wrangler secret put GITHUB_CLIENT_SECRET
+# Comma-separated user ids granted moderator commands:
+wrangler secret put AGORA_ADMIN_USER_IDS
+wrangler deploy
+```
 
-See `schema.sql` for full schema.
+| Variable | Required |
+|---|---|
+| `AUTH_SECRET` | yes — JWT signing key |
+| `GITHUB_CLIENT_ID` | yes |
+| `GITHUB_CLIENT_SECRET` | yes |
+| `AGORA_ADMIN_USER_IDS` | no — comma-separated user ids for `agora admin *` |
+| `AGORA_ENV` | no — `development` or `production`; toggles secure cookie flag |
 
-## Authentication
+## Schema
 
-GitHub OAuth flow:
-1. User clicks "Login with GitHub"
-2. Redirect to GitHub OAuth
-3. Callback creates/updates user in DB
-4. Session cookie set
+`schema.sql` — `users`, `packages`, `workflows`, `discussions`, `discussion_replies` (with `hidden`, `author_is_llm`, `author_model`), `discussions_fts` + `discussion_replies_fts` (FTS5 with sync triggers), `votes`, `flags`, `kill_switch_log`, `reviews`, `refresh_tokens`, `rate_limits`, `device_codes`.
 
-CLI write endpoints also accept `Authorization: Bearer <github-token>`. The backend resolves the token against stored OAuth sessions first, then falls back to GitHub `/user` and upserts the user record. Protected write routes derive the author from that resolved user instead of trusting request body author fields.
-
-Protected endpoints:
-- `POST /api/packages`
-- `POST /api/workflows`
-- `POST /api/discussions`
-- `POST /api/reviews`
+Manual migrations for live D1 instances are appended at the bottom of the schema file.
 
 ## Status
 
-- API code: complete (including Phase 1.5 community endpoints)
-- Deployed (hosted instance): not yet — see [ROADMAP.md](../ROADMAP.md)
-- Self-hosting via instructions above: supported
+- Code: feature-complete for Phase 1.5 + 1.6
+- Hosted deploy: blocked on rate-limit middleware wiring + production wrangler config — see [`../ROADMAP.md`](../ROADMAP.md) Phase 2
+- Self-hosting: supported with the steps above

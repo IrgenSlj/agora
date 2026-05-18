@@ -175,25 +175,15 @@ flag/score/threshold logic that Phase 4 needs for marketplace items.
 
 ## Open decisions
 
-1. **TUI shape** — **Decision: hybrid.** Scriptable one-shot commands remain
-   the default (all named commands, `--json`, pipes, CI all work as before).
-   The interactive shell (`agora` with no arguments) handles bash dispatch,
-  chat, and `/` meta commands. A full-screen TUI (`agora tui` / `/tui`) is
-  built with 5 pages (Home, Marketplace, Community, News, Settings) using
-  raw terminal codes and a `Page` contract — see `src/cli/tui.ts` and
-  `src/cli/pages/`.
-2. **Sellable unit** — skills/workflows only, or also proprietary MCP servers?
-   This shapes `install` and the permission manifest.
-3. **Payment model** — per-item Stripe Checkout vs. prepaid credits/wallet.
+1. **Sellable unit** — skills/workflows only, or also proprietary MCP servers? This shapes both `install` and the permission manifest.
+2. **Payment model** — per-item Stripe Checkout vs. prepaid credits/wallet.
+3. **Runtime sandbox shape** — the declared permission manifest is currently informational. Phase 4 will enforce it at runtime; the shape (Linux namespaces? Cloudflare-style isolates? Bun's `--prefer-offline` + `npm`'s built-in policies?) is undecided.
 
 ## Status
 
 - **Phase 1 (standalone hub experience)** — done.
-- **Phase 1.5 ("Destination": news feed + community hub + marketplace
-  elaboration)** — substantially shipped. News feed with 5 source adapters,
-  scoring, TUI reader with AI summarization. Community hub CLI commands
-  and backend schema. `agora similar` / `agora compare`. Preferences and
-  history persistence. See [`../ROADMAP.md`](../ROADMAP.md) for remaining items
-  (backend deploy, demo, 0.5.0 bump).
-- **Phases 2–5** — see [`../ROADMAP.md`](../ROADMAP.md). Payments (Phase 3) are
-  deliberately deferred behind the content and experience work.
+- **Phase 1.5 + 1.6 ("Destination" pillars + polish)** — shipped end-to-end. News feed (5 sources + AI summarization), community hub (boards, threads, votes, flags, FTS5 search, kill-switch), live marketplace hubs (GitHub + HuggingFace), reputation calc + sort weighting, permission-manifest display + install acknowledgment.
+- **Phase 2 (backend & accounts)** — feature-complete; deploy blocked on rate-limit middleware + production wrangler config. See [`../ROADMAP.md`](../ROADMAP.md).
+- **Phase 3 (commerce)** — deferred behind Phase 4 trust work. `Pricing` type on `Package` is scaffolded; the paid branch is a typed no-op.
+- **Phase 4 (trust & self-regulation)** — in progress. Display + acknowledgment + earned reputation + flag/kill-switch shipped; automated publish scan and runtime sandbox enforcement remain.
+- **Phase 5 (reach)** — `agora mcp` and `agora chat` shipped in 0.4.0; public web hub and IDE surfaces are future work.

@@ -1,74 +1,55 @@
 # Security Policy
 
-## Supported Versions
+## Supported versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 0.4.x   | :white_check_mark: |
-| 0.3.x   | :white_check_mark: (security fixes only) |
-| < 0.3   | :x:                |
+| Version | Supported |
+|---|---|
+| 0.4.x | yes |
+| 0.3.x | security fixes only |
+| < 0.3 | no |
 
-## Reporting a Vulnerability
+## Reporting a vulnerability
 
-If you discover a security vulnerability, please do NOT open a public issue.
-Instead, send a private report to the project maintainers via GitHub's
-[private vulnerability reporting](https://github.com/IrgenSlj/agora/security/advisories/new).
+Do **not** open a public issue. Use GitHub's [private vulnerability reporting](https://github.com/IrgenSlj/agora/security/advisories/new) with a description, reproduction steps, and impact assessment. Expect a response within 48 hours.
 
-Please include:
+## How `agora` handles user data
 
-- A description of the vulnerability
-- Steps to reproduce
-- Potential impact
+- `~/.config/agora/state.json` (saves + auth tokens), `settings.toml`, `preferences.json`, `news-meta.json`, and the hub enrichment store are written **atomically** (`.tmp` + `renameSync`) at **`0o600`** via the shared `src/atomic-write.ts` helper. A crash mid-flush leaves the previous file intact.
+- Tokens are masked in `agora auth status` output and never logged.
+- The bundled offline catalog contains no secrets.
+- Auto-installable packages are validated against the live npm registry by the test suite; entries without a published `npmPackage` are marked browsable-only.
 
-You should receive a response within 48 hours. If the vulnerability is accepted,
-a fix will be prioritized and a security advisory will be published.
+## Install consent (Phase 4 trust step 1)
 
-## Security Best Practices
+Items in the catalog can declare a `permissions: { fs?, net?, exec? }` manifest. When present:
 
-- API tokens and credentials are stored in `~/.config/agora/state.json` with user-only permissions
-- Sensitive data (tokens) are never logged or exposed in error messages
-- All file writes use atomic operations to prevent partial writes
-- The bundled offline data contains no secrets or credentials
-- Auto-installable packages are validated against the npm registry — entries without a published `npmPackage` remain browsable but cannot be installed
+- **TUI install preview** flips its footer from `y confirm` to `g grant + install   d details   n cancel`.
+- **CLI `agora install <id> --write`** refuses without `--yes`, prints the manifest, and exits 1.
+- **CLI `agora install <id> --write --yes`** prints `Granted permissions:` followed by the manifest before any `execSync` runs.
+
+The manifest is currently **informational** — there is no runtime sandbox yet. Treat installed MCP servers like any other dependency you would `npm i -g`. Runtime enforcement is open Phase 4 work; see [`ROADMAP.md`](./ROADMAP.md).
 
 ## Authentication model
 
-Agora uses an OAuth-style token pair on every authenticated backend request:
+`agora` uses an OAuth-style token pair on every authenticated backend request:
 
-- **Access token** — stateless JWT (HS256), 1h lifetime. Carried as
-  `Authorization: Bearer <token>`. Verified by signature + `exp` only; no
-  per-request DB lookup.
-- **Refresh token** — JWT with a random `jti`, 90d lifetime. The server
-  stores `sha256(jti)` keyed by `user_id` in `refresh_tokens`. Every call to
-  `POST /auth/refresh` rotates: the old `jti` row is deleted and a fresh
-  pair is issued, so a leaked refresh token is single-use.
-- **Logout** — `POST /auth/logout` revokes either one refresh token
-  (passed in the body) or all of the user's refresh tokens (logout
-  everywhere). `agora logout` calls this best-effort before clearing local
-  state, so a network failure still removes the credentials locally.
-- **GitHub** — used only for identity binding (`users.github_id`); the
-  GitHub OAuth access token is never persisted.
+- **Access token** — stateless JWT (HS256), 1h lifetime. Carried as `Authorization: Bearer <token>`. Verified by signature + `exp` only; no per-request DB lookup.
+- **Refresh token** — JWT with a random `jti`, 90d lifetime. The server stores `sha256(jti)` keyed by `user_id` in `refresh_tokens`. Every `POST /auth/refresh` rotates: the old row is deleted and a fresh pair is issued, so a leaked refresh token is single-use.
+- **Logout** — `POST /auth/logout` revokes either one refresh token or all of the user's tokens (logout everywhere). `agora logout` calls it best-effort before clearing local state.
+- **GitHub** — used only for identity binding (`users.github_id`); the GitHub OAuth access token is never persisted.
 
-The CLI stores the pair in `~/.config/agora/state.json` (user-only perms).
-Tokens are masked in `agora auth status` output and never logged.
+## Moderation
+
+`agora admin hide` and `agora admin log` are gated by a `requireAdmin` middleware that checks the caller's user id against the comma-separated `AGORA_ADMIN_USER_IDS` env on the backend. Every kill-switch use is recorded in the public `kill_switch_log` table per [`COMMUNITY_GUIDELINES.md`](./COMMUNITY_GUIDELINES.md). Community-side moderation is flag-don't-delete: items with ≥3 flags auto-collapse, ≥10 flags auto-hide.
+
+## Recent hardening
+
+- Shell-injection paths reviewed and switched to `execFileSync` / `spawnSync` with args arrays: `$EDITOR` open, OAuth `verificationUri` browser open, `git clone` install kind (also gated by a URL allowlist at plan-build time)
+- arXiv news source switched from `http://` to `https://`
+- Backend write endpoints (`POST /api/packages|workflows|discussions`) have length caps; `/api/community/threads` validates `?sort=` against an explicit allowlist before SQL interpolation
+- OAuth device-code + token responses are narrowly typed and validated for required fields
 
 ## Known issues tracked for the next release
 
-These are documented openly because Agora's whole thesis is that trust is the
-product:
-
-- **Marketplace packages do not yet declare permission manifests.** Until the
-  Phase 4 trust layer ships, `agora install <id> --write` runs `npm install -g`
-  without surfacing what the package can touch. Treat installed MCP servers like
-  any other dependency you would `npm i -g`.
-- **Redundant rate-limit check on `/api/*` write endpoints.** Each write
-  flows through both the `/api/*` middleware and an inline `checkRateLimit`
-  call, against different keys. Functionally correct (both buckets must
-  permit), but burns two DB writes per request. Cleanup tracked for the
-  deploy-readiness pass.
-- **`/api/*` rate-limit keying by auth-header prefix.** The middleware keys
-  authenticated requests by `auth.slice(0, 16)` — the first 16 chars of
-  `Bearer eyJ...`, which is identical for every JWT from the same secret.
-  In practice this collapses to per-IP keying for all authed traffic.
-  Pre-existing; replace with per-user keying derived from the verified JWT
-  `sub` claim during the deploy-readiness pass.
+- **Redundant rate-limit check on `/api/*` write endpoints.** Each write flows through both the `/api/*` middleware and an inline `checkRateLimit` call. Functionally correct (both buckets must permit) but burns two DB writes per request.
+- **`/api/*` rate-limit keying by auth-header prefix.** The middleware keys authenticated requests by `auth.slice(0, 16)` — `Bearer eyJ...` is identical for every JWT from the same secret. Collapses to per-IP keying for all authed traffic. Replace with per-user keying derived from the verified JWT `sub` claim during the deploy-readiness pass.

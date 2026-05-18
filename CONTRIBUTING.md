@@ -1,153 +1,96 @@
-# Contributing to Agora
+# Contributing
 
-Thank you for your interest in contributing to Agora! We welcome contributions from everyone.
+Thanks for thinking about it. `agora` is a standalone CLI; most contributions land in the CLI handlers (`src/cli/commands/*.ts`), the TUI pages (`src/cli/pages/*.ts`), the curated catalog (`src/data.ts`), or the backend (`backend/src/index.ts`).
 
-Agora is a **standalone terminal marketplace** — the `agora` CLI is the product; the OpenCode plugin is a thin bridge. Most contribution lands in the CLI or the offline catalog. See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the direction and [`ROADMAP.md`](./ROADMAP.md) for what's next.
-
-## How to Contribute
-
-### Reporting Bugs
-
-1. Check the [issue tracker](https://github.com/IrgenSlj/agora/issues) to see if the bug has already been reported
-2. If not, [open a new issue](https://github.com/IrgenSlj/agora/issues/new) with:
-   - A clear title and description
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - Environment details (OS, Bun version, terminal)
-
-### Suggesting Features
-
-Open an issue with the "enhancement" label describing:
-- The problem you're trying to solve
-- Your proposed solution
-- Any alternatives you've considered
-
-### Submitting Changes
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feat/my-feature`
-3. Make your changes
-4. Run tests: `bun test`
-5. Run typecheck: `bun run typecheck`
-6. Run linting: `bun run lint`
-7. Check formatting: `bun run format:check` (or auto-fix with `bun run format`)
-8. Commit using conventional commits (see below)
-9. Push and open a Pull Request
-
-### Commit Convention
-
-Use [conventional commits](https://www.conventionalcommits.org/):
-
-```
-feat: add search filtering by category
-fix: handle missing config file gracefully
-docs: update installation instructions
-refactor: extract formatting utilities
-test: add CLI integration tests
-chore: update dependencies
-```
-
-### Pull Request Process
-
-1. Ensure your PR passes all CI checks (typecheck + tests)
-2. Update documentation if needed (README, CLI help text)
-3. Add tests for new functionality
-4. Keep PRs focused — one feature/fix per PR
-
-## Development Setup
+## Quick start
 
 ```bash
 git clone https://github.com/IrgenSlj/agora.git
 cd agora
 bun install
-bun run build
-bun test
+bun test            # 768 cases, ~3.5s
+bun run typecheck   # tsc on src + scripts + test
+bun run build       # also gates on noUnusedLocals — run before pushing
+bun src/cli.ts <cmd>  # run from source, no build needed
 ```
 
-Try new commands from source:
+Backend has its own `tsconfig.json`: `cd backend && bun run typecheck`.
 
-```bash
-bun src/cli.ts init --dry-run     # Preview init without writing
-bun src/cli.ts use wf-tdd-cycle    # Apply workflow as skill
-bun src/cli.ts search database     # Search rich offline data
+## Workflow
+
+1. Branch off `main`: `git checkout -b feat/short-name`
+2. Make the change. Add tests where behavior is non-trivial.
+3. `bun test && bun run typecheck && bun run build` all clean
+4. Conventional commits: `feat: …`, `fix: …`, `refactor: …`, `docs: …`, `test: …`, `chore: …`. PR titles should be the same.
+5. Push and open a PR. Keep PRs focused — one feature or fix per PR.
+
+CI runs typecheck + lint + tests on push and PR. Backend has its own check job.
+
+## Adding a curated catalog entry
+
+The offline catalog lives in `src/data.ts`. Each MCP server entry has this shape:
+
+```ts
+{
+  id: 'mcp-foo',
+  name: '@vendor/mcp-foo',
+  description: 'One-line summary.',
+  author: 'Vendor',
+  version: '1.0.0',
+  category: 'mcp',
+  tags: ['foo', 'bar'],
+  stars: 0,
+  installs: 0,
+  npmPackage: '@vendor/mcp-foo',
+  repository: 'https://github.com/vendor/mcp-foo',
+  createdAt: '2026-05-18',
+  permissions: { fs: ['./**/*'], net: ['api.foo.com'] }   // if applicable
+}
 ```
 
-## Project Structure
+Every `npmPackage` is verified against the live registry by the test suite. Place new entries in alphabetical order within their category. Run `bun test test/data.test.ts` to confirm.
+
+## Adding a CLI command
+
+1. Create `src/cli/commands/<name>.ts` exporting `commandName: CommandHandler` (see `today.ts` or `share.ts` as compact references).
+2. Wire dispatch in `src/cli/app.ts` (look for the `cmd` object — alphabetical-ish).
+3. Register metadata in `src/cli/commands-meta.ts` so completions, `/abc` shortcuts, and `agora help <name>` pick it up. Pick the right `group` (`Marketplace` / `Setup` / `Library` / `Learn` / `Community`).
+4. Add tests in `test/cli.test.ts` (or a new `test/<name>.test.ts` if substantial). Use the `runCli` + `createIo` harness; pass `fetcher` for HTTP-touching commands.
+
+## Code style
+
+- TypeScript strict mode, ESLint + Prettier (2-space indent, single quotes, semicolons, 100 col)
+- No emojis in output. Project policy.
+- No superfluous comments. Comment only the *why*, not the *what*. Function names + types do the documentation.
+- No defensive `try/catch` around things that can't fail.
+- Errors at boundaries (user input, external APIs), not at internal call sites.
+- Prefer `--json` output for every new command so scripts can consume it.
+
+## Project layout
 
 ```
-src/
-├── cli.ts                  # CLI entrypoint
-├── cli/app.ts              # CLI command parser and handlers (the standalone hub)
-├── cli/shell.ts            # Interactive REPL — bash/chat dispatch, slash meta commands
-├── cli/prompter.ts         # Raw-mode line editor — auto-complete, history, ghost text
-├── cli/completions.ts      # Completion providers (slash, path, marketplace ids)
-├── cli/tui.ts              # Full-screen TUI frame renderer + key dispatch
-├── cli/menu.ts             # @clack/prompts interactive command builder wizard
-├── cli/commands-meta.ts    # Command catalog (groups, summaries, manual rendering)
-├── cli/mcp-server.ts       # MCP server mode (`agora mcp`)
-├── cli/chat-renderer.ts    # Markdown chat formatter + live thinking line
-├── cli/pages/              # TUI page implementations (5 pages + helpers)
-│   ├── types.ts            # Page / KeyEvent / PageAction / PageContext contract
-│   ├── helpers.ts          # Shared TUI helpers (frame, scrollbar, sep, etc.)
-│   ├── home.ts             # Home dashboard
-│   ├── marketplace.ts      # Package list + drill-in
-│   ├── community.ts        # Community boards → threads
-│   ├── news.ts             # Ranked feed + reader + AI summarization
-│   └── settings.ts         # Settings form
-├── news/                   # News feed core
-│   ├── types.ts            # NewsItem, ScoredNewsItem, NewsConfig
-│   ├── score.ts            # scoreItem, rankItems
-│   ├── cache.ts            # readCache, writeCache, isStale, readNewsMeta
-│   └── sources/            # Source adapters (hn, reddit, github-trending, arxiv)
-├── community/              # Community hub core
-│   ├── types.ts            # Thread, Reply, Vote, Flag, Board
-│   └── client.ts           # Community API source helpers
-├── ui.ts                   # Terminal styling: styler, gradient banner, colour detection
-├── init.ts                 # Project scanner + init plan generator
-├── marketplace.ts          # Search, browse, trending, install logic
-├── config-files.ts         # OpenCode config detection and writes
-├── commands.ts             # /agora slash-command template installed by `agora init`
-├── live.ts                 # API client with offline fallback (api-or-offline source layer)
-├── state.ts                # Local saved-item and auth state
-├── preferences.ts          # Local preferences (theme, verbosity, username, etc.)
-├── history.ts              # Search + chat history (JSONL append log)
-├── settings.ts             # Settings persistence (toml)
-├── transcript.ts           # Per-cwd chat transcripts
-├── transcript.ts       # Per-cwd shell transcripts + session metadata
-├── index.ts            # OpenCode plugin — thin bridge, 7 offline marketplace tools
-├── data.ts             # 61 MCP servers, 12 workflows, 12 tutorials, 6 prompts
-├── types.ts            # TypeScript types
-├── config.ts           # Config generation helpers
-└── format.ts           # Count formatting helpers (formatStars, formatInstalls)
-backend/   # Cloudflare Workers API (Hono + D1)
-hub/       # Optional local web Hub
-docs/      # ARCHITECTURE.md and design briefs
-test/      # 16 test files, ~440 tests
+src/cli/              command dispatch, shell, prompter, TUI runner
+src/cli/commands/     one file per top-level CLI command
+src/cli/pages/        full-screen TUI pages (home, marketplace, community, news, settings)
+src/marketplace.ts    curated catalog + live hub merge + install planner
+src/hubs/             GitHub + HuggingFace connectors + AI README enrichment
+src/community/        backend client + types
+src/news/             scoring, cache, per-source adapters
+src/state.ts          local state, saves, auth (atomic 0o600 writes)
+src/atomic-write.ts   shared atomic + 0o600 file write helper
+src/data.ts           curated MCP servers, workflows, tutorials, prompts
+src/types.ts          shared types — Package, Workflow, Permissions, Pricing, …
+backend/src/index.ts  Hono router on Cloudflare Workers + D1
+test/                 bun:test suite (768 cases, 34 files)
 ```
 
-## Key Files for New Contributors
+## Help wanted
 
-| File | What to know |
-|---|---|
-| `src/data.ts` | The offline marketplace data — add MCP servers, workflows, tutorials here |
-| `src/init.ts` | Project scanning and config generation logic |
-| `src/cli/app.ts` | All CLI commands live here — easy to add new ones |
-| `src/marketplace.ts` | Core search, browse, install-plan logic |
-| `src/state.ts` | Local persistence for saved items and auth tokens |
+See [ROADMAP.md](./ROADMAP.md) for what's open. Some specific asks:
 
-## Adding an MCP server to the offline marketplace
+- Add a curated entry (lowest-friction first PR).
+- Wire a runtime sandbox for declared permissions (Phase 4 — interesting unscoped problem).
+- Build a backend rate-limit middleware (the `rate_limits` table is already there).
+- Land the VHS demo tape for the 0.5.0 cut.
 
-1. Open `src/data.ts` — the offline marketplace data lives there.
-2. Find the array of MCP servers. Each entry has a clear shape: `id`, `name`, `description`, `category`, and the npm package name (plus optional fields). Use an existing entry in the same category as a template.
-3. Add your entry alphabetically within its category.
-4. Run `bun test && bun run typecheck` before opening your PR.
-
-## Code Style
-
-- TypeScript strict mode
-- **Prettier** for formatting: 2-space indentation, single quotes, semicolons, 100-char line width
-- **ESLint** with `typescript-eslint` recommended rules for static analysis
-- Descriptive variable names
-- No unused imports or variables (enforced by tsconfig `noUnusedLocals`/`noUnusedParameters`)
-
-Run `bun run format` to auto-format all files. Run `bun run lint` to check for lint errors.
+Questions? Open an issue with the `question` label or ping `agora community /meta` once the backend is hosted.
