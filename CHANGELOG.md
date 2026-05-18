@@ -9,6 +9,27 @@ gained completions, history, job control, a letter-shortcut surface, and a
 broad new command surface (`export`, `watch`, `notify`, `config doctor`, …).
 No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
 
+### Refactored — type-safety pass
+
+- `src/community/client.ts`: zero `(as any)` casts left. The result
+  types for `CommunityThreadResult.thread`, `createThreadSource`, and
+  `createReplySource` are now correctly `Thread | null` / `Reply | null`
+  so the offline-fallback branches don't need to lie. `adminHideSource`
+  error parse + the local `fetcher` helper also gained their real types.
+- `src/cli/pages/marketplace.ts`: typed `itemSource()` accessor used in
+  the source-breakdown counts; `similarItems({ type: kind })` typed
+  through (the union already matched).
+- `src/marketplace.ts`: `createInstallPlan` git-clone branch narrows
+  on `item.kind === 'package'` to read `repository`; `getInstallKind`
+  reads `item.source` directly (it landed on `Package` in 42d3024).
+- `src/live.ts` + `src/cli/commands/ping.ts` + `src/cli/commands/today.ts`:
+  fetcher access uses the typed `FetchLike` end-to-end.
+- `agora browse <id>`: `formatItemDetail` now surfaces declared
+  permissions (was previously TUI-only).
+
+src/ as-any count: 25 → 17. Remaining casts are mostly `stdin.setRawMode`
+detection and other narrow node-types holes.
+
 ### Added — daily-use commands & polish
 
 - **`agora share <id>`** — paste-ready markdown snippet for a catalog
