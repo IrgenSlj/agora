@@ -14,7 +14,7 @@ export interface CommunityThreadsResult {
 }
 
 export interface CommunityThreadResult {
-  thread: Thread;
+  thread: Thread | null;
   replies: Reply[];
 }
 
@@ -187,7 +187,7 @@ export async function communityThreadSource(
   if (!thread) {
     return {
       source: 'offline',
-      data: { thread: null as any, replies: [] },
+      data: { thread: null, replies: [] },
       fallbackReason: 'thread not found'
     };
   }
@@ -201,11 +201,11 @@ export async function communityThreadSource(
 export async function createThreadSource(
   opts: SourceOptions,
   input: CreateThreadInput
-): Promise<SourceResult<{ thread: Thread }>> {
+): Promise<SourceResult<{ thread: Thread | null }>> {
   if (!opts.useApi || !opts.apiUrl || !opts.token) {
     return {
       source: 'offline',
-      data: { thread: null as any },
+      data: { thread: null },
       fallbackReason: 'API required for create'
     };
   }
@@ -226,11 +226,11 @@ export async function createReplySource(
   opts: SourceOptions,
   parentId: string,
   input: CreateReplyInput
-): Promise<SourceResult<{ reply: Reply }>> {
+): Promise<SourceResult<{ reply: Reply | null }>> {
   if (!opts.useApi || !opts.apiUrl || !opts.token) {
     return {
       source: 'offline',
-      data: { reply: null as any },
+      data: { reply: null },
       fallbackReason: 'API required for reply'
     };
   }
@@ -348,8 +348,10 @@ export async function adminHideSource(
   });
   if (res.status === 403) throw new Error('Admin access required');
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: 'request failed' }));
-    throw new Error((err as any).error || `Failed to hide: ${res.status}`);
+    const err = (await res.json().catch(() => ({ error: 'request failed' }))) as {
+      error?: string;
+    };
+    throw new Error(err.error || `Failed to hide: ${res.status}`);
   }
   const data = (await res.json()) as AdminHideResult;
   return { source: 'api', apiUrl: opts.apiUrl, data };
@@ -458,7 +460,7 @@ function buildReplyTree(replies: Reply[]): Reply[] {
 }
 
 async function fetcher(opts: SourceOptions, url: string, init?: RequestInit): Promise<Response> {
-  const f = (opts as any).fetcher ?? globalThis.fetch;
+  const f = opts.fetcher ?? globalThis.fetch;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10000);
   try {
