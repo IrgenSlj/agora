@@ -235,9 +235,9 @@ export const marketplacePage: Page = {
     // Source breakdown counts
     let sourceBreakdown = '';
     if (state.sourceFilter === 'all') {
-      const nCurated = allItems.filter((i) => !(i as any).source).length;
-      const nGh = allItems.filter((i) => (i as any).source === 'github').length;
-      const nHf = allItems.filter((i) => (i as any).source === 'hf').length;
+      const nCurated = allItems.filter((i) => !itemSource(i)).length;
+      const nGh = allItems.filter((i) => itemSource(i) === 'github').length;
+      const nHf = allItems.filter((i) => itemSource(i) === 'hf').length;
       const parts: string[] = [];
       if (nCurated) parts.push(nCurated + ' curated');
       if (nGh) parts.push(nGh + ' gh');
@@ -363,7 +363,7 @@ export const marketplacePage: Page = {
 
       // Related items
       const kind = it.kind === 'workflow' ? 'workflow' : 'package';
-      const related = similarItems(it.id, { limit: 4, type: kind as any });
+      const related = similarItems(it.id, { limit: 4, type: kind });
       const relatedFiltered = related.filter((r) => r.id !== it.id).slice(0, 3);
       if (relatedFiltered.length > 0) {
         detail.push('');

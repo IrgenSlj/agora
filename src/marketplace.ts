@@ -310,7 +310,7 @@ export function createInstallPlan(
   }
 
   if (installKind === 'git-clone') {
-    const repo = (item as any).repository as string;
+    const repo = (item.kind === 'package' ? item.repository : undefined) ?? '';
     // Refuse to clone repos whose URL contains shell metacharacters — the
     // runner uses execSync(cmd, ...) and we shouldn't interpolate untrusted
     // strings into shell. Accept only http(s):// or git@host:owner/repo forms.
@@ -439,7 +439,7 @@ export function getInstallKind(item: MarketplaceItem): InstallKind | 'workflow' 
   if (
     item.kind === 'package' &&
     item.repository &&
-    ((item as any).source === 'github' || (item as any).source === 'hf')
+    (item.source === 'github' || item.source === 'hf')
   )
     return 'git-clone';
   // package-install reserved for future pypi/cargo detection — unreachable in v1

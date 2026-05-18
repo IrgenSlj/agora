@@ -59,7 +59,7 @@ export const commandPing: CommandHandler = async (parsed, io, style) => {
     );
   }
 
-  const result = await ping(apiUrl, token, (io as any).fetcher);
+  const result = await ping(apiUrl, token, io.fetcher);
 
   if (parsed.flags.json) {
     writeJson(io.stdout, result);

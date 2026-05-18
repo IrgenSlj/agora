@@ -465,7 +465,7 @@ export async function flagMarketplaceSource(
   if (!opts.useApi || !opts.apiUrl || !opts.token) {
     return { source: 'offline', data: { success: false }, fallbackReason: 'API required for flag' };
   }
-  const fetcher = (opts as any).fetcher ?? globalThis.fetch;
+  const fetcher = opts.fetcher ?? globalThis.fetch;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), opts.timeoutMs ?? 10000);
   try {

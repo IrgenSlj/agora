@@ -11,13 +11,21 @@ import type { CommandHandler } from './types.js';
 import type { ScoredNewsItem } from '../../news/types.js';
 import type { Thread } from '../../community/types.js';
 import type { MarketplaceItem } from '../../marketplace.js';
-import type { SourceOptions } from '../../live.js';
+import type { SourceOptions, FetchLike } from '../../live.js';
 
 const DAY_MS = 86400 * 1000;
 
-function buildSourceOptions(dataDir: string, io: { env?: Record<string, string | undefined>; fetcher?: unknown }): SourceOptions | null {
+function buildSourceOptions(
+  dataDir: string,
+  io: { env?: Record<string, string | undefined>; fetcher?: FetchLike }
+): SourceOptions | null {
   let apiUrl = (io.env?.['AGORA_API_URL'] ?? process.env['AGORA_API_URL']) || '';
-  let token = (io.env?.['AGORA_TOKEN'] ?? process.env['AGORA_TOKEN'] ?? io.env?.['AGORA_API_TOKEN'] ?? process.env['AGORA_API_TOKEN']) || '';
+  let token =
+    (io.env?.['AGORA_TOKEN'] ??
+      process.env['AGORA_TOKEN'] ??
+      io.env?.['AGORA_API_TOKEN'] ??
+      process.env['AGORA_API_TOKEN']) ||
+    '';
   if (!apiUrl || !token) {
     try {
       const state = loadAgoraState(dataDir);
@@ -31,7 +39,7 @@ function buildSourceOptions(dataDir: string, io: { env?: Record<string, string |
     }
   }
   if (!apiUrl || !token) return null;
-  return { useApi: true, apiUrl, token, fetcher: io.fetcher as any, timeoutMs: 10000 };
+  return { useApi: true, apiUrl, token, fetcher: io.fetcher, timeoutMs: 10000 };
 }
 
 function fmtAge(iso: string): string {
