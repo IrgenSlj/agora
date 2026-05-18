@@ -280,7 +280,7 @@ async function fetchArticlePreview(url: string, signal: AbortSignal): Promise<st
   try {
     const resp = await fetch(url, {
       signal,
-      headers: { 'User-Agent': 'Agora/0.4.0 (+https://agora.opencode.ai)' }
+      headers: { 'User-Agent': 'Agora/0.4.1 (+https://agora.opencode.ai)' }
     });
     if (!resp.ok) return `(error: HTTP ${resp.status})`;
     const html = await resp.text();

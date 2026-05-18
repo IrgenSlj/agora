@@ -4,6 +4,8 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-05-18 — CLI enrichment
+
 The "destination + trust" cycle on top of 0.4.0. Phase 1.5 pillars
 (news / community / live marketplace hubs) shipped end-to-end; the
 Phase 1.6 polish list is closed; Phase 4 trust gating took its first

@@ -1,6 +1,6 @@
 # agora
 
-> A terminal hub for the agentic-coding ecosystem — discover MCP servers, follow the news, join the conversation, install with consent.
+> A terminal hub for developers and the agentic AI ecosystem — discover MCP servers and AI tools, skills and harnesses, follow the news, join the conversation, access the latest tech.
 
 <p>
   <a href="https://www.npmjs.com/package/opencode-agora"><img src="https://img.shields.io/npm/v/opencode-agora" alt="npm"></a>
@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/tests-768%20passing-success" alt="tests">
 </p>
 
-`agora` is a standalone CLI that puts everything a developer building with LLMs cares about in one terminal: a **curated + live marketplace** of MCP servers and agent tooling, a **threaded community** with reputation-weighted sort, a **ranked news feed** with on-cache AI summarization, and **first-class install consent** for declared permissions. Works offline by default; opt into the backend with `agora auth login`.
+`agora` is a standalone CLI that puts everything a developer building for the future  cares about in one terminal: a **curated + live marketplace** of MCP servers and agent tooling, a **threaded community** with reputation-weighted sort, a **ranked news feed** with on-cache AI summarization, and **first-class install consent** for declared permissions. Works offline by default; opt into the backend with `agora auth login`.
 
 ## Install
 
@@ -137,4 +137,4 @@ PRs welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`COMMUNITY_GUIDE
 
 ## License
 
-[MIT](./LICENSE) — © contributors.
+[MIT](./LICENSE) — © IrgenSlj.
