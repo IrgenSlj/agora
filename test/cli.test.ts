@@ -115,6 +115,16 @@ describe('CLI commands', () => {
     expect(out).toContain('stars');
   });
 
+  test('browse surfaces declared permissions for permission-declaring items', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['browse', 'mcp-filesystem'], io);
+
+    expect(code).toBe(0);
+    const out = stdout.join('');
+    expect(out).toContain('Permissions');
+    expect(out).toContain('fs');
+  });
+
   test('browse returns an error for missing items', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['browse', 'missing-package'], io);

@@ -1,6 +1,6 @@
 import type { Styler } from '../ui.js';
 import { formatNumber } from '../format.js';
-import { getInstallKind, type MarketplaceItem } from '../marketplace.js';
+import { getInstallKind, renderPermissionLines, type MarketplaceItem } from '../marketplace.js';
 import type { ResolvedSavedItem } from '../state.js';
 import type { Tutorial, Pricing } from '../types.js';
 import type { ApiReview, ApiProfile } from '../live.js';
@@ -106,6 +106,15 @@ export function formatItemDetail(item: MarketplaceItem, style: Styler): string {
     lines.push(`${style.dim('installs')}  ${formatNumber(item.installs)}`);
     if (item.repository) lines.push(`${style.dim('repo')}      ${item.repository}`);
     if (item.npmPackage) lines.push(`${style.dim('npm')}       ${item.npmPackage}`);
+    if (item.permissions) {
+      const permRows = renderPermissionLines(item.permissions);
+      if (permRows.length > 1) {
+        lines.push('');
+        // First row is "Permissions" label; subsequent rows are the indented values.
+        lines.push(style.dim(permRows[0]!));
+        for (const row of permRows.slice(1)) lines.push(row);
+      }
+    }
   }
 
   if (item.kind === 'workflow') {
