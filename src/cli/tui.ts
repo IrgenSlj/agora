@@ -174,8 +174,19 @@ function renderFooter(
 
   let statusLine: string;
   if (status) {
-    const icon = status.tone === 'error' ? style.accent('\u26a0') : style.dim('\u00b7');
-    statusLine = padRight(' ' + icon + ' ' + status.msg, width);
+    const icon =
+      status.tone === 'error'
+        ? style.accent('\u26a0')
+        : status.tone === 'warn'
+          ? style.accent('!')
+          : style.dim('\u00b7');
+    const body =
+      status.tone === 'error'
+        ? style.accent(status.msg)
+        : status.tone === 'warn'
+          ? status.msg
+          : style.dim(status.msg);
+    statusLine = padRight(' ' + icon + ' ' + body, width);
   } else {
     statusLine = padRight('', width);
   }
