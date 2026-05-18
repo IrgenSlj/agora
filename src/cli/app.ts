@@ -20,6 +20,7 @@ import * as watchModule from './commands/watch.js';
 import * as notifyModule from './commands/notify.js';
 import * as todayModule from './commands/today.js';
 import * as welcomeModule from './commands/welcome.js';
+import * as pingModule from './commands/ping.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -152,6 +153,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       today: todayModule.commandToday,
       open: browseModule.commandOpen,
       share: browseModule.commandShare,
+      ping: pingModule.commandPing,
       author: marketplace.commandAuthor,
       bookmarks: operations.commandBookmarks,
       welcome: welcomeModule.commandWelcome,

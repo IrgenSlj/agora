@@ -1188,6 +1188,36 @@ describe('help system', () => {
     expect(stderr.join('')).toContain('Unknown command: bogus');
   });
 
+  test('agora ping --api-url with no fetcher errors out gracefully', async () => {
+    const fetcher: FetchLike = async () => {
+      throw new Error('connection refused');
+    };
+    const { io, stderr } = createIo(process.cwd(), { fetcher });
+    const code = await runCli(['ping', '--api-url', 'https://example.invalid'], io);
+    expect(code).toBe(1);
+    expect(stderr.join('')).toContain('unreachable');
+  });
+
+  test('agora ping --json on success returns status 200', async () => {
+    const fetcher: FetchLike = async () => jsonResponse({ boards: [] }, 200);
+    const { io, stdout } = createIo(process.cwd(), { fetcher });
+    const code = await runCli(
+      ['ping', '--api-url', 'https://example.invalid', '--json'],
+      io
+    );
+    expect(code).toBe(0);
+    const payload = JSON.parse(stdout.join(''));
+    expect(payload.status).toBe(200);
+    expect(payload.okBoards).toBe(true);
+  });
+
+  test('agora ping without backend configured errors with usage', async () => {
+    const { io, stderr } = createIo();
+    const code = await runCli(['ping'], io);
+    expect(code).toBe(1);
+    expect(stderr.join('')).toContain('No backend configured');
+  });
+
   test('agora share emits a markdown snippet', async () => {
     const { io, stdout } = createIo();
     const code = await runCli(['share', 'mcp-github'], io);

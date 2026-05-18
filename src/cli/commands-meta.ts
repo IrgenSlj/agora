@@ -829,6 +829,21 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'ping',
+    group: 'Setup',
+    summary: 'Check the configured backend is reachable',
+    usage: 'agora ping [--api-url <url>] [--json]',
+    details:
+      'Sends a GET /api/community/boards to the configured backend and reports the HTTP ' +
+      'status, response time, and whether the request was authenticated. Picks the URL ' +
+      'from --api-url, AGORA_API_URL, or the persisted auth state in that order.',
+    flags: [
+      { flag: '--api-url <url>', description: 'Override the backend URL' },
+      { flag: '--json', description: 'Output { apiUrl, status, okBoards, durationMs } as JSON' }
+    ],
+    examples: ['agora ping', 'agora ping --api-url https://api.agora.example', 'agora ping --json']
+  },
+  {
     name: 'bookmarks',
     group: 'Library',
     summary: 'View all bookmarked marketplace items and news',
