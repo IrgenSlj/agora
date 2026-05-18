@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { atomicWriteFile } from '../atomic-write.js';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { FREE_MODELS } from '../cli/commands/chat.js';
@@ -32,9 +33,7 @@ export function readEnrichmentStore(dataDir: string): EnrichmentStore {
 }
 
 export function writeEnrichmentStore(dataDir: string, store: EnrichmentStore): void {
-  mkdirSync(dataDir, { recursive: true });
-  const path = enrichmentPath(dataDir);
-  writeFileSync(path, JSON.stringify(store, null, 2), 'utf8');
+  atomicWriteFile(enrichmentPath(dataDir), JSON.stringify(store, null, 2));
 }
 
 export function getEnrichment(

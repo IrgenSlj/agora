@@ -1,5 +1,6 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync, chmodSync, renameSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { atomicWriteFile } from './atomic-write.js';
 
 export interface AgoraSettings {
   account: { username: string; backend: string; declared_llm: string };
@@ -42,17 +43,7 @@ export function loadSettings(dataDir: string): AgoraSettings {
 }
 
 export function writeSettings(dataDir: string, settings: AgoraSettings): void {
-  mkdirSync(dataDir, { recursive: true });
-  const path = join(dataDir, SETTINGS_FILE);
-  const tmp = `${path}.tmp`;
-  const body = serializeToml(settings);
-  writeFileSync(tmp, body, { mode: 0o600 });
-  renameSync(tmp, path);
-  try {
-    chmodSync(path, 0o600);
-  } catch {
-    /* ignore */
-  }
+  atomicWriteFile(join(dataDir, SETTINGS_FILE), serializeToml(settings));
 }
 
 // ── Minimal TOML subset parser ──────────────────────────────────────────────

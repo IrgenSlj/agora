@@ -1,4 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { atomicWriteFile } from './atomic-write.js';
 import { join } from 'node:path';
 
 export interface LocalPreferences {
@@ -38,6 +39,5 @@ export function loadPreferences(dataDir: string): LocalPreferences {
 }
 
 export function writePreferences(dataDir: string, prefs: LocalPreferences): void {
-  mkdirSync(dataDir, { recursive: true });
-  writeFileSync(prefsPath(dataDir), JSON.stringify(prefs, null, 2), 'utf8');
+  atomicWriteFile(prefsPath(dataDir), JSON.stringify(prefs, null, 2));
 }

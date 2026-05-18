@@ -1,4 +1,5 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { atomicWriteFile } from './atomic-write.js';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import type { MarketplaceItem } from './marketplace.js';
@@ -77,21 +78,10 @@ export function loadAgoraState(dataDir: string): AgoraState {
 }
 
 export function writeAgoraState(dataDir: string, state: AgoraState): void {
-  mkdirSync(dataDir, { recursive: true });
-  const statePath = getAgoraStatePath(dataDir);
-  const tmpPath = `${statePath}.tmp`;
-  writeFileSync(tmpPath, `${JSON.stringify(normalizeState(state), null, 2)}\n`, {
-    encoding: 'utf8',
-    mode: 0o600
-  });
-
-  try {
-    chmodSync(tmpPath, 0o600);
-  } catch {
-    // Best effort: some filesystems do not support POSIX permissions.
-  }
-
-  renameSync(tmpPath, statePath);
+  atomicWriteFile(
+    getAgoraStatePath(dataDir),
+    `${JSON.stringify(normalizeState(state), null, 2)}\n`
+  );
 }
 
 export function saveItemToState(
