@@ -33,13 +33,6 @@ function fmtAge(hours: number): string {
   return Math.round(hours / 24) + 'd';
 }
 
-function detectDataDir(): string {
-  return (
-    process.env.AGORA_DATA_DIR ||
-    (process.env.HOME ? process.env.HOME + '/.config/agora' : '.agora')
-  );
-}
-
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface ComposerState {
