@@ -1,6 +1,22 @@
 import type { NewsItem, NewsSource } from '../types.js';
 import { agoraUserAgent } from '../types.js';
 
+interface RedditPost {
+  id: string;
+  title?: string;
+  permalink: string;
+  author?: string;
+  created_utc: number;
+  ups?: number;
+  selftext?: string;
+  link_flair_text?: string;
+  stickied?: boolean;
+}
+
+interface RedditResponse {
+  data?: { children?: Array<{ data?: RedditPost }> };
+}
+
 export interface SourceAdapter {
   fetch(opts: {
     fetcher?: (url: string, init?: RequestInit) => Promise<Response>;
@@ -24,7 +40,7 @@ export const redditSource: SourceAdapter = {
           headers: { 'User-Agent': agoraUserAgent }
         });
         if (!res.ok) continue;
-        const data = (await res.json()) as any;
+        const data = (await res.json()) as RedditResponse;
         const children = data?.data?.children ?? [];
         for (const child of children) {
           const post = child?.data;
@@ -51,7 +67,7 @@ export const redditSource: SourceAdapter = {
   }
 };
 
-function extractRedditTags(post: any, subreddit: string): string[] {
+function extractRedditTags(post: RedditPost, subreddit: string): string[] {
   const tags: string[] = [];
   const title = (post.title ?? '').toLowerCase();
   const linkFlair = (post.link_flair_text ?? '').toLowerCase();

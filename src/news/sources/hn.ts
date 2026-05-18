@@ -8,6 +8,20 @@ export interface SourceAdapter {
   }): Promise<NewsItem[]>;
 }
 
+interface HnHit {
+  objectID: string;
+  title?: string;
+  url?: string;
+  author?: string;
+  created_at: string;
+  points?: number;
+  _tags?: string[];
+}
+
+interface HnResponse {
+  hits?: HnHit[];
+}
+
 export const hnSource: SourceAdapter = {
   async fetch(opts): Promise<NewsItem[]> {
     const fetcher = opts.fetcher ?? globalThis.fetch;
@@ -19,10 +33,10 @@ export const hnSource: SourceAdapter = {
       headers: { 'User-Agent': agoraUserAgent }
     });
     if (!res.ok) throw new Error(`HN API returned ${res.status}`);
-    const data = (await res.json()) as any;
+    const data = (await res.json()) as HnResponse;
 
     const now = new Date().toISOString();
-    return (data.hits ?? []).map((hit: any) => {
+    return (data.hits ?? []).map((hit) => {
       const item: NewsItem = {
         id: `hn:${hit.objectID}`,
         source: 'hn' as NewsSource,
@@ -39,7 +53,7 @@ export const hnSource: SourceAdapter = {
   }
 };
 
-function extractHnTags(hit: any): string[] {
+function extractHnTags(hit: HnHit): string[] {
   const tags: string[] = [];
   const title = (hit.title ?? '').toLowerCase();
   const url = (hit.url ?? '').toLowerCase();
