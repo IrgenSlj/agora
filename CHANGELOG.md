@@ -9,6 +9,42 @@ gained completions, history, job control, a letter-shortcut surface, and a
 broad new command surface (`export`, `watch`, `notify`, `config doctor`, …).
 No version bump yet — sculpting toward the 0.5.0 "Destination" cut.
 
+### Added — daily-use commands & polish
+
+- **`agora share <id>`** — paste-ready markdown snippet for a catalog
+  item (name, description, link, tags, install command). `--json`
+  returns `{ id, name, link, snippet }`.
+- **`agora ping`** — quick `GET /api/community/boards` reachability
+  check against the configured backend. Reports HTTP status, RTT, and
+  whether the request was authenticated. Lightweight companion to
+  `agora config doctor --deep`.
+- **`agora config doctor --deep`** now additionally checks: auth state
+  ("signed in to <api> (token Xh)" / "AGORA_API_URL set but no token"
+  / offline mode), news cache age (empty / fresh / stale-24h), hub
+  cache age (only when AGORA_LIVE_HUBS=1).
+- **Unknown-command suggestion**: `agora serch mcp` now prints
+  `Did you mean: search?`. Levenshtein-based; the suggestion is
+  suppressed when nothing is meaningfully close.
+- **Home page focused-section indicator**: `j`/`k` cycles the cursor
+  through News / Community / Trending; the focused title gets a `▸`
+  prefix in accent color in both stacked and two-column layouts.
+- **TUI status-line tones**: `warn` and `error` are now visually
+  distinct from `info`. The discriminator already existed but only
+  `error` rendered differently before.
+
+### Refactored — atomic file writes centralized
+
+New `src/atomic-write.ts` exposes `atomicWriteFile(path, body, mode?)`
+that mkdirs the parent, writes to `<path>.tmp`, renames over the
+destination, and chmods to 0o600 by default. Five call sites
+collapsed to one:
+
+- `state.ts` (already atomic — now delegates)
+- `settings.ts` (already atomic — now delegates)
+- `news/cache.ts` writeCache + writeNewsMeta (newly atomic + 0o600)
+- `preferences.ts` (newly atomic + 0o600)
+- `hubs/enrichment.ts` (newly atomic + 0o600)
+
 ### Fixed — security (shell injection × 3 + http→https)
 
 Three real shell-eval hazards from an internal review:
