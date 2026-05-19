@@ -346,7 +346,7 @@ async function submitFlag(
   const { targetId, targetType, notes } = state.flagModal;
   const opts = buildSourceOptions(ctx);
   try {
-    await flagSource(opts, targetId, { reason, notes: notes || undefined, targetType });
+    await flagSource(opts, targetId, { reason, notes: notes.trim() || undefined, targetType });
     setStatus('Flagged.');
   } catch {
     setStatus('Flag failed.');
