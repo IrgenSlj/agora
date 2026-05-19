@@ -512,7 +512,15 @@ async function searchApi(options: SearchSourceOptions): Promise<MarketplaceItem[
     );
   }
 
-  const results = (await Promise.all(tasks)).flat().sort((a, b) => b.stars - a.stars);
+  const settled = await Promise.allSettled(tasks);
+  const fulfilled = settled.filter((r) => r.status === 'fulfilled');
+  if (fulfilled.length === 0 && settled.length > 0) {
+    throw (settled[0] as PromiseRejectedResult).reason;
+  }
+  const arrays: MarketplaceItem[][] = settled.map((r): MarketplaceItem[] =>
+    r.status === 'fulfilled' ? r.value : []
+  );
+  const results = arrays.flat().sort((a, b) => b.stars - a.stars);
   return results.slice(0, limit);
 }
 

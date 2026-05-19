@@ -8,7 +8,5 @@ export function formatNumber(count: number): string {
   return String(count);
 }
 
-/** @deprecated Use formatNumber instead */
 export const formatStars = formatNumber;
-/** @deprecated Use formatNumber instead */
 export const formatInstalls = formatNumber;

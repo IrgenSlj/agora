@@ -800,7 +800,7 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
           if (npmMatch && (part.startsWith('npx ') || entry.command[0] === 'npx')) {
             const pkgName = npmMatch[1];
             try {
-              execSync(`npm view ${pkgName} version`, { stdio: 'pipe', timeout: 10000 });
+              execFileSync('npm', ['view', pkgName, 'version'], { stdio: 'pipe', timeout: 10000 });
               deepOk.push(`${key}: npm package ${pkgName} exists`);
             } catch {
               deepIssues.push(`${key}: npm package "${pkgName}" not found or network error`);

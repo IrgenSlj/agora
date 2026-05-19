@@ -749,8 +749,16 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         }
 
         if (dispatch.sub === 'fg') {
+          if (jobs.size === 0) {
+            process.stdout.write(style.dim('No background jobs. Append & to run a command in the background.') + '\n');
+            continue;
+          }
           const arg = dispatch.args || '';
-          const targetId = arg ? parseInt(arg, 10) : Math.max(...jobs.keys());
+          if (arg && Number.isNaN(parseInt(arg, 10))) {
+            process.stdout.write(style.dim(`Invalid job id: ${arg}`) + '\n');
+            continue;
+          }
+          const targetId = arg ? parseInt(arg, 10) : Math.max(...Array.from(jobs.keys()));
           const job = jobs.get(targetId);
           if (!job) {
             process.stdout.write(style.dim(`Job ${targetId} not found.`) + '\n');
@@ -778,8 +786,16 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         }
 
         if (dispatch.sub === 'bg') {
+          if (jobs.size === 0) {
+            process.stdout.write(style.dim('No background jobs. Append & to run a command in the background.') + '\n');
+            continue;
+          }
           const arg = dispatch.args || '';
-          const targetId = arg ? parseInt(arg, 10) : Math.max(...jobs.keys());
+          if (arg && Number.isNaN(parseInt(arg, 10))) {
+            process.stdout.write(style.dim(`Invalid job id: ${arg}`) + '\n');
+            continue;
+          }
+          const targetId = arg ? parseInt(arg, 10) : Math.max(...Array.from(jobs.keys()));
           const job = jobs.get(targetId);
           if (!job) {
             process.stdout.write(style.dim(`Job ${targetId} not found.`) + '\n');

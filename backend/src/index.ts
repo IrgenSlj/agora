@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
@@ -49,7 +49,7 @@ const RATE_LIMITS: Record<string, RateLimitOpts> = {
 };
 
 async function rateLimit(
-  c: any,
+  c: Context<Env>,
   opts: RateLimitOpts = RATE_LIMITS.default
 ): Promise<Response | null> {
   const auth = c.req.header('authorization');
@@ -59,9 +59,9 @@ async function rateLimit(
   const windowKey = `${key}:${Math.floor(Date.now() / (opts.window * 1000))}`;
 
   try {
-    const row = (await c.env.DB.prepare('SELECT requests FROM rate_limits WHERE key = ?')
+    const row = await c.env.DB.prepare('SELECT requests FROM rate_limits WHERE key = ?')
       .bind(windowKey)
-      .first()) as any;
+      .first<{ requests: number }>();
 
     const count = row ? row.requests + 1 : 1;
 
