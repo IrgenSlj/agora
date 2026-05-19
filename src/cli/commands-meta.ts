@@ -195,6 +195,20 @@ export const COMMANDS: CommandMeta[] = [
       'agora install mcp-github --write --config ./opencode.json'
     ]
   },
+  {
+    name: 'scan',
+    group: 'Marketplace',
+    summary: 'Pre-install safety scan for a catalog or live item.',
+    usage: 'agora scan <id> [--type package|workflow] [--json]',
+    flags: [
+      { flag: '--type, -t', description: 'Item kind: package or workflow' },
+      { flag: '--json', description: 'Output result as JSON' }
+    ],
+    examples: [
+      'agora scan mcp-github',
+      'agora scan some-pkg --json'
+    ]
+  },
 
   // Setup
   {

@@ -4,6 +4,27 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+- **`agora scan <id>`** — pre-install safety scan. Runs six checks (permissions declared, permission/install-kind consistency, repo reachable, npm package exists, recently active, flag count below auto-hide threshold) and reports pass / warn / fail with a summary. Exits 1 only on failures; warnings are informational. `--json` available; reads `AGORA_GITHUB_TOKEN` to raise GitHub's unauth rate cap. This is Phase 4 trust as a client-side check first; the same logic will move server-side at publish time when the hosted backend lands.
+
+### Fixed
+- News preview article fetch was using a hardcoded `Agora/0.4.1` User-Agent; switched to the shared `agoraUserAgent` constant so the UA tracks `package.json`.
+- Auth device-code / token-poll / logout fetches gained 5–10s `AbortSignal.timeout` — the CLI no longer hangs forever if the backend stalls.
+- `fg` / `bg` shell builtins now print "No background jobs." for an empty job set and reject non-numeric job ids cleanly (was "Job NaN/-Infinity not found").
+- `doctor --deep`'s `npm view` existence check uses `execFileSync` (was `execSync` with template-string interpolation).
+- `searchApi` uses `Promise.allSettled` so a single source erroring doesn't tank the whole search; total failure still throws to keep the existing offline fallback.
+- Whitespace-only notes on community flag submit are now treated as no notes (was passed through as a blank string).
+- OAuth `state` cookie's `sameSite` normalized to lower-case `'lax'` to match the access/refresh cookies set in the same file.
+
+### Refactored
+- Backend D1 row reads: dropped all 28 `as any` casts via inline row types (`UserRow`, `PackageRow`, `WorkflowRow`, `DiscussionRow`, `DiscussionReplyRow`, `RefreshTokenRow`, `DeviceCodeRow`, `KillSwitchRow`, `BoardStatsRow`) plus typed shapes on the GitHub OAuth fetch responses. Joined SELECTs use inline intersection types.
+- `rateLimit(c: Context<Env>)` in backend now uses Hono's `Context` type instead of `any`.
+- Dropped the wrong `@deprecated` markers on `formatStars` / `formatInstalls` — both aliases are still in active use.
+
+### Internal
+- 793 pass / 1 skip / 0 fail across 35 test files (was 768 across 34 at 0.4.1).
+- 2 new enrichment tests (sha-changed and opencode-null paths) close the remaining coverage gap on the hub enrichment cache.
+
 ## [0.4.1] - 2026-05-18 — CLI enrichment
 
 The "destination + trust" cycle on top of 0.4.0. Phase 1.5 pillars
