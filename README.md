@@ -50,7 +50,7 @@ Run `agora help` for the grouped list, or `agora help <command>` for any of thes
 | Group | Commands |
 |---|---|
 | **Daily** | `welcome` · `today` · `bookmarks` · `share` · `open` · `author` |
-| **Marketplace** | `search` · `browse` · `trending` · `similar` · `compare` · `install` · `scan` · `workflows` |
+| **Marketplace** | `search` · `browse` · `trending` · `similar` · `compare` · `install` · `scan` · `outdated` · `workflows` |
 | **News** | `news` (CLI) · TUI reader with AI summarization |
 | **Community** | `community` · `thread` · `post` · `reply` · `vote` · `flag` · `discuss` |
 | **Account** | `auth login` · `auth status` · `profile` · `review` · `reviews` · `publish` |

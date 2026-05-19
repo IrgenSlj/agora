@@ -6,6 +6,7 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ### Added
 - **`agora scan <id>`** — pre-install safety scan. Runs six checks (permissions declared, permission/install-kind consistency, repo reachable, npm package exists, recently active, flag count below auto-hide threshold) and reports pass / warn / fail with a summary. Exits 1 only on failures; warnings are informational. `--json` available; reads `AGORA_GITHUB_TOKEN` to raise GitHub's unauth rate cap. This is Phase 4 trust as a client-side check first; the same logic will move server-side at publish time when the hosted backend lands.
+- **`agora outdated`** — reads opencode.json, fetches the npm registry for each declared MCP package, and reports `latest` + `time.modified` age per row. Marks anything not published in the last 365 days as stale. Strictly informational: no exit-code failure, no "is this installed locally" detection (opencode.json doesn't pin versions; `npm list -g` is unreliable). `--json` and `--config <path>` available.
 
 ### Fixed
 - News preview article fetch was using a hardcoded `Agora/0.4.1` User-Agent; switched to the shared `agoraUserAgent` constant so the UA tracks `package.json`.

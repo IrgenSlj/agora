@@ -209,6 +209,20 @@ export const COMMANDS: CommandMeta[] = [
       'agora scan some-pkg --json'
     ]
   },
+  {
+    name: 'outdated',
+    group: 'Marketplace',
+    summary: 'List MCP packages from opencode.json with their latest npm versions.',
+    usage: 'agora outdated [--config <path>] [--json]',
+    flags: [
+      { flag: '--config', description: 'Path to opencode.json (auto-detected by default)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora outdated',
+      'agora outdated --json'
+    ]
+  },
 
   // Setup
   {
