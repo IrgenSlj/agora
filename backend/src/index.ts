@@ -16,6 +16,135 @@ type Env = {
 
 const app = new Hono<Env>();
 
+// ── D1 row types ─────────────────────────────────────────────────────────────
+
+type UserRow = {
+  id: string;
+  username: string;
+  display_name: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  github_id: string | null;
+  is_llm: number;
+  llm_model: string | null;
+  reputation: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type PackageRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  author: string;
+  version: string | null;
+  category: string;
+  tags: string | null;
+  stars: number;
+  installs: number;
+  repository: string | null;
+  npm_package: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type WorkflowRow = {
+  id: string;
+  name: string;
+  description: string | null;
+  author: string;
+  prompt: string | null;
+  model: string | null;
+  tags: string | null;
+  stars: number;
+  forks: number;
+  is_featured: number;
+  created_at: string;
+  updated_at: string;
+};
+
+type DiscussionRow = {
+  id: string;
+  board: string;
+  title: string;
+  content: string;
+  author: string;
+  parent_id: string | null;
+  score: number;
+  flag_count: number;
+  reply_count: number;
+  hidden: number;
+  author_is_llm: number;
+  author_model: string | null;
+  category: string;
+  package_id: string | null;
+  workflow_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type DiscussionReplyRow = {
+  id: string;
+  discussion_id: string;
+  parent_id: string | null;
+  author: string;
+  content: string;
+  score: number;
+  flag_count: number;
+  hidden: number;
+  author_is_llm: number;
+  author_model: string | null;
+  created_at: string;
+};
+
+type RefreshTokenRow = {
+  jti_hash: string;
+  user_id: string;
+  created_at: string;
+  expires_at: string;
+};
+
+type DeviceCodeRow = {
+  device_code: string;
+  user_code: string;
+  client_id: string;
+  status: string;
+  github_id: string | null;
+  created_at: string;
+  expires_at: string;
+  verified_at: string | null;
+};
+
+type KillSwitchRow = {
+  id: string;
+  target_id: string;
+  target_type: string;
+  reason: string;
+  operator_id: string;
+  acted_at: string;
+};
+
+type BoardStatsRow = {
+  board: string;
+  thread_count: number;
+  new_today: number;
+};
+
+// ── GitHub OAuth response shapes ─────────────────────────────────────────────
+
+type GitHubTokenResponse = {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+};
+
+type GitHubUserResponse = {
+  id: number;
+  login: string;
+  name?: string;
+  avatar_url?: string;
+};
+
 type AuthUser = {
   id: string;
   username: string;
@@ -151,7 +280,7 @@ app.get('/auth/callback', async (c) => {
       })
     });
 
-    const tokenData = (await tokenRes.json()) as any;
+    const tokenData = (await tokenRes.json()) as GitHubTokenResponse;
 
     if (tokenData.error) {
       return c.json({ error: tokenData.error_description }, 400);
@@ -166,7 +295,7 @@ app.get('/auth/callback', async (c) => {
       }
     });
 
-    const userData = (await userRes.json()) as any;
+    const userData = (await userRes.json()) as GitHubUserResponse;
 
     const username = userData.login;
     const githubId = String(userData.id);
@@ -229,9 +358,9 @@ app.post('/auth/refresh', async (c) => {
   }
 
   const jtiHash = await hashToken(String(payload.jti));
-  const row = (await c.env.DB.prepare('SELECT jti_hash FROM refresh_tokens WHERE jti_hash = ?')
+  const row = await c.env.DB.prepare('SELECT jti_hash FROM refresh_tokens WHERE jti_hash = ?')
     .bind(jtiHash)
-    .first()) as any;
+    .first<RefreshTokenRow>();
 
   if (!row) return c.json({ error: 'revoked_refresh' }, 401);
 
@@ -395,10 +524,10 @@ async function checkRateLimit(
 ): Promise<{ allowed: boolean; resetIn: number }> {
   const windowKey = `${key}:${Math.floor(Date.now() / (opts.window * 1000))}`;
   try {
-    const row = (await db
+    const row = await db
       .prepare('SELECT requests FROM rate_limits WHERE key = ?')
       .bind(windowKey)
-      .first()) as any;
+      .first<{ requests: number }>();
 
     const count = row ? row.requests + 1 : 1;
 
@@ -539,11 +668,11 @@ app.post('/auth/device/verify', async (c) => {
   }
 
   try {
-    const record = (await c.env.DB.prepare(
+    const record = await c.env.DB.prepare(
       `SELECT device_code, status, expires_at FROM device_codes WHERE user_code = ?`
     )
       .bind(userCode)
-      .first()) as any;
+      .first<DeviceCodeRow>();
 
     if (!record) return c.json({ error: 'Invalid code' }, 404);
     if (record.status !== 'pending') return c.json({ error: 'Code already used' }, 400);
@@ -583,11 +712,11 @@ app.get('/auth/device/callback', async (c) => {
   }
 
   try {
-    const record = (await c.env.DB.prepare(
+    const record = await c.env.DB.prepare(
       `SELECT status, expires_at FROM device_codes WHERE device_code = ?`
     )
       .bind(deviceCode)
-      .first()) as any;
+      .first<DeviceCodeRow>();
 
     if (!record || record.status !== 'pending' || new Date(record.expires_at) < new Date()) {
       return c.html(
@@ -603,7 +732,7 @@ app.get('/auth/device/callback', async (c) => {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({ client_id: clientId, client_secret: clientSecret, code })
     });
-    const tokenData = (await tokenRes.json()) as any;
+    const tokenData = (await tokenRes.json()) as GitHubTokenResponse;
     if (tokenData.error) {
       return c.html(
         `<html><body><h1>GitHub auth failed</h1><p>${tokenData.error_description || tokenData.error}</p></body></html>`
@@ -616,7 +745,7 @@ app.get('/auth/device/callback', async (c) => {
     const userRes = await fetch('https://api.github.com/user', {
       headers: { Authorization: `Bearer ${accessToken}`, Accept: 'application/vnd.github.v3+json' }
     });
-    const userData = (await userRes.json()) as any;
+    const userData = (await userRes.json()) as GitHubUserResponse;
     const username = userData.login;
     const githubId = String(userData.id);
     const now = new Date().toISOString();
@@ -665,11 +794,11 @@ app.post('/auth/device/token', async (c) => {
   if (!deviceCode) return c.json({ error: 'device_code required' }, 400);
 
   try {
-    const record = (await c.env.DB.prepare(
+    const record = await c.env.DB.prepare(
       `SELECT status, github_id, expires_at FROM device_codes WHERE device_code = ?`
     )
       .bind(deviceCode)
-      .first()) as any;
+      .first<DeviceCodeRow>();
 
     if (!record) return c.json({ error: 'Invalid device_code' }, 404);
 
@@ -685,9 +814,9 @@ app.post('/auth/device/token', async (c) => {
     }
 
     if (record.status === 'authorized' && record.github_id) {
-      const user = (await c.env.DB.prepare('SELECT id FROM users WHERE github_id = ?')
+      const user = await c.env.DB.prepare('SELECT id FROM users WHERE github_id = ?')
         .bind(record.github_id)
-        .first()) as any;
+        .first<{ id: string }>();
 
       if (!user) {
         return c.json({ error: 'User not found' }, 404);
@@ -722,11 +851,11 @@ async function requireUser(c: any): Promise<AuthUser | Response> {
     return c.json({ error: 'Invalid or expired token' }, 401);
   }
 
-  const user = (await c.env.DB.prepare(
+  const user = await c.env.DB.prepare(
     'SELECT id, username, display_name, avatar_url FROM users WHERE id = ?'
   )
     .bind(String(payload.sub))
-    .first()) as any;
+    .first<UserRow>();
   if (!user) return c.json({ error: 'User not found' }, 401);
 
   return {
@@ -886,9 +1015,9 @@ app.post('/api/packages', async (c) => {
   }
 
   try {
-    const existing = (await c.env.DB.prepare('SELECT id, author FROM packages WHERE id = ?')
+    const existing = await c.env.DB.prepare('SELECT id, author FROM packages WHERE id = ?')
       .bind(id)
-      .first()) as any;
+      .first<PackageRow>();
 
     if (existing && existing.author !== user.username) {
       return c.json({ error: 'Package id is owned by another user' }, 403);
@@ -1010,9 +1139,9 @@ app.post('/api/workflows', async (c) => {
   }
 
   try {
-    const existing = (await c.env.DB.prepare('SELECT id, author FROM workflows WHERE id = ?')
+    const existing = await c.env.DB.prepare('SELECT id, author FROM workflows WHERE id = ?')
       .bind(id)
-      .first()) as any;
+      .first<WorkflowRow>();
 
     if (existing && existing.author !== user.username) {
       return c.json({ error: 'Workflow id is owned by another user' }, 403);
@@ -1216,7 +1345,7 @@ app.get('/api/community/boards', async (c) => {
   const yesterday = Date.now() - 86400000;
   const yesterdayIso = new Date(yesterday).toISOString();
   try {
-    const { results } = (await c.env.DB.prepare(
+    const { results } = await c.env.DB.prepare(
       `SELECT board,
               COUNT(*) AS thread_count,
               COUNT(CASE WHEN created_at > ? THEN 1 END) AS new_today
@@ -1225,7 +1354,7 @@ app.get('/api/community/boards', async (c) => {
        GROUP BY board`
     )
       .bind(yesterdayIso)
-      .all()) as any;
+      .all<BoardStatsRow>();
 
     const rowMap = new Map<string, { thread_count: number; new_today: number }>();
     for (const row of results ?? []) {
@@ -1283,15 +1412,15 @@ app.get('/api/community/threads', async (c) => {
     }
 
     const fetchSize = useRepWeight ? 200 : PAGE_SIZE + 1;
-    const { results } = (await c.env.DB.prepare(
+    const { results } = await c.env.DB.prepare(
       `${baseSql} ORDER BY ${sqlOrder} LIMIT ? OFFSET ?`
     )
       .bind(board, fetchSize, useRepWeight ? 0 : offset)
-      .all()) as any;
+      .all<DiscussionRow & { author_reputation: number | null; computed_flag_count: number }>();
 
-    let rows = (results ?? []) as any[];
+    let rows = results ?? [];
     if (useRepWeight) {
-      const base = (r: any): number =>
+      const base = (r: DiscussionRow & { author_reputation: number | null }): number =>
         sort === 'top' ? Number(r.score ?? 0) : Number(r.score ?? 0) + Number(r.reply_count ?? 0);
       rows = rows
         .map((r) => ({ row: r, w: weightedThreadScore(base(r), Number(r.author_reputation ?? 0)) }))
@@ -1301,7 +1430,7 @@ app.get('/api/community/threads', async (c) => {
     }
 
     const hasMore = rows.length > PAGE_SIZE;
-    const threads = rows.slice(0, PAGE_SIZE).map((r: any) => ({
+    const threads = rows.slice(0, PAGE_SIZE).map((r) => ({
       id: r.id,
       board: r.board,
       title: r.title,
@@ -1328,13 +1457,13 @@ app.get('/api/community/thread/:id', async (c) => {
   if (!threadId) return c.json({ error: 'Missing thread id' }, 400);
 
   try {
-    const row = (await c.env.DB.prepare(
+    const row = await c.env.DB.prepare(
       `SELECT d.*,
               (SELECT COUNT(*) FROM flags f WHERE f.target_id = d.id AND f.target_type = 'discussion') AS computed_flag_count
        FROM discussions d WHERE d.id = ?`
     )
       .bind(threadId)
-      .first()) as any;
+      .first<DiscussionRow & { computed_flag_count: number }>();
 
     if (!row || row.hidden === 1) return c.json({ error: 'Thread not found' }, 404);
 
@@ -1353,7 +1482,7 @@ app.get('/api/community/thread/:id', async (c) => {
       authorModel: row.author_model ?? undefined
     };
 
-    const { results: replyRows } = (await c.env.DB.prepare(
+    const { results: replyRows } = await c.env.DB.prepare(
       `SELECT r.*,
               (SELECT COUNT(*) FROM flags f WHERE f.target_id = r.id AND f.target_type = 'reply') AS computed_flag_count
        FROM discussion_replies r
@@ -1361,9 +1490,9 @@ app.get('/api/community/thread/:id', async (c) => {
        ORDER BY r.created_at ASC`
     )
       .bind(threadId)
-      .all()) as any;
+      .all<DiscussionReplyRow & { computed_flag_count: number }>();
 
-    const rawReplies = (replyRows ?? []).map((r: any) => ({
+    const rawReplies = (replyRows ?? []).map((r) => ({
       id: r.id,
       threadId: r.discussion_id,
       parentId: r.parent_id ?? undefined,
@@ -1426,9 +1555,9 @@ app.post('/api/community/threads', async (c) => {
     return c.json({ error: 'content must be 1-10000 chars' }, 400);
 
   try {
-    const userRow = (await c.env.DB.prepare('SELECT is_llm, llm_model FROM users WHERE id = ?')
+    const userRow = await c.env.DB.prepare('SELECT is_llm, llm_model FROM users WHERE id = ?')
       .bind(user.id)
-      .first()) as any;
+      .first<Pick<UserRow, 'is_llm' | 'llm_model'>>();
 
     const authorIsLlm = userRow?.is_llm ? 1 : 0;
     const authorModel = userRow?.llm_model ?? null;
@@ -1490,9 +1619,9 @@ app.post('/api/community/reply/:parentId', async (c) => {
 
   try {
     // Check if parentId is a thread
-    const thread = (await c.env.DB.prepare('SELECT id FROM discussions WHERE id = ?')
+    const thread = await c.env.DB.prepare('SELECT id FROM discussions WHERE id = ?')
       .bind(parentId)
-      .first()) as any;
+      .first<{ id: string }>();
 
     let discussionId: string;
     let replyParentId: string | null = null;
@@ -1501,19 +1630,19 @@ app.post('/api/community/reply/:parentId', async (c) => {
       discussionId = parentId;
     } else {
       // Check if parentId is a reply
-      const parentReply = (await c.env.DB.prepare(
+      const parentReply = await c.env.DB.prepare(
         'SELECT id, discussion_id FROM discussion_replies WHERE id = ?'
       )
         .bind(parentId)
-        .first()) as any;
+        .first<Pick<DiscussionReplyRow, 'id' | 'discussion_id'>>();
       if (!parentReply) return c.json({ error: 'Parent not found' }, 404);
       discussionId = parentReply.discussion_id;
       replyParentId = parentId;
     }
 
-    const userRow = (await c.env.DB.prepare('SELECT is_llm, llm_model FROM users WHERE id = ?')
+    const userRow = await c.env.DB.prepare('SELECT is_llm, llm_model FROM users WHERE id = ?')
       .bind(user.id)
-      .first()) as any;
+      .first<Pick<UserRow, 'is_llm' | 'llm_model'>>();
 
     const authorIsLlm = userRow?.is_llm ? 1 : 0;
     const authorModel = userRow?.llm_model ?? null;
@@ -1600,11 +1729,11 @@ app.post('/api/community/vote/:targetId', async (c) => {
         .run();
     }
 
-    const scoreRow = (await c.env.DB.prepare(
+    const scoreRow = await c.env.DB.prepare(
       'SELECT COALESCE(SUM(value), 0) AS total FROM votes WHERE target_id = ? AND target_type = ?'
     )
       .bind(targetId, targetType)
-      .first()) as any;
+      .first<{ total: number }>();
 
     const score = scoreRow?.total ?? 0;
 
@@ -1727,7 +1856,7 @@ app.get('/api/community/search', async (c) => {
       ? [ftsQuery, boardParam]
       : [ftsQuery];
 
-    const { results: threadRows } = (await c.env.DB.prepare(
+    const { results: threadRows } = await c.env.DB.prepare(
       `SELECT d.id, d.board, d.title, d.content, d.author, d.score, d.flag_count, d.created_at, d.author_is_llm,
               (SELECT COUNT(*) FROM flags f WHERE f.target_id = d.id AND f.target_type = 'discussion') AS computed_flag_count
        FROM discussions_fts ft
@@ -1738,13 +1867,13 @@ app.get('/api/community/search', async (c) => {
        LIMIT ?`
     )
       .bind(...threadBindArgs, limit + 1)
-      .all()) as any;
+      .all<Pick<DiscussionRow, 'id' | 'board' | 'title' | 'content' | 'author' | 'score' | 'flag_count' | 'created_at' | 'author_is_llm'> & { computed_flag_count: number }>();
 
     const threadRowsArr = threadRows ?? [];
     const truncatedThreads = threadRowsArr.length > limit;
     const threadSlice = threadRowsArr.slice(0, limit);
 
-    const threads = threadSlice.map((r: any) => ({
+    const threads = threadSlice.map((r) => ({
       kind: 'thread' as const,
       id: r.id,
       threadId: r.id,
@@ -1761,7 +1890,7 @@ app.get('/api/community/search', async (c) => {
     const replyBoardFilter = boardParam ? 'AND d2.board = ?' : '';
     const replyBindArgs: (string | number)[] = boardParam ? [ftsQuery, boardParam] : [ftsQuery];
 
-    const { results: replyRows } = (await c.env.DB.prepare(
+    const { results: replyRows } = await c.env.DB.prepare(
       `SELECT dr.id, dr.discussion_id, dr.author, dr.content, dr.score, dr.flag_count, dr.created_at, dr.author_is_llm,
               d2.board, d2.title AS thread_title,
               (SELECT COUNT(*) FROM flags f WHERE f.target_id = dr.id AND f.target_type = 'reply') AS computed_flag_count
@@ -1776,13 +1905,13 @@ app.get('/api/community/search', async (c) => {
        LIMIT ?`
     )
       .bind(...replyBindArgs, limit + 1)
-      .all()) as any;
+      .all<Pick<DiscussionReplyRow, 'id' | 'discussion_id' | 'author' | 'content' | 'score' | 'flag_count' | 'created_at' | 'author_is_llm'> & { board: string; thread_title: string; computed_flag_count: number }>();
 
     const replyRowsArr = replyRows ?? [];
     const truncatedReplies = replyRowsArr.length > limit;
     const replySlice = replyRowsArr.slice(0, limit);
 
-    const replies = replySlice.map((r: any) => ({
+    const replies = replySlice.map((r) => ({
       kind: 'reply' as const,
       id: r.id,
       threadId: r.discussion_id,
@@ -1936,7 +2065,7 @@ app.get('/api/users/:username', async (c) => {
   const username = c.req.param('username');
 
   try {
-    const user = (await c.env.DB.prepare(
+    const user = await c.env.DB.prepare(
       `SELECT u.id, u.username, u.display_name, u.bio, u.avatar_url, u.reputation, u.created_at,
               (SELECT COUNT(*) FROM packages    WHERE author = u.username) AS package_count,
               (SELECT COUNT(*) FROM workflows   WHERE author = u.username) AS workflow_count,
@@ -1945,7 +2074,7 @@ app.get('/api/users/:username', async (c) => {
        WHERE u.username = ?`
     )
       .bind(username)
-      .first()) as any;
+      .first<UserRow & { package_count: number; workflow_count: number; discussion_count: number }>();
 
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
@@ -2144,7 +2273,7 @@ app.get('/api/admin/log', async (c) => {
   const limitParam = c.req.query('limit') ?? '50';
   const limit = Math.min(200, Math.max(1, parseInt(limitParam, 10) || 50));
 
-  const { results } = (await c.env.DB.prepare(
+  const { results } = await c.env.DB.prepare(
     `SELECT k.id, k.target_id, k.target_type, k.reason, k.operator_id, k.acted_at,
             u.username AS operator_username
      FROM kill_switch_log k
@@ -2153,9 +2282,9 @@ app.get('/api/admin/log', async (c) => {
      LIMIT ?`
   )
     .bind(limit)
-    .all()) as any;
+    .all<KillSwitchRow & { operator_username: string | null }>();
 
-  const entries = (results ?? []).map((r: any) => ({
+  const entries = (results ?? []).map((r) => ({
     id: r.id,
     targetId: r.target_id,
     targetType: r.target_type,
@@ -2176,11 +2305,11 @@ app.post('/api/admin/reputation/recompute', async (c) => {
 
   const start = Date.now();
 
-  const { results: users } = (await c.env.DB.prepare(
+  const { results: users } = await c.env.DB.prepare(
     `SELECT id, username, created_at FROM users`
-  ).all()) as any;
+  ).all<Pick<UserRow, 'id' | 'username' | 'created_at'>>();
 
-  const { results: voteRows } = (await c.env.DB.prepare(
+  const { results: voteRows } = await c.env.DB.prepare(
     `SELECT d.author AS username, SUM(v.value) AS net
      FROM votes v
      JOIN discussions d ON d.id = v.target_id AND v.target_type = 'discussion'
@@ -2190,7 +2319,7 @@ app.post('/api/admin/reputation/recompute', async (c) => {
      FROM votes v
      JOIN discussion_replies r ON r.id = v.target_id AND v.target_type = 'reply'
      GROUP BY r.author`
-  ).all()) as any;
+  ).all<{ username: string; net: number }>();
 
   const voteMap = new Map<string, number>();
   for (const row of voteRows ?? []) {
@@ -2198,7 +2327,7 @@ app.post('/api/admin/reputation/recompute', async (c) => {
   }
 
   const now = Date.now();
-  const statements = (users ?? []).map((u: any) => {
+  const statements = (users ?? []).map((u) => {
     const ageDays = (now - new Date(u.created_at).getTime()) / 86400000;
     const netVotes = voteMap.get(u.username) ?? 0;
     const rep = computeReputation(ageDays, netVotes);

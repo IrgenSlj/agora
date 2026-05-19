@@ -19,7 +19,7 @@ Most of the work landed during 0.4.x / Phase 1.5; what blocks a public-hosted ba
 - ✓ Local dev: Docker Compose with wrangler's D1 SQLite emulation
 - ✓ Catalog-as-a-service: bundled JSON stays as the offline fallback
 - ✓ Real reviews / ratings / publishing endpoints
-- ☐ **Rate-limit middleware**: `rate_limits` table exists; wire it to every write endpoint + anonymous-search past N req/min
+- ✓ **Rate-limit middleware**: applied globally to `/api/*` with separate read (60/min) and write (10/min) buckets; anonymous half-quota in `backend/src/index.ts`
 - ☐ **Hosted deploy**: production wrangler config, env secrets, DNS
 
 ## Phase 3 — Commerce (deferred until trust lands)
@@ -51,7 +51,6 @@ Small, focused items remaining before the cut:
 | Item | Notes |
 |---|---|
 | ☐ VHS demo tape + README hero gif | `scripts/demo.tape` + generated `docs/demo.gif` |
-| ☐ Backend rate-limit middleware | Wire `rate_limits` table to write endpoints |
 | ☐ Automated publish scan (Phase 4) | Backend pre-publish check (basic checks: license, README, declared-vs-observed permissions) |
 | ☐ 0.5.0 version bump + release notes | Per policy: one bump per landed phase, not per PR |
 
@@ -62,4 +61,4 @@ Small, focused items remaining before the cut:
 - **Report what `agora init` misses** — open an issue with your project's manifest files.
 - **Polish what's there** — there's always a rough edge worth grinding.
 
-_Last updated: 2026-05-18. See [CHANGELOG.md](./CHANGELOG.md) for the shipped history._
+_Last updated: 2026-05-19. See [CHANGELOG.md](./CHANGELOG.md) for the shipped history._
