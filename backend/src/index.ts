@@ -247,7 +247,7 @@ app.get('/auth/github', async (c) => {
   setCookie(c, 'oauth_state', state, {
     httpOnly: true,
     secure: c.env.AGORA_ENV === 'production',
-    sameSite: 'Lax',
+    sameSite: 'lax',
     maxAge: 600
   });
 

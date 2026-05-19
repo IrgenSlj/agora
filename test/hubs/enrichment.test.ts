@@ -222,6 +222,73 @@ describe('enrichItem() cache hit', () => {
       rmSync(dir, { recursive: true });
     }
   });
+
+  test('sha changed: refetches readme + opencode and writes new entry', async () => {
+    const dir = makeTmpDir();
+    try {
+      const stale: EnrichmentEntry = {
+        repoId: 'owner/repo',
+        commitSha: 'oldsha',
+        description: 'stale description',
+        installHint: 'stale hint',
+        fetchedAt: '2026-05-01T00:00:00Z'
+      };
+      writeEnrichmentStore(dir, setEnrichment({}, stale));
+
+      const NEW_SHA = 'newsha';
+      const README = '# my repo\n\n```sh\nnpm i my-repo\n```\n';
+      const fetcher: FetchLike = async (url) => {
+        const u = url.toString();
+        if (u.includes('/commits')) return { ok: true, json: async () => [{ sha: NEW_SHA }] } as Response;
+        if (u.includes('/readme'))
+          return {
+            ok: true,
+            json: async () => ({ content: Buffer.from(README, 'utf8').toString('base64') })
+          } as Response;
+        return { ok: false, status: 404 } as Response;
+      };
+      const fakeOpencode = async (prompt: string): Promise<string | null> =>
+        prompt.includes('install command') ? 'npm i my-repo' : 'fresh description';
+
+      const result = await enrichItem('owner/repo', dir, { fetcher, opencode: fakeOpencode });
+
+      expect(result).not.toBeNull();
+      expect(result!.commitSha).toBe(NEW_SHA);
+      expect(result!.description).toBe('fresh description');
+      expect(result!.installHint).toBe('npm i my-repo');
+
+      const persisted = readEnrichmentStore(dir);
+      expect(Object.values(persisted).some((e) => e.commitSha === NEW_SHA)).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
+
+  test('opencode returns null: entry persists without description', async () => {
+    const dir = makeTmpDir();
+    try {
+      const README = '# repo without an install line\n';
+      const fetcher: FetchLike = async (url) => {
+        const u = url.toString();
+        if (u.includes('/commits')) return { ok: true, json: async () => [{ sha: 'sha-x' }] } as Response;
+        if (u.includes('/readme'))
+          return {
+            ok: true,
+            json: async () => ({ content: Buffer.from(README, 'utf8').toString('base64') })
+          } as Response;
+        return { ok: false, status: 404 } as Response;
+      };
+      const nullOpencode = async (): Promise<string | null> => null;
+
+      const result = await enrichItem('owner/quiet', dir, { fetcher, opencode: nullOpencode });
+
+      expect(result).not.toBeNull();
+      expect(result!.commitSha).toBe('sha-x');
+      expect(result!.description).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true });
+    }
+  });
 });
 
 describe('enrichHfItem()', () => {
