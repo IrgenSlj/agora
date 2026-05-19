@@ -50,8 +50,8 @@ Small, focused items remaining before the cut:
 
 | Item | Notes |
 |---|---|
-| ☐ VHS demo tape + README hero gif | `scripts/demo.tape` + generated `docs/demo.gif` |
-| ☐ Automated publish scan (Phase 4) | Backend pre-publish check (basic checks: license, README, declared-vs-observed permissions) |
+| ◐ VHS demo tape + README hero gif | `scripts/demo.tape` scaffold landed; `docs/demo.gif` is regenerated on demand via `vhs scripts/demo.tape` (output gitignored) |
+| ◐ Automated publish scan (Phase 4) | Client-side `agora scan <id>` ships; backend `POST /api/publish` pre-publish version still pending |
 | ☐ 0.5.0 version bump + release notes | Per policy: one bump per landed phase, not per PR |
 
 ## How to help

@@ -10,3 +10,6 @@ dist/
 .agora/
 .idea/
 .vscode/
+
+# VHS demo output — regenerated on demand by `vhs scripts/demo.tape`
+docs/demo.gif

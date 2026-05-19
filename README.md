@@ -6,7 +6,7 @@
   <a href="https://www.npmjs.com/package/opencode-agora"><img src="https://img.shields.io/npm/v/opencode-agora" alt="npm"></a>
   <a href="https://github.com/IrgenSlj/agora/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/opencode-agora" alt="MIT"></a>
   <a href="https://github.com/IrgenSlj/agora/actions"><img src="https://img.shields.io/github/actions/workflow/status/IrgenSlj/agora/ci.yml?branch=main" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tests-768%20passing-success" alt="tests">
+  <img src="https://img.shields.io/badge/tests-805%20passing-success" alt="tests">
 </p>
 
 `agora` is a standalone CLI that puts everything a developer building for the future  cares about in one terminal: a **curated + live marketplace** of MCP servers and agent tooling, a **threaded community** with reputation-weighted sort, a **ranked news feed** with on-cache AI summarization, and **first-class install consent** for declared permissions. Works offline by default; opt into the backend with `agora auth login`.
@@ -116,7 +116,7 @@ src/community/        backend client + types
 src/news/             scoring, cache, per-source adapters
 src/state.ts          local state, saves, auth (atomic 0o600 writes)
 backend/src/index.ts  Cloudflare Workers + D1 (Hono router)
-test/                 768 tests, 34 files
+test/                 805 tests, 36 files
 ```
 
 See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the why-this-shape writeup and [`ROADMAP.md`](./ROADMAP.md) for what's next.
@@ -124,7 +124,7 @@ See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the why-this-shape writ
 ## Development
 
 ```bash
-bun test            # 768 cases, ~3.5s
+bun test            # 805 cases, ~3.5s
 bun run typecheck   # tsc -p tsconfig.check.json
 bun run build       # tsc + chmod +x dist/cli.js
 bun src/cli.ts <cmd>  # run from source without building
@@ -134,6 +134,8 @@ cd backend && bun run typecheck    # backend has its own tsconfig
 ```
 
 PRs welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`COMMUNITY_GUIDELINES.md`](./COMMUNITY_GUIDELINES.md). The catalog accepts entries via PR; see `src/data.ts` for the shape.
+
+A [`scripts/demo.tape`](./scripts/demo.tape) is included for regenerating the README hero gif with [VHS](https://github.com/charmbracelet/vhs) (`brew install vhs && vhs scripts/demo.tape` → `docs/demo.gif`).
 
 ## License
 
