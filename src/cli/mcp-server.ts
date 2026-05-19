@@ -11,6 +11,8 @@ import {
 import { getTutorials, findTutorial } from '../marketplace.js';
 import { formatNumber } from '../format.js';
 import type { MarketplaceItem } from '../marketplace.js';
+import { scanItem, type ScanResult, type ScanOptions } from '../scan.js';
+import { AGORA_VERSION } from './app.js';
 
 function backtick(s: string): string {
   return '`' + s + '`';
@@ -39,10 +41,14 @@ function formatItemList(items: MarketplaceItem[]): string {
   return items.map((item, i) => `${i + 1}. ${describeItem(item)}`).join('\n\n');
 }
 
-export function createAgoraMcpServer(): McpServer {
+export interface AgoraMcpServerOptions {
+  scan?: ScanOptions;
+}
+
+export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServer {
   const server = new McpServer({
     name: 'agora-marketplace',
-    version: '0.3.0'
+    version: AGORA_VERSION
   });
 
   server.registerTool(
@@ -227,6 +233,48 @@ export function createAgoraMcpServer(): McpServer {
           {
             type: 'text',
             text: `📦 **Install**: ${item.name}\n\n1. Install the package:\n\`\`\`bash\n${plan.commands[0]}\n\`\`\`\n\n2. Add to \`opencode.json\`:\n\`\`\`json\n${JSON.stringify(plan.config, null, 2)}\n\`\`\`\n\nOr run:\n\`\`\`bash\nagora install ${item.id} --write\n\`\`\``
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    'scan',
+    {
+      description:
+        'Run a pre-install safety scan on a marketplace item. Checks permissions declaration, install-kind consistency, repo reachability, npm package existence, recency, and community flag count. Returns pass/warn/fail per check.',
+      inputSchema: z.object({
+        id: z.string().describe('Item ID to scan (e.g. mcp-github)'),
+        type: z.enum(['package', 'workflow']).optional().describe('Item type hint')
+      })
+    },
+    async ({ id, type }) => {
+      const item = findMarketplaceItem(id, type ? { type } : undefined);
+      if (!item) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Item "${id}" not found. Try \`search\` to find it.`
+            }
+          ]
+        };
+      }
+
+      const result: ScanResult = await scanItem(item, opts.scan ?? {});
+      const lines = result.checks.map((c) => {
+        const icon = c.status === 'pass' ? '✓' : c.status === 'warn' ? '⚠' : '✗';
+        return `${icon} **${c.label}** — ${c.message}`;
+      });
+      const { pass, warn, fail } = result.summary;
+      const summary = `${pass} pass · ${warn} warning(s) · ${fail} failure(s)`;
+      const heading = `🛡️ **Scan**: ${item.name} (${backtick(item.id)})`;
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `${heading}\n\n${lines.join('\n')}\n\n${summary}`
           }
         ]
       };

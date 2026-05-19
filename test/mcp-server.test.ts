@@ -9,8 +9,8 @@ function extractText(result: Record<string, unknown>): string {
   return text?.text ?? '';
 }
 
-async function createTestClient() {
-  const server = createAgoraMcpServer();
+async function createTestClient(opts?: Parameters<typeof createAgoraMcpServer>[0]) {
+  const server = createAgoraMcpServer(opts);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 
   const client = new Client({ name: 'test-client', version: '1.0' }, { capabilities: {} });
@@ -21,13 +21,14 @@ async function createTestClient() {
 }
 
 describe('Agora MCP Server', () => {
-  test('lists all 6 tools', async () => {
+  test('lists all 7 tools', async () => {
     const { client } = await createTestClient();
     const result = await client.listTools();
     const toolNames = result.tools.map((t) => t.name).sort();
     expect(toolNames).toEqual([
       'browse',
       'install_plan',
+      'scan',
       'search',
       'trending',
       'tutorial',
@@ -149,6 +150,35 @@ describe('Agora MCP Server', () => {
     const { client } = await createTestClient();
     const result = await client.callTool({
       name: 'tutorial',
+      arguments: { id: 'does-not-exist' }
+    });
+    const text = extractText(result);
+    expect(text).toContain('not found');
+  });
+
+  test('scan tool returns checks for a known item', async () => {
+    // Inject a fetcher that always 200s so we never hit the network from tests.
+    const fakeFetcher = async () =>
+      ({
+        status: 200,
+        json: async () => ({ version: '1.0.0' })
+      }) as unknown as Response;
+    const { client } = await createTestClient({ scan: { fetcher: fakeFetcher } });
+
+    const result = await client.callTool({
+      name: 'scan',
+      arguments: { id: 'mcp-github' }
+    });
+    const text = extractText(result);
+    expect(text).toContain('Scan');
+    expect(text).toContain('mcp-github');
+    expect(text).toMatch(/\d+ pass · \d+ warning\(s\) · \d+ failure\(s\)/);
+  });
+
+  test('scan tool returns not found for unknown id', async () => {
+    const { client } = await createTestClient();
+    const result = await client.callTool({
+      name: 'scan',
       arguments: { id: 'does-not-exist' }
     });
     const text = extractText(result);
