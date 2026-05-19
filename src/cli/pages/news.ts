@@ -1,6 +1,6 @@
 import type { Page, PageAction, PageContext } from './types.js';
 import type { NewsItem, ScoredNewsItem, NewsSource } from '../../news/types.js';
-import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
+import { DEFAULT_NEWS_CONFIG, agoraUserAgent, hostFromUrl } from '../../news/types.js';
 import { rankItems } from '../../news/score.js';
 import { readCache, writeCache, isStale, readNewsMeta, writeNewsMeta } from '../../news/cache.js';
 import { formatNumber } from '../../format.js';
@@ -280,7 +280,7 @@ async function fetchArticlePreview(url: string, signal: AbortSignal): Promise<st
   try {
     const resp = await fetch(url, {
       signal,
-      headers: { 'User-Agent': 'Agora/0.4.1 (+https://agora.opencode.ai)' }
+      headers: { 'User-Agent': agoraUserAgent }
     });
     if (!resp.ok) return `(error: HTTP ${resp.status})`;
     const html = await resp.text();

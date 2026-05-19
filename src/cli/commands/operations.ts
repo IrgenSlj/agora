@@ -941,7 +941,10 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
     process.stdout.write(`${style.dim('Connecting to')} ${baseUrl}...\n`);
 
     try {
-      const codeRes = await fetch(`${baseUrl}/auth/device/code`, { method: 'POST' });
+      const codeRes = await fetch(`${baseUrl}/auth/device/code`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(10000)
+      });
       if (!codeRes.ok) {
         const err = await codeRes.json().catch(() => ({ error: 'request failed' }));
         return usageError(io, `Device code request failed: ${err.error || codeRes.status}`);
@@ -1005,7 +1008,8 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
           const tokenRes = await fetch(`${baseUrl}/auth/device/token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ device_code: deviceCode })
+            body: JSON.stringify({ device_code: deviceCode }),
+            signal: AbortSignal.timeout(10000)
           });
 
           if (tokenRes.ok) {
@@ -1111,7 +1115,8 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${existingAuth.accessToken}`
           },
-          body: JSON.stringify({ refresh_token: existingAuth.refreshToken })
+          body: JSON.stringify({ refresh_token: existingAuth.refreshToken }),
+          signal: AbortSignal.timeout(5000)
         });
       } catch {
         /* network failure — clear local anyway */
