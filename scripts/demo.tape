@@ -9,85 +9,119 @@
 #   vhs scripts/demo.tape
 #
 # Output:
-#   docs/demo.gif  (overwritten each run; not committed — see .gitignore)
-#
-# This tape walks the three pillars and the Phase 4 trust check in ~60 seconds.
-# Keep it tight; viewers bail after 20 seconds. Edit ruthlessly.
+#   docs/demo.gif  (overwritten each run)
 
 Output docs/demo.gif
 
 Set Shell "bash"
-Set FontSize 14
+Set FontSize 12
 Set Width 1200
 Set Height 720
-Set Padding 18
-Set TypingSpeed 60ms
+Set Padding 12
+Set TypingSpeed 30ms
 Set Theme "Catppuccin Mocha"
 
-# ── Cold open ──────────────────────────────────────────────────────────────
-Hide
-Type "clear"
-Enter
-Show
-
-Sleep 700ms
-
-# ── Welcome tour ───────────────────────────────────────────────────────────
-Type "agora welcome"
-Enter
-Sleep 5s
-
+# ── Cold open ──
 Hide
 Type "clear"
 Enter
 Show
 Sleep 300ms
 
-# ── Daily digest ───────────────────────────────────────────────────────────
+# ── Launch the agora interactive shell ──
+Type "agora"
+Enter
+Sleep 1s
+
+# ── TUI: Home page ──
+Type "/home"
+Enter
+Sleep 1200ms
+
+# ── TUI: Marketplace (page 2) — browse and inspect an item ──
+Type "2"
+Sleep 400ms
+
+Down
+Sleep 120ms
+Down
+Sleep 120ms
+Down
+Sleep 120ms
+Enter
+Sleep 1200ms
+Escape
+Sleep 300ms
+
+# ── TUI: News (page 4) — open an article and preview ──
+Type "4"
+Sleep 400ms
+
+Down
+Sleep 120ms
+Down
+Sleep 120ms
+Enter
+Sleep 1s
+Type "p"
+Sleep 2s
+Escape
+Sleep 300ms
+Escape
+Sleep 300ms
+
+# ── Back to shell for CLI commands ──
+Type "q"
+Sleep 400ms
+
+# ── CLI: daily digest ──
+Hide
+Type "clear"
+Enter
+Show
+Sleep 200ms
 Type "agora today"
 Enter
-Sleep 4s
+Sleep 2s
 
 Hide
 Type "clear"
 Enter
 Show
-Sleep 300ms
+Sleep 200ms
 
-# ── Marketplace search ─────────────────────────────────────────────────────
+# ── CLI: marketplace search ──
 Type "agora search mcp"
 Enter
-Sleep 4s
+Sleep 2s
 
 Hide
 Type "clear"
 Enter
 Show
-Sleep 300ms
+Sleep 200ms
 
-# ── Phase 4 trust: scan before install ─────────────────────────────────────
+# ── CLI: safety scan before install ──
 Type "agora scan mcp-github"
 Enter
-Sleep 4s
+Sleep 2s
 
 Hide
 Type "clear"
 Enter
 Show
-Sleep 300ms
+Sleep 200ms
 
-# ── Permission-gated install preview ───────────────────────────────────────
+# ── CLI: install preview with declared permissions ──
 Type "agora install mcp-github"
 Enter
-Sleep 3500ms
+Sleep 1500ms
 
+# ── Fade ──
 Hide
 Type "clear"
 Enter
 Show
-Sleep 300ms
-
-# ── Fade ────────────────────────────────────────────────────────────────────
 Type "echo 'agora · the developer terminal hub'"
 Enter
-Sleep 1500ms
+Sleep 1s
