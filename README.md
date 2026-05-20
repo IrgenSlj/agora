@@ -127,7 +127,7 @@ See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the why-this-shape writ
 
 ```bash
 bun test            # 805 cases, ~3.5s
-bun run typecheck   # tsc -p tsconfig.check.json
+bun run typecheck   # CLI + backend (typecheck:cli / typecheck:backend run both)
 bun run build       # tsc + chmod +x dist/cli.js
 bun src/cli.ts <cmd>  # run from source without building
 
