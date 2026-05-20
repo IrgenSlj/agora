@@ -169,6 +169,55 @@ describe('repo_reachable', () => {
   });
 });
 
+// ── license_present (derived from the same repo fetch) ─────────────────────
+
+describe('license_present', () => {
+  test('pass when the repo declares an spdx license', async () => {
+    const item = makePackage({ repository: 'https://github.com/owner/repo' });
+    const fetcher = makeFetcher({
+      'api.github.com': { status: 200, body: { full_name: 'owner/repo', license: { spdx_id: 'MIT' } } }
+    });
+    const result = await scanItem(item, { fetcher });
+    const check = result.checks.find((c) => c.name === 'license_present')!;
+    expect(check.status).toBe('pass');
+    expect(check.message).toBe('MIT');
+  });
+
+  test('warn when the repo has no license', async () => {
+    const item = makePackage({ repository: 'https://github.com/owner/repo' });
+    const fetcher = makeFetcher({
+      'api.github.com': { status: 200, body: { full_name: 'owner/repo', license: null } }
+    });
+    const result = await scanItem(item, { fetcher });
+    const check = result.checks.find((c) => c.name === 'license_present')!;
+    expect(check.status).toBe('warn');
+    expect(check.message).toContain('no license');
+  });
+
+  test('warn when license is NOASSERTION', async () => {
+    const item = makePackage({ repository: 'https://github.com/owner/repo' });
+    const fetcher = makeFetcher({
+      'api.github.com': { status: 200, body: { license: { spdx_id: 'NOASSERTION' } } }
+    });
+    const result = await scanItem(item, { fetcher });
+    const check = result.checks.find((c) => c.name === 'license_present')!;
+    expect(check.status).toBe('warn');
+  });
+
+  test('no license check emitted when the repo is unreachable (404)', async () => {
+    const item = makePackage({ repository: 'https://github.com/owner/repo' });
+    const fetcher = makeFetcher({ 'api.github.com': { status: 404 } });
+    const result = await scanItem(item, { fetcher });
+    expect(result.checks.find((c) => c.name === 'license_present')).toBeUndefined();
+  });
+
+  test('no license check for a non-github repo', async () => {
+    const item = makePackage({ repository: 'https://gitlab.com/owner/repo' });
+    const result = await scanItem(item, { fetcher: makeFetcher({}) });
+    expect(result.checks.find((c) => c.name === 'license_present')).toBeUndefined();
+  });
+});
+
 // ── npm_exists ─────────────────────────────────────────────────────────────
 
 describe('npm_exists', () => {

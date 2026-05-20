@@ -34,25 +34,31 @@ function tally(checks: ScanCheck[]): { pass: number; warn: number; fail: number 
   return { pass, warn, fail };
 }
 
-async function checkRepoReachable(
-  item: PackageMarketplaceItem,
-  opts: ScanOptions
-): Promise<ScanCheck> {
+function licenseCheck(status: CheckStatus, message: string): ScanCheck {
+  return { name: 'license_present', label: 'License declared', status, message };
+}
+
+// Returns repo_reachable plus (when the repo is reachable) license_present,
+// both derived from a single GitHub repos API call. A missing license is a
+// warning, never a hard fail — many legitimate repos lack a detected license.
+async function checkRepo(item: PackageMarketplaceItem, opts: ScanOptions): Promise<ScanCheck[]> {
   const base: Omit<ScanCheck, 'status' | 'message'> = {
     name: 'repo_reachable',
     label: 'Repository reachable'
   };
-  if (!item.repository) return { ...base, status: 'pass', message: 'no repository field, skipped' };
+  if (!item.repository) {
+    return [{ ...base, status: 'pass', message: 'no repository field, skipped' }];
+  }
 
   let url: URL;
   try {
     url = new URL(item.repository);
   } catch {
-    return { ...base, status: 'pass', message: 'non-github repository, skipped' };
+    return [{ ...base, status: 'pass', message: 'non-github repository, skipped' }];
   }
 
   if (url.hostname !== 'github.com') {
-    return { ...base, status: 'pass', message: 'non-github repository, skipped' };
+    return [{ ...base, status: 'pass', message: 'non-github repository, skipped' }];
   }
 
   const path = url.pathname.replace(/^\//, '').replace(/\.git$/, '').split('/').slice(0, 2).join('/');
@@ -63,11 +69,25 @@ async function checkRepoReachable(
   const fetcher = opts.fetcher ?? globalThis.fetch;
   try {
     const res = await fetcher(apiUrl, { headers, signal: AbortSignal.timeout(8000) });
-    if (res.status === 200) return { ...base, status: 'pass', message: `github.com/${path}` };
-    if (res.status === 404) return { ...base, status: 'fail', message: 'repo not found' };
-    return { ...base, status: 'warn', message: 'could not verify (rate limited or network)' };
+    if (res.status === 200) {
+      const reachable: ScanCheck = { ...base, status: 'pass', message: `github.com/${path}` };
+      let license: ScanCheck;
+      try {
+        const body = (await res.json()) as { license?: { spdx_id?: string } | null };
+        const spdx = body.license?.spdx_id;
+        license =
+          spdx && spdx !== 'NOASSERTION'
+            ? licenseCheck('pass', spdx)
+            : licenseCheck('warn', 'no license detected on the repository');
+      } catch {
+        license = licenseCheck('warn', 'could not read license metadata');
+      }
+      return [reachable, license];
+    }
+    if (res.status === 404) return [{ ...base, status: 'fail', message: 'repo not found' }];
+    return [{ ...base, status: 'warn', message: 'could not verify (rate limited or network)' }];
   } catch {
-    return { ...base, status: 'warn', message: 'could not verify (rate limited or network)' };
+    return [{ ...base, status: 'warn', message: 'could not verify (rate limited or network)' }];
   }
 }
 
@@ -126,9 +146,9 @@ async function scanPackage(
     checks.push({ name: 'permission_consistency', label: 'Permission consistency', status: 'pass', message: 'declared permissions match install kind' });
   }
 
-  // 3. repo_reachable
+  // 3. repo_reachable (+ license_present when reachable)
   if (item.repository) {
-    checks.push(await checkRepoReachable(item, opts));
+    checks.push(...(await checkRepo(item, opts)));
   }
 
   // 4. npm_exists

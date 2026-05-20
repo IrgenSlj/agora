@@ -935,6 +935,18 @@ export async function runPublishScan(
         });
         if (res.status === 200) {
           checks.push({ name: 'repo_reachable', status: 'pass', message: `github.com/${path}` });
+          // License is advisory (warn, never fail) and read from the same response.
+          try {
+            const body = (await res.json()) as { license?: { spdx_id?: string } | null };
+            const spdx = body.license?.spdx_id;
+            if (spdx && spdx !== 'NOASSERTION') {
+              checks.push({ name: 'license_present', status: 'pass', message: spdx });
+            } else {
+              checks.push({ name: 'license_present', status: 'unknown', message: 'no license detected on the repository' });
+            }
+          } catch {
+            checks.push({ name: 'license_present', status: 'unknown', message: 'could not read license metadata' });
+          }
         } else if (res.status === 404) {
           checks.push({ name: 'repo_reachable', status: 'fail', message: 'repository not found' });
         } else {
@@ -1084,8 +1096,10 @@ app.post('/api/packages', async (c) => {
   // positives (e.g. npm registry propagation lag on a fresh package).
   const skipScan = (body.skipScan === true || body.skip_scan === true) &&
     isAdminUser(c.env.AGORA_ADMIN_USER_IDS, user.id);
+  let scanChecks: PublishScanCheck[] = [];
   if (!skipScan) {
     const scan = await runPublishScan({ repository, npmPackage }, fetch);
+    scanChecks = scan.checks;
     if (!scan.pass) {
       return c.json(
         { error: 'Publish scan failed', checks: scan.checks.filter((ch) => ch.status === 'fail') },
@@ -1135,7 +1149,7 @@ app.post('/api/packages', async (c) => {
 
     const pkg = await c.env.DB.prepare('SELECT * FROM packages WHERE id = ?').bind(id).first();
 
-    return c.json({ package: pkg, created: !existing });
+    return c.json({ package: pkg, created: !existing, scan: scanChecks });
   } catch (e) {
     console.error('POST /api/packages error:', e);
     return c.json({ error: 'Internal server error' }, 500);
