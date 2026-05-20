@@ -2,7 +2,12 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
-## [Unreleased]
+## [0.4.1] - 2026-05-20 — CLI enrichment
+
+The "destination + trust" cycle on top of 0.4.0. Phase 1.5 pillars
+(news / community / live marketplace hubs) shipped end-to-end; the
+Phase 1.6 polish list is closed; Phase 4 trust gating took its first
+step with declared install permissions.
 
 ### Added
 - **`agora scan <id>`** — pre-install safety scan. Runs seven checks (permissions declared, permission/install-kind consistency, repo reachable, **license declared**, npm package exists, recently active, flag count below auto-hide threshold) and reports pass / warn / fail with a summary. The license check is parsed from the same GitHub repos API response as the reachability check (no extra request) and is advisory — a missing license warns, never fails. Exits 1 only on failures; warnings are informational. `--json` available; reads `AGORA_GITHUB_TOKEN` to raise GitHub's unauth rate cap. This is Phase 4 trust as a client-side check first; the same logic will move server-side at publish time when the hosted backend lands.
@@ -12,35 +17,6 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 - **Scan gate on install**: `agora install <id> --write` now runs the scan first and refuses to apply if any check returns `fail` (e.g. an item flagged ≥10 times, or a repo/npm package that 404s). `--skip-scan` bypasses the gate. Preview mode (no `--write`) stays scan-free so it works offline; `--json` output includes the full scan result.
 - **TUI scan view**: press `S` in the marketplace page to scan the selected item — async with a "Scanning…" state, then the per-check report and summary, `esc` to go back. Completes the scan feature across all three surfaces (CLI · MCP · TUI).
 - **Backend publish scan**: `POST /api/packages` now runs `runPublishScan` before accepting a publish — verifies the declared npm package exists, a github `repository` is reachable, and (advisory) whether the repo declares a license. A definitive 404 is rejected with `422` + the failing checks; transient/network problems and a missing license never block (status `unknown`). Admins can bypass with `skipScan` for npm registry-propagation lag on a fresh package. On success the response now carries the full `scan` check list so a publisher sees any warnings.
-
-### Fixed
-- Backend: `requireUser` was typed `c: any`, which let a `.first<UserRow>()` type-argument call slip past the root typecheck (which doesn't cover `backend/`). Typed it `Context<Env>` so `cd backend && bun run typecheck` is clean again.
-
-### Internal
-- `bun run typecheck` now runs both the CLI (`typecheck:cli`) and the backend (`typecheck:backend`) so local typechecks match CI coverage — the latent backend error above had slipped through because the root script was CLI-only. CI's `check` job and `publish.yml` stay on `typecheck:cli` (they don't install backend deps); the dedicated CI `backend` job still typechecks `backend/`.
-- News preview article fetch was using a hardcoded `Agora/0.4.1` User-Agent; switched to the shared `agoraUserAgent` constant so the UA tracks `package.json`.
-- Auth device-code / token-poll / logout fetches gained 5–10s `AbortSignal.timeout` — the CLI no longer hangs forever if the backend stalls.
-- `fg` / `bg` shell builtins now print "No background jobs." for an empty job set and reject non-numeric job ids cleanly (was "Job NaN/-Infinity not found").
-- `doctor --deep`'s `npm view` existence check uses `execFileSync` (was `execSync` with template-string interpolation).
-- `searchApi` uses `Promise.allSettled` so a single source erroring doesn't tank the whole search; total failure still throws to keep the existing offline fallback.
-- Whitespace-only notes on community flag submit are now treated as no notes (was passed through as a blank string).
-- OAuth `state` cookie's `sameSite` normalized to lower-case `'lax'` to match the access/refresh cookies set in the same file.
-
-### Refactored
-- Backend D1 row reads: dropped all 28 `as any` casts via inline row types (`UserRow`, `PackageRow`, `WorkflowRow`, `DiscussionRow`, `DiscussionReplyRow`, `RefreshTokenRow`, `DeviceCodeRow`, `KillSwitchRow`, `BoardStatsRow`) plus typed shapes on the GitHub OAuth fetch responses. Joined SELECTs use inline intersection types.
-- `rateLimit(c: Context<Env>)` in backend now uses Hono's `Context` type instead of `any`.
-- Dropped the wrong `@deprecated` markers on `formatStars` / `formatInstalls` — both aliases are still in active use.
-
-### Internal
-- 793 pass / 1 skip / 0 fail across 35 test files (was 768 across 34 at 0.4.1).
-- 2 new enrichment tests (sha-changed and opencode-null paths) close the remaining coverage gap on the hub enrichment cache.
-
-## [0.4.1] - 2026-05-18 — CLI enrichment
-
-The "destination + trust" cycle on top of 0.4.0. Phase 1.5 pillars
-(news / community / live marketplace hubs) shipped end-to-end; the
-Phase 1.6 polish list is closed; Phase 4 trust gating took its first
-step with declared install permissions.
 
 ### Added — daily-use surface
 - **`agora today`** — last-24h digest (news + community + trending) with `--section`/`--json` flags
@@ -68,14 +44,29 @@ step with declared install permissions.
 - News cache + meta atomic writes via centralized `atomicWriteFile` (5 sites collapsed); all user-data writes `0o600`
 - Backend length caps on `POST /api/packages|workflows|discussions`; sort allowlist on `/api/community/threads`; OAuth device-code + token responses narrowly typed
 
+### Fixed
+- Backend: `requireUser` was typed `c: any`, which let a `.first<UserRow>()` type-argument call slip past the root typecheck (which doesn't cover `backend/`). Typed it `Context<Env>` so `cd backend && bun run typecheck` is clean again.
+
 ### Refactored
 - `pageSourceOptions` shared helper (community + home pages were carrying drifted copies)
 - `Package.source` / `pushedAt` typed (was `(as any)` × 12)
 - `getMarketplaceItems` 30s memo + parallel news source fetch
 - `src/` `(as any)` count: 35 → 15 (remaining are stdin raw-mode probes)
+- Backend D1 row reads: dropped all 28 `as any` casts via inline row types (`UserRow`, `PackageRow`, `WorkflowRow`, `DiscussionRow`, `DiscussionReplyRow`, `RefreshTokenRow`, `DeviceCodeRow`, `KillSwitchRow`, `BoardStatsRow`) plus typed shapes on the GitHub OAuth fetch responses. Joined SELECTs use inline intersection types.
+- `rateLimit(c: Context<Env>)` in backend now uses Hono's `Context` type instead of `any`.
+- Dropped the wrong `@deprecated` markers on `formatStars` / `formatInstalls` — both aliases are still in active use.
 
 ### Internal
-- 768 pass / 1 skip / 0 fail across 34 test files (was 509 across 22 at 0.4.0)
+- 793 pass / 1 skip / 0 fail across 35 test files (was 768 across 34 at 0.4.1).
+- 2 new enrichment tests (sha-changed and opencode-null paths) close the remaining coverage gap on the hub enrichment cache.
+- `bun run typecheck` now runs both the CLI (`typecheck:cli`) and the backend (`typecheck:backend`) so local typechecks match CI coverage — the latent backend error above had slipped through because the root script was CLI-only. CI's `check` job and `publish.yml` stay on `typecheck:cli` (they don't install backend deps); the dedicated CI `backend` job still typechecks `backend/`.
+- News preview article fetch was using a hardcoded `Agora/0.4.1` User-Agent; switched to the shared `agoraUserAgent` constant so the UA tracks `package.json`.
+- Auth device-code / token-poll / logout fetches gained 5–10s `AbortSignal.timeout` — the CLI no longer hangs forever if the backend stalls.
+- `fg` / `bg` shell builtins now print "No background jobs." for an empty job set and reject non-numeric job ids cleanly (was "Job NaN/-Infinity not found").
+- `doctor --deep`'s `npm view` existence check uses `execFileSync` (was `execSync` with template-string interpolation).
+- `searchApi` uses `Promise.allSettled` so a single source erroring doesn't tank the whole search; total failure still throws to keep the existing offline fallback.
+- Whitespace-only notes on community flag submit are now treated as no notes (was passed through as a blank string).
+- OAuth `state` cookie's `sameSite` normalized to lower-case `'lax'` to match the access/refresh cookies set in the same file.
 
 ## [0.4.0] - 2026-05-16
 
@@ -131,7 +122,7 @@ Production-hardening release.
 - Backend: input validation, guarded JSON parsing, no internal error leakage
 
 ### Security
-- Backend `requireUser` flagged `// SECURITY:` — used the raw GitHub OAuth token as the API bearer credential. Deployment was deferred until the auth rework that landed in the [Unreleased] cycle.
+- Backend `requireUser` flagged `// SECURITY:` — used the raw GitHub OAuth token as the API bearer credential. Deployment was deferred until the auth rework that landed in the [0.4.1] cycle.
 
 ## [0.2.0] - 2026-05-11
 
