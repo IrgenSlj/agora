@@ -9,6 +9,10 @@
   <img src="https://img.shields.io/badge/tests-805%20passing-success" alt="tests">
 </p>
 
+<p align="center">
+  <img src="./docs/demo.gif" alt="Agora demo" width="720">
+</p>
+
 `agora` is a standalone CLI that puts everything a developer building for the future  cares about in one terminal: a **curated + live marketplace** of MCP servers and agent tooling, a **threaded community** with reputation-weighted sort, a **ranked news feed** with on-cache AI summarization, and **first-class install consent** for declared permissions. Works offline by default; opt into the backend with `agora auth login`.
 
 ## Install
