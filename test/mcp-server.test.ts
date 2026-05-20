@@ -21,13 +21,14 @@ async function createTestClient(opts?: Parameters<typeof createAgoraMcpServer>[0
 }
 
 describe('Agora MCP Server', () => {
-  test('lists all 7 tools', async () => {
+  test('lists all 8 tools', async () => {
     const { client } = await createTestClient();
     const result = await client.listTools();
     const toolNames = result.tools.map((t) => t.name).sort();
     expect(toolNames).toEqual([
       'browse',
       'install_plan',
+      'outdated',
       'scan',
       'search',
       'trending',
@@ -183,5 +184,26 @@ describe('Agora MCP Server', () => {
     });
     const text = extractText(result);
     expect(text).toContain('not found');
+  });
+
+  test('outdated tool returns per-package freshness using injected fetcher', async () => {
+    const fakeFetcher = async () =>
+      ({
+        status: 200,
+        json: async () => ({
+          'dist-tags': { latest: '1.2.3' },
+          time: { modified: new Date(Date.now() - 30 * 86400_000).toISOString() }
+        })
+      }) as unknown as Response;
+    const { client } = await createTestClient({ outdated: { fetcher: fakeFetcher } });
+
+    const result = await client.callTool({
+      name: 'outdated',
+      arguments: { packages: ['@scope/foo', '@scope/bar'] }
+    });
+    const text = extractText(result);
+    expect(text).toContain('@scope/foo');
+    expect(text).toContain('@scope/bar');
+    expect(text).toMatch(/\d+ fresh · \d+ stale · \d+ unknown/);
   });
 });

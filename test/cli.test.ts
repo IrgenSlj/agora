@@ -213,6 +213,64 @@ describe('CLI commands', () => {
     }
   });
 
+  test('install --write prints a Scan: section before applying', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const configPath = join(temp, 'opencode.json');
+    const { io, stdout } = createIo(temp);
+
+    try {
+      const code = await runCli(
+        ['install', 'mcp-github', '--write', '--config', configPath],
+        io
+      );
+
+      expect(code).toBe(0);
+      const out = stdout.join('');
+      expect(out).toContain('Scan:');
+      expect(out).toMatch(/\d+ pass · \d+ warning\(s\) · \d+ failure\(s\)/);
+      expect(out).toContain('Installed');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('install --write --skip-scan does not print a Scan: section', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const configPath = join(temp, 'opencode.json');
+    const { io, stdout } = createIo(temp);
+
+    try {
+      const code = await runCli(
+        ['install', 'mcp-github', '--write', '--skip-scan', '--config', configPath],
+        io
+      );
+
+      expect(code).toBe(0);
+      const out = stdout.join('');
+      expect(out).not.toContain('Scan:');
+      expect(out).toContain('Installed');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('install preview (no --write) does not run scan to stay offline-friendly', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
+    const configPath = join(temp, 'opencode.json');
+    const { io, stdout } = createIo(temp);
+
+    try {
+      const code = await runCli(['install', 'mcp-github', '--config', configPath], io);
+
+      expect(code).toBe(0);
+      const out = stdout.join('');
+      expect(out).toContain('Install preview');
+      expect(out).not.toContain('Scan:');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
   test('config doctor reports config metadata', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
     const configPath = join(temp, 'opencode.json');

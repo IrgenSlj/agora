@@ -76,6 +76,8 @@ $ echo $?
 
 The TUI install preview flips its footer to `g grant + install   d details   n cancel` when permissions are present. The list shows a dim `[fs net exec]` badge on any item with a non-empty manifest.
 
+`--write` also runs a **pre-install scan** first — repo reachability, npm existence, recency, declared-permission consistency, and community flag count — and refuses to apply if any check fails (e.g. an item flagged enough times to auto-hide, or a package that 404s on npm). Run the scan standalone with `agora scan <id>`, or bypass the install gate with `--skip-scan`.
+
 ## Configuration
 
 | Env | Meaning |

@@ -12,6 +12,7 @@ import { getTutorials, findTutorial } from '../marketplace.js';
 import { formatNumber } from '../format.js';
 import type { MarketplaceItem } from '../marketplace.js';
 import { scanItem, type ScanResult, type ScanOptions } from '../scan.js';
+import { checkOutdated, type OutdatedOptions } from '../outdated.js';
 import { AGORA_VERSION } from './app.js';
 
 function backtick(s: string): string {
@@ -43,6 +44,7 @@ function formatItemList(items: MarketplaceItem[]): string {
 
 export interface AgoraMcpServerOptions {
   scan?: ScanOptions;
+  outdated?: OutdatedOptions;
 }
 
 export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServer {
@@ -275,6 +277,42 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
           {
             type: 'text',
             text: `${heading}\n\n${lines.join('\n')}\n\n${summary}`
+          }
+        ]
+      };
+    }
+  );
+
+  server.registerTool(
+    'outdated',
+    {
+      description:
+        'Check the npm registry freshness of a list of MCP package names. For each package returns latest version, days since last publish, and a freshness status (fresh / stale / unknown). Pass the names you find via `browse` or from an opencode.json.',
+      inputSchema: z.object({
+        packages: z
+          .array(z.string())
+          .min(1)
+          .describe('List of npm package names to check (e.g. ["@modelcontextprotocol/server-github"])')
+      })
+    },
+    async ({ packages }) => {
+      const result = await checkOutdated(packages, opts.outdated ?? {});
+      if (result.entries.length === 0) {
+        return {
+          content: [{ type: 'text', text: 'No packages provided.' }]
+        };
+      }
+      const lines = result.entries.map((e) => {
+        const icon = e.status === 'fresh' ? '✓' : e.status === 'stale' ? '⚠' : '?';
+        return `${icon} **${e.pkg}** — ${e.message}`;
+      });
+      const { fresh, stale, unknown } = result.summary;
+      const summary = `${fresh} fresh · ${stale} stale · ${unknown} unknown`;
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `📦 **Outdated check**\n\n${lines.join('\n')}\n\n${summary}`
           }
         ]
       };

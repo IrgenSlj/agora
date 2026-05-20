@@ -187,6 +187,7 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--write', description: 'Apply the install plan (update config + run npm install)' },
       { flag: '--config', description: 'Path to opencode.json (auto-detected by default)' },
       { flag: '--type, -t', description: 'Item kind: package or workflow' },
+      { flag: '--skip-scan', description: 'Bypass the pre-install scan gate (use only when you understand the risk)' },
       { flag: '--json', description: 'Output plan as JSON' }
     ],
     examples: [

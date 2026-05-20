@@ -9,6 +9,7 @@ import {
   writeOpenCodeConfig
 } from '../../config-files.js';
 import { createInstallPlan, hasPermissions, renderPermissionLines } from '../../marketplace.js';
+import { scanItem, type ScanResult } from '../../scan.js';
 import {
   findMarketplaceSource,
   publishPackageSource,
@@ -90,6 +91,15 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
   const plan = createInstallPlan(item, loaded.config, { dataDir });
   if (!plan.installable) return usageError(io, plan.reason || `${item.name} is not installable`);
 
+  const skipScan = Boolean(parsed.flags.skipScan);
+  const wantScan = Boolean(parsed.flags.write) && !skipScan;
+  const scanResult: ScanResult | null = wantScan
+    ? await scanItem(item, {
+        fetcher: io.fetcher,
+        githubToken: io.env?.AGORA_GITHUB_TOKEN
+      })
+    : null;
+
   if (parsed.flags.json) {
     writeJson(io.stdout, {
       source: source.source,
@@ -103,9 +113,35 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
       notes: plan.notes,
       config: plan.config,
       cloneTarget: plan.cloneTarget,
-      postInstallHint: plan.postInstallHint
+      postInstallHint: plan.postInstallHint,
+      scan: scanResult
     });
+    if (scanResult && scanResult.summary.fail > 0) return 1;
     return 0;
+  }
+
+  if (scanResult) {
+    writeLine(io.stdout, 'Scan:');
+    for (const c of scanResult.checks) {
+      const icon =
+        c.status === 'pass'
+          ? style.accent('✓')
+          : c.status === 'warn'
+            ? style.orange('⚠')
+            : style.bold('✗');
+      writeLine(io.stdout, `  ${icon}  ${c.label}: ${c.message}`);
+    }
+    const { pass, warn, fail } = scanResult.summary;
+    writeLine(io.stdout, `  ${pass} pass · ${warn} warning(s) · ${fail} failure(s)`);
+    writeLine(io.stdout, '');
+
+    if (fail > 0) {
+      writeLine(
+        io.stderr,
+        `${style.bold('Refusing install')} — ${fail} scan check(s) failed. Re-run with --skip-scan to override.`
+      );
+      return 1;
+    }
   }
 
   if (parsed.flags.write) {
