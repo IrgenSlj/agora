@@ -200,17 +200,42 @@
     selectedWorkflowId: 'wf-tdd-cycle',
     analyticsMode: 'installs',
     queue: readJson('agora-hub-queue', ['mcp-filesystem']),
-    discussions: readJson('agora-hub-discussions', baseDiscussions)
+    discussions: readJson('agora-hub-discussions', baseDiscussions),
+    livePackages: null,
+    liveWorkflows: null
   };
 
   const els = {};
 
   document.addEventListener('DOMContentLoaded', init);
 
-  function init() {
+  async function init() {
     cacheElements();
     bindEvents();
+    await tryLoadFromApi();
     render();
+  }
+
+  async function tryLoadFromApi() {
+    if (!window.AgoraApi) return;
+    try {
+      const [livePkgs, liveWfs] = await Promise.all([
+        window.AgoraApi.loadPackages(),
+        window.AgoraApi.loadWorkflows()
+      ]);
+      if (livePkgs.length > 0) state.livePackages = livePkgs;
+      if (liveWfs.length > 0) state.liveWorkflows = liveWfs;
+    } catch {
+      // API unreachable — use bundled sample data
+    }
+  }
+
+  function livePackages() {
+    return state.livePackages || packages;
+  }
+
+  function liveWorkflows() {
+    return state.liveWorkflows || workflows;
   }
 
   function cacheElements() {
@@ -332,7 +357,8 @@
   }
 
   function renderShell() {
-    const readyCount = packages.filter((item) => item.status === 'Ready').length;
+    const items = livePackages();
+    const readyCount = items.filter((item) => item.status === 'Ready').length;
     els.sidebarReady.textContent = String(readyCount);
     document.querySelectorAll('.view').forEach((view) => {
       view.classList.toggle('is-active', view.id === `view-${state.view}`);
@@ -352,25 +378,27 @@
   }
 
   function renderOverview() {
-    const packageStars = packages.reduce((sum, item) => sum + item.stars, 0);
-    const installs = packages.reduce((sum, item) => sum + item.installs, 0);
+    const items = livePackages();
+    const packageStars = items.reduce((sum, item) => sum + item.stars, 0);
+    const installs = items.reduce((sum, item) => sum + item.installs, 0);
     const replies = state.discussions.reduce((sum, item) => sum + item.replies, 0);
     const pending = state.discussions.filter((item) => !item.reviewed).length;
 
     els.metricGrid.innerHTML = [
       metric(
         'Packages',
-        String(packages.length),
-        `${packages.filter((item) => item.status === 'Ready').length} ready`
+        String(items.length),
+        `${items.filter((item) => item.status === 'Ready').length} ready`
       ),
       metric('Installs', formatNumber(installs), 'sample marketplace'),
       metric('Stars', formatNumber(packageStars), 'across tools'),
       metric('Open threads', String(pending), `${replies} total replies`)
     ].join('');
 
+    const items2 = livePackages();
     const metricKey = state.analyticsMode;
-    const max = Math.max(...packages.map((item) => item[metricKey]));
-    els.barChart.innerHTML = packages
+    const max = Math.max(...items2.map((item) => item[metricKey]));
+    els.barChart.innerHTML = items2
       .map((item) => {
         const height = Math.max(12, Math.round((item[metricKey] / max) * 100));
         return `
@@ -406,6 +434,7 @@
   }
 
   function renderMarketplace() {
+    const pkgs = livePackages();
     const items = filteredPackages(state.query);
     if (!items.some((item) => item.id === state.selectedPackageId) && items.length > 0) {
       state.selectedPackageId = items[0].id;
@@ -423,7 +452,7 @@
     });
     bindCardActions(els.packageList);
 
-    const selected = packages.find((item) => item.id === state.selectedPackageId) || items[0];
+    const selected = pkgs.find((item) => item.id === state.selectedPackageId) || items[0];
     els.packageDetail.innerHTML = selected
       ? packageDetail(selected)
       : emptyState('Nothing selected', 'Package details will appear here.');
@@ -431,7 +460,8 @@
   }
 
   function renderWorkflows() {
-    const items = workflows
+    const wfs = liveWorkflows();
+    const items = wfs
       .filter((item) => matchesQuery(item, state.query))
       .sort((a, b) => b.stars - a.stars);
 
@@ -451,7 +481,7 @@
     });
     bindCardActions(els.workflowList);
 
-    const selected = workflows.find((item) => item.id === state.selectedWorkflowId) || items[0];
+    const selected = wfs.find((item) => item.id === state.selectedWorkflowId) || items[0];
     els.workflowDetail.innerHTML = selected
       ? workflowDetail(selected)
       : emptyState('Nothing selected', 'Workflow details will appear here.');
@@ -535,7 +565,8 @@
   function filteredPackages(query) {
     const normalized = query || state.query;
     const category = state.packageCategory;
-    const items = packages
+    const pkgs = livePackages();
+    const items = pkgs
       .filter((item) => category === 'all' || item.category === category)
       .filter((item) => matchesQuery(item, normalized));
 
@@ -686,14 +717,14 @@
     bindCardActions(root);
     root.querySelectorAll('[data-copy-package]').forEach((button) => {
       button.addEventListener('click', () => {
-        const item = packages.find((candidate) => candidate.id === button.dataset.copyPackage);
+        const item = livePackages().find((candidate) => candidate.id === button.dataset.copyPackage);
         copyText(JSON.stringify(generateConfig([item]), null, 2), 'Package config copied');
       });
     });
 
     root.querySelectorAll('[data-copy-workflow]').forEach((button) => {
       button.addEventListener('click', () => {
-        const item = workflows.find((candidate) => candidate.id === button.dataset.copyWorkflow);
+        const item = liveWorkflows().find((candidate) => candidate.id === button.dataset.copyWorkflow);
         copyText(item.prompt, 'Workflow prompt copied');
       });
     });
@@ -725,7 +756,7 @@
   }
 
   function findInstallable(id) {
-    return packages.find((item) => item.id === id) || workflows.find((item) => item.id === id);
+    return livePackages().find((item) => item.id === id) || liveWorkflows().find((item) => item.id === id);
   }
 
   function generateConfig(items) {

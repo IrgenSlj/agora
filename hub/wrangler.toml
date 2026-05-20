@@ -1,0 +1,5 @@
+name = "agora-hub"
+compatibility_date = "2026-05-20"
+
+[pages]
+build_output = "."
