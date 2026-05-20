@@ -28,6 +28,10 @@ export interface Package {
   source?: 'github' | 'hf';
   /** Last upstream push for live hub items (HF lastModified, GH pushedAt). */
   pushedAt?: string;
+  /** AI-generated install hint from curation. */
+  installHint?: string;
+  /** ISO timestamp when AI verification last ran. */
+  aiVerifiedAt?: string;
 }
 
 export interface Workflow {

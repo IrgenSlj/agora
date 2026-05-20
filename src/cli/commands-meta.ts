@@ -905,6 +905,26 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora welcome', 'agora welcome --json']
   },
   {
+    name: 'curate',
+    group: 'Marketplace',
+    summary: 'Run AI-powered curation to discover and verify marketplace items',
+    usage: 'agora curate [--force] [--limit 50]',
+    details:
+      'Discovers MCP servers and tools from GitHub and HuggingFace, then uses AI to verify ' +
+      'each item is a genuine MCP server/prompt/skill and extract metadata. Results are cached ' +
+      'locally and used by the marketplace search. By default only verifies new items; use ' +
+      '--force to re-verify everything.',
+    flags: [
+      { flag: '--force', description: 'Re-verify all items, not just new ones' },
+      { flag: '--limit, -n', description: 'Maximum items to process (default 50)' }
+    ],
+    examples: [
+      'agora curate',
+      'agora curate --force',
+      'agora curate --limit 20'
+    ]
+  },
+  {
     name: 'notify',
     group: 'Setup',
     summary: 'Send a desktop notification via macOS, Linux, or Windows',

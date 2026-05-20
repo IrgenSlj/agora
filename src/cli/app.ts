@@ -23,6 +23,7 @@ import * as welcomeModule from './commands/welcome.js';
 import * as pingModule from './commands/ping.js';
 import * as scanModule from './commands/scan.js';
 import * as outdatedModule from './commands/outdated.js';
+import * as curateModule from './commands/curate.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -158,6 +159,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       ping: pingModule.commandPing,
       scan: scanModule.commandScan,
       outdated: outdatedModule.commandOutdated,
+      curate: curateModule.commandCurate,
       author: marketplace.commandAuthor,
       bookmarks: operations.commandBookmarks,
       welcome: welcomeModule.commandWelcome,

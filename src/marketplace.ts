@@ -11,6 +11,7 @@ import type { OpenCodeConfig } from './config.js';
 import { detectAgoraDataDir } from './state.js';
 import { isHubCacheStale, readHubsCache } from './hubs/cache.js';
 import type { HubItem, InstallKind } from './hubs/types.js';
+import { readCuratedCache } from './curator/index.js';
 
 export type MarketplaceCategory = 'all' | 'package' | 'mcp' | 'prompt' | 'workflow' | 'skill';
 export type MarketplaceItemType = 'package' | 'workflow';
@@ -109,7 +110,7 @@ function hubItemToPackage(item: HubItem): PackageMarketplaceItem {
 // changes only when scripts/refresh-hubs.ts runs. TUI pages call this once
 // per render — without memoization that's 60+ catalog rebuilds per minute on
 // arrow-key navigation with AGORA_LIVE_HUBS=1.
-let _memo: { at: number; envFlag: string; items: MarketplaceItem[] } | null = null;
+let _memo: { at: number; envFlag: string; useAiCuration: boolean; items: MarketplaceItem[] } | null = null;
 const MEMO_TTL_MS = 30_000;
 
 let _warnedEmpty = false;
@@ -121,26 +122,47 @@ export function clearMarketplaceItemsCache(): void {
   _warnedStale = false;
 }
 
+export function getCuratedSource(): 'ai' | 'bundled' {
+  const useAiCuration = (process.env.AGORA_AI_CURATE ?? '1') === '1';
+  if (!useAiCuration) return 'bundled';
+  const dataDir = detectAgoraDataDir({ env: process.env });
+  const cache = readCuratedCache(dataDir);
+  return cache.length > 0 ? 'ai' : 'bundled';
+}
+
 export function getMarketplaceItems(): MarketplaceItem[] {
   const envFlag = process.env.AGORA_LIVE_HUBS ?? '';
-  if (_memo && _memo.envFlag === envFlag && Date.now() - _memo.at < MEMO_TTL_MS) {
+  const useAiCuration = (process.env.AGORA_AI_CURATE ?? '1') === '1';
+  if (_memo && _memo.envFlag === envFlag && _memo.useAiCuration === useAiCuration && Date.now() - _memo.at < MEMO_TTL_MS) {
     return _memo.items;
   }
 
-  const curated: MarketplaceItem[] = [
-    ...samplePackages.map((pkg) => ({ ...pkg, kind: 'package' as const })),
-    ...sampleWorkflows.map((workflow) => ({
-      ...workflow,
-      kind: 'workflow' as const,
-      category: 'workflow' as const,
-      installs: workflow.forks
-    }))
-  ];
+  // Try AI-curated cache first
+  const dataDir = detectAgoraDataDir({ env: process.env });
+  let curatedPackages: MarketplaceItem[] = [];
+  if (useAiCuration) {
+    const cache = readCuratedCache(dataDir);
+    if (cache.length > 0) {
+      curatedPackages = cache.map((pkg) => ({ ...pkg, kind: 'package' as const }));
+    }
+  }
+
+  const packageItems: MarketplaceItem[] = curatedPackages.length > 0
+    ? curatedPackages
+    : samplePackages.map((pkg) => ({ ...pkg, kind: 'package' as const }));
+
+  const workflowItems: MarketplaceItem[] = sampleWorkflows.map((workflow) => ({
+    ...workflow,
+    kind: 'workflow' as const,
+    category: 'workflow' as const,
+    installs: workflow.forks
+  }));
+
+  const curated: MarketplaceItem[] = [...packageItems, ...workflowItems];
 
   let items: MarketplaceItem[] = curated;
 
   if (envFlag === '1') {
-    const dataDir = detectAgoraDataDir({ env: process.env });
     const hubItems = readHubsCache(dataDir);
     if (hubItems.length === 0 && !_warnedEmpty) {
       console.warn('AGORA_LIVE_HUBS=1 but hub cache is empty. Run: bun scripts/refresh-hubs.ts');
@@ -156,7 +178,7 @@ export function getMarketplaceItems(): MarketplaceItem[] {
     }
   }
 
-  _memo = { at: Date.now(), envFlag, items };
+  _memo = { at: Date.now(), envFlag, useAiCuration, items };
   return items;
 }
 
