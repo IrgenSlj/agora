@@ -1,18 +1,24 @@
 # agora — README hero demo
-# Regenerate with:  vhs scripts/demo.tape   →   docs/demo.gif
-# (run `bun run build` first so dist/cli.js is executable on PATH).
+# Regenerate with:  bun run build && vhs scripts/demo.tape   →   docs/demo.gif
+# (build first so dist/cli.js is executable on PATH).
 #
-# The whole demo runs inside ONE persistent `agora` shell session, so the
-# branded prompt stays on screen throughout. Only the offline, curated,
-# fully-deterministic surface is shown (marketplace + CLI), so the GIF renders
-# the same with or without network.
+# A curated three-beat story, all inside ONE persistent `agora` shell session
+# so the branded prompt stays on screen the whole time:
 #
-# TIMING RULES learned the hard way:
+#   1. DISCOVER   agora search mcp            — a real ranked catalog, in the terminal
+#   2. INSTALL    agora install … --write     — scan + permission consent gate (the differentiator)
+#   3. EXPLORE    agora tui                    — the full-screen, keyboard-driven marketplace
+#
+# Only the offline, curated surface is shown, so the GIF renders the same with
+# or without a network. AGORA_HOME is a throwaway dir, so the session is always
+# fresh (0 turns, no "Resumed…" banner).
+#
+# TIMING RULES (learned the hard way):
 #   • The agora shell's line-reader drops an Enter that lands in the same beat
 #     as the last typed character — so every command typed at the agora prompt
-#     gets `Sleep 450ms` before its Enter.
-#   • `Wait` is only safe on TUI-internal text (raw mode); gating a *shell*
-#     keystroke on screen text fires before the reader is ready and eats input.
+#     gets `Sleep 450ms` before its Enter. (TUI raw-mode keys are exempt.)
+#   • `Wait` is only safe on TUI-internal text; gating a *shell* keystroke on
+#     screen text fires before the reader is ready and eats input.
 
 Output docs/demo.gif
 
@@ -39,77 +45,20 @@ Show
 Sleep 500ms
 
 # ═══════════════════════════════════════════════════════════════
-# 1 — Cold open: the gradient AGORA banner (launched from bash)
+# Cold open — the gradient AGORA banner
 # ═══════════════════════════════════════════════════════════════
 Type "agora"
 Enter
-Sleep 2200ms
+Sleep 2400ms
 
 # ═══════════════════════════════════════════════════════════════
-# 2 — It's a real shell: bash dispatch ($›) lives next to the hub
+# 1 — DISCOVER: a ranked marketplace, right in the terminal
 # ═══════════════════════════════════════════════════════════════
-Type "ls"
-Sleep 450ms
-Enter
-Sleep 1800ms
-
-# ═══════════════════════════════════════════════════════════════
-# 3 — Marketplace TUI: 5 pages, details, install-consent gate
-# ═══════════════════════════════════════════════════════════════
-# `agora tui` runs as a fresh bash child — its own clean raw-mode session.
-Type "agora tui"
-Sleep 450ms
-Enter
-Wait+Screen /installs/
-Sleep 1200ms
-
-# 1-5 switch pages (Tab cycles) — jump to the Marketplace
-Type "2"
-Wait+Screen /MARKETPLACE/
-Sleep 1300ms
-
-# Skim down to a server that declares permissions (dim [net] badge)
-Down
-Sleep 300ms
-Down
-Sleep 300ms
-Down
-Sleep 1000ms
-
-# Enter opens full details: stats, tags, repo, permissions, related items
-Enter
-Sleep 2600ms
-Escape
-Sleep 600ms
-
-# `i` previews the install — the footer flips to a permissions GRANT gate,
-# the consent step that sets agora apart.
-Type "i"
-Wait+Screen /grant/
-Sleep 2900ms
-Escape
-Sleep 600ms
-
-# Quit the TUI, back to the branded shell
-Type "q"
-Sleep 1000ms
-
-# ═══════════════════════════════════════════════════════════════
-# 4 — Scriptable CLI: search, safety scan, consented install
-# ═══════════════════════════════════════════════════════════════
-Hide
-Type "clear"
-Sleep 450ms
-Enter
-Show
-Sleep 400ms
-
-# Curated + live search — every command also speaks --json
 Type "agora search mcp"
 Sleep 450ms
 Enter
 Wait+Screen /results/
-Sleep 3000ms
+Sleep 3200ms
 
 Hide
 Type "clear"
@@ -118,29 +67,58 @@ Enter
 Show
 Sleep 300ms
 
-# Pre-install safety scan: repo reachable, npm exists, flag count, perms
-Type "agora scan mcp-filesystem"
-Sleep 450ms
-Enter
-Wait+Screen /pass/
-Sleep 3000ms
-
-Hide
-Type "clear"
-Sleep 450ms
-Enter
-Show
-Sleep 300ms
-
-# `--write` refuses to apply until permissions are explicitly granted
+# ═══════════════════════════════════════════════════════════════
+# 2 — INSTALL SAFELY: a scan + a permission consent gate
+#     (`--write` refuses to apply until you explicitly grant access)
+# ═══════════════════════════════════════════════════════════════
 Type "agora install mcp-filesystem --write"
 Sleep 450ms
 Enter
 Wait+Screen /grant and install/
-Sleep 3200ms
+Sleep 3600ms
+
+Hide
+Type "clear"
+Sleep 450ms
+Enter
+Show
+Sleep 300ms
 
 # ═══════════════════════════════════════════════════════════════
-# 5 — Outro
+# 3 — EXPLORE: the full-screen, keyboard-driven interface
+# ═══════════════════════════════════════════════════════════════
+# Runs as a fresh bash child — its own clean raw-mode session.
+Type "agora tui"
+Sleep 450ms
+Enter
+Wait+Screen /installs/
+Sleep 900ms
+
+# 1-5 switch pages (Tab cycles) — jump straight to the Marketplace
+Type "2"
+Wait+Screen /MARKETPLACE/
+Sleep 1400ms
+
+# Skim the catalog — note the dim [fs] / [net] / [exec] permission badges
+Down
+Sleep 350ms
+Down
+Sleep 350ms
+Down
+Sleep 900ms
+
+# Enter opens a full detail card: stats, tags, repo, permissions, related items
+Enter
+Sleep 3000ms
+
+# Quit the TUI, back to the branded shell
+Escape
+Sleep 400ms
+Type "q"
+Sleep 900ms
+
+# ═══════════════════════════════════════════════════════════════
+# Outro
 # ═══════════════════════════════════════════════════════════════
 Hide
 Type "clear"
@@ -148,9 +126,8 @@ Sleep 450ms
 Enter
 Show
 Sleep 300ms
-# ASCII only — a multibyte char typed via VHS gets mangled by bash's echo
-# (the agora binary prints UTF-8 fine; this is a typed-literal limitation).
-Type "echo 'agora -- discover, vet, and install. npm i -g opencode-agora'"
+# ASCII only — a multibyte char typed via VHS gets mangled by bash's echo.
+Type "echo 'agora -- discover, install safely, and explore. npm i -g opencode-agora'"
 Sleep 450ms
 Enter
-Sleep 2200ms
+Sleep 2400ms
