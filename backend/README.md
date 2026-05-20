@@ -74,5 +74,6 @@ Manual migrations for live D1 instances are appended at the bottom of the schema
 ## Status
 
 - Code: feature-complete for Phase 1.5 + 1.6
-- Hosted deploy: blocked on rate-limit middleware wiring + production wrangler config — see [`../ROADMAP.md`](../ROADMAP.md) Phase 2
+- Rate-limit middleware: wired (`60/min` read, `10/min` write, anonymous half-quota)
+- Hosted deploy: ready — see steps above
 - Self-hosting: supported with the steps above
