@@ -2,6 +2,11 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
+## [0.4.2] - 2026-05-20
+
+### Fixed
+- README now embeds the demo hero gif inline; `docs/demo.gif` is tracked in git instead of gitignored.
+
 ## [0.4.1] - 2026-05-20 — CLI enrichment
 
 The "destination + trust" cycle on top of 0.4.0. Phase 1.5 pillars
