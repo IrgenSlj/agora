@@ -11,8 +11,10 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 - **MCP server tools**: `agora mcp` now exposes `scan` and `outdated` (7th + 8th tools) so LLM clients can run pre-install safety checks and registry freshness checks through the MCP transport (alongside `search` / `browse` / `trending` / `install_plan` / `tutorials` / `tutorial`). The server version stamp now reads from `package.json` instead of being hardcoded.
 - **Scan gate on install**: `agora install <id> --write` now runs the scan first and refuses to apply if any check returns `fail` (e.g. an item flagged ≥10 times, or a repo/npm package that 404s). `--skip-scan` bypasses the gate. Preview mode (no `--write`) stays scan-free so it works offline; `--json` output includes the full scan result.
 - **TUI scan view**: press `S` in the marketplace page to scan the selected item — async with a "Scanning…" state, then the per-check report and summary, `esc` to go back. Completes the scan feature across all three surfaces (CLI · MCP · TUI).
+- **Backend publish scan**: `POST /api/packages` now runs `runPublishScan` before accepting a publish — verifies the declared npm package exists and a github `repository` is reachable. A definitive 404 is rejected with `422` + the failing checks; transient/network problems never block (status `unknown`). Admins can bypass with `skipScan` for npm registry-propagation lag on a fresh package.
 
 ### Fixed
+- Backend: `requireUser` was typed `c: any`, which let a `.first<UserRow>()` type-argument call slip past the root typecheck (which doesn't cover `backend/`). Typed it `Context<Env>` so `cd backend && bun run typecheck` is clean again.
 - News preview article fetch was using a hardcoded `Agora/0.4.1` User-Agent; switched to the shared `agoraUserAgent` constant so the UA tracks `package.json`.
 - Auth device-code / token-poll / logout fetches gained 5–10s `AbortSignal.timeout` — the CLI no longer hangs forever if the backend stalls.
 - `fg` / `bg` shell builtins now print "No background jobs." for an empty job set and reject non-numeric job ids cleanly (was "Job NaN/-Infinity not found").

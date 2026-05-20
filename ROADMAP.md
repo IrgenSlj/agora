@@ -33,7 +33,7 @@ The actual product. An open marketplace of executable code is a supply-chain sur
 - ✓ **Permission manifests per item** (fs / network / exec), shown at install like an app-store prompt — display + acknowledgment shipped (TUI flips to `g grant + install / d details`, CLI `--write` requires `--yes`)
 - ✓ **Earned (not granted) reputation** — recompute + thread-sort weighting shipped
 - ✓ **Flag/report + kill switch** for confirmed malware — auto-collapse at 3 flags, auto-hide at 10, operator `agora admin hide` with public audit log
-- ◐ **Automated scan on publish** — `agora scan <id>` ships the client-side pre-install check (permissions, repo reachability, npm existence, freshness, flag count). The backend `POST /api/publish` pre-publish version is next.
+- ✓ **Automated scan on publish** — client side: `agora scan <id>` (CLI + MCP tool + TUI `S` key) and a scan gate on `agora install --write`. Server side: `POST /api/packages` runs `runPublishScan` (npm existence + github repo reachability) and rejects a definitive 404 with 422; admins can bypass via `skipScan` for registry-propagation false positives. Deeper checks (license, README, declared-vs-observed permissions) remain a follow-up.
 - ☐ **Runtime sandbox enforcement** — today the manifest is informational. Future: spawn installed MCP servers under fs / net / exec restrictions matching what they declared
 - ☐ **Verified-purchase reviews** — gated on Phase 3 commerce
 
@@ -51,7 +51,7 @@ Small, focused items remaining before the cut:
 | Item | Notes |
 |---|---|
 | ◐ VHS demo tape + README hero gif | `scripts/demo.tape` scaffold landed; `docs/demo.gif` is regenerated on demand via `vhs scripts/demo.tape` (output gitignored) |
-| ◐ Automated publish scan (Phase 4) | Client-side `agora scan <id>` ships; backend `POST /api/publish` pre-publish version still pending |
+| ✓ Automated publish scan (Phase 4) | Client `agora scan` + install gate, MCP/TUI surfaces, and backend `runPublishScan` on `POST /api/packages` all shipped; deeper license/README/permission-diff checks remain |
 | ☐ 0.5.0 version bump + release notes | Per policy: one bump per landed phase, not per PR |
 
 ## How to help

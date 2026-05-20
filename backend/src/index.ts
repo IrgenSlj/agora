@@ -840,7 +840,7 @@ app.post('/auth/device/token', async (c) => {
 
 // ── Require user middleware (JWT access token only) ──────────────────────────
 
-async function requireUser(c: any): Promise<AuthUser | Response> {
+async function requireUser(c: Context<Env>): Promise<AuthUser | Response> {
   const authHeader = c.req.header('authorization') || '';
   const bearer = authHeader.match(/^Bearer\s+(.+)$/i)?.[1];
   const token = bearer || getCookie(c, 'agora_access');
@@ -870,17 +870,83 @@ function isResponse(value: unknown): value is Response {
   return value instanceof Response;
 }
 
+function isAdminUser(adminIdsRaw: string | undefined, userId: string): boolean {
+  const adminIds = (adminIdsRaw ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return adminIds.includes(userId);
+}
+
 async function requireAdmin(c: any): Promise<AuthUser | Response> {
   const user = await requireUser(c);
   if (isResponse(user)) return user;
-  const adminIds = (c.env.AGORA_ADMIN_USER_IDS ?? '')
-    .split(',')
-    .map((s: string) => s.trim())
-    .filter(Boolean);
-  if (!adminIds.includes(user.id)) {
+  if (!isAdminUser(c.env.AGORA_ADMIN_USER_IDS, user.id)) {
     return c.json({ error: 'Admin access required' }, 403);
   }
   return user;
+}
+
+type PublishScanStatus = 'pass' | 'fail' | 'unknown';
+type PublishScanCheck = { name: string; status: PublishScanStatus; message: string };
+
+// Pre-publish sanity scan. Hard-fails only on a definitive 404 (declared
+// npm package or github repo does not exist); transient/network problems
+// surface as `unknown` and never block. Mirrors the client-side `agora scan`.
+export async function runPublishScan(
+  input: { repository: string | null; npmPackage: string | null },
+  fetchFn: typeof fetch = fetch
+): Promise<{ pass: boolean; checks: PublishScanCheck[] }> {
+  const checks: PublishScanCheck[] = [];
+
+  if (input.npmPackage) {
+    const encoded = encodeURIComponent(input.npmPackage).replace('%40', '@').replace('%2F', '/');
+    try {
+      const res = await fetchFn(`https://registry.npmjs.org/${encoded}/latest`, {
+        signal: AbortSignal.timeout(8000)
+      });
+      if (res.status === 200) {
+        checks.push({ name: 'npm_exists', status: 'pass', message: `${input.npmPackage} found on npm` });
+      } else if (res.status === 404) {
+        checks.push({ name: 'npm_exists', status: 'fail', message: `${input.npmPackage} not found on npm` });
+      } else {
+        checks.push({ name: 'npm_exists', status: 'unknown', message: 'could not verify npm package' });
+      }
+    } catch {
+      checks.push({ name: 'npm_exists', status: 'unknown', message: 'could not verify npm package (network)' });
+    }
+  }
+
+  if (input.repository) {
+    let path: string | null = null;
+    try {
+      const url = new URL(input.repository);
+      if (url.hostname === 'github.com') {
+        path = url.pathname.replace(/^\//, '').replace(/\.git$/, '').split('/').slice(0, 2).join('/');
+      }
+    } catch {
+      path = null;
+    }
+    if (path) {
+      try {
+        const res = await fetchFn(`https://api.github.com/repos/${path}`, {
+          headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'agora-backend' },
+          signal: AbortSignal.timeout(8000)
+        });
+        if (res.status === 200) {
+          checks.push({ name: 'repo_reachable', status: 'pass', message: `github.com/${path}` });
+        } else if (res.status === 404) {
+          checks.push({ name: 'repo_reachable', status: 'fail', message: 'repository not found' });
+        } else {
+          checks.push({ name: 'repo_reachable', status: 'unknown', message: 'could not verify repository' });
+        }
+      } catch {
+        checks.push({ name: 'repo_reachable', status: 'unknown', message: 'could not verify repository (network)' });
+      }
+    }
+  }
+
+  return { pass: !checks.some((c) => c.status === 'fail'), checks };
 }
 
 function slugify(value: string): string {
@@ -1012,6 +1078,20 @@ app.post('/api/packages', async (c) => {
 
   if (category === 'mcp' && !npmPackage) {
     return c.json({ error: 'npmPackage is required for MCP packages' }, 400);
+  }
+
+  // Pre-publish scan. Admins may bypass with skipScan for known false
+  // positives (e.g. npm registry propagation lag on a fresh package).
+  const skipScan = (body.skipScan === true || body.skip_scan === true) &&
+    isAdminUser(c.env.AGORA_ADMIN_USER_IDS, user.id);
+  if (!skipScan) {
+    const scan = await runPublishScan({ repository, npmPackage }, fetch);
+    if (!scan.pass) {
+      return c.json(
+        { error: 'Publish scan failed', checks: scan.checks.filter((ch) => ch.status === 'fail') },
+        422
+      );
+    }
   }
 
   try {
