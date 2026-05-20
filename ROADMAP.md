@@ -49,8 +49,7 @@ The actual product. An open marketplace of executable code is a supply-chain sur
 Small, focused items remaining before the cut:
 
 | Item | Notes |
-|---|---|
-| ◐ VHS demo tape + README hero gif | `scripts/demo.tape` scaffold landed; `docs/demo.gif` is regenerated on demand via `vhs scripts/demo.tape` (output gitignored) |
+|---|---|---|
 | ✓ Automated publish scan (Phase 4) | Client `agora scan` + install gate, MCP/TUI surfaces, and backend `runPublishScan` on `POST /api/packages` all shipped; deeper license/README/permission-diff checks remain |
 | ☐ 0.5.0 version bump + release notes | Per policy: one bump per landed phase, not per PR |
 
@@ -61,4 +60,4 @@ Small, focused items remaining before the cut:
 - **Report what `agora init` misses** — open an issue with your project's manifest files.
 - **Polish what's there** — there's always a rough edge worth grinding.
 
-_Last updated: 2026-05-19. See [CHANGELOG.md](./CHANGELOG.md) for the shipped history._
+_Last updated: 2026-05-20. See [CHANGELOG.md](./CHANGELOG.md) for the shipped history._
