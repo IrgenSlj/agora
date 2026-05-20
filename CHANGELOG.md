@@ -2,10 +2,6 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
-## [0.5.0] - 2026-05-20 — Destination
-
-The "Destination" cut closes the 0.4.x cycle. The core pillars — interactive shell, TUI, news feed, community hub, live marketplace, permissions, and automated publish scans — are all shipped. The next cycle focuses on hosted backend deployment and Phase 4 trust enforcement.
-
 ## [0.4.2] - 2026-05-20
 
 ### Changed
