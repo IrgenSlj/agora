@@ -33,6 +33,17 @@ git clone https://github.com/IrgenSlj/agora.git
 cd agora && bun install && bun run build && bun link
 ```
 
+You can also compile a self-contained standalone binary (no Node or bun runtime required at run-time):
+
+```bash
+bun run build:binary   # produces dist/agora
+```
+
+> **Experimental.** The compile works, but distributing the binary needs code
+> signing (unsigned arm64 macOS binaries are killed on launch) and, for wider
+> reach, notarization + a Homebrew tap. That packaging is tracked for an
+> upcoming distribution cut; for now `npm`/`npx` remains the supported path.
+
 The binary is published as both `agora` and `opencode-agora`.
 
 ## Try it
@@ -45,7 +56,7 @@ agora install mcp-github --write --yes # install + write opencode.json
 agora tui                              # 5-page full-screen interface
 ```
 
-The default `agora` in a TTY drops you into a **persistent shell** that mixes bash dispatch (`ls`, `git status`) with free LLM chat (`why is this slow?`). `/help` lists the slash commands; `/abc` shows the single-letter shortcuts.
+The default `agora` in a TTY drops you into a **persistent shell** that mixes bash dispatch (`ls`, `git status`) with free LLM chat (`why is this slow?`). It remembers you across sessions: `/recall <query>` searches your past conversations and `/sessions` lists them. `/help` lists the slash commands; `/abc` shows the single-letter shortcuts.
 
 ## Commands
 
