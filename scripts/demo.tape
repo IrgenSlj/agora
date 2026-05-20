@@ -1,16 +1,3 @@
-# scripts/demo.tape — VHS recording for the README hero gif
-#
-# Prereqs:
-#   1. Install VHS:  brew install vhs  (or see https://github.com/charmbracelet/vhs)
-#   2. Install agora globally:  npm i -g opencode-agora
-#   3. (optional) export AGORA_GITHUB_TOKEN=... so live-hub checks don't rate-limit
-#
-# Generate:
-#   vhs scripts/demo.tape
-#
-# Output:
-#   docs/demo.gif  (overwritten each run)
-
 Output docs/demo.gif
 
 Set Shell "bash"
@@ -21,107 +8,130 @@ Set Padding 12
 Set TypingSpeed 30ms
 Set Theme "Catppuccin Mocha"
 
+# ═══════════════════════════════════════════════════════════════
+# PART 1 — TUI exploration
+# Each page is launched fresh from the shell for reliability.
+# ═══════════════════════════════════════════════════════════════
+
 # ── Cold open ──
 Hide
 Type "clear"
 Enter
 Show
-Sleep 300ms
+Sleep 400ms
 
-# ── Launch the agora interactive shell ──
+# ── Launch interactive shell ──
 Type "agora"
-Enter
-Sleep 1s
-
-# ── TUI: Home page ──
-Type "/home"
-Enter
-Sleep 1200ms
-
-# ── TUI: Marketplace (page 2) — browse and inspect an item ──
-Type "2"
-Sleep 400ms
-
-Down
-Sleep 120ms
-Down
-Sleep 120ms
-Down
-Sleep 120ms
-Enter
-Sleep 1200ms
-Escape
-Sleep 300ms
-
-# ── TUI: News (page 4) — open an article and preview ──
-Type "4"
-Sleep 400ms
-
-Down
-Sleep 120ms
-Down
-Sleep 120ms
-Enter
-Sleep 1s
-Type "p"
-Sleep 2s
-Escape
-Sleep 300ms
-Escape
-Sleep 300ms
-
-# ── Back to shell for CLI commands ──
-Type "q"
-Sleep 400ms
-
-# ── CLI: daily digest ──
-Hide
-Type "clear"
-Enter
-Show
-Sleep 200ms
-Type "agora today"
-Enter
-Sleep 2s
-
-Hide
-Type "clear"
-Enter
-Show
-Sleep 200ms
-
-# ── CLI: marketplace search ──
-Type "agora search mcp"
-Enter
-Sleep 2s
-
-Hide
-Type "clear"
-Enter
-Show
-Sleep 200ms
-
-# ── CLI: safety scan before install ──
-Type "agora scan mcp-github"
-Enter
-Sleep 2s
-
-Hide
-Type "clear"
-Enter
-Show
-Sleep 200ms
-
-# ── CLI: install preview with declared permissions ──
-Type "agora install mcp-github"
 Enter
 Sleep 1500ms
 
-# ── Fade ──
+# ────────────────────────────────────
+# TUI: Marketplace
+# ────────────────────────────────────
+Type "/marketplace"
+Enter
+Sleep 1500ms
+
+# Navigate to an item and open it
+Down
+Sleep 250ms
+Down
+Sleep 250ms
+Down
+Sleep 250ms
+Enter
+Sleep 2s
+
+# Go back
+Escape
+Sleep 400ms
+
+# Quit back to shell
+Type "q"
+Sleep 800ms
+
+# ────────────────────────────────────
+# TUI: News
+# ────────────────────────────────────
+Type "/news"
+Enter
+Sleep 1500ms
+
+# Navigate to a story and open it
+Down
+Sleep 250ms
+Down
+Sleep 250ms
+Enter
+Sleep 1500ms
+
+# AI preview
+Type "p"
+Sleep 3s
+
+# Back to list
+Escape
+Sleep 400ms
+Escape
+Sleep 400ms
+
+# Quit TUI
+Type "q"
+Sleep 800ms
+
+# ═══════════════════════════════════════════════════════════════
+# PART 2 — CLI commands
+# ═══════════════════════════════════════════════════════════════
+
+Hide
+Type "clear"
+Enter
+Show
+Sleep 300ms
+
+# ── Daily digest ──
+Type "agora today"
+Enter
+Sleep 3s
+
+Hide
+Type "clear"
+Enter
+Show
+Sleep 200ms
+
+# ── Marketplace search ──
+Type "agora search mcp"
+Enter
+Sleep 2500ms
+
+Hide
+Type "clear"
+Enter
+Show
+Sleep 200ms
+
+# ── Pre-install safety scan ──
+Type "agora scan mcp-github"
+Enter
+Sleep 2500ms
+
+Hide
+Type "clear"
+Enter
+Show
+Sleep 200ms
+
+# ── Install preview with declared permissions ──
+Type "agora install mcp-github"
+Enter
+Sleep 2s
+
+# ── Outro ──
 Hide
 Type "clear"
 Enter
 Show
 Type "echo 'agora · the developer terminal hub'"
 Enter
-Sleep 1s
+Sleep 1500ms
