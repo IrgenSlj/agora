@@ -4,8 +4,8 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [0.4.2] - 2026-05-20
 
-### Fixed
-- README now embeds the demo hero gif inline; `docs/demo.gif` is tracked in git instead of gitignored.
+### Changed
+- Demo tape rewritten: walks TUI (home → marketplace item → news article preview) then CLI commands (today → search → scan → install). Timing is faster (~16s vs ~23s sleep). `docs/demo.gif` is now tracked in git and embedded inline in the README.
 
 ## [0.4.1] - 2026-05-20 — CLI enrichment
 
