@@ -102,7 +102,7 @@ describe('agora today', () => {
     }
   });
 
-  test('empty news cache shows dim "Nothing in the last 24h." line', async () => {
+  test('empty news cache shows actionable hint', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-today-'));
     const dataDir = join(temp, 'data');
     mkdirSync(dataDir, { recursive: true });
@@ -113,7 +113,27 @@ describe('agora today', () => {
       const out = stdout.join('');
 
       expect(code).toBe(0);
-      expect(out).toContain('Nothing in the last 24h.');
+      expect(out).toContain('No news cached yet');
+      expect(out).toContain('agora news --refresh');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('old news in cache falls back to cached items with "recent" label', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-today-'));
+    const dataDir = join(temp, 'data');
+    const oldDate = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
+    writeNewsCache(dataDir, [makeNewsItem({ publishedAt: oldDate, fetchedAt: oldDate, title: 'Old cached item' })]);
+    const { io, stdout } = createIo(temp, { env: { AGORA_API_URL: '', AGORA_TOKEN: '' } });
+
+    try {
+      const code = await runCli(['today', '--section', 'news', '--data-dir', dataDir], io);
+      const out = stdout.join('');
+
+      expect(code).toBe(0);
+      expect(out).toContain('recent');
+      expect(out).toContain('Old cached item');
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }

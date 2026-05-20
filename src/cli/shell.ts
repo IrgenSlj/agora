@@ -19,9 +19,11 @@ import type { CliIo } from './flags.js';
 import { detectAgoraDataDir, loadAgoraState, resolveSavedItems } from '../state.js';
 import {
   appendTranscript,
+  listSessions,
   loadSessionMeta,
   readTranscript,
   recentBashContext,
+  searchTranscripts,
   writeSessionMeta
 } from '../transcript.js';
 import { gradientText, renderBanner, supportsTrueColor, type Styler } from '../ui.js';
@@ -61,7 +63,9 @@ export type Dispatch =
         | 'jobs'
         | 'fg'
         | 'bg'
-        | 'abc';
+        | 'abc'
+        | 'sessions'
+        | 'recall';
       args?: string;
     }
   | { kind: 'tui'; page?: TuiPageId }
@@ -195,6 +199,9 @@ export function classifyInput(line: string, isExecutable: (name: string) => bool
   if (trimmed === '/medium') return { kind: 'meta', sub: 'medium' };
   if (trimmed === '/last') return { kind: 'meta', sub: 'last' };
   if (trimmed === '/again') return { kind: 'meta', sub: 'again' };
+  if (trimmed === '/sessions') return { kind: 'meta', sub: 'sessions' };
+  if (trimmed === '/recall' || trimmed.startsWith('/recall '))
+    return { kind: 'meta', sub: 'recall', args: trimmed.slice(8).trim() };
   if (trimmed === '/jobs') return { kind: 'meta', sub: 'jobs' };
   if (trimmed === '/fg' || trimmed.startsWith('/fg '))
     return { kind: 'meta', sub: 'fg', args: trimmed.slice(4).trim() };
@@ -508,6 +515,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     '/jobs',
     '/fg',
     '/bg',
+    '/sessions',
+    '/recall',
     ...agoraSlashCommands
   ];
 
@@ -781,6 +790,43 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           } catch {
             jobs.delete(targetId);
             process.stdout.write(style.dim(`Job ${targetId} has finished.`) + '\n');
+          }
+          continue;
+        }
+
+        if (dispatch.sub === 'sessions') {
+          const sessions = listSessions(dataDir);
+          if (sessions.length === 0) {
+            process.stdout.write(style.dim('No sessions recorded yet.') + '\n');
+          } else {
+            process.stdout.write(style.accent('Recent sessions') + '\n');
+            for (const s of sessions) {
+              const activity = s.lastActivity.slice(0, 19);
+              const turns = s.turnCount + (s.turnCount === 1 ? ' turn' : ' turns');
+              process.stdout.write(
+                '  ' + style.dim(activity) + '  ' + style.accent(shortCwd(s.cwd)) + '  ' + style.dim(turns) + '\n'
+              );
+            }
+          }
+          continue;
+        }
+
+        if (dispatch.sub === 'recall') {
+          const query = dispatch.args ?? '';
+          if (!query) {
+            process.stdout.write(style.dim('Usage: /recall <query>') + '\n');
+            continue;
+          }
+          const matches = searchTranscripts(dataDir, query);
+          if (matches.length === 0) {
+            process.stdout.write(style.dim('no matches') + '\n');
+          } else {
+            for (const m of matches) {
+              process.stdout.write(
+                style.dim(shortCwd(m.cwd) + '  ' + m.timestamp.slice(0, 19)) + '\n'
+              );
+              process.stdout.write('  ' + m.snippet + '\n');
+            }
           }
           continue;
         }
@@ -1229,6 +1275,8 @@ function printHelp(style: Styler): void {
     '  /jobs         list background jobs',
     '  /fg [N]       bring job N (or last) to foreground',
     '  /bg [N]       resume job N (or last) in background',
+    '  /sessions     list all recorded shell sessions (cwd, turns, last activity)',
+    '  /recall <q>   search across all session transcripts for <q>',
     '',
     style.dim('Verbosity:'),
     '  /verbose  /medium  /quiet',
