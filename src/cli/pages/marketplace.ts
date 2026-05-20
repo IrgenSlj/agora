@@ -13,6 +13,7 @@ import {
 } from '../../marketplace.js';
 import { vlen, rail, noRail, sep, fmtCount, frame, scrollbar } from './helpers.js';
 import { enrichItem, enrichHfItem, type EnrichmentEntry } from '../../hubs/enrichment.js';
+import { scanItem, type ScanResult } from '../../scan.js';
 import {
   detectAgoraDataDir,
   loadAgoraState,
@@ -33,11 +34,13 @@ interface MpState {
   sort: SortKey;
   sourceFilter: SourceFilter;
   pricingFilter: PricingFilter;
-  view: 'list' | 'install-preview' | 'install-perm-details';
+  view: 'list' | 'install-preview' | 'install-perm-details' | 'scan';
   installPlan: InstallPlan | null;
   installStatus: string | null;
   enrichment: EnrichmentEntry | null;
   enrichmentLoading: boolean;
+  scanResult: ScanResult | null;
+  scanLoading: boolean;
 }
 const state: MpState = {
   cursor: 0,
@@ -52,7 +55,9 @@ const state: MpState = {
   installPlan: null,
   installStatus: null,
   enrichment: null,
-  enrichmentLoading: false
+  enrichmentLoading: false,
+  scanResult: null,
+  scanLoading: false
 };
 
 function itemSource(item: MarketplaceItem): 'github' | 'hf' | undefined {
@@ -113,6 +118,7 @@ export const marketplacePage: Page = {
     { key: 'j/k', label: 'nav' },
     { key: 'Enter', label: 'details' },
     { key: 'i', label: 'install' },
+    { key: 'S', label: 'scan' },
     { key: 's', label: 'save' },
     { key: 'o', label: 'sort/open' },
     { key: '/', label: 'filter' },
@@ -122,6 +128,32 @@ export const marketplacePage: Page = {
   ],
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
+
+    if (state.view === 'scan') {
+      const lines: string[] = [];
+      lines.push(' ' + style.bold(style.accent('SCAN')));
+      lines.push(' ' + sep('', width - 2, style));
+      lines.push('');
+      const it = filtered(getMarketplaceItems())[state.cursor];
+      if (it) lines.push(' ' + style.bold(it.name) + style.dim('  ' + it.id));
+      lines.push('');
+      if (state.scanLoading) {
+        lines.push(' ' + style.dim('Scanning…'));
+      } else if (state.scanResult) {
+        for (const c of state.scanResult.checks) {
+          const icon = c.status === 'pass' ? style.accent('✓') : c.status === 'warn' ? style.orange('⚠') : style.bold('✗');
+          lines.push('   ' + icon + '  ' + style.dim(c.label) + '  ' + c.message);
+        }
+        lines.push('');
+        const { pass, warn, fail } = state.scanResult.summary;
+        lines.push(' ' + style.dim(`${pass} pass · ${warn} warning(s) · ${fail} failure(s)`));
+      } else {
+        lines.push(' ' + style.dim('No scan result.'));
+      }
+      lines.push('');
+      lines.push(' ' + style.accent('esc') + style.dim(' back'));
+      return frame(lines, width, height);
+    }
 
     if (state.view === 'install-preview' && state.installPlan) {
       const plan = state.installPlan;
@@ -444,6 +476,15 @@ export const marketplacePage: Page = {
     return frame(lines, width, height);
   },
   handleKey(event, _ctx: PageContext): PageAction {
+    if (state.view === 'scan') {
+      if (event.key === 'esc' || event.key === 'n') {
+        state.view = 'list';
+        state.scanResult = null;
+        state.scanLoading = false;
+      }
+      return { kind: 'none' };
+    }
+
     if (state.view === 'install-perm-details') {
       if (event.key === 'esc') state.view = 'install-preview';
       return { kind: 'none' };
@@ -583,6 +624,23 @@ export const marketplacePage: Page = {
         state.installPlan = plan;
         state.installStatus = null;
         state.view = 'install-preview';
+        return { kind: 'none' };
+      }
+      case 'S': {
+        const it = items[state.cursor];
+        if (!it) return { kind: 'status', message: 'nothing selected' };
+        state.view = 'scan';
+        state.scanResult = null;
+        state.scanLoading = true;
+        const ctx = _ctx;
+        scanItem(it, { githubToken: process.env.AGORA_GITHUB_TOKEN }).then((r) => {
+          state.scanResult = r;
+          state.scanLoading = false;
+          ctx.repaint();
+        }).catch(() => {
+          state.scanLoading = false;
+          ctx.repaint();
+        });
         return { kind: 'none' };
       }
       case '/':
