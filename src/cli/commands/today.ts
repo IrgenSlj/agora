@@ -60,6 +60,7 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
   const wantsMarket = section === 'all' || section === 'market';
 
   let newsItems: ScoredNewsItem[] = [];
+  let newsIsFallback = false;
   let threads: Thread[] = [];
   let trending: MarketplaceItem[] = [];
   let communityHint = '';
@@ -68,6 +69,10 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
     const cached = readCache(dataDir);
     const recent = cached.filter((item) => new Date(item.publishedAt).getTime() > cutoff);
     newsItems = rankItems(recent, DEFAULT_NEWS_CONFIG, new Date()).slice(0, 3);
+    if (newsItems.length === 0 && cached.length > 0) {
+      newsItems = rankItems(cached, DEFAULT_NEWS_CONFIG, new Date()).slice(0, 3);
+      newsIsFallback = true;
+    }
   }
 
   if (wantsCommunity) {
@@ -103,9 +108,10 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
   writeLine(io.stdout, '');
 
   if (wantsNews) {
-    writeLine(io.stdout, style.accent('News'));
+    const newsHeading = newsIsFallback ? 'News' + style.dim(' · recent') : 'News';
+    writeLine(io.stdout, style.accent(newsHeading));
     if (newsItems.length === 0) {
-      writeLine(io.stdout, style.dim('Nothing in the last 24h.'));
+      writeLine(io.stdout, style.dim('No news cached yet — run `agora news --refresh`'));
     } else {
       for (const item of newsItems) {
         const src = style.dim(item.source.toUpperCase().slice(0, 2).padEnd(3));

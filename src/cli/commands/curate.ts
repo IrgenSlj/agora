@@ -1,7 +1,7 @@
 import type { ParsedArgs, CliIo } from '../flags.js';
 import type { Styler } from '../../ui.js';
 import { writeLine, detectDataDir } from '../helpers.js';
-import { curateAll } from '../../curator/index.js';
+import { curateAll, curationStatus } from '../../curator/index.js';
 import { clearMarketplaceItemsCache, getCuratedSource } from '../../marketplace.js';
 
 export async function commandCurate(
@@ -9,9 +9,21 @@ export async function commandCurate(
   io: CliIo,
   _style: Styler,
 ): Promise<number> {
+  const dataDir = detectDataDir(parsed, io);
+
+  if (parsed.flags.status === true) {
+    const status = curationStatus(dataDir);
+    writeLine(io.stdout, `Count:     ${status.count}`);
+    writeLine(io.stdout, `Source:    ${status.source}`);
+    writeLine(io.stdout, `Last run:  ${status.lastRunAt ?? 'never'}`);
+    if (parsed.flags.json) {
+      writeLine(io.stdout, JSON.stringify(status, null, 2));
+    }
+    return 0;
+  }
+
   const force = parsed.flags.force === true;
   const limit = typeof parsed.flags.limit === 'number' ? parsed.flags.limit : 50;
-  const dataDir = detectDataDir(parsed, io);
 
   const before = getCuratedSource();
   writeLine(io.stdout, `Current curation source: ${before}`);

@@ -1,12 +1,13 @@
 import { existsSync, readFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import { atomicWriteFile } from '../atomic-write.js';
 import { searchGithub } from '../hubs/github.js';
 import { searchHuggingFace } from '../hubs/huggingface.js';
 import { fetchRepoMetadata, fetchHfRepoMetadata } from '../hubs/enrichment.js';
 import type { HubItem } from '../hubs/types.js';
 import { FREE_MODELS } from '../cli/commands/chat.js';
+import { samplePackages } from '../data.js';
 
 const MAX_AI_ITEMS = 50;
 const MAX_RETRIES = 3;
@@ -57,6 +58,66 @@ export function getCuratedItems(dataDir: string): CuratedPackage[] {
   const cached = readCuratedCache(dataDir);
   if (cached.length > 0) return cached;
   return [];
+}
+
+/**
+ * Normalises a repository URL for deduplication:
+ * lower-cases, strips trailing slashes and a trailing ".git".
+ */
+export function normaliseRepo(url: string): string {
+  return url.trim().toLowerCase().replace(/\/+$/, '').replace(/\.git$/, '');
+}
+
+/**
+ * Filters out HubItem candidates whose id OR repository already exists in the
+ * bundled hand-curated catalog (src/data.ts samplePackages).
+ * Pure function — no I/O.
+ */
+export function filterBundledDuplicates(candidates: HubItem[]): HubItem[] {
+  const bundledIds = new Set(samplePackages.map((p) => p.id.toLowerCase()));
+  const bundledRepos = new Set(
+    samplePackages.filter((p) => p.repository).map((p) => normaliseRepo(p.repository!))
+  );
+  return candidates.filter((item) => {
+    if (bundledIds.has(item.id.toLowerCase())) return false;
+    if (item.repository && bundledRepos.has(normaliseRepo(item.repository))) return false;
+    return true;
+  });
+}
+
+/**
+ * Returns curation status without running discovery or verification.
+ */
+export interface CurationStatus {
+  count: number;
+  lastRunAt: string | null;
+  source: 'ai' | 'bundled';
+}
+
+export function curationStatus(dataDir: string): CurationStatus {
+  const cached = readCuratedCache(dataDir);
+  if (cached.length === 0) {
+    return { count: samplePackages.length, lastRunAt: null, source: 'bundled' };
+  }
+  const dates = cached
+    .map((p) => p.aiVerifiedAt)
+    .filter(Boolean)
+    .sort()
+    .reverse();
+  const lastRunAt = dates[0] ?? null;
+  return { count: cached.length, lastRunAt, source: 'ai' };
+}
+
+/**
+ * Returns true if the `opencode` binary is available on PATH.
+ */
+export function isOpencodeAvailable(): boolean {
+  try {
+    execSync('which opencode', { stdio: 'pipe', timeout: 2000 });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 interface VerifyResult {
@@ -242,9 +303,23 @@ export async function curateAll(
     }
   }
 
+  if (!isOpencodeAvailable()) {
+    const msg =
+      'AI verification unavailable: `opencode` not found on PATH. ' +
+      'Install opencode (https://opencode.ai) or run with cached results.';
+    log(msg);
+    return cached;
+  }
+
   log('Discovering candidates from GitHub and HuggingFace...');
-  const candidates = await discoverCandidates();
-  log(`Found ${candidates.length} candidate items`);
+  const rawCandidates = await discoverCandidates();
+  log(`Found ${rawCandidates.length} candidate items`);
+
+  const candidates = filterBundledDuplicates(rawCandidates);
+  const skipped = rawCandidates.length - candidates.length;
+  if (skipped > 0) {
+    log(`Skipped ${skipped} items already in the bundled catalog`);
+  }
 
   const results: CuratedPackage[] = [];
   const todo = candidates.slice(0, limit);

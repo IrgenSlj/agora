@@ -54,10 +54,18 @@ function fmtAge(iso: string): string {
   return Math.round(h / 24) + 'd';
 }
 
-function loadNews(ctx: PageContext, max: number): ScoredNewsItem[] {
-  const cached = readCache(detectDataDir(ctx));
-  if (cached.length === 0) return [];
-  return rankItems(cached, DEFAULT_NEWS_CONFIG, new Date()).slice(0, max);
+const DAY_MS = 86400 * 1000;
+
+function loadNews(ctx: PageContext, max: number): { items: ScoredNewsItem[]; isFallback: boolean } {
+  const dataDir = detectDataDir(ctx);
+  const cached = readCache(dataDir);
+  if (cached.length === 0) return { items: [], isFallback: false };
+  const cutoff = Date.now() - DAY_MS;
+  const recent = cached.filter((item) => new Date(item.publishedAt).getTime() > cutoff);
+  if (recent.length > 0) {
+    return { items: rankItems(recent, DEFAULT_NEWS_CONFIG, new Date()).slice(0, max), isFallback: false };
+  }
+  return { items: rankItems(cached, DEFAULT_NEWS_CONFIG, new Date()).slice(0, max), isFallback: true };
 }
 
 async function refreshCommunity(ctx: PageContext): Promise<void> {
@@ -94,13 +102,14 @@ interface RenderColumn {
   lines: string[];
 }
 
-function renderNewsColumn(items: ScoredNewsItem[], style: PageContext['style']): RenderColumn {
+function renderNewsColumn(items: ScoredNewsItem[], isFallback: boolean, style: PageContext['style']): RenderColumn {
   if (items.length === 0) {
     return {
       title: 'News',
-      lines: [style.dim('No news yet. Press `n` or run `agora news` to populate.')]
+      lines: [style.dim('No news cached yet — run `agora news --refresh`')]
     };
   }
+  const title = isFallback ? 'News' + style.dim(' · recent') : 'News';
   const lines: string[] = [];
   for (const item of items) {
     const src = style.dim((SOURCE_LABELS[item.source] ?? item.source.toUpperCase()).padEnd(3));
@@ -109,7 +118,7 @@ function renderNewsColumn(items: ScoredNewsItem[], style: PageContext['style']):
     lines.push(src + '  ' + age + '  ' + up + '  ' + item.title);
     lines.push('         ' + style.dim(hostFromUrl(item.url)));
   }
-  return { title: 'News', lines };
+  return { title, lines };
 }
 
 function renderCommunityColumn(
@@ -215,10 +224,10 @@ export const homePage: Page = {
   },
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
-    const news = loadNews(ctx, 5);
+    const { items: news, isFallback: newsFallback } = loadNews(ctx, 5);
     const trending = getTrendingItems().slice(0, 5);
 
-    const newsCol = renderNewsColumn(news, style);
+    const newsCol = renderNewsColumn(news, newsFallback, style);
     const commCol = renderCommunityColumn(state.threads, state.threadsHint, state.threadsLoading, style);
     const trendCol = renderTrendingColumn(trending, style);
 
