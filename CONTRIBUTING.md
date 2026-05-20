@@ -91,6 +91,6 @@ See [ROADMAP.md](./ROADMAP.md) for what's open. Some specific asks:
 - Add a curated entry (lowest-friction first PR).
 - Wire a runtime sandbox for declared permissions (Phase 4 — interesting unscoped problem).
 - Build a backend rate-limit middleware (the `rate_limits` table is already there).
-- Land the VHS demo tape for the 0.5.0 cut.
+- Land the VHS demo tape for the 0.4.5 cut.
 
 Questions? Open an issue with the `question` label or ping `agora community /meta` once the backend is hosted.

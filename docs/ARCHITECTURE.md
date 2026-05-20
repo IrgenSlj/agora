@@ -173,6 +173,35 @@ Phase 1.5 is partly a content release and partly the soft launch of this
 trust layer — community moderation in particular is a dry run of the same
 flag/score/threshold logic that Phase 4 needs for marketplace items.
 
+## The next step: reach, memory, and a self-growing catalog
+
+Phase 1.5 made `agora` a destination you *can* open daily. The 0.4.5 "Destination"
+cut (see [`../ROADMAP.md`](../ROADMAP.md)) makes it one you *want* to — by going
+where developers already are, remembering them across sessions, and growing its
+own catalog. Three convictions, reinforced by the multi-channel agent gateways
+the field is converging on (Hermes Agent, OpenClaw, OpenCode):
+
+- **Be reachable on every channel.** A terminal hub that only exists when you
+  type `agora` leaves most of its value on the table. The same digest that powers
+  `agora today` should arrive in Discord and Telegram on a schedule, and the
+  marketplace engine should answer a `/agora search` from inside those apps. Both
+  run on the existing Cloudflare Worker via inbound webhooks — no always-on server.
+  A small channel/notifier abstraction keeps Slack, RSS, and webhooks one adapter
+  away.
+- **Carry memory across sessions.** The shell already records per-cwd transcripts;
+  `/recall` and `/sessions` turn that into searchable cross-session memory. This is
+  the cheap half of the "closed learning loop" pattern — recall first, summarization
+  and skill-extraction later.
+- **Let the catalog grow itself.** A hand-fed catalog caps at whatever the
+  maintainers curate. The AI curator (`src/curator/`) discovers and verifies items
+  from GitHub + HuggingFace; run server-side on a schedule, it makes the catalog a
+  living thing every user benefits from — while the bundled JSON stays the
+  offline-first fallback.
+
+None of this changes the thesis: the marketplace core works offline with zero AI,
+trust is still the product, and the plugin stays thin. Reach, memory, and curation
+are amplifiers on a foundation that already stands on its own.
+
 ## Open decisions
 
 1. **Sellable unit** — skills/workflows only, or also proprietary MCP servers? This shapes both `install` and the permission manifest.
@@ -185,5 +214,6 @@ flag/score/threshold logic that Phase 4 needs for marketplace items.
 - **Phase 1.5 + 1.6 ("Destination" pillars + polish)** — shipped end-to-end. News feed (5 sources + AI summarization), community hub (boards, threads, votes, flags, FTS5 search, kill-switch), live marketplace hubs (GitHub + HuggingFace), reputation calc + sort weighting, permission-manifest display + install acknowledgment.
 - **Phase 2 (backend & accounts)** — feature-complete; deploy blocked on rate-limit middleware + production wrangler config. See [`../ROADMAP.md`](../ROADMAP.md).
 - **Phase 3 (commerce)** — deferred behind Phase 4 trust work. `Pricing` type on `Package` is scaffolded; the paid branch is a typed no-op.
-- **Phase 4 (trust & self-regulation)** — in progress. Display + acknowledgment + earned reputation + flag/kill-switch shipped; automated publish scan and runtime sandbox enforcement remain.
-- **Phase 5 (reach)** — `agora mcp` and `agora chat` shipped in 0.4.0; public web hub and IDE surfaces are future work.
+- **Phase 4 (trust & self-regulation)** — in progress. Display + acknowledgment + earned reputation + flag/kill-switch + client/server scan shipped; declared-vs-observed permission diff and runtime sandbox enforcement remain (0.4.5 Wave 4).
+- **Phase 5 (reach)** — `agora mcp` and `agora chat` shipped in 0.4.0; Discord/Telegram bots are 0.4.5 Wave 3; public web hub and IDE surfaces are future work.
+- **0.4.5 "Destination" cut** — in progress. Wave 1 (cross-session shell memory `/recall` · `/sessions`, never-dead daily surface, `build:binary` scaffold) shipped; curator hardening, backend deploy, multi-channel bots, and trust depth follow. See [`../ROADMAP.md`](../ROADMAP.md).

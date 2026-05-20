@@ -4,54 +4,74 @@ Where `agora` is headed. For the *why* — the three-surface model, the open-mar
 
 ## Direction
 
-`agora` is a **standalone terminal marketplace hub**. The OpenCode plugin is one surface, not the product. The destination is an **open, self-regulating marketplace** where third-party developers publish and sell skills, tools, and kits — `agora` provides discovery, trust, and delivery; the developers bring the goods. Payments are deliberately deferred to Phase 3; everything before that focuses on making the hub good on its own.
+`agora` is a **standalone terminal marketplace hub** for the agentic-coding ecosystem. The OpenCode plugin is one surface, not the product. The destination is an **open, self-regulating marketplace** where third-party developers publish (and later sell) skills, tools, and kits — `agora` provides discovery, trust, and delivery; the developers bring the goods.
 
-## Status: Phase 1.5 + 1.6 shipped
+Three pillars are live end-to-end — a curated + live **marketplace**, a ranked **news feed**, and a threaded **community** — plus a real trust layer (permission manifests, pre-install scan gate, flag/kill-switch, earned reputation), an MCP server mode, and a hybrid bash/chat shell. The next step is **reach and depth**: make `agora` a place developers passively receive value and that grows itself, and turn its informational trust layer into something closer to enforcement.
 
-The "Destination" pillars — news / community / live marketplace hubs — landed end-to-end during 2026-05-17, and the Phase 1.6 polish list (HuggingFace README enrichment, FTS5 search cutover, kill-switch operator UI, reputation calc + sort weighting, permission-manifest display + acknowledgment) closed shortly after. The next named cut is **0.5.0 "Destination"**; see the open work below.
+## Status: Phase 1.5 + 1.6 shipped; 0.4.5 "Destination" cut in progress
 
-## Phase 2 — Backend & accounts (mostly shipped, deploy gated)
+The "Destination" pillars (news / community / live marketplace hubs) and the Phase 1.6 polish list landed during 2026-05. Work has now begun on the **0.4.5 "Destination"** cut, sequenced into four waves below. Per release policy we sculpt heavily and bump once per landed cut, not per PR.
 
-Most of the work landed during 0.4.x / Phase 1.5; what blocks a public-hosted backend is operational rather than feature work.
+---
 
-- ✓ Hosted-backend codebase (Cloudflare Workers + D1 in `backend/`)
-- ✓ Auth rework — device-code login, short-lived JWTs, hashed token storage
-- ✓ Local dev: Docker Compose with wrangler's D1 SQLite emulation
-- ✓ Catalog-as-a-service: bundled JSON stays as the offline fallback
-- ✓ Real reviews / ratings / publishing endpoints
-- ✓ **Rate-limit middleware**: applied globally to `/api/*` with separate read (60/min) and write (10/min) buckets; anonymous half-quota in `backend/src/index.ts`
-- ☐ **Hosted deploy**: production wrangler config, env secrets, DNS
+## The 0.4.5 "Destination" cut — detailed plan
 
-## Phase 3 — Commerce (deferred until trust lands)
+Four waves, sequenced by dependency so each ships value on its own and nothing stalls. Legend: ✓ done · ◑ in progress · ☐ planned.
+
+### Wave 1 — Command excellence & self-growing catalog *(no external accounts required)*
+
+The local layer: make the tool sharper and the catalog able to grow itself.
+
+- ✓ **Cross-session shell memory** — `/recall <query>` searches every past per-cwd transcript; `/sessions` lists recent sessions with turn counts and last activity. Built on the existing transcript store (`src/transcript.ts` → `listSessions` / `searchTranscripts`).
+- ✓ **Never-dead daily surface** — `agora today` and the TUI Home news column fall back to recent cached items when nothing is fresh, and show an actionable `agora news --refresh` hint when the cache is empty — never a bare "Nothing in the last 24h."
+- ◑ **Compiled standalone binary** — `bun run build:binary` (`bun build --compile`) produces `dist/agora`. The compile works today; *distribution* of the binary (code signing for arm64 macOS, notarization, Homebrew) is deferred to Wave 4.
+- ☐ **Harden the AI curator** — `src/curator/` discovers MCP servers/skills from GitHub + HuggingFace and AI-verifies each. Make it robust enough to run unattended: bounded concurrency, resumable progress, dedupe against the bundled catalog, graceful degradation when `opencode` is unavailable, and a clear `agora curate --status`.
+- ☐ **Indexed + semantic catalog search** — the in-memory scan is fine at ~67 items, not at thousands. Move offline catalog search to an indexed store and add "find something that does X" intent search so a growing curated catalog stays fast and discoverable.
+
+### Wave 2 — Deploy the backend & schedule curation *(needs: Cloudflare account)*
+
+The single roadmap blocker for the social layer. Everything is coded; this is operational.
+
+- ☐ **One-command, non-technical-friendly deploy** — a scripted `wrangler deploy` plus a secret-setup wizard (GitHub OAuth client, `AUTH_SECRET`, admin ids) so the hosted backend (Cloudflare Workers + D1, in `backend/`) goes live without hand-editing TOML. Production `wrangler.toml`, D1 binding, DNS.
+- ☐ **Catalog-as-a-service** — server-side curated catalog so every user gets a fat, fresh, AI-verified marketplace without running AI locally; the bundled JSON stays the offline fallback.
+- ☐ **Scheduled server-side curation** — a Cloudflare Cron Trigger re-runs curation weekly so the catalog grows and re-verifies itself for everyone.
+- ☐ **Real accounts unlocked** — once live, auth / community / reviews / publishing stop being "configure a backend" and become real for users.
+
+### Wave 3 — Reach: Discord & Telegram *(needs: backend live + bot tokens)*
+
+`agora` goes where developers already are. Both bot modes run on the deployed Worker via inbound webhooks — no always-on server to operate.
+
+- ☐ **Digest broadcast bot** — posts the daily news + trending + new-MCP-servers digest (the `agora today` payload) to a Discord/Telegram channel on the Cloudflare cron. The "passive value" hook the architecture doc anticipated.
+- ☐ **Query bot** — `/agora search postgres`, `/agora scan <id>`, `/agora trending` answered inline in Discord (interaction webhook) and Telegram (webhook), reusing the marketplace engine.
+- ☐ **Channel abstraction** — a small notifier/channel interface so future surfaces (Slack, RSS, webhook) drop in without bespoke code, mirroring the multi-channel gateway pattern from Hermes Agent / OpenClaw.
+
+### Wave 4 — Trust depth & distribution → release
+
+Turn the informational trust layer toward enforcement, then ship.
+
+- ☐ **Declared-vs-observed permission diff** — inspect an item against its declared manifest (does an MCP server's code touch fs/net/exec it didn't declare?). The remaining Phase 4 check.
+- ☐ **`agora doctor` for installed MCP servers** — does each configured server actually start? Does it stay within declared permissions? A pragmatic step toward runtime trust short of a full sandbox.
+- ☐ **Signed, distributable binary** — code-sign + notarize the `build:binary` output, a Homebrew tap, and GitHub-release automation so `brew install` / `curl | sh` work alongside `npm`.
+- ☐ **0.4.5 version bump + release notes** — finalize the changelog, tag, release.
+
+---
+
+## Longer horizon (beyond 0.4.5)
+
+### Phase 3 — Commerce (deferred until trust lands)
 
 Stripe Connect (Agora as marketplace operator), `agora buy`, `agora library`, entitlement-aware `install`, seller-side `publish --price` / `earnings` / `payouts`. Browse stays free and login-free; the wall goes up only at purchase. The `Pricing` type on `Package` is already scaffolded so commerce can drop in without a model change.
 
-## Phase 4 — Trust & self-regulation (in progress)
+### Phase 4 (continued) — Runtime sandbox enforcement
 
-The actual product. An open marketplace of executable code is a supply-chain surface — mechanism design does the policing, not a gatekeeper:
+Today the manifest is informational and Wave 4 adds a diff + health check. The end state is spawning installed MCP servers under fs / net / exec restrictions matching what they declared. Shape undecided (Linux namespaces? isolates? npm policies?) — an interesting unscoped problem.
 
-- ✓ **Permission manifests per item** (fs / network / exec), shown at install like an app-store prompt — display + acknowledgment shipped (TUI flips to `g grant + install / d details`, CLI `--write` requires `--yes`)
-- ✓ **Earned (not granted) reputation** — recompute + thread-sort weighting shipped
-- ✓ **Flag/report + kill switch** for confirmed malware — auto-collapse at 3 flags, auto-hide at 10, operator `agora admin hide` with public audit log
-- ✓ **Automated scan on publish** — client side: `agora scan <id>` (CLI + MCP tool + TUI `S` key) and a scan gate on `agora install --write`. Server side: `POST /api/packages` runs `runPublishScan` (npm existence + github repo reachability + advisory license check) and rejects a definitive 404 with 422; admins can bypass via `skipScan` for registry-propagation false positives. README presence + declared-vs-observed permission diff remain a follow-up.
-- ☐ **Runtime sandbox enforcement** — today the manifest is informational. Future: spawn installed MCP servers under fs / net / exec restrictions matching what they declared
-- ☐ **Verified-purchase reviews** — gated on Phase 3 commerce
+### Phase 5 — Reach & ecosystem
 
-## Phase 5 — Reach & ecosystem
-
-- ☐ **Public web hub** for discovery / SEO / share links
-- ☐ **VS Code + JetBrains surfaces** consuming the same marketplace core
-- ✓ **MCP server mode** (`agora mcp`) — marketplace as an MCP server (shipped 0.4.0)
-- ✓ **Free inference chat** (`agora chat`) via `opencode` — TUI + one-shot + plugin tool (shipped 0.4.0)
-
-## Toward 0.5.0 "Destination" cut
-
-Small, focused items remaining before the cut:
-
-| Item | Notes |
-|---|---|---|
-| ✓ Automated publish scan (Phase 4) | Client `agora scan` + install gate, MCP/TUI surfaces, and backend `runPublishScan` on `POST /api/packages` all shipped; deeper license/README/permission-diff checks remain |
-| ☐ 0.5.0 version bump + release notes | Per policy: one bump per landed phase, not per PR |
+- ☐ **Public web hub** (`hub/`) for discovery / SEO / share links.
+- ☐ **VS Code + JetBrains surfaces** consuming the same marketplace core.
+- ✓ **MCP server mode** (`agora mcp`) and **free inference chat** (`agora chat`) — shipped 0.4.0.
+- ◑ **Multi-channel bots** (Discord / Telegram) — Wave 3 above.
 
 ## How to help
 

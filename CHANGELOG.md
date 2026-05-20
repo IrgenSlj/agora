@@ -2,6 +2,20 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased] — the 0.4.5 "Destination" cut
+
+Wave 1 of the [0.4.5 cut](./ROADMAP.md#the-045-destination-cut--detailed-plan): the command-excellence local layer (no backend dependency).
+
+### Added
+- **Cross-session shell memory** — `/recall <query>` searches every past per-cwd transcript and shows matching exchanges (cwd · timestamp · snippet); `/sessions` lists recent sessions with turn counts and last activity. Built on the existing transcript store: `src/transcript.ts` gains `listSessions(dataDir)` and `searchTranscripts(dataDir, query)`. Brings Hermes-style "it remembers me" recall to the interactive shell.
+- **`build:binary` script** — `bun build src/cli.ts --compile --outfile dist/agora` produces a self-contained executable (no Node/bun needed at run-time). The compile works today; a *signed, notarized, Homebrew-distributable* binary is tracked for a later distribution cut (unsigned arm64 macOS binaries are killed on launch), so `npm`/`npx` stays the supported install path for now.
+
+### Changed
+- **Never-dead daily surface** — `agora today` and the TUI Home news column no longer dead-end on an empty cache. When nothing is fresh in the last 24h they fall back to the most-recent cached items (flagged ` · recent`); when the cache is genuinely empty they show an actionable `run agora news --refresh` hint instead of "Nothing in the last 24h." Trending always renders. `--json` output is unchanged (still the 24h window) so scripts are unaffected.
+
+### Internal
+- 827 pass / 1 skip / 0 fail across 36 test files (was 793 across 35). New tests cover the `today` fallback, `listSessions` / `searchTranscripts`, and the `/recall` · `/sessions` shell dispatch.
+
 ## [0.4.2] - 2026-05-20
 
 ### Changed
