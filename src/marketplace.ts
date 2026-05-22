@@ -12,6 +12,8 @@ import { detectAgoraDataDir } from './state.js';
 import { isHubCacheStale, readHubsCache } from './hubs/cache.js';
 import type { HubItem, InstallKind } from './hubs/types.js';
 import { readCuratedCache } from './curator/index.js';
+import { buildIndex, searchIndex } from './search/catalog-index.js';
+import type { CatalogIndex } from './search/catalog-index.js';
 
 export type MarketplaceCategory = 'all' | 'package' | 'mcp' | 'prompt' | 'workflow' | 'skill';
 export type MarketplaceItemType = 'package' | 'workflow';
@@ -113,11 +115,16 @@ function hubItemToPackage(item: HubItem): PackageMarketplaceItem {
 let _memo: { at: number; envFlag: string; useAiCuration: boolean; items: MarketplaceItem[] } | null = null;
 const MEMO_TTL_MS = 30_000;
 
+// Lazily-built BM25 index — rebuilt whenever _memo is rebuilt, cleared in
+// clearMarketplaceItemsCache() so env-toggling tests stay correct.
+let _indexMemo: CatalogIndex | null = null;
+
 let _warnedEmpty = false;
 let _warnedStale = false;
 
 export function clearMarketplaceItemsCache(): void {
   _memo = null;
+  _indexMemo = null;
   _warnedEmpty = false;
   _warnedStale = false;
 }
@@ -179,6 +186,17 @@ export function getMarketplaceItems(): MarketplaceItem[] {
   }
 
   _memo = { at: Date.now(), envFlag, useAiCuration, items };
+  // Rebuild the BM25 index whenever the item list changes.
+  _indexMemo = buildIndex(
+    items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      author: item.author,
+      category: item.category,
+      tags: item.tags ?? []
+    }))
+  );
   return items;
 }
 
@@ -191,11 +209,34 @@ export function searchMarketplaceItems(options: SearchOptions = {}): Marketplace
   const page = options.page || 1;
   const perPage = options.perPage || 0;
 
-  let results = getMarketplaceItems()
-    .filter((item) => matchesCategory(item, category))
-    .filter((item) => matchesQuery(item, query));
+  // Ensure items (and index) are loaded/memoized.
+  const allItems = getMarketplaceItems();
 
-  results.sort(sortMarketplaceItems(sortBy, sortOrder, query));
+  let results: MarketplaceItem[];
+  let scoreMap: Map<string, number> | undefined;
+
+  if (query) {
+    // Use BM25 index when a query is present. Unknown/nonsense queries produce
+    // an empty scored set → empty results (no fallback to match-all).
+    const index = _indexMemo;
+    if (index) {
+      const scored = searchIndex(index, query);
+      if (scored.length === 0) return [];
+      scoreMap = new Map(scored.map(({ id, score }) => [id, score]));
+      results = allItems
+        .filter((item) => scoreMap!.has(item.id))
+        .filter((item) => matchesCategory(item, category));
+    } else {
+      // Fallback: index not yet built (shouldn't happen after getMarketplaceItems call above)
+      results = allItems
+        .filter((item) => matchesCategory(item, category))
+        .filter((item) => matchesQuery(item, query));
+    }
+  } else {
+    results = allItems.filter((item) => matchesCategory(item, category));
+  }
+
+  results.sort(sortMarketplaceItems(sortBy, sortOrder, query, scoreMap));
 
   if (perPage > 0) {
     const start = (page - 1) * perPage;
@@ -210,7 +251,8 @@ export function searchMarketplaceItems(options: SearchOptions = {}): Marketplace
 export function sortMarketplaceItems(
   sortBy: string,
   sortOrder: 'asc' | 'desc',
-  query: string
+  query: string,
+  scores?: Map<string, number>
 ): (a: MarketplaceItem, b: MarketplaceItem) => number {
   return (a: MarketplaceItem, b: MarketplaceItem) => {
     let cmp: number;
@@ -219,7 +261,13 @@ export function sortMarketplaceItems(
     else if (sortBy === 'installs') cmp = a.installs - b.installs;
     else if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
     else if (sortBy === 'updated') cmp = (a.createdAt || '').localeCompare(b.createdAt || '');
-    else cmp = relevanceScore(a, b, query);
+    else if (scores) {
+      // BM25 score available: use it for relevance, fall back to popularity as tie-break
+      const sa = scores.get(a.id) ?? 0;
+      const sb = scores.get(b.id) ?? 0;
+      if (sa !== sb) cmp = sa - sb;
+      else cmp = compareByPopularity(a, b);
+    } else cmp = relevanceScore(a, b, query);
 
     return sortOrder === 'desc' ? -cmp : cmp;
   };
