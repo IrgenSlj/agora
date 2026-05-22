@@ -10,7 +10,10 @@ function notifyDarwin(title: string, message: string, sound: boolean): void {
 
 function notifyLinux(title: string, message: string, sound: boolean): void {
   try {
-    execSync(`notify-send "${title.replace(/"/g, '\\"')}" "${message.replace(/"/g, '\\"')}" ${sound ? '-u critical' : ''}`, { timeout: 5000 });
+    execSync(
+      `notify-send "${title.replace(/"/g, '\\"')}" "${message.replace(/"/g, '\\"')}" ${sound ? '-u critical' : ''}`,
+      { timeout: 5000 }
+    );
   } catch {
     throw new Error('notify-send not installed. Try: sudo apt install libnotify-bin');
   }
@@ -32,7 +35,10 @@ export const commandNotify: CommandHandler = async (parsed, io, style) => {
   const platform = process.platform;
 
   if (!message) {
-    return usageError(io, 'notify requires a message.\nUsage: agora notify <message> [--title "Title"] [--sound]');
+    return usageError(
+      io,
+      'notify requires a message.\nUsage: agora notify <message> [--title "Title"] [--sound]'
+    );
   }
 
   if (parsed.flags.json) {

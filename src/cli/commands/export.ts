@@ -65,7 +65,8 @@ function toTable(items: MarketplaceItem[], _style: unknown): string {
   const hdr = `| ${'id'.padEnd(idW)} | ${'name'.padEnd(nameW)} | kind | ${'category'.padEnd(catW)} | ${'author'.padEnd(authorW)} | stars | installs |`;
 
   const rows = items.map((i) => {
-    const name = i.name.length > nameW ? i.name.slice(0, nameW - 1) + '\u2026' : i.name.padEnd(nameW);
+    const name =
+      i.name.length > nameW ? i.name.slice(0, nameW - 1) + '\u2026' : i.name.padEnd(nameW);
     return `| ${i.id.padEnd(idW)} | ${name} | ${i.kind.padEnd(4)} | ${i.category.padEnd(catW)} | ${i.author.padEnd(authorW)} | ${String(i.stars ?? 0).padStart(5)} | ${String(i.installs ?? 0).padStart(7)} |`;
   });
 
@@ -95,12 +96,17 @@ export const commandExport: CommandHandler = async (parsed, io, style) => {
     items = result.data;
     warnFallback(result, io);
   } else {
-    items = getMarketplaceItems()
-      .filter((i) => {
-        if (category !== 'all' && i.category !== category) return false;
-        if (query && !i.id.toLowerCase().includes(query.toLowerCase()) && !i.name.toLowerCase().includes(query.toLowerCase()) && !i.description.toLowerCase().includes(query.toLowerCase())) return false;
-        return true;
-      });
+    items = getMarketplaceItems().filter((i) => {
+      if (category !== 'all' && i.category !== category) return false;
+      if (
+        query &&
+        !i.id.toLowerCase().includes(query.toLowerCase()) &&
+        !i.name.toLowerCase().includes(query.toLowerCase()) &&
+        !i.description.toLowerCase().includes(query.toLowerCase())
+      )
+        return false;
+      return true;
+    });
     if (limit > 0) items = items.slice(0, limit);
   }
 

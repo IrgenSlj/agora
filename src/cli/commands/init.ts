@@ -15,17 +15,25 @@ import { header } from '../format.js';
 import { renderMeander, supportsTrueColor } from '../../ui.js';
 import type { CommandHandler } from './types.js';
 
-const TEMPLATES: Record<string, { name: string; files: Record<string, string>; config?: Record<string, unknown> }> = {
+const TEMPLATES: Record<
+  string,
+  { name: string; files: Record<string, string>; config?: Record<string, unknown> }
+> = {
   'node-mcp': {
     name: 'Node.js MCP Server',
     files: {
-      'package.json': JSON.stringify({
-        name: 'my-mcp-server',
-        version: '1.0.0',
-        type: 'module',
-        scripts: { start: 'node index.js' },
-        dependencies: { '@modelcontextprotocol/sdk': '^1.0.0' }
-      }, null, 2) + '\n',
+      'package.json':
+        JSON.stringify(
+          {
+            name: 'my-mcp-server',
+            version: '1.0.0',
+            type: 'module',
+            scripts: { start: 'node index.js' },
+            dependencies: { '@modelcontextprotocol/sdk': '^1.0.0' }
+          },
+          null,
+          2
+        ) + '\n',
       'index.js': `import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
@@ -114,11 +122,18 @@ export const commandInit: CommandHandler = async (parsed, io, style) => {
   if (templateName) {
     const template = TEMPLATES[templateName];
     if (!template) {
-      return usageError(io, `Unknown template "${templateName}". Available: ${Object.keys(TEMPLATES).join(', ')}`);
+      return usageError(
+        io,
+        `Unknown template "${templateName}". Available: ${Object.keys(TEMPLATES).join(', ')}`
+      );
     }
 
     if (parsed.flags.json) {
-      writeJson(io.stdout, { template: templateName, files: Object.keys(template.files), target: cwd });
+      writeJson(io.stdout, {
+        template: templateName,
+        files: Object.keys(template.files),
+        target: cwd
+      });
       return 0;
     }
 

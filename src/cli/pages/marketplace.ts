@@ -141,7 +141,12 @@ export const marketplacePage: Page = {
         lines.push(' ' + style.dim('Scanning…'));
       } else if (state.scanResult) {
         for (const c of state.scanResult.checks) {
-          const icon = c.status === 'pass' ? style.accent('✓') : c.status === 'warn' ? style.orange('⚠') : style.bold('✗');
+          const icon =
+            c.status === 'pass'
+              ? style.accent('✓')
+              : c.status === 'warn'
+                ? style.orange('⚠')
+                : style.bold('✗');
           lines.push('   ' + icon + '  ' + style.dim(c.label) + '  ' + c.message);
         }
         lines.push('');
@@ -239,11 +244,7 @@ export const marketplacePage: Page = {
       lines.push(' ' + style.bold(style.accent('PERMISSIONS DETAIL')));
       lines.push(' ' + sep('', width - 2, style));
       lines.push('');
-      const renderGroup = (
-        label: string,
-        legend: string,
-        values: string[] | undefined
-      ): void => {
+      const renderGroup = (label: string, legend: string, values: string[] | undefined): void => {
         if (!values?.length) return;
         lines.push(' ' + style.dim(label) + '  ' + style.dim(legend));
         for (const v of values) {
@@ -316,14 +317,10 @@ export const marketplacePage: Page = {
           style.accent('c') +
           style.dim(' to reset category.')
       );
-      if (
-        process.env.AGORA_LIVE_HUBS !== '1' &&
-        state.sourceFilter !== 'curated'
-      ) {
+      if (process.env.AGORA_LIVE_HUBS !== '1' && state.sourceFilter !== 'curated') {
         lines.push('');
         lines.push(
-          '   ' +
-            style.dim('Tip: set AGORA_LIVE_HUBS=1 to pull live GitHub + HuggingFace items.')
+          '   ' + style.dim('Tip: set AGORA_LIVE_HUBS=1 to pull live GitHub + HuggingFace items.')
         );
       }
       return frame(lines, width, height);
@@ -336,8 +333,7 @@ export const marketplacePage: Page = {
       const detail: string[] = [];
       // Header line: badge + name + pricing + author
       const badge = style.dim(sourceBadge(it));
-      const pricing =
-        itemPricing(it) === 'paid' ? '  ' + style.accent('PAID') : '';
+      const pricing = itemPricing(it) === 'paid' ? '  ' + style.accent('PAID') : '';
       detail.push(' ' + badge + style.bold(style.accent(it.name)) + pricing);
       const metaLine =
         (it.author ? style.dim('by ' + it.author) : '') +
@@ -633,14 +629,16 @@ export const marketplacePage: Page = {
         state.scanResult = null;
         state.scanLoading = true;
         const ctx = _ctx;
-        scanItem(it, { githubToken: process.env.AGORA_GITHUB_TOKEN }).then((r) => {
-          state.scanResult = r;
-          state.scanLoading = false;
-          ctx.repaint();
-        }).catch(() => {
-          state.scanLoading = false;
-          ctx.repaint();
-        });
+        scanItem(it, { githubToken: process.env.AGORA_GITHUB_TOKEN })
+          .then((r) => {
+            state.scanResult = r;
+            state.scanLoading = false;
+            ctx.repaint();
+          })
+          .catch(() => {
+            state.scanLoading = false;
+            ctx.repaint();
+          });
         return { kind: 'none' };
       }
       case '/':
@@ -675,8 +673,7 @@ export const marketplacePage: Page = {
       }
       case 't': {
         const order: SourceFilter[] = ['all', 'curated', 'github', 'hf'];
-        state.sourceFilter =
-          order[(order.indexOf(state.sourceFilter) + 1) % order.length] ?? 'all';
+        state.sourceFilter = order[(order.indexOf(state.sourceFilter) + 1) % order.length] ?? 'all';
         state.cursor = 0;
         return { kind: 'none' };
       }

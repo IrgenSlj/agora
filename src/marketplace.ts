@@ -110,7 +110,12 @@ function hubItemToPackage(item: HubItem): PackageMarketplaceItem {
 // changes only when scripts/refresh-hubs.ts runs. TUI pages call this once
 // per render — without memoization that's 60+ catalog rebuilds per minute on
 // arrow-key navigation with AGORA_LIVE_HUBS=1.
-let _memo: { at: number; envFlag: string; useAiCuration: boolean; items: MarketplaceItem[] } | null = null;
+let _memo: {
+  at: number;
+  envFlag: string;
+  useAiCuration: boolean;
+  items: MarketplaceItem[];
+} | null = null;
 const MEMO_TTL_MS = 30_000;
 
 let _warnedEmpty = false;
@@ -133,7 +138,12 @@ export function getCuratedSource(): 'ai' | 'bundled' {
 export function getMarketplaceItems(): MarketplaceItem[] {
   const envFlag = process.env.AGORA_LIVE_HUBS ?? '';
   const useAiCuration = (process.env.AGORA_AI_CURATE ?? '1') === '1';
-  if (_memo && _memo.envFlag === envFlag && _memo.useAiCuration === useAiCuration && Date.now() - _memo.at < MEMO_TTL_MS) {
+  if (
+    _memo &&
+    _memo.envFlag === envFlag &&
+    _memo.useAiCuration === useAiCuration &&
+    Date.now() - _memo.at < MEMO_TTL_MS
+  ) {
     return _memo.items;
   }
 
@@ -147,9 +157,10 @@ export function getMarketplaceItems(): MarketplaceItem[] {
     }
   }
 
-  const packageItems: MarketplaceItem[] = curatedPackages.length > 0
-    ? curatedPackages
-    : samplePackages.map((pkg) => ({ ...pkg, kind: 'package' as const }));
+  const packageItems: MarketplaceItem[] =
+    curatedPackages.length > 0
+      ? curatedPackages
+      : samplePackages.map((pkg) => ({ ...pkg, kind: 'package' as const }));
 
   const workflowItems: MarketplaceItem[] = sampleWorkflows.map((workflow) => ({
     ...workflow,
@@ -168,7 +179,9 @@ export function getMarketplaceItems(): MarketplaceItem[] {
       console.warn('AGORA_LIVE_HUBS=1 but hub cache is empty. Run: bun scripts/refresh-hubs.ts');
       _warnedEmpty = true;
     } else if (hubItems.length > 0 && isHubCacheStale(hubItems, 60, new Date()) && !_warnedStale) {
-      console.warn('AGORA_LIVE_HUBS=1 but hub cache is stale (>60min). Run: bun scripts/refresh-hubs.ts');
+      console.warn(
+        'AGORA_LIVE_HUBS=1 but hub cache is stale (>60min). Run: bun scripts/refresh-hubs.ts'
+      );
       _warnedStale = true;
     }
     if (hubItems.length > 0) {

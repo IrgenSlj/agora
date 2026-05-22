@@ -219,7 +219,12 @@ export const homePage: Page = {
     const trending = getTrendingItems().slice(0, 5);
 
     const newsCol = renderNewsColumn(news, style);
-    const commCol = renderCommunityColumn(state.threads, state.threadsHint, state.threadsLoading, style);
+    const commCol = renderCommunityColumn(
+      state.threads,
+      state.threadsHint,
+      state.threadsLoading,
+      style
+    );
     const trendCol = renderTrendingColumn(trending, style);
 
     const headerRight = style.dim('press ') + style.accent('n c m') + style.dim(' for sections');
@@ -268,4 +273,3 @@ export const homePage: Page = {
     }
   }
 };
-

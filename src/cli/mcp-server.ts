@@ -292,7 +292,9 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
         packages: z
           .array(z.string())
           .min(1)
-          .describe('List of npm package names to check (e.g. ["@modelcontextprotocol/server-github"])')
+          .describe(
+            'List of npm package names to check (e.g. ["@modelcontextprotocol/server-github"])'
+          )
       })
     },
     async ({ packages }) => {

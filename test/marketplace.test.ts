@@ -678,7 +678,11 @@ describe('renderPermissionLines', () => {
   });
 
   test('full permissions → header + 3 rows', () => {
-    const lines = renderPermissionLines({ fs: ['./**/*'], net: ['api.openai.com'], exec: ['node'] });
+    const lines = renderPermissionLines({
+      fs: ['./**/*'],
+      net: ['api.openai.com'],
+      exec: ['node']
+    });
     expect(lines).toHaveLength(4);
     expect(lines[0]).toBe('Permissions');
     expect(lines[1]).toContain('fs');

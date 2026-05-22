@@ -99,7 +99,16 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  writeLine(io.stdout, header('agora today', [new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })], style));
+  writeLine(
+    io.stdout,
+    header(
+      'agora today',
+      [
+        new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      ],
+      style
+    )
+  );
   writeLine(io.stdout, '');
 
   if (wantsNews) {

@@ -120,7 +120,8 @@ export async function fetchHfRepoMetadata(
   if (!readme) return null;
 
   const maxChars = 8000;
-  const trimmed = readme.length > maxChars ? readme.slice(0, maxChars) + '\n...(truncated)' : readme;
+  const trimmed =
+    readme.length > maxChars ? readme.slice(0, maxChars) + '\n...(truncated)' : readme;
   return { version, readme: trimmed };
 }
 
@@ -194,7 +195,11 @@ export async function generateInstallHint(
 export async function enrichItem(
   repoId: string,
   dataDir: string,
-  opts: { fetcher?: FetchLike; token?: string; opencode?: (prompt: string) => Promise<string | null> } = {}
+  opts: {
+    fetcher?: FetchLike;
+    token?: string;
+    opencode?: (prompt: string) => Promise<string | null>;
+  } = {}
 ): Promise<EnrichmentEntry | null> {
   const store = readEnrichmentStore(dataDir);
 

@@ -126,7 +126,9 @@ describe('permission_consistency', () => {
 describe('repo_reachable', () => {
   test('pass on 200', async () => {
     const item = makePackage({ repository: 'https://github.com/owner/repo' });
-    const fetcher = makeFetcher({ 'api.github.com': { status: 200, body: { full_name: 'owner/repo' } } });
+    const fetcher = makeFetcher({
+      'api.github.com': { status: 200, body: { full_name: 'owner/repo' } }
+    });
     const result = await scanItem(item, { fetcher });
     const check = result.checks.find((c) => c.name === 'repo_reachable')!;
     expect(check.status).toBe('pass');
@@ -153,7 +155,9 @@ describe('repo_reachable', () => {
 
   test('warn on network error', async () => {
     const item = makePackage({ repository: 'https://github.com/owner/repo' });
-    const fetcher = async () => { throw new Error('network failure'); };
+    const fetcher = async () => {
+      throw new Error('network failure');
+    };
     const result = await scanItem(item, { fetcher });
     const check = result.checks.find((c) => c.name === 'repo_reachable')!;
     expect(check.status).toBe('warn');
@@ -175,7 +179,10 @@ describe('license_present', () => {
   test('pass when the repo declares an spdx license', async () => {
     const item = makePackage({ repository: 'https://github.com/owner/repo' });
     const fetcher = makeFetcher({
-      'api.github.com': { status: 200, body: { full_name: 'owner/repo', license: { spdx_id: 'MIT' } } }
+      'api.github.com': {
+        status: 200,
+        body: { full_name: 'owner/repo', license: { spdx_id: 'MIT' } }
+      }
     });
     const result = await scanItem(item, { fetcher });
     const check = result.checks.find((c) => c.name === 'license_present')!;
@@ -223,7 +230,9 @@ describe('license_present', () => {
 describe('npm_exists', () => {
   test('pass on 200 with version', async () => {
     const item = makePackage({ npmPackage: 'my-pkg' });
-    const fetcher = makeFetcher({ 'registry.npmjs.org': { status: 200, body: { version: '2.3.4' } } });
+    const fetcher = makeFetcher({
+      'registry.npmjs.org': { status: 200, body: { version: '2.3.4' } }
+    });
     const result = await scanItem(item, { fetcher });
     const check = result.checks.find((c) => c.name === 'npm_exists')!;
     expect(check.status).toBe('pass');
@@ -241,7 +250,9 @@ describe('npm_exists', () => {
 
   test('warn on network error', async () => {
     const item = makePackage({ npmPackage: 'some-pkg' });
-    const fetcher = async () => { throw new Error('timeout'); };
+    const fetcher = async () => {
+      throw new Error('timeout');
+    };
     const result = await scanItem(item, { fetcher });
     const check = result.checks.find((c) => c.name === 'npm_exists')!;
     expect(check.status).toBe('warn');
@@ -326,7 +337,9 @@ describe('workflow scan', () => {
 describe('summary counts', () => {
   test('summary adds up to total checks for package', async () => {
     const item = makePackage({ permissions: { net: ['example.com'] }, npmPackage: 'my-pkg' });
-    const fetcher = makeFetcher({ 'registry.npmjs.org': { status: 200, body: { version: '1.0.0' } } });
+    const fetcher = makeFetcher({
+      'registry.npmjs.org': { status: 200, body: { version: '1.0.0' } }
+    });
     const result = await scanItem(item, { fetcher });
     const total = result.summary.pass + result.summary.warn + result.summary.fail;
     expect(total).toBe(result.checks.length);

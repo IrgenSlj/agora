@@ -165,7 +165,10 @@ export function sourceLabel(result: { source: string }): string {
 
 export function warnFallback<T>(result: SourceResult<T>, io: CliIo): void {
   if (result.fallbackReason) {
-    writeLine(io.stderr, `Warning: API unavailable — using offline data (cached ${dataRefreshedAt})`);
+    writeLine(
+      io.stderr,
+      `Warning: API unavailable — using offline data (cached ${dataRefreshedAt})`
+    );
     writeLine(io.stderr, `  Reason: ${result.fallbackReason}`);
   }
 }

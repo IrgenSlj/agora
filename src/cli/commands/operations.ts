@@ -151,9 +151,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
         writeLine(io.stdout, '');
         writeLine(
           io.stdout,
-          style.dim(
-            'This package declares permissions. Re-run with --yes to grant and install.'
-          )
+          style.dim('This package declares permissions. Re-run with --yes to grant and install.')
         );
         return 1;
       }
@@ -675,7 +673,10 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
       execFileSync(editorBin, editorArgs, { stdio: 'inherit' });
       writeLine(io.stdout, style.dim('Config saved.'));
     } catch {
-      return usageError(io, `Editor "${editorRaw}" failed. Set $EDITOR or try manually: nano ${configPath}`);
+      return usageError(
+        io,
+        `Editor "${editorRaw}" failed. Set $EDITOR or try manually: nano ${configPath}`
+      );
     }
     return 0;
   }
@@ -683,7 +684,10 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
   if (subcommand === 'diff') {
     const paths = parsed.args.slice(1);
     if (paths.length < 2) {
-      return usageError(io, 'config diff requires two paths.\nUsage: agora config diff <path1> <path2>');
+      return usageError(
+        io,
+        'config diff requires two paths.\nUsage: agora config diff <path1> <path2>'
+      );
     }
     const [loaded1, loaded2] = await Promise.all([
       Promise.resolve(loadOpenCodeConfig(paths[0])),
@@ -704,7 +708,9 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
     diffLines.push('');
 
     if (c1.$schema !== c2.$schema) {
-      diffLines.push(`  $schema: ${style.dim(c1.$schema || '(none)')} → ${style.accent(c2.$schema || '(none)')}`);
+      diffLines.push(
+        `  $schema: ${style.dim(c1.$schema || '(none)')} → ${style.accent(c2.$schema || '(none)')}`
+      );
     }
 
     const mcpKeys1 = Object.keys(c1.mcp || {});
@@ -718,12 +724,16 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
     const plug2 = new Set(c2.plugin || []);
     const plugAdded = [...plug2].filter((p) => !plug1.has(p));
     const plugRemoved = [...plug1].filter((p) => !plug2.has(p));
-    if (plugRemoved.length > 0) diffLines.push(`  Plugin removed: ${style.dim(plugRemoved.join(', '))}`);
-    if (plugAdded.length > 0) diffLines.push(`  Plugin added:   ${style.accent(plugAdded.join(', '))}`);
+    if (plugRemoved.length > 0)
+      diffLines.push(`  Plugin removed: ${style.dim(plugRemoved.join(', '))}`);
+    if (plugAdded.length > 0)
+      diffLines.push(`  Plugin added:   ${style.accent(plugAdded.join(', '))}`);
 
     diffLines.push('');
     diffLines.push(style.dim('MCP server count: ' + mcpKeys1.length + ' → ' + mcpKeys2.length));
-    diffLines.push(style.dim('Plugin count:     ' + (c1.plugin?.length || 0) + ' → ' + (c2.plugin?.length || 0)));
+    diffLines.push(
+      style.dim('Plugin count:     ' + (c1.plugin?.length || 0) + ' → ' + (c2.plugin?.length || 0))
+    );
 
     for (const line of diffLines) writeLine(io.stdout, line);
     return 0;
@@ -884,10 +894,7 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
       if (items.length === 0) {
         deepOk.push('news cache: empty (run `agora news` to populate)');
       } else {
-        const newest = items.reduce(
-          (m, i) => Math.max(m, new Date(i.fetchedAt).getTime()),
-          0
-        );
+        const newest = items.reduce((m, i) => Math.max(m, new Date(i.fetchedAt).getTime()), 0);
         const ageH = (Date.now() - newest) / 3600000;
         const ageLabel = ageH < 1 ? Math.round(ageH * 60) + 'm' : Math.round(ageH) + 'h';
         if (ageH > 24) {
@@ -924,7 +931,10 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
   }
 
   writeLine(io.stdout, '');
-  writeLine(io.stdout, style.dim('Run with --fix to auto-heal common issues, --deep for full diagnostics.'));
+  writeLine(
+    io.stdout,
+    style.dim('Run with --fix to auto-heal common issues, --deep for full diagnostics.')
+  );
   return report.valid ? 0 : 1;
 };
 

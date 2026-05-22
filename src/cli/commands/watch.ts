@@ -4,13 +4,19 @@ import type { CommandHandler } from './types.js';
 export const commandWatch: CommandHandler = async (parsed, io, style) => {
   const args = parsed.args;
   if (args.length === 0) {
-    return usageError(io, 'watch requires a command to run.\nUsage: agora watch <interval> <command...>\n  agora watch 5 agora trending\n  agora watch 1 agora search filesystem');
+    return usageError(
+      io,
+      'watch requires a command to run.\nUsage: agora watch <interval> <command...>\n  agora watch 5 agora trending\n  agora watch 1 agora search filesystem'
+    );
   }
 
   const intervalArg = args[0];
   const interval = parseInt(intervalArg, 10);
   if (isNaN(interval) || interval < 1) {
-    return usageError(io, `Invalid interval "${intervalArg}". Must be a positive number of seconds.`);
+    return usageError(
+      io,
+      `Invalid interval "${intervalArg}". Must be a positive number of seconds.`
+    );
   }
 
   const cmdArgs = args.slice(1);
@@ -29,7 +35,10 @@ export const commandWatch: CommandHandler = async (parsed, io, style) => {
     const timestamp = now.toLocaleTimeString();
 
     writeLine(io.stdout, clearScreen);
-    writeLine(io.stdout, style.accent(`Every ${interval}s · ${cmd} · ${timestamp} (iteration ${++iteration})`));
+    writeLine(
+      io.stdout,
+      style.accent(`Every ${interval}s · ${cmd} · ${timestamp} (iteration ${++iteration})`)
+    );
     writeLine(io.stdout, style.dim('\u2500'.repeat(60)));
     writeLine(io.stdout, '');
 

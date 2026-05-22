@@ -649,12 +649,7 @@ export const communityPage: Page = {
           const myVoteReply = state.userVotes.get(rn.reply.id) ?? 0;
           const replyVoteStr = voteGlyph(myVoteReply as -1 | 0 | 1, rn.reply.score, style);
           lines.push(
-            ' ' +
-              indent +
-              lead +
-              style.dim(replyAuthor + ' · ' + ra) +
-              '  ' +
-              replyVoteStr
+            ' ' + indent + lead + style.dim(replyAuthor + ' · ' + ra) + '  ' + replyVoteStr
           );
           lines.push('     ' + indent + rn.reply.content);
           lines.push(rule);
@@ -1061,7 +1056,9 @@ export const communityPage: Page = {
             sortOrder[(sortOrder.indexOf(state.threadSort) + 1) % sortOrder.length] ?? 'top';
           const board = state.board ?? cachedBoards[state.boardCur]?.id;
           if (board) {
-            loadThreads(board, ctx).then(() => ctx.repaint()).catch(() => {});
+            loadThreads(board, ctx)
+              .then(() => ctx.repaint())
+              .catch(() => {});
           }
           return { kind: 'none' };
         }
