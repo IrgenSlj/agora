@@ -1,6 +1,6 @@
 import type { Styler } from '../ui.js';
 
-export type CommandGroup = 'Marketplace' | 'Setup' | 'Library' | 'Learn' | 'Community';
+export type CommandGroup = 'Marketplace' | 'Setup' | 'Library' | 'Learn' | 'Community' | 'Stack';
 
 export interface CommandMeta {
   name: string;
@@ -935,6 +935,59 @@ export const COMMANDS: CommandMeta[] = [
       'agora curate --concurrency 8',
       'agora curate --status',
       'agora curate --status --json'
+    ]
+  },
+  {
+    name: 'installed',
+    group: 'Stack',
+    summary: 'List MCP servers configured across all agent tools',
+    usage: 'agora installed [--tool <id>] [--json]',
+    details:
+      'Reads configuration files for all supported agent tools (opencode, claude-code, cursor, windsurf) ' +
+      'and lists every MCP server found. Servers configured in multiple tools or scopes are grouped ' +
+      'by name. Use --tool to filter to a single agent tool. When no servers are found, detected tools ' +
+      'are reported and hints to `agora search` / `agora install` are shown.',
+    flags: [
+      {
+        flag: '--tool',
+        description: 'Filter to a single tool: opencode, claude-code, cursor, or windsurf'
+      },
+      { flag: '--json', description: 'Output as JSON: { servers, tools, summary }' }
+    ],
+    examples: [
+      'agora installed',
+      'agora installed --tool opencode',
+      'agora installed --tool cursor --json'
+    ]
+  },
+  {
+    name: 'doctor',
+    group: 'Stack',
+    summary: 'Health-check configured MCP servers across all agent tools',
+    usage: 'agora doctor [--tool <id>] [--probe] [--strict] [--json]',
+    details:
+      'Checks each configured MCP server for common problems: missing binary, invalid remote URL, ' +
+      'all instances disabled, conflicting definitions across tools/scopes. ' +
+      'Use --probe to briefly start each local server and verify it launches. ' +
+      'Returns exit code 0 by default (informational); use --strict to return 1 when any server has errors.',
+    flags: [
+      {
+        flag: '--tool',
+        description: 'Filter to a single tool: opencode, claude-code, cursor, or windsurf'
+      },
+      { flag: '--probe', description: 'Briefly start each local server to verify it runs' },
+      {
+        flag: '--strict',
+        description: 'Exit 1 if any server has errors (for CI/scripting)'
+      },
+      { flag: '--json', description: 'Output StackHealth object as JSON' }
+    ],
+    examples: [
+      'agora doctor',
+      'agora doctor --tool opencode',
+      'agora doctor --strict',
+      'agora doctor --json',
+      'agora doctor --probe --strict'
     ]
   },
   {

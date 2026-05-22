@@ -263,7 +263,7 @@ export function header(title: string, meta: string[], style: Styler): string {
 
 export function usage(style: Styler, version: string): string {
   const nameWidth = Math.max(...COMMANDS.map((c) => c.name.length));
-  const groups = ['Marketplace', 'Setup', 'Library', 'Learn', 'Community'] as const;
+  const groups = ['Marketplace', 'Setup', 'Stack', 'Library', 'Learn', 'Community'] as const;
 
   const lines: string[] = [
     `${style.accent('agora')}${style.dim(` · Developers' CLI marketplace and community hub · v${version}`)}`,
