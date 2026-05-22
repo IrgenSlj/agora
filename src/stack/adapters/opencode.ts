@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { detectOpenCodeConfigPath, loadOpenCodeConfig } from '../../config-files.js';
+import { loadOpenCodeConfig } from '../../config-files.js';
 import type { ConfiguredServer, StackEnv, ToolAdapter, ToolConfigLocation } from '../types.js';
 
 function resolveHome(opts: StackEnv): string {
@@ -27,11 +27,7 @@ export const opencodeAdapter: ToolAdapter = {
   },
 
   readServers(opts: StackEnv): ConfiguredServer[] {
-    const cwd = resolveCwd(opts);
-    const home = resolveHome(opts);
-
-    // Use detectOpenCodeConfigPath to find the active config file.
-    // We also check all known locations so we can emit scope correctly.
+    // Iterate all known locations so scope is preserved correctly.
     const locations = this.locations(opts);
     const servers: ConfiguredServer[] = [];
 
@@ -44,8 +40,8 @@ export const opencodeAdapter: ToolAdapter = {
       for (const [name, entry] of Object.entries(loaded.config.mcp)) {
         const raw = entry as Record<string, unknown>;
 
-        // opencode only supports type:'local' in the spec we read,
-        // but we handle url-bearing entries as remote for forward-compat.
+        // opencode only supports type:'local' formally, but handle url-bearing
+        // entries as remote for forward-compatibility.
         const isRemote = (entry as { type?: string }).type === 'remote' || 'url' in raw;
 
         if (isRemote) {
@@ -81,10 +77,6 @@ export const opencodeAdapter: ToolAdapter = {
         }
       }
     }
-
-    // Suppress unused-variable lint: cwd/home are used above in locations()
-    void cwd;
-    void home;
 
     return servers;
   }
