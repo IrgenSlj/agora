@@ -187,7 +187,10 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--write', description: 'Apply the install plan (update config + run npm install)' },
       { flag: '--config', description: 'Path to opencode.json (auto-detected by default)' },
       { flag: '--type, -t', description: 'Item kind: package or workflow' },
-      { flag: '--skip-scan', description: 'Bypass the pre-install scan gate (use only when you understand the risk)' },
+      {
+        flag: '--skip-scan',
+        description: 'Bypass the pre-install scan gate (use only when you understand the risk)'
+      },
       { flag: '--json', description: 'Output plan as JSON' }
     ],
     examples: [
@@ -205,10 +208,7 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--type, -t', description: 'Item kind: package or workflow' },
       { flag: '--json', description: 'Output result as JSON' }
     ],
-    examples: [
-      'agora scan mcp-github',
-      'agora scan some-pkg --json'
-    ]
+    examples: ['agora scan mcp-github', 'agora scan some-pkg --json']
   },
   {
     name: 'outdated',
@@ -219,10 +219,7 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--config', description: 'Path to opencode.json (auto-detected by default)' },
       { flag: '--json', description: 'Output as JSON' }
     ],
-    examples: [
-      'agora outdated',
-      'agora outdated --json'
-    ]
+    examples: ['agora outdated', 'agora outdated --json']
   },
 
   // Setup
@@ -544,14 +541,13 @@ export const COMMANDS: CommandMeta[] = [
     summary: 'Daily digest: top news, community threads, and trending items from the last 24h',
     usage: 'agora today [--section news|community|market|all] [--json]',
     flags: [
-      { flag: '--section, -s', description: 'Show only one section: news, community, market, or all (default all)' },
+      {
+        flag: '--section, -s',
+        description: 'Show only one section: news, community, market, or all (default all)'
+      },
       { flag: '--json', description: 'Output { at, news, threads, trending } as JSON' }
     ],
-    examples: [
-      'agora today',
-      'agora today --section news',
-      'agora today --json'
-    ]
+    examples: ['agora today', 'agora today --section news', 'agora today --json']
   },
   {
     name: 'community',
@@ -740,7 +736,7 @@ export const COMMANDS: CommandMeta[] = [
     summary: 'Generate shell completion scripts for bash, zsh, or fish',
     usage: 'agora completions bash|zsh|fish',
     details:
-      'Generates shell completion scripts for the agora CLI. Pipe the output to your shell\'s ' +
+      "Generates shell completion scripts for the agora CLI. Pipe the output to your shell's " +
       'completions directory or source it directly. Completions include all commands, flags, ' +
       'marketplace IDs, categories, and common option values.',
     examples: [
@@ -771,7 +767,8 @@ export const COMMANDS: CommandMeta[] = [
     name: 'export',
     group: 'Marketplace',
     summary: 'Export marketplace data in various formats',
-    usage: 'agora export [query] [--category all|mcp|prompt|workflow] [--format json|csv|markdown|table] [--limit N] [--api]',
+    usage:
+      'agora export [query] [--category all|mcp|prompt|workflow] [--format json|csv|markdown|table] [--limit N] [--api]',
     details:
       'Exports all marketplace items matching the optional query and category filters. ' +
       'Use --format to choose the output format. ' +
@@ -885,11 +882,7 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--data-dir', description: 'Override the Agora data directory' },
       { flag: '--json', description: 'Output { marketplace, news } as JSON' }
     ],
-    examples: [
-      'agora bookmarks',
-      'agora bookmarks --kind marketplace',
-      'agora bookmarks --json'
-    ]
+    examples: ['agora bookmarks', 'agora bookmarks --kind marketplace', 'agora bookmarks --json']
   },
   {
     name: 'welcome',
@@ -918,11 +911,7 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--force', description: 'Re-verify all items, not just new ones' },
       { flag: '--limit, -n', description: 'Maximum items to process (default 50)' }
     ],
-    examples: [
-      'agora curate',
-      'agora curate --force',
-      'agora curate --limit 20'
-    ]
+    examples: ['agora curate', 'agora curate --force', 'agora curate --limit 20']
   },
   {
     name: 'notify',

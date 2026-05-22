@@ -502,8 +502,7 @@ export const newsPage: Page = {
     state.cursor = Math.min(state.cursor, Math.max(0, list.length - 1));
     const lines: string[] = [];
 
-    const srcLabel =
-      state.source === 'all' ? 'all' : (SOURCE_LABELS[state.source] ?? state.source);
+    const srcLabel = state.source === 'all' ? 'all' : (SOURCE_LABELS[state.source] ?? state.source);
     const head = ' ' + style.bold(style.accent('NEWS'));
     const pos =
       list.length > 0 ? style.dim(' [' + (state.cursor + 1) + '/' + list.length + ']') : '';

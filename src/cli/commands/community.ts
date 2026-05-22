@@ -496,7 +496,10 @@ export const commandAdmin: CommandHandler = async (parsed, io, style) => {
         writeJson(io.stdout, result.data);
         return 0;
       }
-      writeLine(io.stdout, `Hid ${style.accent(id)} (${targetType}); audit id ${style.dim(result.data.id)}`);
+      writeLine(
+        io.stdout,
+        `Hid ${style.accent(id)} (${targetType}); audit id ${style.dim(result.data.id)}`
+      );
       return 0;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -573,7 +576,10 @@ export const commandAdmin: CommandHandler = async (parsed, io, style) => {
         writeJson(io.stdout, result.data);
         return 0;
       }
-      writeLine(io.stdout, `Recomputed ${result.data.recomputed} users in ${result.data.durationMs}ms`);
+      writeLine(
+        io.stdout,
+        `Recomputed ${result.data.recomputed} users in ${result.data.durationMs}ms`
+      );
       return 0;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);

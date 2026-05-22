@@ -71,13 +71,13 @@ export const commandPing: CommandHandler = async (parsed, io, style) => {
     writeLine(
       io.stdout,
       `${style.accent('✓')} ${apiUrl} reachable in ${dur} (HTTP ${result.status}` +
-        (result.authenticated ? ', authenticated' : ', anon' ) + ')'
+        (result.authenticated ? ', authenticated' : ', anon') +
+        ')'
     );
     return 0;
   }
 
-  const detail =
-    result.status !== null ? `HTTP ${result.status}` : result.error || 'no response';
+  const detail = result.status !== null ? `HTTP ${result.status}` : result.error || 'no response';
   writeLine(io.stderr, `${style.accent('✗')} ${apiUrl} unreachable in ${dur} (${detail})`);
   return 1;
 };

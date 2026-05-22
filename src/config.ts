@@ -74,5 +74,3 @@ export function extractPackageFromConfig(config: OpenCodeConfig): string[] {
 
   return packages;
 }
-
-

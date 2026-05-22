@@ -51,7 +51,9 @@ describe('news source toggle fields', () => {
       account: { username: '', backend: '', declared_llm: '' },
       display: { color: 'auto' as const, banner: true },
       news: {
-        sources: { hn: { enabled: true, ttl_minutes: 10 } as { enabled: boolean; ttl_minutes: number } },
+        sources: {
+          hn: { enabled: true, ttl_minutes: 10 } as { enabled: boolean; ttl_minutes: number }
+        },
         feeds: [] as string[]
       },
       community: { default_board: 'mcp', collapse_flag_threshold: 3 }
@@ -64,7 +66,9 @@ describe('news source toggle fields', () => {
         sources: { ...sources, hn: { ...(sources['hn'] ?? {}), enabled: !sources['hn']?.enabled } }
       }
     };
-    expect((toggled.news.sources as Record<string, { enabled: boolean }>)['hn']?.enabled).toBe(false);
+    expect((toggled.news.sources as Record<string, { enabled: boolean }>)['hn']?.enabled).toBe(
+      false
+    );
   });
 
   test('toggle write function: enabled=false -> toggled state has enabled=true', () => {
@@ -72,7 +76,9 @@ describe('news source toggle fields', () => {
       account: { username: '', backend: '', declared_llm: '' },
       display: { color: 'auto' as const, banner: true },
       news: {
-        sources: { arxiv: { enabled: false, ttl_minutes: 60 } as { enabled: boolean; ttl_minutes: number } },
+        sources: {
+          arxiv: { enabled: false, ttl_minutes: 60 } as { enabled: boolean; ttl_minutes: number }
+        },
         feeds: [] as string[]
       },
       community: { default_board: 'mcp', collapse_flag_threshold: 3 }
@@ -82,10 +88,15 @@ describe('news source toggle fields', () => {
       ...base,
       news: {
         ...base.news,
-        sources: { ...sources, arxiv: { ...(sources['arxiv'] ?? {}), enabled: !sources['arxiv']?.enabled } }
+        sources: {
+          ...sources,
+          arxiv: { ...(sources['arxiv'] ?? {}), enabled: !sources['arxiv']?.enabled }
+        }
       }
     };
-    expect((toggled.news.sources as Record<string, { enabled: boolean }>)['arxiv']?.enabled).toBe(true);
+    expect((toggled.news.sources as Record<string, { enabled: boolean }>)['arxiv']?.enabled).toBe(
+      true
+    );
   });
 
   test('toggling one source does not affect others', () => {
@@ -129,7 +140,11 @@ describe('settings revert', () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'agora-revert2-'));
     // Write known values then reload to verify round-trip, avoiding DEFAULT_SETTINGS mutation
     const s = loadSettings(tmpDir);
-    const known = { ...s, account: { ...s.account, username: '' }, display: { ...s.display, color: 'auto' as const } };
+    const known = {
+      ...s,
+      account: { ...s.account, username: '' },
+      display: { ...s.display, color: 'auto' as const }
+    };
     writeSettings(tmpDir, known);
     const reverted = loadSettings(tmpDir);
     expect(reverted.account.username).toBe('');

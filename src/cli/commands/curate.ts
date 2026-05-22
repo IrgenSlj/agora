@@ -7,7 +7,7 @@ import { clearMarketplaceItemsCache, getCuratedSource } from '../../marketplace.
 export async function commandCurate(
   parsed: ParsedArgs,
   io: CliIo,
-  _style: Styler,
+  _style: Styler
 ): Promise<number> {
   const force = parsed.flags.force === true;
   const limit = typeof parsed.flags.limit === 'number' ? parsed.flags.limit : 50;
@@ -20,7 +20,7 @@ export async function commandCurate(
   const results = await curateAll(dataDir, {
     force,
     limit,
-    onProgress: (msg) => writeLine(io.stdout, msg),
+    onProgress: (msg) => writeLine(io.stdout, msg)
   });
 
   clearMarketplaceItemsCache();
@@ -29,7 +29,10 @@ export async function commandCurate(
   writeLine(io.stdout, `Curation source now: ${after}`);
 
   if (parsed.flags.json) {
-    writeLine(io.stdout, JSON.stringify({ count: results.length, source: after, items: results }, null, 2));
+    writeLine(
+      io.stdout,
+      JSON.stringify({ count: results.length, source: after, items: results }, null, 2)
+    );
   }
 
   return 0;

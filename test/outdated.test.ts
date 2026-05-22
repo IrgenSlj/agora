@@ -40,7 +40,10 @@ describe('checkOutdated', () => {
 
   test('single fresh package (modifiedAt 30d ago)', async () => {
     const fetcher = makeFetcher({
-      'registry.npmjs.org': { status: 200, body: makeRegistryBody({ version: '2.0.0', modified: daysAgoIso(30) }) }
+      'registry.npmjs.org': {
+        status: 200,
+        body: makeRegistryBody({ version: '2.0.0', modified: daysAgoIso(30) })
+      }
     });
     const result = await checkOutdated(['my-pkg'], { fetcher, now: () => NOW });
     expect(result.entries).toHaveLength(1);
@@ -58,7 +61,10 @@ describe('checkOutdated', () => {
 
   test('single stale package (modifiedAt 400d ago)', async () => {
     const fetcher = makeFetcher({
-      'registry.npmjs.org': { status: 200, body: makeRegistryBody({ version: '0.1.0', modified: daysAgoIso(400) }) }
+      'registry.npmjs.org': {
+        status: 200,
+        body: makeRegistryBody({ version: '0.1.0', modified: daysAgoIso(400) })
+      }
     });
     const result = await checkOutdated(['old-pkg'], { fetcher, now: () => NOW });
     const entry = result.entries[0]!;
@@ -97,7 +103,9 @@ describe('checkOutdated', () => {
   });
 
   test('network error: status unknown with network message', async () => {
-    const fetcher = async () => { throw new Error('network failure'); };
+    const fetcher = async () => {
+      throw new Error('network failure');
+    };
     const result = await checkOutdated(['some-pkg'], { fetcher, now: () => NOW });
     const entry = result.entries[0]!;
     expect(entry.status).toBe('unknown');
@@ -131,11 +139,20 @@ describe('checkOutdated', () => {
 
   test('multiple packages: order preserved, summary tallies correctly', async () => {
     const fetcher = makeFetcher({
-      'npmjs.org/fresh-pkg': { status: 200, body: makeRegistryBody({ version: '1.0.0', modified: daysAgoIso(10) }) },
-      'npmjs.org/stale-pkg': { status: 200, body: makeRegistryBody({ version: '0.5.0', modified: daysAgoIso(500) }) },
+      'npmjs.org/fresh-pkg': {
+        status: 200,
+        body: makeRegistryBody({ version: '1.0.0', modified: daysAgoIso(10) })
+      },
+      'npmjs.org/stale-pkg': {
+        status: 200,
+        body: makeRegistryBody({ version: '0.5.0', modified: daysAgoIso(500) })
+      },
       'npmjs.org/ghost-pkg': { status: 404 }
     });
-    const result = await checkOutdated(['fresh-pkg', 'stale-pkg', 'ghost-pkg'], { fetcher, now: () => NOW });
+    const result = await checkOutdated(['fresh-pkg', 'stale-pkg', 'ghost-pkg'], {
+      fetcher,
+      now: () => NOW
+    });
     expect(result.entries).toHaveLength(3);
     expect(result.entries[0]!.pkg).toBe('fresh-pkg');
     expect(result.entries[0]!.status).toBe('fresh');
@@ -150,7 +167,9 @@ describe('checkOutdated', () => {
     let capturedUrl = '';
     const fetcher = async (input: string | URL): Promise<Response> => {
       capturedUrl = typeof input === 'string' ? input : input.toString();
-      return new Response(JSON.stringify(makeRegistryBody({ modified: daysAgoIso(5) })), { status: 200 });
+      return new Response(JSON.stringify(makeRegistryBody({ modified: daysAgoIso(5) })), {
+        status: 200
+      });
     };
     await checkOutdated(['@scope/name'], { fetcher, now: () => NOW });
     expect(capturedUrl).toContain('@scope/name');

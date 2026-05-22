@@ -220,7 +220,10 @@ export function classifyInput(line: string, isExecutable: (name: string) => bool
   const letterDisp = LETTER_SHORTCUTS[trimmed];
   if (letterDisp) {
     if (letterDisp.kind === 'meta') {
-      return { kind: 'meta', sub: letterDisp.sub as Dispatch extends { kind: 'meta' } ? Dispatch['sub'] : never };
+      return {
+        kind: 'meta',
+        sub: letterDisp.sub as Dispatch extends { kind: 'meta' } ? Dispatch['sub'] : never
+      };
     }
     if (letterDisp.kind === 'tui') {
       return { kind: 'tui', page: letterDisp.page };
@@ -737,7 +740,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
         if (dispatch.sub === 'jobs') {
           if (jobs.size === 0) {
-            process.stdout.write(style.dim('No background jobs. Append & to run a command in the background.') + '\n');
+            process.stdout.write(
+              style.dim('No background jobs. Append & to run a command in the background.') + '\n'
+            );
           } else {
             process.stdout.write(style.accent('Background jobs') + '\n');
             for (const [id, job] of jobs) {
@@ -750,7 +755,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
         if (dispatch.sub === 'fg') {
           if (jobs.size === 0) {
-            process.stdout.write(style.dim('No background jobs. Append & to run a command in the background.') + '\n');
+            process.stdout.write(
+              style.dim('No background jobs. Append & to run a command in the background.') + '\n'
+            );
             continue;
           }
           const arg = dispatch.args || '';
@@ -787,7 +794,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
         if (dispatch.sub === 'bg') {
           if (jobs.size === 0) {
-            process.stdout.write(style.dim('No background jobs. Append & to run a command in the background.') + '\n');
+            process.stdout.write(
+              style.dim('No background jobs. Append & to run a command in the background.') + '\n'
+            );
             continue;
           }
           const arg = dispatch.args || '';
@@ -816,7 +825,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           const arg = dispatch.args || '';
           if (!arg) {
             if (trackedEnv.size === 0) {
-              process.stdout.write(style.dim('No tracked environment variables. Use /env VAR=value to set one.') + '\n');
+              process.stdout.write(
+                style.dim('No tracked environment variables. Use /env VAR=value to set one.') + '\n'
+              );
             } else {
               process.stdout.write(style.accent('Tracked environment') + '\n');
               for (const [k, v] of [...trackedEnv.entries()].sort()) {
@@ -875,11 +886,14 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
               stdio: ['ignore', 'pipe', 'pipe']
             });
             jobs.set(jobId, { pid: child.pid ?? 0, cmd: actualCmd, status: 'running' });
-            process.stdout.write(style.dim(`[${jobId}] ${actualCmd} (background, pid ${child.pid ?? '?'})`) + '\n');
+            process.stdout.write(
+              style.dim(`[${jobId}] ${actualCmd} (background, pid ${child.pid ?? '?'})`) + '\n'
+            );
             child.stdout?.on('data', (chunk: Buffer) => {
               const text = chunk.toString();
               const lines = text.split('\n').filter(Boolean);
-              for (const l of lines) process.stdout.write(style.dim(`[${jobId}] ${l.trimRight()} |> `));
+              for (const l of lines)
+                process.stdout.write(style.dim(`[${jobId}] ${l.trimRight()} |> `));
             });
             child.on('close', (code) => {
               jobs.delete(jobId);

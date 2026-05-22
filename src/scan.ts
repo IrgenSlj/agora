@@ -25,7 +25,9 @@ export interface ScanOptions {
 }
 
 function tally(checks: ScanCheck[]): { pass: number; warn: number; fail: number } {
-  let pass = 0, warn = 0, fail = 0;
+  let pass = 0,
+    warn = 0,
+    fail = 0;
   for (const c of checks) {
     if (c.status === 'pass') pass++;
     else if (c.status === 'warn') warn++;
@@ -61,7 +63,12 @@ async function checkRepo(item: PackageMarketplaceItem, opts: ScanOptions): Promi
     return [{ ...base, status: 'pass', message: 'non-github repository, skipped' }];
   }
 
-  const path = url.pathname.replace(/^\//, '').replace(/\.git$/, '').split('/').slice(0, 2).join('/');
+  const path = url.pathname
+    .replace(/^\//, '')
+    .replace(/\.git$/, '')
+    .split('/')
+    .slice(0, 2)
+    .join('/');
   const apiUrl = `https://api.github.com/repos/${path}`;
   const headers: Record<string, string> = { Accept: 'application/vnd.github+json' };
   if (opts.githubToken) headers.Authorization = `Bearer ${opts.githubToken}`;
@@ -91,10 +98,7 @@ async function checkRepo(item: PackageMarketplaceItem, opts: ScanOptions): Promi
   }
 }
 
-async function checkNpmExists(
-  item: PackageMarketplaceItem,
-  opts: ScanOptions
-): Promise<ScanCheck> {
+async function checkNpmExists(item: PackageMarketplaceItem, opts: ScanOptions): Promise<ScanCheck> {
   const base: Omit<ScanCheck, 'status' | 'message'> = {
     name: 'npm_exists',
     label: 'npm package exists'
@@ -108,8 +112,12 @@ async function checkNpmExists(
       signal: AbortSignal.timeout(8000)
     });
     if (res.status === 200) {
-      const json = await res.json() as { version?: string };
-      return { ...base, status: 'pass', message: `${item.npmPackage}@${json.version ?? 'unknown'}` };
+      const json = (await res.json()) as { version?: string };
+      return {
+        ...base,
+        status: 'pass',
+        message: `${item.npmPackage}@${json.version ?? 'unknown'}`
+      };
     }
     if (res.status === 404) return { ...base, status: 'fail', message: 'package not found on npm' };
     return { ...base, status: 'warn', message: 'could not verify (network)' };
@@ -118,10 +126,7 @@ async function checkNpmExists(
   }
 }
 
-async function scanPackage(
-  item: PackageMarketplaceItem,
-  opts: ScanOptions
-): Promise<ScanCheck[]> {
+async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Promise<ScanCheck[]> {
   const checks: ScanCheck[] = [];
 
   // 1. permissions_declared
@@ -131,19 +136,44 @@ async function scanPackage(
     if (item.permissions?.fs?.length) parts.push('fs');
     if (item.permissions?.net?.length) parts.push('net');
     if (item.permissions?.exec?.length) parts.push('exec');
-    checks.push({ name: 'permissions_declared', label: 'Permissions declared', status: 'pass', message: parts.join('|') });
+    checks.push({
+      name: 'permissions_declared',
+      label: 'Permissions declared',
+      status: 'pass',
+      message: parts.join('|')
+    });
   } else {
-    checks.push({ name: 'permissions_declared', label: 'Permissions declared', status: 'warn', message: 'no permissions manifest declared' });
+    checks.push({
+      name: 'permissions_declared',
+      label: 'Permissions declared',
+      status: 'warn',
+      message: 'no permissions manifest declared'
+    });
   }
 
   // 2. permission_consistency
   const kind = getInstallKind(item);
   if (kind === 'git-clone' && !item.permissions?.exec?.length) {
-    checks.push({ name: 'permission_consistency', label: 'Permission consistency', status: 'warn', message: 'git-clone install runs shell commands; declare exec' });
+    checks.push({
+      name: 'permission_consistency',
+      label: 'Permission consistency',
+      status: 'warn',
+      message: 'git-clone install runs shell commands; declare exec'
+    });
   } else if (kind === 'mcp-config-patch' && item.npmPackage && !item.permissions?.exec?.length) {
-    checks.push({ name: 'permission_consistency', label: 'Permission consistency', status: 'warn', message: 'npx invocation runs binaries; declare exec' });
+    checks.push({
+      name: 'permission_consistency',
+      label: 'Permission consistency',
+      status: 'warn',
+      message: 'npx invocation runs binaries; declare exec'
+    });
   } else {
-    checks.push({ name: 'permission_consistency', label: 'Permission consistency', status: 'pass', message: 'declared permissions match install kind' });
+    checks.push({
+      name: 'permission_consistency',
+      label: 'Permission consistency',
+      status: 'pass',
+      message: 'declared permissions match install kind'
+    });
   }
 
   // 3. repo_reachable (+ license_present when reachable)
@@ -161,20 +191,45 @@ async function scanPackage(
     const now = opts.now ? opts.now() : new Date();
     const days = Math.floor((now.getTime() - new Date(item.pushedAt).getTime()) / 86_400_000);
     if (days <= 365) {
-      checks.push({ name: 'recently_active', label: 'Recently active', status: 'pass', message: `pushed ${days}d ago` });
+      checks.push({
+        name: 'recently_active',
+        label: 'Recently active',
+        status: 'pass',
+        message: `pushed ${days}d ago`
+      });
     } else {
-      checks.push({ name: 'recently_active', label: 'Recently active', status: 'warn', message: `last push ${days}d ago — may be unmaintained` });
+      checks.push({
+        name: 'recently_active',
+        label: 'Recently active',
+        status: 'warn',
+        message: `last push ${days}d ago — may be unmaintained`
+      });
     }
   }
 
   // 6. flag_count_low
   const flags = item.flagCount ?? 0;
   if (flags < 3) {
-    checks.push({ name: 'flag_count_low', label: 'Flag count low', status: 'pass', message: `${flags} flags` });
+    checks.push({
+      name: 'flag_count_low',
+      label: 'Flag count low',
+      status: 'pass',
+      message: `${flags} flags`
+    });
   } else if (flags < 10) {
-    checks.push({ name: 'flag_count_low', label: 'Flag count low', status: 'warn', message: `${flags} flags — under review threshold` });
+    checks.push({
+      name: 'flag_count_low',
+      label: 'Flag count low',
+      status: 'warn',
+      message: `${flags} flags — under review threshold`
+    });
   } else {
-    checks.push({ name: 'flag_count_low', label: 'Flag count low', status: 'fail', message: `${flags} flags — would auto-hide` });
+    checks.push({
+      name: 'flag_count_low',
+      label: 'Flag count low',
+      status: 'fail',
+      message: `${flags} flags — would auto-hide`
+    });
   }
 
   return checks;
@@ -186,12 +241,22 @@ export async function scanItem(item: MarketplaceItem, opts: ScanOptions = {}): P
   if (item.kind === 'workflow') {
     const n = (item as { flagCount?: number }).flagCount ?? 0;
     checks = [
-      { name: 'workflow_kind', label: 'Workflow kind', status: 'pass', message: 'Workflow items are inert prompts — no install side effects to scan.' },
+      {
+        name: 'workflow_kind',
+        label: 'Workflow kind',
+        status: 'pass',
+        message: 'Workflow items are inert prompts — no install side effects to scan.'
+      },
       {
         name: 'flag_count_low',
         label: 'Flag count low',
         status: n < 3 ? 'pass' : n < 10 ? 'warn' : 'fail',
-        message: n < 3 ? `${n} flags` : n < 10 ? `${n} flags — under review threshold` : `${n} flags — would auto-hide`
+        message:
+          n < 3
+            ? `${n} flags`
+            : n < 10
+              ? `${n} flags — under review threshold`
+              : `${n} flags — would auto-hide`
       }
     ];
   } else {

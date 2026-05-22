@@ -219,10 +219,7 @@ describe('CLI commands', () => {
     const { io, stdout } = createIo(temp);
 
     try {
-      const code = await runCli(
-        ['install', 'mcp-github', '--write', '--config', configPath],
-        io
-      );
+      const code = await runCli(['install', 'mcp-github', '--write', '--config', configPath], io);
 
       expect(code).toBe(0);
       const out = stdout.join('');
@@ -1269,10 +1266,7 @@ describe('help system', () => {
   test('agora ping --json on success returns status 200', async () => {
     const fetcher: FetchLike = async () => jsonResponse({ boards: [] }, 200);
     const { io, stdout } = createIo(process.cwd(), { fetcher });
-    const code = await runCli(
-      ['ping', '--api-url', 'https://example.invalid', '--json'],
-      io
-    );
+    const code = await runCli(['ping', '--api-url', 'https://example.invalid', '--json'], io);
     expect(code).toBe(0);
     const payload = JSON.parse(stdout.join(''));
     expect(payload.status).toBe(200);

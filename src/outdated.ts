@@ -22,7 +22,9 @@ export interface OutdatedOptions {
 }
 
 function tally(entries: OutdatedEntry[]): { fresh: number; stale: number; unknown: number } {
-  let fresh = 0, stale = 0, unknown = 0;
+  let fresh = 0,
+    stale = 0,
+    unknown = 0;
   for (const e of entries) {
     if (e.status === 'fresh') fresh++;
     else if (e.status === 'stale') stale++;
@@ -41,14 +43,31 @@ async function checkPackage(pkg: string, opts: OutdatedOptions): Promise<Outdate
     const res = await fetcher(url, { signal: AbortSignal.timeout(8000) });
 
     if (res.status === 404) {
-      return { pkg, latestVersion: null, modifiedAt: null, ageDays: null, status: 'unknown', message: 'not found on npm' };
+      return {
+        pkg,
+        latestVersion: null,
+        modifiedAt: null,
+        ageDays: null,
+        status: 'unknown',
+        message: 'not found on npm'
+      };
     }
 
     if (res.status !== 200) {
-      return { pkg, latestVersion: null, modifiedAt: null, ageDays: null, status: 'unknown', message: 'could not verify (network)' };
+      return {
+        pkg,
+        latestVersion: null,
+        modifiedAt: null,
+        ageDays: null,
+        status: 'unknown',
+        message: 'could not verify (network)'
+      };
     }
 
-    const json = await res.json() as { 'dist-tags'?: { latest?: string }; time?: { modified?: string } };
+    const json = (await res.json()) as {
+      'dist-tags'?: { latest?: string };
+      time?: { modified?: string };
+    };
     const latestVersion = json['dist-tags']?.latest ?? null;
     const modifiedAt = json.time?.modified ?? null;
 
@@ -69,7 +88,14 @@ async function checkPackage(pkg: string, opts: OutdatedOptions): Promise<Outdate
 
     return { pkg, latestVersion, modifiedAt, ageDays, status, message };
   } catch {
-    return { pkg, latestVersion: null, modifiedAt: null, ageDays: null, status: 'unknown', message: 'could not verify (network)' };
+    return {
+      pkg,
+      latestVersion: null,
+      modifiedAt: null,
+      ageDays: null,
+      status: 'unknown',
+      message: 'could not verify (network)'
+    };
   }
 }
 

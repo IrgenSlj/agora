@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { extractSnippet, sanitizeFtsQuery, validateSearchQuery } from '../../src/community/search.js';
+import {
+  extractSnippet,
+  sanitizeFtsQuery,
+  validateSearchQuery
+} from '../../src/community/search.js';
 import { BOARD_IDS } from '../../src/community/types.js';
 
 // ── extractSnippet ─────────────────────────────────────────────────────────────

@@ -6,7 +6,10 @@ import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
 export const commandScan: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
   if (!id) {
-    return usageError(io, 'scan requires an item id. Usage: agora scan <id> [--type package|workflow]');
+    return usageError(
+      io,
+      'scan requires an item id. Usage: agora scan <id> [--type package|workflow]'
+    );
   }
 
   const item = findMarketplaceItem(id, { type: stringFlag(parsed, 'type') });
@@ -38,10 +41,7 @@ export const commandScan: CommandHandler = async (parsed, io, style) => {
 
   writeLine(io.stdout);
   const { pass, warn, fail } = result.summary;
-  writeLine(
-    io.stdout,
-    `${pass} pass · ${warn} warning(s) · ${fail} failure(s)`
-  );
+  writeLine(io.stdout, `${pass} pass · ${warn} warning(s) · ${fail} failure(s)`);
 
   return fail > 0 ? 1 : 0;
 };

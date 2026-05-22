@@ -906,14 +906,30 @@ export async function runPublishScan(
         signal: AbortSignal.timeout(8000)
       });
       if (res.status === 200) {
-        checks.push({ name: 'npm_exists', status: 'pass', message: `${input.npmPackage} found on npm` });
+        checks.push({
+          name: 'npm_exists',
+          status: 'pass',
+          message: `${input.npmPackage} found on npm`
+        });
       } else if (res.status === 404) {
-        checks.push({ name: 'npm_exists', status: 'fail', message: `${input.npmPackage} not found on npm` });
+        checks.push({
+          name: 'npm_exists',
+          status: 'fail',
+          message: `${input.npmPackage} not found on npm`
+        });
       } else {
-        checks.push({ name: 'npm_exists', status: 'unknown', message: 'could not verify npm package' });
+        checks.push({
+          name: 'npm_exists',
+          status: 'unknown',
+          message: 'could not verify npm package'
+        });
       }
     } catch {
-      checks.push({ name: 'npm_exists', status: 'unknown', message: 'could not verify npm package (network)' });
+      checks.push({
+        name: 'npm_exists',
+        status: 'unknown',
+        message: 'could not verify npm package (network)'
+      });
     }
   }
 
@@ -922,7 +938,12 @@ export async function runPublishScan(
     try {
       const url = new URL(input.repository);
       if (url.hostname === 'github.com') {
-        path = url.pathname.replace(/^\//, '').replace(/\.git$/, '').split('/').slice(0, 2).join('/');
+        path = url.pathname
+          .replace(/^\//, '')
+          .replace(/\.git$/, '')
+          .split('/')
+          .slice(0, 2)
+          .join('/');
       }
     } catch {
       path = null;
@@ -942,18 +963,34 @@ export async function runPublishScan(
             if (spdx && spdx !== 'NOASSERTION') {
               checks.push({ name: 'license_present', status: 'pass', message: spdx });
             } else {
-              checks.push({ name: 'license_present', status: 'unknown', message: 'no license detected on the repository' });
+              checks.push({
+                name: 'license_present',
+                status: 'unknown',
+                message: 'no license detected on the repository'
+              });
             }
           } catch {
-            checks.push({ name: 'license_present', status: 'unknown', message: 'could not read license metadata' });
+            checks.push({
+              name: 'license_present',
+              status: 'unknown',
+              message: 'could not read license metadata'
+            });
           }
         } else if (res.status === 404) {
           checks.push({ name: 'repo_reachable', status: 'fail', message: 'repository not found' });
         } else {
-          checks.push({ name: 'repo_reachable', status: 'unknown', message: 'could not verify repository' });
+          checks.push({
+            name: 'repo_reachable',
+            status: 'unknown',
+            message: 'could not verify repository'
+          });
         }
       } catch {
-        checks.push({ name: 'repo_reachable', status: 'unknown', message: 'could not verify repository (network)' });
+        checks.push({
+          name: 'repo_reachable',
+          status: 'unknown',
+          message: 'could not verify repository (network)'
+        });
       }
     }
   }
@@ -1082,10 +1119,7 @@ app.post('/api/packages', async (c) => {
   }
 
   if (name.length > 100 || description.length > 500 || (npmPackage && npmPackage.length > 200)) {
-    return c.json(
-      { error: 'name ≤ 100, description ≤ 500, npmPackage ≤ 200 chars' },
-      400
-    );
+    return c.json({ error: 'name ≤ 100, description ≤ 500, npmPackage ≤ 200 chars' }, 400);
   }
 
   if (category === 'mcp' && !npmPackage) {
@@ -1094,7 +1128,8 @@ app.post('/api/packages', async (c) => {
 
   // Pre-publish scan. Admins may bypass with skipScan for known false
   // positives (e.g. npm registry propagation lag on a fresh package).
-  const skipScan = (body.skipScan === true || body.skip_scan === true) &&
+  const skipScan =
+    (body.skipScan === true || body.skip_scan === true) &&
     isAdminUser(c.env.AGORA_ADMIN_USER_IDS, user.id);
   let scanChecks: PublishScanCheck[] = [];
   if (!skipScan) {
@@ -1226,10 +1261,7 @@ app.post('/api/workflows', async (c) => {
   }
 
   if (name.length > 100 || description.length > 500 || prompt.length > 50000) {
-    return c.json(
-      { error: 'name ≤ 100, description ≤ 500, prompt ≤ 50000 chars' },
-      400
-    );
+    return c.json({ error: 'name ≤ 100, description ≤ 500, prompt ≤ 50000 chars' }, 400);
   }
 
   try {
@@ -1506,9 +1538,7 @@ app.get('/api/community/threads', async (c) => {
     }
 
     const fetchSize = useRepWeight ? 200 : PAGE_SIZE + 1;
-    const { results } = await c.env.DB.prepare(
-      `${baseSql} ORDER BY ${sqlOrder} LIMIT ? OFFSET ?`
-    )
+    const { results } = await c.env.DB.prepare(`${baseSql} ORDER BY ${sqlOrder} LIMIT ? OFFSET ?`)
       .bind(board, fetchSize, useRepWeight ? 0 : offset)
       .all<DiscussionRow & { author_reputation: number | null; computed_flag_count: number }>();
 
@@ -1946,9 +1976,7 @@ app.get('/api/community/search', async (c) => {
 
   try {
     const threadBoardFilter = boardParam ? 'AND d.board = ?' : '';
-    const threadBindArgs: (string | number)[] = boardParam
-      ? [ftsQuery, boardParam]
-      : [ftsQuery];
+    const threadBindArgs: (string | number)[] = boardParam ? [ftsQuery, boardParam] : [ftsQuery];
 
     const { results: threadRows } = await c.env.DB.prepare(
       `SELECT d.id, d.board, d.title, d.content, d.author, d.score, d.flag_count, d.created_at, d.author_is_llm,
@@ -1961,7 +1989,20 @@ app.get('/api/community/search', async (c) => {
        LIMIT ?`
     )
       .bind(...threadBindArgs, limit + 1)
-      .all<Pick<DiscussionRow, 'id' | 'board' | 'title' | 'content' | 'author' | 'score' | 'flag_count' | 'created_at' | 'author_is_llm'> & { computed_flag_count: number }>();
+      .all<
+        Pick<
+          DiscussionRow,
+          | 'id'
+          | 'board'
+          | 'title'
+          | 'content'
+          | 'author'
+          | 'score'
+          | 'flag_count'
+          | 'created_at'
+          | 'author_is_llm'
+        > & { computed_flag_count: number }
+      >();
 
     const threadRowsArr = threadRows ?? [];
     const truncatedThreads = threadRowsArr.length > limit;
@@ -1999,7 +2040,19 @@ app.get('/api/community/search', async (c) => {
        LIMIT ?`
     )
       .bind(...replyBindArgs, limit + 1)
-      .all<Pick<DiscussionReplyRow, 'id' | 'discussion_id' | 'author' | 'content' | 'score' | 'flag_count' | 'created_at' | 'author_is_llm'> & { board: string; thread_title: string; computed_flag_count: number }>();
+      .all<
+        Pick<
+          DiscussionReplyRow,
+          | 'id'
+          | 'discussion_id'
+          | 'author'
+          | 'content'
+          | 'score'
+          | 'flag_count'
+          | 'created_at'
+          | 'author_is_llm'
+        > & { board: string; thread_title: string; computed_flag_count: number }
+      >();
 
     const replyRowsArr = replyRows ?? [];
     const truncatedReplies = replyRowsArr.length > limit;
@@ -2168,7 +2221,9 @@ app.get('/api/users/:username', async (c) => {
        WHERE u.username = ?`
     )
       .bind(username)
-      .first<UserRow & { package_count: number; workflow_count: number; discussion_count: number }>();
+      .first<
+        UserRow & { package_count: number; workflow_count: number; discussion_count: number }
+      >();
 
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
@@ -2349,9 +2404,7 @@ app.post('/api/admin/hide', async (c) => {
     .run();
 
   const table = targetType === 'discussion' ? 'discussions' : 'discussion_replies';
-  const updated = await c.env.DB.prepare(
-    `UPDATE ${table} SET hidden = 1 WHERE id = ?`
-  )
+  const updated = await c.env.DB.prepare(`UPDATE ${table} SET hidden = 1 WHERE id = ?`)
     .bind(targetId)
     .run();
 
