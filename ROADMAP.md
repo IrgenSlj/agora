@@ -8,6 +8,8 @@ Where `agora` is headed. For the *why* — the three-surface model, the open-mar
 
 Three pillars are live end-to-end — a curated + live **marketplace**, a ranked **news feed**, and a threaded **community** — plus a real trust layer (permission manifests, pre-install scan gate, flag/kill-switch, earned reputation), an MCP server mode, and a hybrid bash/chat shell. The next step is **reach and depth**: make `agora` a place developers passively receive value and that grows itself, and turn its informational trust layer into something closer to enforcement.
 
+**The wedge.** `agora` is the only marketplace in this space that lives *in the terminal where agentic coding happens* and is *itself consumable by an agent* (the `agora mcp` server). The website competitors can't install a capability for a running agent mid-task; `agora` can — behind its scan gate. So beyond the three content pillars, `agora` is evolving into two things they can't be: the **agent stack manager** (a cross-tool package-manager for the MCP servers / skills / workflows your agent uses daily) and the **safe capability-acquisition gateway** an autonomous agent calls when it hits a capability gap. These *amplify* the marketplace and community — they do not replace them. Discovery still happens in the marketplace; conversation still happens in the community; the stack manager is simply the daily-use loop that connects discover → install → manage → publish → discuss.
+
 ## Status: Phase 1.5 + 1.6 shipped; 0.4.3 "Destination" cut in progress
 
 The "Destination" pillars (news / community / live marketplace hubs) and the Phase 1.6 polish list landed during 2026-05. Work has now begun on the **0.4.3 "Destination"** cut, sequenced into four waves below. Per release policy we sculpt heavily and bump once per landed cut, not per PR.
@@ -26,7 +28,7 @@ The local layer: make the tool sharper and the catalog able to grow itself.
 - ✓ **Never-dead daily surface** — `agora today` and the TUI Home news column fall back to recent cached items when nothing is fresh, and show an actionable `agora news --refresh` hint when the cache is empty — never a bare "Nothing in the last 24h."
 - ◑ **Compiled standalone binary** — `bun run build:binary` (`bun build --compile`) produces `dist/agora`. The compile works today; *distribution* of the binary (code signing for arm64 macOS, notarization, Homebrew) is deferred to Wave 4.
 - ✓ **Harden the AI curator** — `src/curator/` discovers MCP servers/skills from GitHub + HuggingFace and AI-verifies each, now robust enough to run unattended: bounded concurrency (`--concurrency`), three modes (incremental / `--refresh` re-verifies items older than `--stale-days` for scheduled runs / `--force`), resumable progress via incremental cache writes, dedupe against the bundled catalog *and* the cache, per-failure-class stats with graceful degradation when `opencode` or repo metadata is unavailable, and a clear `agora curate --status` (mode + stats from the persisted run-state).
-- ☐ **Indexed + semantic catalog search** — the in-memory scan is fine at ~67 items, not at thousands. Move offline catalog search to an indexed store and add "find something that does X" intent search so a growing curated catalog stays fast and discoverable.
+- ✓ **Indexed + semantic catalog search** — replaced the linear substring scan with a no-dependency, offline **BM25 inverted index** (`src/search/catalog-index.ts`) with field weighting (name ×3, tags/id ×2, description ×1), stopword + intent-phrase stripping so "find something that does X" reduces to its content terms, and query-side dev-term synonym expansion (db→database, k8s→kubernetes, pg→postgresql…). `searchMarketplaceItems` ranks by BM25 when a query is present and stays fast as the curated catalog grows. The index is memoized alongside the item list.
 
 ### Wave 2 — Deploy the backend & schedule curation *(needs: Cloudflare account)*
 
@@ -56,6 +58,36 @@ Turn the informational trust layer toward enforcement, then ship.
 
 ---
 
+## The next era — agent stack manager, capability search & self-curation
+
+Beyond the 0.4.3 cut, four strategic threads turn `agora` from a tool you *visit* into one you *live in* — without diluting the marketplace / news / community pillars, which remain the core. Sequenced so the local, no-backend work ships first.
+
+### Thread A — Agent stack manager *(local; no backend; in progress)*
+
+A **cross-tool package-manager for your agentic dev environment** — the daily-driver hook. Think `package.json` / Brewfile, but for the MCP servers, skills, and workflows your agent uses. Built in `src/stack/`, mirroring the pluggable `src/hubs/` pattern: one `ToolAdapter` per agent tool (**opencode**, **Claude Code**, **Cursor**, **Windsurf**) normalizing each tool's MCP config into one `ConfiguredServer` shape. Nobody owns this universal config layer today.
+
+- ◑ **Phase 1 — read-only stack view** *(building now)*: the adapter layer + `agora installed` (a unified view of every configured MCP server across all detected tools, grouped by name) + `agora doctor` (health: config parses, command resolvable on `PATH`, conflicting definitions, optional `--probe` to actually start a server). `doctor` is also the Wave 4 trust item — landed early.
+- ☐ **Phase 2 — `agora.toml` + `agora sync`**: a declarative manifest of the MCP servers / skills / workflows you want; `agora sync` reconciles each tool's real config to it (writes gated behind `--write`/`--yes` like `install`). `agora export` snapshots your current stack into a manifest. Shareable stacks = "clone someone's agent setup," a reproducible-environment + viral-growth loop.
+- ☐ **Phase 3 — close the loop**: marketplace `install` writes into the manifest; `agora update` (extends `src/outdated.ts`) bumps installed servers; `agora try <id>` does an ephemeral, auto-removed install for a test drive.
+
+### Thread B — Capability search *(local; builds on the BM25 index)*
+
+Index what MCP servers actually **expose** — their declared tool/resource schemas — and search over *capabilities*, not README prose. `agora find "talk to my postgres db"` matches servers whose tools are about SQL/query/db, ranked by capability overlap. This is the natural substrate for the agent-facing `agora mcp` `search` tool: an agent describes the capability it needs and gets the server that provides it. Novel and defensible — nobody indexes the tool schemas.
+
+### Thread C — Self-curation flywheel *(needs Wave 2 backend)*
+
+Make the catalog and news self/LLM-curated with zero human labor by *composing* the engines that already exist:
+
+- **Structured-rubric LLM curation** — upgrade the curator's single genuineness verdict into independent axes (genuine / maintained / documented / safe) with self-consistency; verdicts cached keyed by commit SHA so the weekly cron is near-free (the hardened curator already stores `version=commitSha`).
+- **Composed trust score** — Bayesian combination of (a) the AI verdict, (b) mechanical quality signals (`src/hubs/quality.ts`: log-stars + recency + maintenance gate), and (c) **opt-in install-retention telemetry** — items people install *and keep* rank up; install-then-remove ranks down. Earned reputation applied to the catalog itself; the signal no website competitor can capture, because they don't sit at the install point.
+- **News self-curation** — extend the existing scorer (`recency·e^(-h/12) + engagement·log + topic`) with LLM clustering/dedup (one card per story across HN/Reddit/GH), a one-line "why it matters," and a bandit that learns topic weights from what users open.
+
+### Thread D — Reach: digest bot *(Wave 3 above)*
+
+The Discord/Telegram digest + query bot — passive distribution where agent devs already are. Tracked in Wave 3.
+
+---
+
 ## The 0.4.5 horizon (beyond the 0.4.3 cut)
 
 The far-horizon work — a long way ahead of the next milestone.
@@ -82,4 +114,4 @@ Today the manifest is informational and Wave 4 adds a diff + health check. The e
 - **Report what `agora init` misses** — open an issue with your project's manifest files.
 - **Polish what's there** — there's always a rough edge worth grinding.
 
-_Last updated: 2026-05-20. See [CHANGELOG.md](./CHANGELOG.md) for the shipped history._
+_Last updated: 2026-05-23. See [CHANGELOG.md](./CHANGELOG.md) for the shipped history._

@@ -128,13 +128,22 @@ src/cli/              command handlers, dispatch, shell, prompter, TUI
 src/cli/pages/        five full-screen TUI pages (home, marketplace,
                       community, news, settings) + shared helpers
 src/marketplace.ts    curated catalog + live hub merge + install planner
+src/search/           offline BM25 catalog-search index
+src/curator/          AI curator (GitHub/HF discovery + verify, scheduled-safe)
+src/stack/            cross-tool agent stack manager (opencode/claude/cursor/…)
 src/hubs/             GitHub + HuggingFace connectors + AI enrichment
 src/community/        backend client + types
 src/news/             scoring, cache, per-source adapters
 src/state.ts          local state, saves, auth (atomic 0o600 writes)
 backend/src/index.ts  Cloudflare Workers + D1 (Hono router)
-test/                 805 tests, 36 files
+test/                 907 tests, 38 files
 ```
+
+`agora` is, at its core, a **marketplace + community** hub for agentic coding. On
+top of that it's growing a daily-driver layer — a cross-tool **agent stack
+manager** (`agora installed` / `doctor`, then `agora.toml` + `sync`) and a
+**capability-acquisition gateway** an agent can call through `agora mcp`. See the
+[roadmap](./ROADMAP.md) for the plan.
 
 See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the why-this-shape writeup and [`ROADMAP.md`](./ROADMAP.md) for what's next.
 

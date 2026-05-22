@@ -202,6 +202,61 @@ None of this changes the thesis: the marketplace core works offline with zero AI
 trust is still the product, and the plugin stays thin. Reach, memory, and curation
 are amplifiers on a foundation that already stands on its own.
 
+## The daily-driver layer: agent stack manager & capability acquisition
+
+The marketplace, news, and community remain the core — but discovery is an
+*occasional* job, and a destination needs a *daily* one. The unlock is to own the
+layer the website competitors structurally cannot: the developer's actual agent
+configuration, and the moment an agent reaches for a new capability.
+
+**Agent stack manager.** Every agent tool — OpenCode, Claude Code, Cursor,
+Windsurf — keeps its MCP servers in a different config file and format. No one owns
+the universal layer. `agora` does, via `src/stack/`, structured like `src/hubs/`:
+one `ToolAdapter` per tool normalizes its config into a single `ConfiguredServer`
+shape. On top of that:
+
+- `agora installed` / `agora doctor` — one view of every configured MCP server
+  across all tools, and a health check (config parses, command resolvable on
+  `PATH`, conflicting definitions, optional `--probe` to actually start it).
+- `agora.toml` + `agora sync` — a declarative manifest of the servers / skills /
+  workflows you want, reconciled into each tool's real config. The Brewfile for
+  your agent stack: reproducible, shareable ("clone someone's setup"), and the
+  on-ramp from *using* the catalog to *publishing* to it.
+
+This is the daily loop that ties the pillars together: discover in the
+marketplace → `install` → `sync`/`doctor` keep it healthy → publish back →
+discuss in the community.
+
+**Capability acquisition for autonomous agents.** `agora mcp` already makes the
+marketplace queryable by an agent mid-task. The end state: an autonomous agent
+hits a capability gap → calls `agora` for a *verified* server → the scan gate
+enforces "don't install unvetted code" → `install` writes the config → the agent
+proceeds. `agora` is the **safe capability-acquisition gateway** — the policy
+checkpoint between an autonomous agent and arbitrary executable code. The trust
+layer is what makes that defensible; nobody should let an agent `npm install`
+random MCP servers unmediated.
+
+## The algorithms (fast, offline, original)
+
+`agora` stays snappy and offline-first by design, not by luck:
+
+- **BM25 capability/catalog search** (`src/search/catalog-index.ts`) — a
+  no-dependency inverted index with field weighting and query-side synonym
+  expansion replaces the linear scan, so search stays fast as the catalog grows.
+  The original extension (next): index MCP servers' *declared tool schemas* and
+  rank by capability overlap, not README keywords.
+- **SHA-keyed memoized re-curation** — the curator caches AI verdicts against
+  `version=commitSha`, so the weekly server-side cron re-verifies only what
+  changed: curation cost scales with churn, not catalog size.
+- **Composed trust score** — a Bayesian blend of the LLM genuineness verdict,
+  mechanical quality signals (`src/hubs/quality.ts`), and opt-in install-retention
+  telemetry. Earned reputation for catalog items, with no human curator.
+- **News ranking** — `recencyW·e^(-h/12) + engagementW·log(eng+1) + topicW·topicMatch`,
+  to be extended with LLM dedup/clustering and a topic-weight bandit.
+- **Offline-first, content-addressed caches** throughout (hub cache by
+  `repo@sha`, curation cache, news cache) and a `bun --compile` binary for instant
+  startup.
+
 ## Open decisions
 
 1. **Sellable unit** — skills/workflows only, or also proprietary MCP servers? This shapes both `install` and the permission manifest.
@@ -216,4 +271,5 @@ are amplifiers on a foundation that already stands on its own.
 - **Phase 3 (commerce)** — deferred behind Phase 4 trust work. `Pricing` type on `Package` is scaffolded; the paid branch is a typed no-op.
 - **Phase 4 (trust & self-regulation)** — in progress. Display + acknowledgment + earned reputation + flag/kill-switch + client/server scan shipped; declared-vs-observed permission diff and runtime sandbox enforcement remain (0.4.3 Wave 4).
 - **Phase 5 (reach)** — `agora mcp` and `agora chat` shipped in 0.4.0; Discord/Telegram bots are 0.4.3 Wave 3; public web hub and IDE surfaces are future work.
-- **0.4.3 "Destination" cut** — in progress. Wave 1 (cross-session shell memory `/recall` · `/sessions`, never-dead daily surface, `build:binary` scaffold) shipped; curator hardening, backend deploy, multi-channel bots, and trust depth follow. See [`../ROADMAP.md`](../ROADMAP.md).
+- **0.4.3 "Destination" cut** — in progress. Wave 1 is essentially complete: cross-session shell memory (`/recall` · `/sessions`), never-dead daily surface, `build:binary` scaffold, **hardened AI curator** (bounded concurrency, `--refresh`/`--stale-days` scheduled mode, resumable, per-failure stats), and **indexed BM25 catalog search** all shipped. Backend deploy, multi-channel bots, and trust depth follow. See [`../ROADMAP.md`](../ROADMAP.md).
+- **Agent stack manager** (`src/stack/`) — in progress. The cross-tool adapter layer + `agora installed` / `agora doctor` (read-only Phase 1) are being built; `agora.toml` + `agora sync` follow. The daily-driver layer on top of the marketplace. See [`../ROADMAP.md`](../ROADMAP.md).
