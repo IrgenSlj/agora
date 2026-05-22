@@ -63,9 +63,15 @@ function loadNews(ctx: PageContext, max: number): { items: ScoredNewsItem[]; isF
   const cutoff = Date.now() - DAY_MS;
   const recent = cached.filter((item) => new Date(item.publishedAt).getTime() > cutoff);
   if (recent.length > 0) {
-    return { items: rankItems(recent, DEFAULT_NEWS_CONFIG, new Date()).slice(0, max), isFallback: false };
+    return {
+      items: rankItems(recent, DEFAULT_NEWS_CONFIG, new Date()).slice(0, max),
+      isFallback: false
+    };
   }
-  return { items: rankItems(cached, DEFAULT_NEWS_CONFIG, new Date()).slice(0, max), isFallback: true };
+  return {
+    items: rankItems(cached, DEFAULT_NEWS_CONFIG, new Date()).slice(0, max),
+    isFallback: true
+  };
 }
 
 async function refreshCommunity(ctx: PageContext): Promise<void> {
@@ -102,7 +108,11 @@ interface RenderColumn {
   lines: string[];
 }
 
-function renderNewsColumn(items: ScoredNewsItem[], isFallback: boolean, style: PageContext['style']): RenderColumn {
+function renderNewsColumn(
+  items: ScoredNewsItem[],
+  isFallback: boolean,
+  style: PageContext['style']
+): RenderColumn {
   if (items.length === 0) {
     return {
       title: 'News',
@@ -228,7 +238,12 @@ export const homePage: Page = {
     const trending = getTrendingItems().slice(0, 5);
 
     const newsCol = renderNewsColumn(news, newsFallback, style);
-    const commCol = renderCommunityColumn(state.threads, state.threadsHint, state.threadsLoading, style);
+    const commCol = renderCommunityColumn(
+      state.threads,
+      state.threadsHint,
+      state.threadsLoading,
+      style
+    );
     const trendCol = renderTrendingColumn(trending, style);
 
     const headerRight = style.dim('press ') + style.accent('n c m') + style.dim(' for sections');
@@ -277,4 +292,3 @@ export const homePage: Page = {
     }
   }
 };
-

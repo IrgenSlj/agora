@@ -14,7 +14,7 @@ import {
   mapWithConcurrency,
   isStale,
   dedupeById,
-  type CuratedPackage,
+  type CuratedPackage
 } from '../src/curator/index';
 import { parsePositiveIntFlag } from '../src/cli/commands/curate';
 import { samplePackages } from '../src/data';
@@ -43,7 +43,7 @@ function makeHubItem(overrides: Partial<HubItem> = {}): HubItem {
     pushedAt: '2025-01-01T00:00:00Z',
     license: null,
     topics: ['mcp-server'],
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -62,7 +62,7 @@ function makeCuratedPackage(overrides: Partial<CuratedPackage> = {}): CuratedPac
     createdAt: '2025-01-01',
     pricing: { kind: 'free' },
     aiVerifiedAt: '2025-06-01T12:00:00.000Z',
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -100,7 +100,7 @@ describe('filterBundledDuplicates', () => {
   test('returns all items when none overlap the bundled catalog', () => {
     const candidates = [
       makeHubItem({ id: 'gh:novel/pkg-a', repository: 'https://github.com/novel/pkg-a' }),
-      makeHubItem({ id: 'gh:novel/pkg-b', repository: 'https://github.com/novel/pkg-b' }),
+      makeHubItem({ id: 'gh:novel/pkg-b', repository: 'https://github.com/novel/pkg-b' })
     ];
     const filtered = filterBundledDuplicates(candidates);
     expect(filtered).toHaveLength(2);
@@ -110,7 +110,7 @@ describe('filterBundledDuplicates', () => {
     const bundledId = samplePackages[0]!.id;
     const candidates = [
       makeHubItem({ id: bundledId }),
-      makeHubItem({ id: 'gh:novel/pkg-x', repository: 'https://github.com/novel/pkg-x' }),
+      makeHubItem({ id: 'gh:novel/pkg-x', repository: 'https://github.com/novel/pkg-x' })
     ];
     const filtered = filterBundledDuplicates(candidates);
     expect(filtered).toHaveLength(1);
@@ -129,8 +129,8 @@ describe('filterBundledDuplicates', () => {
     const candidates = [
       makeHubItem({
         id: 'gh:some/novel-id',
-        repository: bundledRepo.toUpperCase() + '/',
-      }),
+        repository: bundledRepo.toUpperCase() + '/'
+      })
     ];
     const filtered = filterBundledDuplicates(candidates);
     expect(filtered).toHaveLength(0);
@@ -141,8 +141,8 @@ describe('filterBundledDuplicates', () => {
     const candidates = [
       makeHubItem({
         id: 'gh:some/novel-id-2',
-        repository: bundledRepo + '.git',
-      }),
+        repository: bundledRepo + '.git'
+      })
     ];
     const filtered = filterBundledDuplicates(candidates);
     expect(filtered).toHaveLength(0);
@@ -179,11 +179,11 @@ describe('curationStatus', () => {
     const dir = makeTmp();
     const older = makeCuratedPackage({
       id: 'item-a',
-      aiVerifiedAt: '2025-01-01T00:00:00.000Z',
+      aiVerifiedAt: '2025-01-01T00:00:00.000Z'
     });
     const newer = makeCuratedPackage({
       id: 'item-b',
-      aiVerifiedAt: '2025-06-15T10:00:00.000Z',
+      aiVerifiedAt: '2025-06-15T10:00:00.000Z'
     });
     writeCuratedCache(dir, [older, newer]);
     const status = curationStatus(dir);
@@ -200,7 +200,7 @@ describe('readCuratedCache / writeCuratedCache — incremental resumability', ()
 
     const items = [
       makeCuratedPackage({ id: 'cached-item-1', stars: 50 }),
-      makeCuratedPackage({ id: 'cached-item-2', stars: 200 }),
+      makeCuratedPackage({ id: 'cached-item-2', stars: 200 })
     ];
     writeCuratedCache(dir, items);
 
@@ -219,7 +219,7 @@ describe('readCuratedCache / writeCuratedCache — incremental resumability', ()
     const items = [
       makeCuratedPackage({ id: 'low-stars', stars: 5 }),
       makeCuratedPackage({ id: 'high-stars', stars: 999 }),
-      makeCuratedPackage({ id: 'mid-stars', stars: 50 }),
+      makeCuratedPackage({ id: 'mid-stars', stars: 50 })
     ];
     writeCuratedCache(dir, items);
     const cached = readCuratedCache(dir);
@@ -242,7 +242,7 @@ describe('readCuratedCache / writeCuratedCache — incremental resumability', ()
     const result = await curateAll(dir, {
       force: false,
       limit: 50,
-      onProgress: (msg) => logs.push(msg),
+      onProgress: (msg) => logs.push(msg)
     });
 
     expect(result).toHaveLength(1);
@@ -332,7 +332,7 @@ describe('dedupeById', () => {
     const items = [
       { id: 'a', v: 1 },
       { id: 'b', v: 2 },
-      { id: 'a', v: 3 },
+      { id: 'a', v: 3 }
     ];
     const result = dedupeById(items);
     expect(result).toHaveLength(2);

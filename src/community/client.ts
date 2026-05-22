@@ -393,11 +393,9 @@ export async function adminLogSource(
       fallbackReason: 'API required for admin log'
     };
   }
-  const res = await fetcher(
-    opts,
-    `${opts.apiUrl}/api/admin/log?limit=${limit}`,
-    { headers: { Authorization: `Bearer ${opts.token}` } }
-  );
+  const res = await fetcher(opts, `${opts.apiUrl}/api/admin/log?limit=${limit}`, {
+    headers: { Authorization: `Bearer ${opts.token}` }
+  });
   if (res.status === 403) throw new Error('Admin access required');
   if (!res.ok) throw new Error(`Failed to fetch log: ${res.status}`);
   const data = (await res.json()) as AdminLogResult;

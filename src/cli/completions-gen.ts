@@ -1,29 +1,91 @@
 import { COMMANDS } from './commands-meta.js';
 import { readFileSync } from 'node:fs';
 
-const pkg = JSON.parse(
-  readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
-) as { version: string };
+const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
+  version: string;
+};
 const VERSION = pkg.version;
 
 const IDS = [
-  'mcp-filesystem', 'mcp-everything', 'mcp-github', 'mcp-gitlab', 'mcp-postgres',
-  'mcp-redis', 'mcp-mongodb', 'mcp-elasticsearch', 'mcp-supabase', 'mcp-openai',
-  'mcp-anthropic', 'mcp-replicate', 'mcp-huggingface', 'mcp-sequential-thinking',
-  'mcp-memory', 'mcp-context7', 'mcp-brave-search', 'mcp-tavily', 'mcp-exa',
-  'mcp-perplexity', 'mcp-firecrawl', 'mcp-google-maps', 'mcp-puppeteer',
-  'mcp-playwright', 'mcp-playwright-ea', 'mcp-browsermcp', 'mcp-linear', 'mcp-jira',
-  'mcp-asana', 'mcp-obsidian', 'mcp-confluence', 'mcp-sonarqube', 'mcp-snyk',
-  'mcp-aws', 'mcp-vercel', 'mcp-netlify', 'mcp-discord', 'mcp-email', 'mcp-slack',
-  'mcp-notion', 'mcp-gdrive', 'mcp-figma', 'mcp-magic', 'mcp-docker', 'mcp-sqlite',
-  'mcp-pinecone', 'mcp-qdrant', 'mcp-chromadb', 'mcp-neo4j', 'mcp-cloudflare',
-  'mcp-kubernetes', 'mcp-heroku', 'mcp-aws-kb', 'mcp-remote', 'mcp-datadog',
-  'mcp-grafana', 'mcp-pagerduty', 'mcp-newrelic', 'mcp-sentry', 'mcp-stripe',
-  'mcp-sequelize', 'prompt-code-review', 'prompt-api-design', 'prompt-refactor-plan',
-  'prompt-debug-session', 'prompt-test-strategy', 'prompt-migration-plan',
-  'wf-tdd-cycle', 'wf-security-audit', 'wf-api-design', 'wf-refactor-large',
-  'wf-db-migration', 'wf-code-review-arch', 'wf-doc-generator', 'wf-postmortem',
-  'wf-dependency-audit', 'wf-performance-audit', 'wf-ci-cd-review', 'wf-new-project'
+  'mcp-filesystem',
+  'mcp-everything',
+  'mcp-github',
+  'mcp-gitlab',
+  'mcp-postgres',
+  'mcp-redis',
+  'mcp-mongodb',
+  'mcp-elasticsearch',
+  'mcp-supabase',
+  'mcp-openai',
+  'mcp-anthropic',
+  'mcp-replicate',
+  'mcp-huggingface',
+  'mcp-sequential-thinking',
+  'mcp-memory',
+  'mcp-context7',
+  'mcp-brave-search',
+  'mcp-tavily',
+  'mcp-exa',
+  'mcp-perplexity',
+  'mcp-firecrawl',
+  'mcp-google-maps',
+  'mcp-puppeteer',
+  'mcp-playwright',
+  'mcp-playwright-ea',
+  'mcp-browsermcp',
+  'mcp-linear',
+  'mcp-jira',
+  'mcp-asana',
+  'mcp-obsidian',
+  'mcp-confluence',
+  'mcp-sonarqube',
+  'mcp-snyk',
+  'mcp-aws',
+  'mcp-vercel',
+  'mcp-netlify',
+  'mcp-discord',
+  'mcp-email',
+  'mcp-slack',
+  'mcp-notion',
+  'mcp-gdrive',
+  'mcp-figma',
+  'mcp-magic',
+  'mcp-docker',
+  'mcp-sqlite',
+  'mcp-pinecone',
+  'mcp-qdrant',
+  'mcp-chromadb',
+  'mcp-neo4j',
+  'mcp-cloudflare',
+  'mcp-kubernetes',
+  'mcp-heroku',
+  'mcp-aws-kb',
+  'mcp-remote',
+  'mcp-datadog',
+  'mcp-grafana',
+  'mcp-pagerduty',
+  'mcp-newrelic',
+  'mcp-sentry',
+  'mcp-stripe',
+  'mcp-sequelize',
+  'prompt-code-review',
+  'prompt-api-design',
+  'prompt-refactor-plan',
+  'prompt-debug-session',
+  'prompt-test-strategy',
+  'prompt-migration-plan',
+  'wf-tdd-cycle',
+  'wf-security-audit',
+  'wf-api-design',
+  'wf-refactor-large',
+  'wf-db-migration',
+  'wf-code-review-arch',
+  'wf-doc-generator',
+  'wf-postmortem',
+  'wf-dependency-audit',
+  'wf-performance-audit',
+  'wf-ci-cd-review',
+  'wf-new-project'
 ];
 
 const CATEGORIES = ['mcp', 'prompt', 'workflow', 'skill', 'all'];
@@ -51,7 +113,9 @@ function bash(): string {
     '  fi',
     '',
     '  case $prev in',
-    '    --category|-c) COMPREPLY=($(compgen -W "' + CATEGORIES.join(' ') + ' packages" -- "$cur")) ;;',
+    '    --category|-c) COMPREPLY=($(compgen -W "' +
+      CATEGORIES.join(' ') +
+      ' packages" -- "$cur")) ;;',
     '    --sort)       COMPREPLY=($(compgen -W "top new active" -- "$cur")) ;;',
     '    --order)      COMPREPLY=($(compgen -W "' + SORT_ORDERS.join(' ') + '" -- "$cur")) ;;',
     '    --sort-by)    COMPREPLY=($(compgen -W "' + SORT_BY.join(' ') + '" -- "$cur")) ;;',
@@ -82,12 +146,12 @@ function bash(): string {
 }
 
 function zsh(): string {
-  const cmdDefs = COMMANDS.map(
-    (c) => '  "' + c.name + ':' + c.summary + '"'
-  ).concat([
-    '  "completions:Generate shell completion scripts"',
-    '  "shell:Start the interactive Agora shell"'
-  ]).join('\n');
+  const cmdDefs = COMMANDS.map((c) => '  "' + c.name + ':' + c.summary + '"')
+    .concat([
+      '  "completions:Generate shell completion scripts"',
+      '  "shell:Start the interactive Agora shell"'
+    ])
+    .join('\n');
 
   const ids = IDS.map((id) => '"' + id + '"').join(' ');
 
@@ -103,12 +167,12 @@ function zsh(): string {
     '_ids=(' + ids + ')',
     '',
     '_arguments \\',
-    '  \'-h[Show help]\' \\',
-    '  \'--help[Show help]\' \\',
-    '  \'-v[Show version]\' \\',
-    '  \'--version[Show version]\' \\',
-    '  \'--json[Output as JSON]\' \\',
-    '  \'*:: :->subcmd\' \\',
+    "  '-h[Show help]' \\",
+    "  '--help[Show help]' \\",
+    "  '-v[Show version]' \\",
+    "  '--version[Show version]' \\",
+    "  '--json[Output as JSON]' \\",
+    "  '*:: :->subcmd' \\",
     '  && return 0',
     '',
     'case $state in',
@@ -116,19 +180,19 @@ function zsh(): string {
     '    case $words[1] in',
     '      search)',
     '        _arguments \\',
-    '          \'--category=[Category]:category:(' + CATEGORIES.join(' ') + ')\' \\',
-    '          \'--sort-by=[Sort field]:sort:(' + SORT_BY.join(' ') + ')\' \\',
-    '          \'--order=[Sort order]:order:(' + SORT_ORDERS.join(' ') + ')\' \\',
-    '          \'--limit=[Max results]:number\' \\',
-    '          \'--page=[Page number]:number\' \\',
-    '          \'--per-page=[Items per page]:number\' \\',
-    '          \'--table[Table view]\' \\',
-    '          \'--json[JSON output]\'',
+    "          '--category=[Category]:category:(" + CATEGORIES.join(' ') + ")' \\",
+    "          '--sort-by=[Sort field]:sort:(" + SORT_BY.join(' ') + ")' \\",
+    "          '--order=[Sort order]:order:(" + SORT_ORDERS.join(' ') + ")' \\",
+    "          '--limit=[Max results]:number' \\",
+    "          '--page=[Page number]:number' \\",
+    "          '--per-page=[Items per page]:number' \\",
+    "          '--table[Table view]' \\",
+    "          '--json[JSON output]'",
     '        ;;',
     '      browse|install)',
     '        _arguments \\',
-    '          \'--type=[Item type]:type:(package workflow)\' \\',
-    '          \'--json[JSON output]\' \\',
+    "          '--type=[Item type]:type:(package workflow)' \\",
+    "          '--json[JSON output]' \\",
     '          ":id:(' + ids + ')"',
     '        ;;',
     '      completions)',
@@ -137,20 +201,20 @@ function zsh(): string {
     '        ;;',
     '      init)',
     '        _arguments \\',
-    '          \'--dry-run[Preview only]\' \\',
-    '          \'--json[JSON output]\' \\',
-    '          \'--mcp[Register MCP server]\'',
+    "          '--dry-run[Preview only]' \\",
+    "          '--json[JSON output]' \\",
+    "          '--mcp[Register MCP server]'",
     '        ;;',
     '      trending)',
     '        _arguments \\',
-    '          \'--category=[Category]:category:(packages workflows all)\' \\',
-    '          \'--limit=[Max results]:number\' \\',
-    '          \'--sort-by=[Sort field]:sort:(' + SORT_BY.join(' ') + ')\' \\',
-    '          \'--order=[Sort order]:order:(' + SORT_ORDERS.join(' ') + ')\' \\',
-    '          \'--table[Table view]\' \\',
-    '          \'--json[JSON output]\'',
+    "          '--category=[Category]:category:(packages workflows all)' \\",
+    "          '--limit=[Max results]:number' \\",
+    "          '--sort-by=[Sort field]:sort:(" + SORT_BY.join(' ') + ")' \\",
+    "          '--order=[Sort order]:order:(" + SORT_ORDERS.join(' ') + ")' \\",
+    "          '--table[Table view]' \\",
+    "          '--json[JSON output]'",
     '        ;;',
-    '      *) _arguments \'*: :_files\' ;;',
+    "      *) _arguments '*: :_files' ;;",
     '    esac',
     '    ;;',
     'esac',
@@ -160,7 +224,9 @@ function zsh(): string {
 }
 
 function fish(): string {
-  const cmdNames = COMMANDS.map((c) => c.name).concat(['completions', 'shell']).join(' ');
+  const cmdNames = COMMANDS.map((c) => c.name)
+    .concat(['completions', 'shell'])
+    .join(' ');
 
   const a = [
     '# agora shell completion for fish (v' + VERSION + ')',
@@ -180,20 +246,30 @@ function fish(): string {
     'complete -c agora -s v -l version -d "Show version"',
     'complete -c agora -l json -d "JSON output"',
     '',
-    'complete -c agora -n "__fish_seen_subcommand_from search" -l category -d "Category" -xa "' + CATEGORIES.join(' ') + ' packages"',
-    'complete -c agora -n "__fish_seen_subcommand_from search" -l sort-by -d "Sort field" -xa "' + SORT_BY.join(' ') + '"',
-    'complete -c agora -n "__fish_seen_subcommand_from search" -l order -d "Sort order" -xa "' + SORT_ORDERS.join(' ') + '"',
+    'complete -c agora -n "__fish_seen_subcommand_from search" -l category -d "Category" -xa "' +
+      CATEGORIES.join(' ') +
+      ' packages"',
+    'complete -c agora -n "__fish_seen_subcommand_from search" -l sort-by -d "Sort field" -xa "' +
+      SORT_BY.join(' ') +
+      '"',
+    'complete -c agora -n "__fish_seen_subcommand_from search" -l order -d "Sort order" -xa "' +
+      SORT_ORDERS.join(' ') +
+      '"',
     'complete -c agora -n "__fish_seen_subcommand_from search" -l limit -d "Max results" -xa "5 10 20 50"',
     'complete -c agora -n "__fish_seen_subcommand_from search" -l page -d "Page number" -xa "1 2 3 4 5"',
     'complete -c agora -n "__fish_seen_subcommand_from search" -l table -d "Table view"',
-    'complete -c agora -n "__fish_seen_subcommand_from browse install save remove" -l type -d "Item type" -xa "' + TYPES.join(' ') + '"',
+    'complete -c agora -n "__fish_seen_subcommand_from browse install save remove" -l type -d "Item type" -xa "' +
+      TYPES.join(' ') +
+      '"',
     'complete -c agora -n "__fish_seen_subcommand_from browse install" -xa "(__agora_list_ids)"',
     'complete -c agora -n "__fish_seen_subcommand_from completions" -xa "bash zsh fish"',
     'complete -c agora -n "__fish_seen_subcommand_from trending" -l category -d "Category" -xa "packages workflows all"',
     'complete -c agora -n "__fish_seen_subcommand_from init" -l dry-run -d "Preview only"',
     'complete -c agora -n "__fish_seen_subcommand_from init" -l mcp -d "Register MCP server"',
     'complete -c agora -n "__fish_seen_subcommand_from community" -l sort -d "Sort order" -xa "top new active"',
-    'complete -c agora -n "__fish_seen_subcommand_from news" -l source -d "Source" -xa "' + NEWS_SOURCES.join(' ') + '"',
+    'complete -c agora -n "__fish_seen_subcommand_from news" -l source -d "Source" -xa "' +
+      NEWS_SOURCES.join(' ') +
+      '"',
     'complete -c agora -n "__fish_seen_subcommand_from config" -l config -r -d "Config path"',
     ''
   ];

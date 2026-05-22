@@ -107,4 +107,3 @@ export function pageSourceOptions(
   if (opts.requireAuth && (!apiUrl || !token)) return null;
   return { useApi: Boolean(apiUrl), apiUrl, token, fetcher: ctx.io.fetcher, timeoutMs: 10000 };
 }
-

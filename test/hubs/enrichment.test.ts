@@ -239,7 +239,8 @@ describe('enrichItem() cache hit', () => {
       const README = '# my repo\n\n```sh\nnpm i my-repo\n```\n';
       const fetcher: FetchLike = async (url) => {
         const u = url.toString();
-        if (u.includes('/commits')) return { ok: true, json: async () => [{ sha: NEW_SHA }] } as Response;
+        if (u.includes('/commits'))
+          return { ok: true, json: async () => [{ sha: NEW_SHA }] } as Response;
         if (u.includes('/readme'))
           return {
             ok: true,
@@ -270,7 +271,8 @@ describe('enrichItem() cache hit', () => {
       const README = '# repo without an install line\n';
       const fetcher: FetchLike = async (url) => {
         const u = url.toString();
-        if (u.includes('/commits')) return { ok: true, json: async () => [{ sha: 'sha-x' }] } as Response;
+        if (u.includes('/commits'))
+          return { ok: true, json: async () => [{ sha: 'sha-x' }] } as Response;
         if (u.includes('/readme'))
           return {
             ok: true,
@@ -295,12 +297,14 @@ describe('enrichHfItem()', () => {
   const LAST_MODIFIED = '2026-05-17T10:00:00.000Z';
   const README_TEXT = '# My HF Model\n\nThis model does text generation.';
 
-  function makeHfFetcher(opts: {
-    lastModified?: string;
-    readmeText?: string;
-    modelCardStatus?: number;
-    readmeEndpoint?: 'models' | 'datasets' | 'spaces';
-  } = {}): FetchLike {
+  function makeHfFetcher(
+    opts: {
+      lastModified?: string;
+      readmeText?: string;
+      modelCardStatus?: number;
+      readmeEndpoint?: 'models' | 'datasets' | 'spaces';
+    } = {}
+  ): FetchLike {
     const lm = opts.lastModified ?? LAST_MODIFIED;
     const readme = opts.readmeText ?? README_TEXT;
     const readmeEndpoint = opts.readmeEndpoint ?? 'models';
@@ -317,7 +321,8 @@ describe('enrichHfItem()', () => {
         } as Response;
       }
       if (urlStr.endsWith('/raw/main/README.md')) {
-        const isModelsPath = urlStr.includes('/datasets/') === false && urlStr.includes('/spaces/') === false;
+        const isModelsPath =
+          urlStr.includes('/datasets/') === false && urlStr.includes('/spaces/') === false;
         const isDatasetsPath = urlStr.includes('/datasets/');
         const isSpacesPath = urlStr.includes('/spaces/');
         if (
@@ -357,7 +362,10 @@ describe('enrichHfItem()', () => {
       };
 
       const fetcher = makeHfFetcher();
-      const result = await enrichHfItem('owner/mymodel', dir, { fetcher, opencode: trackingOpencode });
+      const result = await enrichHfItem('owner/mymodel', dir, {
+        fetcher,
+        opencode: trackingOpencode
+      });
 
       expect(result).not.toBeNull();
       expect(result!.repoId).toBe('hf:owner/mymodel');
@@ -391,7 +399,10 @@ describe('enrichHfItem()', () => {
     const dir = makeTmpDir();
     try {
       const fetcher = makeHfFetcher({ readmeEndpoint: 'datasets' });
-      const result = await enrichHfItem('owner/mydataset', dir, { fetcher, opencode: fakeOpencode });
+      const result = await enrichHfItem('owner/mydataset', dir, {
+        fetcher,
+        opencode: fakeOpencode
+      });
 
       expect(result).not.toBeNull();
       expect(result!.repoId).toBe('hf:owner/mydataset');

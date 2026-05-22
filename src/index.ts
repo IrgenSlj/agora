@@ -373,14 +373,21 @@ Or run \`agora install ${item.id} --write\` in your terminal to do both automati
           fix: tool.schema
             .boolean()
             .optional()
-            .describe('Auto-heal common issues (missing $schema, duplicate plugins, empty MCP entries)'),
+            .describe(
+              'Auto-heal common issues (missing $schema, duplicate plugins, empty MCP entries)'
+            ),
           configPath: tool.schema
             .string()
             .optional()
             .describe('Explicit path to opencode.json (auto-detected if not set)')
         },
         async execute(args) {
-          const { detectOpenCodeConfigPath, doctorOpenCodeConfig, loadOpenCodeConfig, writeOpenCodeConfig } = await import('./config-files.js');
+          const {
+            detectOpenCodeConfigPath,
+            doctorOpenCodeConfig,
+            loadOpenCodeConfig,
+            writeOpenCodeConfig
+          } = await import('./config-files.js');
           const configPath = detectOpenCodeConfigPath({
             explicitPath: args.configPath || process.env.OPENCODE_CONFIG,
             cwd: process.cwd(),
@@ -440,7 +447,9 @@ Or run \`agora install ${item.id} --write\` in your terminal to do both automati
             args.source ? `--source ${args.source}` : '',
             args.limit ? `--limit ${args.limit}` : '',
             args.refresh ? '--refresh' : ''
-          ].filter(Boolean).join(' ');
+          ]
+            .filter(Boolean)
+            .join(' ');
           try {
             const out = execSync(`agora news ${agoraFlags}`, { encoding: 'utf8', timeout: 30000 });
             return out || 'No news found.';

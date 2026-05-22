@@ -717,14 +717,18 @@
     bindCardActions(root);
     root.querySelectorAll('[data-copy-package]').forEach((button) => {
       button.addEventListener('click', () => {
-        const item = livePackages().find((candidate) => candidate.id === button.dataset.copyPackage);
+        const item = livePackages().find(
+          (candidate) => candidate.id === button.dataset.copyPackage
+        );
         copyText(JSON.stringify(generateConfig([item]), null, 2), 'Package config copied');
       });
     });
 
     root.querySelectorAll('[data-copy-workflow]').forEach((button) => {
       button.addEventListener('click', () => {
-        const item = liveWorkflows().find((candidate) => candidate.id === button.dataset.copyWorkflow);
+        const item = liveWorkflows().find(
+          (candidate) => candidate.id === button.dataset.copyWorkflow
+        );
         copyText(item.prompt, 'Workflow prompt copied');
       });
     });
@@ -756,7 +760,10 @@
   }
 
   function findInstallable(id) {
-    return livePackages().find((item) => item.id === id) || liveWorkflows().find((item) => item.id === id);
+    return (
+      livePackages().find((item) => item.id === id) ||
+      liveWorkflows().find((item) => item.id === id)
+    );
   }
 
   function generateConfig(items) {

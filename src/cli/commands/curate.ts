@@ -10,7 +10,7 @@ import { clearMarketplaceItemsCache, getCuratedSource } from '../../marketplace.
  */
 export function parsePositiveIntFlag(
   value: string | boolean | undefined,
-  fallback: number,
+  fallback: number
 ): number {
   if (value === undefined || value === true || value === false) return fallback;
   const n = Number(value);
@@ -20,7 +20,7 @@ export function parsePositiveIntFlag(
 export async function commandCurate(
   parsed: ParsedArgs,
   io: CliIo,
-  _style: Styler,
+  _style: Styler
 ): Promise<number> {
   const dataDir = detectDataDir(parsed, io);
 
@@ -36,7 +36,7 @@ export async function commandCurate(
       const s = status.lastRunStats;
       writeLine(
         io.stdout,
-        `Last stats: verified=${s.verified} reused=${s.reused} rejected=${s.rejected} fetchFailed=${s.fetchFailed} aiFailed=${s.aiFailed}`,
+        `Last stats: verified=${s.verified} reused=${s.reused} rejected=${s.rejected} fetchFailed=${s.fetchFailed} aiFailed=${s.aiFailed}`
       );
     }
     if (parsed.flags.json) {
@@ -67,7 +67,7 @@ export async function commandCurate(
     staleDays,
     limit,
     concurrency,
-    onProgress: (msg) => writeLine(io.stdout, msg),
+    onProgress: (msg) => writeLine(io.stdout, msg)
   });
 
   clearMarketplaceItemsCache();
@@ -76,7 +76,10 @@ export async function commandCurate(
   writeLine(io.stdout, `Curation source now: ${after}`);
 
   if (parsed.flags.json) {
-    writeLine(io.stdout, JSON.stringify({ count: results.length, source: after, items: results }, null, 2));
+    writeLine(
+      io.stdout,
+      JSON.stringify({ count: results.length, source: after, items: results }, null, 2)
+    );
   }
 
   return 0;

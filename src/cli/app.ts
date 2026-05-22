@@ -145,11 +145,23 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       history: operations.commandHistory,
       config: operations.commandConfig,
       show: (p, io2, style2) =>
-        operations.commandConfig({ ...p, args: ['show', ...p.args], command: 'config' }, io2, style2),
+        operations.commandConfig(
+          { ...p, args: ['show', ...p.args], command: 'config' },
+          io2,
+          style2
+        ),
       edit: (p, io2, style2) =>
-        operations.commandConfig({ ...p, args: ['edit', ...p.args], command: 'config' }, io2, style2),
+        operations.commandConfig(
+          { ...p, args: ['edit', ...p.args], command: 'config' },
+          io2,
+          style2
+        ),
       diff: (p, io2, style2) =>
-        operations.commandConfig({ ...p, args: ['diff', ...p.args], command: 'config' }, io2, style2),
+        operations.commandConfig(
+          { ...p, args: ['diff', ...p.args], command: 'config' },
+          io2,
+          style2
+        ),
       export: exportModule.commandExport,
       watch: watchModule.commandWatch,
       notify: notifyModule.commandNotify,

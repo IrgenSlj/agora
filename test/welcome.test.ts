@@ -112,7 +112,16 @@ describe('agora welcome', () => {
       }
     };
     writeFileSync(join(dir, 'state.json'), JSON.stringify(state), 'utf8');
-    const prefs = { username: 'alice', theme: 'dark', verbosity: 'medium', email: '', bio: '', defaultNewsSource: 'all', defaultNewsCategory: 'all', lastTab: 0 };
+    const prefs = {
+      username: 'alice',
+      theme: 'dark',
+      verbosity: 'medium',
+      email: '',
+      bio: '',
+      defaultNewsSource: 'all',
+      defaultNewsCategory: 'all',
+      lastTab: 0
+    };
     writeFileSync(join(dir, 'preferences.json'), JSON.stringify(prefs), 'utf8');
 
     const { io, stdout } = createIo(dir);
@@ -142,7 +151,16 @@ describe('agora welcome', () => {
       }
     };
     writeFileSync(join(dir, 'state.json'), JSON.stringify(state), 'utf8');
-    const prefs = { username: 'bob', theme: 'dark', verbosity: 'medium', email: '', bio: '', defaultNewsSource: 'all', defaultNewsCategory: 'all', lastTab: 0 };
+    const prefs = {
+      username: 'bob',
+      theme: 'dark',
+      verbosity: 'medium',
+      email: '',
+      bio: '',
+      defaultNewsSource: 'all',
+      defaultNewsCategory: 'all',
+      lastTab: 0
+    };
     writeFileSync(join(dir, 'preferences.json'), JSON.stringify(prefs), 'utf8');
 
     const { io, stdout } = createIo(dir);

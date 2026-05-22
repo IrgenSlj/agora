@@ -1,4 +1,9 @@
-import { getMarketplaceItems, getTrendingTags, similarItems, type MarketplaceItem } from '../../marketplace.js';
+import {
+  getMarketplaceItems,
+  getTrendingTags,
+  similarItems,
+  type MarketplaceItem
+} from '../../marketplace.js';
 import { formatNumber } from '../../format.js';
 import { appendHistory } from '../../history.js';
 import {

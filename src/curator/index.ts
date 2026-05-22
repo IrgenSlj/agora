@@ -69,7 +69,11 @@ export function getCuratedItems(dataDir: string): CuratedPackage[] {
  * lower-cases, strips trailing slashes and a trailing ".git".
  */
 export function normaliseRepo(url: string): string {
-  return url.trim().toLowerCase().replace(/\/+$/, '').replace(/\.git$/, '');
+  return url
+    .trim()
+    .toLowerCase()
+    .replace(/\/+$/, '')
+    .replace(/\.git$/, '');
 }
 
 /**
@@ -123,7 +127,7 @@ export function isStale(aiVerifiedAt: string, staleDays: number, now?: Date): bo
 export async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
-  fn: (item: T, index: number) => Promise<R>,
+  fn: (item: T, index: number) => Promise<R>
 ): Promise<R[]> {
   const results: R[] = new Array(items.length);
   let nextIndex = 0;
@@ -170,17 +174,18 @@ interface RunStats {
 
 export function curationStatus(dataDir: string): CurationStatus {
   const cached = readCuratedCache(dataDir);
-  const base: CurationStatus = cached.length === 0
-    ? { count: samplePackages.length, lastRunAt: null, source: 'bundled' }
-    : (() => {
-        const dates = cached
-          .map((p) => p.aiVerifiedAt)
-          .filter(Boolean)
-          .sort()
-          .reverse();
-        const lastRunAt = dates[0] ?? null;
-        return { count: cached.length, lastRunAt, source: 'ai' as const };
-      })();
+  const base: CurationStatus =
+    cached.length === 0
+      ? { count: samplePackages.length, lastRunAt: null, source: 'bundled' }
+      : (() => {
+          const dates = cached
+            .map((p) => p.aiVerifiedAt)
+            .filter(Boolean)
+            .sort()
+            .reverse();
+          const lastRunAt = dates[0] ?? null;
+          return { count: cached.length, lastRunAt, source: 'ai' as const };
+        })();
 
   const statePath = curationStatePath(dataDir);
   if (existsSync(statePath)) {
@@ -226,7 +231,7 @@ async function callOpencodeModel(prompt: string, retries = MAX_RETRIES): Promise
     const result = await new Promise<string | null>((resolve) => {
       const child = spawn('opencode', ['run', '--format', 'json', '--model', modelArg, prompt], {
         stdio: ['ignore', 'pipe', 'pipe'],
-        shell: false,
+        shell: false
       });
       let response = '';
       const timer = setTimeout(() => {
@@ -261,7 +266,8 @@ async function callOpencodeModel(prompt: string, retries = MAX_RETRIES): Promise
 
 function buildVerifyPrompt(name: string, readme: string): string {
   const maxChars = 10000;
-  const trimmed = readme.length > maxChars ? readme.slice(0, maxChars) + '\n...(truncated)' : readme;
+  const trimmed =
+    readme.length > maxChars ? readme.slice(0, maxChars) + '\n...(truncated)' : readme;
   return `<system>
 You are analyzing an open-source repository README. Determine if this is a genuine MCP server, AI prompt library, workflow template, or OpenCode skill.
 
@@ -307,17 +313,14 @@ function parseVerifyResponse(text: string): VerifyResult | null {
       description: parsed.description || '',
       permissions: parsed.permissions || {},
       installHint: parsed.installHint || null,
-      tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : [],
+      tags: Array.isArray(parsed.tags) ? parsed.tags.slice(0, 5) : []
     };
   } catch {
     return null;
   }
 }
 
-async function verifyWithAi(
-  name: string,
-  readme: string,
-): Promise<VerifyResult | null> {
+async function verifyWithAi(name: string, readme: string): Promise<VerifyResult | null> {
   const prompt = buildVerifyPrompt(name, readme);
   const response = await callOpencodeModel(prompt);
   if (!response) return null;
@@ -370,7 +373,7 @@ async function processCandidate(hubItem: HubItem): Promise<CandidateOutcome> {
     pricing: { kind: 'free' },
     permissions: Object.keys(result.permissions).length > 0 ? result.permissions : undefined,
     installHint: result.installHint ?? undefined,
-    aiVerifiedAt: new Date().toISOString(),
+    aiVerifiedAt: new Date().toISOString()
   };
 
   return { kind: 'verified', pkg: published };
@@ -388,7 +391,7 @@ export interface CurateAllOptions {
 
 export async function curateAll(
   dataDir: string,
-  opts: CurateAllOptions = {},
+  opts: CurateAllOptions = {}
 ): Promise<CuratedPackage[]> {
   const log = opts.onProgress || ((msg: string) => console.log(msg));
   const limit = opts.limit || MAX_AI_ITEMS;
@@ -471,7 +474,7 @@ export async function curateAll(
     verified: 0,
     rejected: 0,
     fetchFailed: 0,
-    aiFailed: 0,
+    aiFailed: 0
   };
 
   // Shared completion counter for periodic cache writes.
@@ -531,14 +534,16 @@ export async function curateAll(
   const finalItems = dedupeById([...untouchedCached, ...reusedItems, ...verifiedResults]);
   writeCuratedCache(dataDir, finalItems);
 
-  log(`\nDone. ${stats.verified} new items verified, ${stats.reused} reused, ${stats.rejected} rejected, ${stats.fetchFailed} fetch-failed, ${stats.aiFailed} ai-failed`);
+  log(
+    `\nDone. ${stats.verified} new items verified, ${stats.reused} reused, ${stats.rejected} rejected, ${stats.fetchFailed} fetch-failed, ${stats.aiFailed} ai-failed`
+  );
   log(`Total in cache: ${finalItems.length} items`);
 
   // Persist run-state for --status
   const state: CurationState = {
     lastRunAt: new Date().toISOString(),
     mode,
-    stats,
+    stats
   };
   atomicWriteFile(curationStatePath(dataDir), JSON.stringify(state, null, 2));
 
@@ -546,10 +551,7 @@ export async function curateAll(
 }
 
 export async function discoverCandidates(): Promise<HubItem[]> {
-  const [ghItems, hfItems] = await Promise.all([
-    searchGithub(),
-    searchHuggingFace(),
-  ]);
+  const [ghItems, hfItems] = await Promise.all([searchGithub(), searchHuggingFace()]);
 
   const seen = new Set<string>();
   const items: HubItem[] = [];

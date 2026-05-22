@@ -5,10 +5,7 @@ import { join } from 'node:path';
 import { runCli } from '../src/cli/app';
 import type { NewsItem } from '../src/news/types';
 
-function createIo(
-  cwd = process.cwd(),
-  options: { env?: Record<string, string | undefined> } = {}
-) {
+function createIo(cwd = process.cwd(), options: { env?: Record<string, string | undefined> } = {}) {
   const stdout: string[] = [];
   const stderr: string[] = [];
   return {
@@ -71,7 +68,10 @@ describe('agora today', () => {
     const { io, stdout } = createIo(temp, { env: { AGORA_API_URL: '', AGORA_TOKEN: '' } });
 
     try {
-      const code = await runCli(['today', '--section', 'news', '--json', '--data-dir', dataDir], io);
+      const code = await runCli(
+        ['today', '--section', 'news', '--json', '--data-dir', dataDir],
+        io
+      );
       const payload = JSON.parse(stdout.join(''));
 
       expect(code).toBe(0);
@@ -124,7 +124,9 @@ describe('agora today', () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-today-'));
     const dataDir = join(temp, 'data');
     const oldDate = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
-    writeNewsCache(dataDir, [makeNewsItem({ publishedAt: oldDate, fetchedAt: oldDate, title: 'Old cached item' })]);
+    writeNewsCache(dataDir, [
+      makeNewsItem({ publishedAt: oldDate, fetchedAt: oldDate, title: 'Old cached item' })
+    ]);
     const { io, stdout } = createIo(temp, { env: { AGORA_API_URL: '', AGORA_TOKEN: '' } });
 
     try {

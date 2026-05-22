@@ -13,10 +13,7 @@ function buildSteps(signedIn: boolean, username: string): WelcomeStep[] {
   const signInStep: WelcomeStep = signedIn
     ? {
         title: `Signed in as ${username}`,
-        commands: [
-          `agora profile ${username}`,
-          'agora bookmarks'
-        ],
+        commands: [`agora profile ${username}`, 'agora bookmarks'],
         effect: 'view your profile and saved items'
       }
     : {
@@ -29,45 +26,27 @@ function buildSteps(signedIn: boolean, username: string): WelcomeStep[] {
     signInStep,
     {
       title: 'Browse the marketplace',
-      commands: [
-        'agora marketplace',
-        'agora search <query>',
-        'agora today'
-      ],
+      commands: ['agora marketplace', 'agora search <query>', 'agora today'],
       effect: 'discover MCP servers, agents, and workflow templates'
     },
     {
       title: 'Read the news',
-      commands: [
-        'agora news',
-        'agora news --source hn --limit 10'
-      ],
+      commands: ['agora news', 'agora news --source hn --limit 10'],
       effect: 'ranked feed from HN, Reddit, GitHub, and arXiv'
     },
     {
       title: 'Join the community',
-      commands: [
-        'agora community',
-        'agora discussions',
-        'agora thread <id>'
-      ],
+      commands: ['agora community', 'agora discussions', 'agora thread <id>'],
       effect: 'browse boards, read threads, and post replies'
     },
     {
       title: 'Set up shell completions',
-      commands: [
-        'agora completions bash',
-        'agora completions zsh',
-        'agora completions fish'
-      ],
+      commands: ['agora completions bash', 'agora completions zsh', 'agora completions fish'],
       effect: 'tab-complete commands, flags, and marketplace IDs'
     },
     {
       title: 'Start an MCP project of your own',
-      commands: [
-        'agora init --template node-mcp',
-        'agora init --template python-mcp'
-      ],
+      commands: ['agora init --template node-mcp', 'agora init --template python-mcp'],
       effect: 'scaffold a complete MCP server project in the current directory'
     }
   ];

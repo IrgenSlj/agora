@@ -5,11 +5,7 @@ import type { CommandHandler } from './types.js';
 
 function openUrl(url: string): void {
   const cmd =
-    process.platform === 'darwin'
-      ? 'open'
-      : process.platform === 'win32'
-        ? 'start'
-        : 'xdg-open';
+    process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
   const args = process.platform === 'win32' ? ['""', url] : [url];
   spawn(cmd, args, { detached: true, stdio: 'ignore' }).unref();
 }

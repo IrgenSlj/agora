@@ -299,7 +299,8 @@ describe('agora export', () => {
     const payload = JSON.parse(stdout.join(''));
     expect(payload.count).toBeGreaterThan(0);
     for (const item of payload.items) {
-      const matches = item.id.toLowerCase().includes('postgres') || item.name.toLowerCase().includes('postgres');
+      const matches =
+        item.id.toLowerCase().includes('postgres') || item.name.toLowerCase().includes('postgres');
       expect(matches).toBe(true);
     }
   });
@@ -355,7 +356,11 @@ describe('agora config show', () => {
   test('config show reads an existing config', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-config-show-'));
     const configPath = join(dir, 'opencode.json');
-    writeFileSync(configPath, JSON.stringify({ $schema: 'https://opencode.ai/config.json', plugin: ['test'] }), 'utf8');
+    writeFileSync(
+      configPath,
+      JSON.stringify({ $schema: 'https://opencode.ai/config.json', plugin: ['test'] }),
+      'utf8'
+    );
     const { io, stdout } = createIo(dir);
     try {
       const code = await runCli(['config', 'show'], io);
@@ -395,7 +400,11 @@ describe('agora config doctor', () => {
   test('config doctor --fix on valid config does not crash', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-doctor-fix-'));
     const configPath = join(dir, 'opencode.json');
-    writeFileSync(configPath, JSON.stringify({ $schema: 'https://opencode.ai/config.json', plugin: ['test'] }), 'utf8');
+    writeFileSync(
+      configPath,
+      JSON.stringify({ $schema: 'https://opencode.ai/config.json', plugin: ['test'] }),
+      'utf8'
+    );
     const { io, stdout } = createIo(dir);
     try {
       const code = await runCli(['config', 'doctor', '--fix'], io);
@@ -424,7 +433,14 @@ describe('agora config doctor', () => {
   test('config doctor --fix deduplicates plugins', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-doctor-dedupe-'));
     const configPath = join(dir, 'opencode.json');
-    writeFileSync(configPath, JSON.stringify({ plugin: ['a', 'b', 'a', 'c', 'b'], $schema: 'https://opencode.ai/config.json' }), 'utf8');
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        plugin: ['a', 'b', 'a', 'c', 'b'],
+        $schema: 'https://opencode.ai/config.json'
+      }),
+      'utf8'
+    );
     const { io, stdout } = createIo(dir);
     try {
       const code = await runCli(['config', 'doctor', '--fix'], io);
@@ -441,10 +457,17 @@ describe('agora config doctor', () => {
   test('config doctor --fix removes empty MCP entries', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-doctor-mcp-'));
     const configPath = join(dir, 'opencode.json');
-    writeFileSync(configPath, JSON.stringify({
-      $schema: 'https://opencode.ai/config.json',
-      mcp: { valid: { type: 'local', command: ['node', 'ok.js'] }, invalid: { type: 'local', command: [] } }
-    }), 'utf8');
+    writeFileSync(
+      configPath,
+      JSON.stringify({
+        $schema: 'https://opencode.ai/config.json',
+        mcp: {
+          valid: { type: 'local', command: ['node', 'ok.js'] },
+          invalid: { type: 'local', command: [] }
+        }
+      }),
+      'utf8'
+    );
     const { io, stdout } = createIo(dir);
     try {
       const code = await runCli(['config', 'doctor', '--fix'], io);
@@ -474,8 +497,22 @@ describe('agora config diff', () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-diff-'));
     const path1 = join(dir, 'c1.json');
     const path2 = join(dir, 'c2.json');
-    writeFileSync(path1, JSON.stringify({ plugin: ['a'], mcp: { s1: { type: 'local', command: ['node'] } } }), 'utf8');
-    writeFileSync(path2, JSON.stringify({ plugin: ['a', 'b'], mcp: { s1: { type: 'local', command: ['node'] }, s2: { type: 'local', command: ['python'] } } }), 'utf8');
+    writeFileSync(
+      path1,
+      JSON.stringify({ plugin: ['a'], mcp: { s1: { type: 'local', command: ['node'] } } }),
+      'utf8'
+    );
+    writeFileSync(
+      path2,
+      JSON.stringify({
+        plugin: ['a', 'b'],
+        mcp: {
+          s1: { type: 'local', command: ['node'] },
+          s2: { type: 'local', command: ['python'] }
+        }
+      }),
+      'utf8'
+    );
     const { io, stdout } = createIo(dir);
     try {
       const code = await runCli(['config', 'diff', path1, path2], io);

@@ -151,9 +151,7 @@ describe('buildIndex and searchIndex', () => {
   });
 
   test('nonsense query returns empty array', () => {
-    const items = [
-      makeItem({ id: 'item-a', name: 'GitHub Tool', description: 'version control' })
-    ];
+    const items = [makeItem({ id: 'item-a', name: 'GitHub Tool', description: 'version control' })];
     const index = buildIndex(items);
     const results = searchIndex(index, 'zzz-nonexistent-xyzzy-impossible');
     expect(results).toEqual([]);
@@ -174,8 +172,18 @@ describe('buildIndex and searchIndex', () => {
 
   test('basic match returns the matching item', () => {
     const items = [
-      makeItem({ id: 'postgres-mcp', name: 'PostgreSQL MCP', description: 'SQL database access', tags: ['database', 'sql'] }),
-      makeItem({ id: 'filesystem-mcp', name: 'Filesystem MCP', description: 'File operations', tags: ['files'] })
+      makeItem({
+        id: 'postgres-mcp',
+        name: 'PostgreSQL MCP',
+        description: 'SQL database access',
+        tags: ['database', 'sql']
+      }),
+      makeItem({
+        id: 'filesystem-mcp',
+        name: 'Filesystem MCP',
+        description: 'File operations',
+        tags: ['files']
+      })
     ];
     const index = buildIndex(items);
     const results = searchIndex(index, 'postgresql');
@@ -211,7 +219,12 @@ describe('buildIndex and searchIndex', () => {
   test('tags field match (×2) beats description-only (×1) for same term', () => {
     const items = [
       makeItem({ id: 'item-desc', name: 'Tool A', description: 'postgresql support' }),
-      makeItem({ id: 'item-tags', name: 'Tool B', description: 'database query', tags: ['postgresql'] })
+      makeItem({
+        id: 'item-tags',
+        name: 'Tool B',
+        description: 'database query',
+        tags: ['postgresql']
+      })
     ];
     const index = buildIndex(items);
     const results = searchIndex(index, 'postgresql');
@@ -221,8 +234,18 @@ describe('buildIndex and searchIndex', () => {
 
   test('BM25 monotonicity: item with term in name AND tags outscores name-only match', () => {
     const items = [
-      makeItem({ id: 'item-name-only', name: 'postgresql tool', description: 'generic stuff', tags: [] }),
-      makeItem({ id: 'item-name-and-tags', name: 'postgresql connector', description: 'fast', tags: ['postgresql'] })
+      makeItem({
+        id: 'item-name-only',
+        name: 'postgresql tool',
+        description: 'generic stuff',
+        tags: []
+      }),
+      makeItem({
+        id: 'item-name-and-tags',
+        name: 'postgresql connector',
+        description: 'fast',
+        tags: ['postgresql']
+      })
     ];
     const index = buildIndex(items);
     const results = searchIndex(index, 'postgresql');
@@ -247,8 +270,18 @@ describe('buildIndex and searchIndex', () => {
 
   test('synonym expansion: "db" matches item with "database" in description', () => {
     const items = [
-      makeItem({ id: 'db-item', name: 'Data connector', description: 'database integration tool', tags: ['database'] }),
-      makeItem({ id: 'other', name: 'File manager', description: 'file system operations', tags: ['files'] })
+      makeItem({
+        id: 'db-item',
+        name: 'Data connector',
+        description: 'database integration tool',
+        tags: ['database']
+      }),
+      makeItem({
+        id: 'other',
+        name: 'File manager',
+        description: 'file system operations',
+        tags: ['files']
+      })
     ];
     const index = buildIndex(items);
     const results = searchIndex(index, 'db');
@@ -259,8 +292,18 @@ describe('buildIndex and searchIndex', () => {
 
   test('synonym expansion: "k8s" matches item with "kubernetes" in name', () => {
     const items = [
-      makeItem({ id: 'k8s-item', name: 'kubernetes orchestrator', description: 'cluster management', tags: ['kubernetes'] }),
-      makeItem({ id: 'other', name: 'file manager', description: 'file operations', tags: ['files'] })
+      makeItem({
+        id: 'k8s-item',
+        name: 'kubernetes orchestrator',
+        description: 'cluster management',
+        tags: ['kubernetes']
+      }),
+      makeItem({
+        id: 'other',
+        name: 'file manager',
+        description: 'file operations',
+        tags: ['files']
+      })
     ];
     const index = buildIndex(items);
     const results = searchIndex(index, 'k8s');
@@ -270,7 +313,12 @@ describe('buildIndex and searchIndex', () => {
 
   test('results are sorted by score descending', () => {
     const items = [
-      makeItem({ id: 'strong', name: 'postgresql database', description: 'postgresql access', tags: ['postgresql', 'database'] }),
+      makeItem({
+        id: 'strong',
+        name: 'postgresql database',
+        description: 'postgresql access',
+        tags: ['postgresql', 'database']
+      }),
       makeItem({ id: 'weak', name: 'basic tool', description: 'postgresql mentions once' })
     ];
     const index = buildIndex(items);
@@ -296,9 +344,17 @@ describe('buildIndex and searchIndex', () => {
 
   test('multi-token query matches items containing any of the tokens', () => {
     const items = [
-      makeItem({ id: 'github-item', name: 'GitHub connector', description: 'pull requests and issues' }),
+      makeItem({
+        id: 'github-item',
+        name: 'GitHub connector',
+        description: 'pull requests and issues'
+      }),
       makeItem({ id: 'fs-item', name: 'Filesystem tool', description: 'directory operations' }),
-      makeItem({ id: 'both', name: 'GitHub filesystem bridge', description: 'syncs github to filesystem' })
+      makeItem({
+        id: 'both',
+        name: 'GitHub filesystem bridge',
+        description: 'syncs github to filesystem'
+      })
     ];
     const index = buildIndex(items);
     const results = searchIndex(index, 'github filesystem');
@@ -312,7 +368,11 @@ describe('buildIndex and searchIndex', () => {
 
   test('field weighting: id field (×2) beats description-only (×1)', () => {
     const items = [
-      makeItem({ id: 'description-only', name: 'Tool A', description: 'postgresql connector for databases' }),
+      makeItem({
+        id: 'description-only',
+        name: 'Tool A',
+        description: 'postgresql connector for databases'
+      }),
       makeItem({ id: 'postgresql-server', name: 'Server', description: 'generic tool' })
     ];
     const index = buildIndex(items);

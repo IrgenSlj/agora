@@ -344,13 +344,15 @@ describe('searchTranscripts', () => {
 
       // Write session meta so cwd can be resolved
       writeSessionMeta(dir, cwdA, {
-        sessionId: null, cwd: cwdA,
+        sessionId: null,
+        cwd: cwdA,
         createdAt: '2024-01-01T10:00:00.000Z',
         lastUsedAt: '2024-01-01T10:01:00.000Z',
         turnCount: 2
       });
       writeSessionMeta(dir, cwdB, {
-        sessionId: null, cwd: cwdB,
+        sessionId: null,
+        cwd: cwdB,
         createdAt: '2024-01-02T09:00:00.000Z',
         lastUsedAt: '2024-01-02T09:00:00.000Z',
         turnCount: 1
@@ -375,7 +377,8 @@ describe('searchTranscripts', () => {
         input: 'Tell me about OPENCODE'
       });
       writeSessionMeta(dir, cwd, {
-        sessionId: null, cwd,
+        sessionId: null,
+        cwd,
         createdAt: '2024-01-01T10:00:00.000Z',
         lastUsedAt: '2024-01-01T10:00:00.000Z',
         turnCount: 1
@@ -423,7 +426,8 @@ describe('searchTranscripts', () => {
         output: ''
       });
       writeSessionMeta(dir, cwd, {
-        sessionId: null, cwd,
+        sessionId: null,
+        cwd,
         createdAt: '2024-01-01T08:00:00.000Z',
         lastUsedAt: '2024-01-01T09:00:00.000Z',
         turnCount: 2

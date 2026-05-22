@@ -34,8 +34,14 @@ describe('voteGlyph', () => {
   test('upvote uses accent style', () => {
     const calls: string[] = [];
     const trackStyle = {
-      accent: (s: string) => { calls.push('accent:' + s); return s; },
-      dim: (s: string) => { calls.push('dim:' + s); return s; }
+      accent: (s: string) => {
+        calls.push('accent:' + s);
+        return s;
+      },
+      dim: (s: string) => {
+        calls.push('dim:' + s);
+        return s;
+      }
     };
     voteGlyph(1, 7, trackStyle);
     expect(calls.some((c) => c.startsWith('accent:▲'))).toBe(true);
@@ -44,8 +50,14 @@ describe('voteGlyph', () => {
   test('no vote uses dim style for arrow', () => {
     const calls: string[] = [];
     const trackStyle = {
-      accent: (s: string) => { calls.push('accent:' + s); return s; },
-      dim: (s: string) => { calls.push('dim:' + s); return s; }
+      accent: (s: string) => {
+        calls.push('accent:' + s);
+        return s;
+      },
+      dim: (s: string) => {
+        calls.push('dim:' + s);
+        return s;
+      }
     };
     voteGlyph(0, 7, trackStyle);
     expect(calls.some((c) => c.startsWith('dim:↑'))).toBe(true);
