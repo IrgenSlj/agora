@@ -991,6 +991,36 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'freeze',
+    group: 'Stack',
+    summary: 'Snapshot your MCP stack into an agora.toml manifest',
+    usage: 'agora freeze [--tool <id>] [--write] [--out <path>] [--force] [--json]',
+    details:
+      'Reads all configured MCP servers across supported agent tools and emits an agora.toml ' +
+      'stack manifest. Without --write the serialized TOML is printed to stdout (safe preview). ' +
+      'With --write the manifest is written to agora.toml in the current directory (or --out). ' +
+      'Refuses to overwrite an existing file unless --force is passed. ' +
+      'When a server name appears in multiple tools the first occurrence wins and a warning is emitted.',
+    flags: [
+      {
+        flag: '--tool',
+        description: 'Filter to a single tool: opencode, claude-code, cursor, or windsurf'
+      },
+      { flag: '--write', description: 'Write the manifest to disk (default: print to stdout)' },
+      { flag: '--out', description: 'Override the output path (default: agora.toml in cwd)' },
+      { flag: '--force', description: 'Overwrite an existing agora.toml without prompting' },
+      { flag: '--json', description: 'Output the manifest as JSON instead of TOML' }
+    ],
+    examples: [
+      'agora freeze',
+      'agora freeze --write',
+      'agora freeze --write --force',
+      'agora freeze --tool opencode',
+      'agora freeze --out ~/my-stack.toml --write',
+      'agora freeze --json'
+    ]
+  },
+  {
     name: 'notify',
     group: 'Setup',
     summary: 'Send a desktop notification via macOS, Linux, or Windows',
