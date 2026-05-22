@@ -11,8 +11,12 @@ import {
   curationStatus,
   readCuratedCache,
   writeCuratedCache,
+  mapWithConcurrency,
+  isStale,
+  dedupeById,
   type CuratedPackage,
 } from '../src/curator/index';
+import { parsePositiveIntFlag } from '../src/cli/commands/curate';
 import { samplePackages } from '../src/data';
 import type { HubItem } from '../src/hubs/types';
 
@@ -247,5 +251,139 @@ describe('readCuratedCache / writeCuratedCache — incremental resumability', ()
     expect(logs.some((l) => l.includes('cached'))).toBe(true);
 
     rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+// ── mapWithConcurrency ────────────────────────────────────────────────────────
+
+describe('mapWithConcurrency', () => {
+  test('preserves input order in returned array', async () => {
+    const items = [1, 2, 3, 4, 5];
+    const results = await mapWithConcurrency(items, 2, async (n) => n * 10);
+    expect(results).toEqual([10, 20, 30, 40, 50]);
+  });
+
+  test('handles empty array', async () => {
+    const results = await mapWithConcurrency([], 4, async (n: number) => n);
+    expect(results).toEqual([]);
+  });
+
+  test('respects concurrency limit', async () => {
+    let active = 0;
+    let maxObserved = 0;
+    const items = Array.from({ length: 10 }, (_, i) => i);
+
+    await mapWithConcurrency(items, 3, async (_item) => {
+      active += 1;
+      if (active > maxObserved) maxObserved = active;
+      // Yield to let other tasks start
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      active -= 1;
+    });
+
+    expect(maxObserved).toBeLessThanOrEqual(3);
+  });
+
+  test('limit 1 runs sequentially', async () => {
+    const order: number[] = [];
+    const items = [1, 2, 3];
+    await mapWithConcurrency(items, 1, async (n) => {
+      order.push(n);
+    });
+    expect(order).toEqual([1, 2, 3]);
+  });
+});
+
+// ── isStale ───────────────────────────────────────────────────────────────────
+
+describe('isStale', () => {
+  const base = new Date('2025-06-01T00:00:00.000Z');
+
+  test('returns false when age is less than staleDays', () => {
+    const verifiedAt = new Date(base.getTime() - 29 * 24 * 60 * 60 * 1000).toISOString();
+    expect(isStale(verifiedAt, 30, base)).toBe(false);
+  });
+
+  test('returns true when age equals staleDays exactly', () => {
+    const verifiedAt = new Date(base.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    expect(isStale(verifiedAt, 30, base)).toBe(true);
+  });
+
+  test('returns true when age is greater than staleDays', () => {
+    const verifiedAt = new Date(base.getTime() - 31 * 24 * 60 * 60 * 1000).toISOString();
+    expect(isStale(verifiedAt, 30, base)).toBe(true);
+  });
+
+  test('returns false for a very recent timestamp', () => {
+    const verifiedAt = new Date(base.getTime() - 1000).toISOString();
+    expect(isStale(verifiedAt, 30, base)).toBe(false);
+  });
+});
+
+// ── dedupeById ────────────────────────────────────────────────────────────────
+
+describe('dedupeById', () => {
+  test('returns all items when no duplicates', () => {
+    const items = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    expect(dedupeById(items)).toEqual([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+  });
+
+  test('keeps first occurrence and removes subsequent duplicates', () => {
+    const items = [
+      { id: 'a', v: 1 },
+      { id: 'b', v: 2 },
+      { id: 'a', v: 3 },
+    ];
+    const result = dedupeById(items);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toEqual({ id: 'a', v: 1 });
+    expect(result[1]).toEqual({ id: 'b', v: 2 });
+  });
+
+  test('returns empty array for empty input', () => {
+    expect(dedupeById([])).toEqual([]);
+  });
+
+  test('handles all-duplicate input', () => {
+    const items = [{ id: 'x' }, { id: 'x' }, { id: 'x' }];
+    const result = dedupeById(items);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.id).toBe('x');
+  });
+});
+
+// ── parsePositiveIntFlag ──────────────────────────────────────────────────────
+
+describe('parsePositiveIntFlag', () => {
+  test('returns numeric string coerced to integer', () => {
+    expect(parsePositiveIntFlag('20', 50)).toBe(20);
+  });
+
+  test('returns fallback for boolean true', () => {
+    expect(parsePositiveIntFlag(true, 50)).toBe(50);
+  });
+
+  test('returns fallback for boolean false', () => {
+    expect(parsePositiveIntFlag(false, 50)).toBe(50);
+  });
+
+  test('returns fallback for undefined', () => {
+    expect(parsePositiveIntFlag(undefined, 50)).toBe(50);
+  });
+
+  test('returns fallback for zero', () => {
+    expect(parsePositiveIntFlag('0', 50)).toBe(50);
+  });
+
+  test('returns fallback for negative number', () => {
+    expect(parsePositiveIntFlag('-5', 50)).toBe(50);
+  });
+
+  test('returns fallback for non-numeric string', () => {
+    expect(parsePositiveIntFlag('abc', 50)).toBe(50);
+  });
+
+  test('truncates floating point to integer', () => {
+    expect(parsePositiveIntFlag('7.9', 50)).toBe(7);
   });
 });

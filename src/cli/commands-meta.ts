@@ -908,22 +908,31 @@ export const COMMANDS: CommandMeta[] = [
     name: 'curate',
     group: 'Marketplace',
     summary: 'Run AI-powered curation to discover and verify marketplace items',
-    usage: 'agora curate [--force] [--limit 50] [--status]',
+    usage: 'agora curate [--refresh | --force] [--limit 50] [--concurrency 4] [--stale-days 30] [--status]',
     details:
       'Discovers MCP servers and tools from GitHub and HuggingFace, then uses AI to verify ' +
       'each item is a genuine MCP server/prompt/skill and extract metadata. Results are cached ' +
-      'locally and used by the marketplace search. By default only verifies new items; use ' +
-      '--force to re-verify everything. Items already present in the bundled catalog are ' +
-      'automatically skipped. Requires the `opencode` binary on PATH for AI verification.',
+      'locally and used by the marketplace search. Three modes are available: incremental ' +
+      '(default) only verifies new items; --refresh re-verifies cached items older than ' +
+      '--stale-days (default 30) and is suitable for scheduled/cron runs; --force re-verifies ' +
+      'everything. Items already present in the bundled catalog are automatically skipped. ' +
+      'Candidate processing runs with bounded concurrency (--concurrency, default 4). ' +
+      'Requires the `opencode` binary on PATH for AI verification.',
     flags: [
-      { flag: '--force', description: 'Re-verify all items, not just new ones' },
+      { flag: '--force', description: 'Re-verify all items regardless of freshness' },
+      { flag: '--refresh', description: 'Re-verify cached items older than --stale-days (default: incremental)' },
+      { flag: '--stale-days', description: 'Age threshold in days for --refresh mode (default 30)' },
       { flag: '--limit, -n', description: 'Maximum items to process (default 50)' },
+      { flag: '--concurrency, -c', description: 'Max parallel verifications (default 4)' },
       { flag: '--status', description: 'Print curation status (count, source, last run) and exit' }
     ],
     examples: [
       'agora curate',
+      'agora curate --refresh',
+      'agora curate --refresh --stale-days 7',
       'agora curate --force',
       'agora curate --limit 20',
+      'agora curate --concurrency 8',
       'agora curate --status',
       'agora curate --status --json'
     ]
