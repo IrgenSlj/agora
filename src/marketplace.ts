@@ -15,6 +15,15 @@ import { readCuratedCache } from './curator/index.js';
 import { buildIndex, searchIndex } from './search/catalog-index.js';
 import type { CatalogIndex } from './search/catalog-index.js';
 
+// ── trendScore tunable weights ────────────────────────────────────────────────
+// Growth + recency intentionally outweigh absolute stars so a young fast riser
+// beats an old mega-repo with stale activity.
+const W_STARS = 0.5;
+const W_GROWTH = 1.0;
+const W_RECENCY = 1.0;
+// ~30-day half-life for recency decay (mirrors news/score.ts exponential style)
+const RECENCY_TAU_HOURS = 720;
+
 export type MarketplaceCategory = 'all' | 'package' | 'mcp' | 'prompt' | 'workflow' | 'skill';
 export type MarketplaceItemType = 'package' | 'workflow';
 
@@ -313,6 +322,65 @@ export function findMarketplaceItem(id: string, options: FindOptions = {}): Mark
     (item) => normalize(item.id).includes(target) || normalize(item.name).includes(target)
   );
   return substringMatches.length === 1 ? substringMatches[0] : null;
+}
+
+/**
+ * Velocity score for a single item. Pure and deterministic — pass `now` to
+ * control the reference point (defaults to the real clock).
+ *
+ * Formula:
+ *   score = W_STARS  * log10(stars + 1)
+ *         + W_GROWTH * log10(starsPerDay + 1)
+ *         + W_RECENCY * exp(-hoursSinceAnchor / RECENCY_TAU_HOURS)
+ *
+ * - Unknown/garbage `createdAt` → treated as 10-year-old item (ageDays = 3650).
+ * - Missing `pushedAt` (workflows, sample items) → falls back to `createdAt`.
+ * - Invalid anchor date → recency = 0 (worst-case; still finite).
+ * - Result is always a finite number; never throws.
+ */
+export function trendScore(item: MarketplaceItem, now?: Date): number {
+  const nowMs = (now ?? new Date()).getTime();
+
+  const createdMs = Date.parse(item.createdAt);
+  const ageDays = Number.isFinite(createdMs) ? Math.max(1, (nowMs - createdMs) / 86_400_000) : 3650;
+
+  const growthRate = item.stars / ageDays;
+
+  const anchor = (item as { pushedAt?: string }).pushedAt ?? item.createdAt;
+  const anchorMs = Date.parse(anchor);
+  const recency = Number.isFinite(anchorMs)
+    ? Math.min(
+        1,
+        Math.max(0, Math.exp(-Math.max(0, (nowMs - anchorMs) / 3_600_000) / RECENCY_TAU_HOURS))
+      )
+    : 0;
+
+  return (
+    W_STARS * Math.log10(item.stars + 1) +
+    W_GROWTH * Math.log10(growthRate + 1) +
+    W_RECENCY * recency
+  );
+}
+
+/**
+ * "Hot" lens: top items by velocity score (trendScore) descending.
+ * Same category + limit semantics as getTrendingItems; default limit 5.
+ * Tie-broken by compareByPopularity.
+ */
+export function getHotItems(options: SearchOptions = {}): MarketplaceItem[] {
+  const category = normalizeCategory(options.category || 'all');
+  const limit = normalizeLimit(options.limit) || 5;
+  const now = new Date();
+
+  return getMarketplaceItems()
+    .filter((item) => matchesCategory(item, category))
+    .slice()
+    .sort((a, b) => {
+      const diff = trendScore(b, now) - trendScore(a, now);
+      if (diff !== 0) return diff;
+      return compareByPopularity(b, a);
+    })
+    .slice(0, limit);
 }
 
 export function getTrendingItems(options: SearchOptions = {}): MarketplaceItem[] {
