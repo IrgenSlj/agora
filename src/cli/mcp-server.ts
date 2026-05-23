@@ -14,6 +14,12 @@ import type { MarketplaceItem } from '../marketplace.js';
 import { scanItem, type ScanResult, type ScanOptions } from '../scan.js';
 import { checkOutdated, type OutdatedOptions } from '../outdated.js';
 import { AGORA_VERSION } from './app.js';
+import { readAllServers, groupServersByName } from '../stack/registry.js';
+import { checkStack } from '../stack/doctor.js';
+import { readCapabilityCache } from '../stack/capability-cache.js';
+import { buildIndex, searchIndex, type IndexableItem } from '../search/catalog-index.js';
+import { detectAgoraDataDir } from '../state.js';
+import type { StackEnv, AgentToolId } from '../stack/types.js';
 
 function backtick(s: string): string {
   return '`' + s + '`';
@@ -45,7 +51,19 @@ function formatItemList(items: MarketplaceItem[]): string {
 export interface AgoraMcpServerOptions {
   scan?: ScanOptions;
   outdated?: OutdatedOptions;
+  stack?: {
+    env?: Record<string, string | undefined>;
+    cwd?: string;
+    dataDir?: string;
+  };
 }
+
+const AGENT_TOOL_IDS: [AgentToolId, ...AgentToolId[]] = [
+  'opencode',
+  'claude-code',
+  'cursor',
+  'windsurf'
+];
 
 export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServer {
   const server = new McpServer({
@@ -408,6 +426,268 @@ ${s.code ? `\n\`\`\`\n${s.code}\n\`\`\`` : ''}`
           }
         ]
       };
+    }
+  );
+
+  // ── Stack introspection tools (read-only) ──────────────────────────────────
+
+  // Resolve stack env once in the factory closure — deterministic for the
+  // lifetime of this server instance.
+  const stackEnv: StackEnv = {
+    cwd: opts.stack?.cwd ?? process.cwd(),
+    home: (opts.stack?.env ?? process.env).HOME,
+    env: opts.stack?.env ?? process.env
+  };
+  const stackDataDir =
+    opts.stack?.dataDir ?? detectAgoraDataDir({ env: opts.stack?.env ?? process.env });
+
+  server.registerTool(
+    'stack_installed',
+    {
+      description:
+        "List the MCP servers configured across the user's agent tools (opencode, Claude Code, Cursor, Windsurf).",
+      inputSchema: z.object({
+        tool: z
+          .enum([...AGENT_TOOL_IDS, 'all'] as [string, ...string[]])
+          .optional()
+          .default('all')
+          .describe('Filter by agent tool id, or "all" for every tool')
+      })
+    },
+    async ({ tool }) => {
+      let servers = readAllServers(stackEnv);
+      if (tool && tool !== 'all') {
+        servers = servers.filter((s) => s.tool === tool);
+      }
+
+      if (servers.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'No MCP servers configured. Run `agora search` to find servers.'
+            }
+          ]
+        };
+      }
+
+      // Best-effort capability cache for tool counts
+      const capCache = readCapabilityCache(stackDataDir);
+      const toolCountByName = new Map<string, number>();
+      for (const entry of capCache) {
+        if (entry.ok) {
+          toolCountByName.set(entry.name, entry.tools.length);
+        }
+      }
+
+      const grouped = groupServersByName(servers);
+      const agentToolCount = new Set(servers.map((s) => s.tool)).size;
+
+      const lines: string[] = [];
+      lines.push(`${grouped.size} server(s) configured across ${agentToolCount} agent tool(s)\n`);
+
+      for (const [name, instances] of grouped) {
+        const transport = instances.every((i) => i.transport === 'remote') ? 'remote' : 'local';
+        const locations = instances
+          .map((inst) => {
+            const label = `${inst.tool} (${inst.scope})`;
+            return inst.enabled === false ? label + ' [disabled]' : label;
+          })
+          .join(', ');
+        const cachedTools = toolCountByName.get(name);
+        const toolsSuffix = cachedTools !== undefined ? ` · ${cachedTools} tools` : '';
+        lines.push(`${name}  [${transport}]  ${locations}${toolsSuffix}`);
+      }
+
+      return { content: [{ type: 'text', text: lines.join('\n') }] };
+    }
+  );
+
+  server.registerTool(
+    'stack_doctor',
+    {
+      description:
+        "Health-check the user's configured MCP servers (config valid, command resolvable, conflicting definitions). Static checks only — does not start servers. Probing/starting servers is available only via the `agora doctor --probe` CLI.",
+      inputSchema: z.object({
+        tool: z
+          .enum([...AGENT_TOOL_IDS, 'all'] as [string, ...string[]])
+          .optional()
+          .default('all')
+          .describe('Filter by agent tool id, or "all" for every tool')
+      })
+    },
+    async ({ tool }) => {
+      let servers = readAllServers(stackEnv);
+      if (tool && tool !== 'all') {
+        servers = servers.filter((s) => s.tool === tool);
+      }
+
+      if (servers.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: 'No MCP servers configured. Run `agora search` to find servers.'
+            }
+          ]
+        };
+      }
+
+      // No probe — static checks only
+      const health = await checkStack(servers, { ...stackEnv });
+
+      const lines: string[] = [];
+      for (const serverHealth of health.servers) {
+        const glyph =
+          serverHealth.status === 'ok' ? '✓' : serverHealth.status === 'warn' ? '⚠' : '✗';
+        lines.push(`${glyph}  ${serverHealth.name}`);
+        if (serverHealth.status !== 'ok') {
+          for (const check of serverHealth.checks) {
+            if (!check.ok && check.detail) {
+              lines.push(`     ${check.detail}`);
+            }
+          }
+        }
+      }
+
+      lines.push('');
+      const { ok, warn, error } = health.summary;
+      lines.push(`ok: ${ok}  warn: ${warn}  error: ${error}`);
+
+      return { content: [{ type: 'text', text: lines.join('\n') }] };
+    }
+  );
+
+  server.registerTool(
+    'stack_capabilities',
+    {
+      description:
+        'Search the tools exposed by the user\'s MCP servers (discovered by probing via the CLI), or list them. Answers "which of the user\'s servers can do X".',
+      inputSchema: z.object({
+        query: z
+          .string()
+          .optional()
+          .describe('Search query to rank tools by relevance (BM25). Omit to list all.'),
+        server: z
+          .string()
+          .optional()
+          .describe('Filter to tools from a specific server name (exact or substring match)')
+      })
+    },
+    async ({ query, server }) => {
+      const entries = readCapabilityCache(stackDataDir);
+
+      if (entries.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: [
+                'No capability data found. Tools are discovered by probing configured MCP servers.',
+                'Hints:',
+                '  agora doctor --probe   (probe all configured servers)',
+                '  agora try <id>         (test-drive a marketplace item)'
+              ].join('\n')
+            }
+          ]
+        };
+      }
+
+      interface FlatTool {
+        server: string;
+        name: string;
+        description: string;
+      }
+
+      // Flatten, skip failed probes
+      let allTools: FlatTool[] = [];
+      for (const entry of entries) {
+        if (entry.ok === false) continue;
+        for (const t of entry.tools) {
+          allTools.push({
+            server: entry.name,
+            name: t.name,
+            description: t.description ?? ''
+          });
+        }
+      }
+
+      // Server filter
+      if (server !== undefined) {
+        const lower = server.toLowerCase();
+        const exact = allTools.filter((t) => t.server.toLowerCase() === lower);
+        allTools =
+          exact.length > 0 ? exact : allTools.filter((t) => t.server.toLowerCase().includes(lower));
+      }
+
+      if (query && query.trim()) {
+        // BM25 ranked query
+        const items: IndexableItem[] = allTools.map((t) => ({
+          id: `${t.server}::${t.name}`,
+          name: t.name,
+          description: t.description,
+          author: t.server,
+          category: 'tool',
+          tags: [t.server]
+        }));
+
+        const index = buildIndex(items);
+        const scored = searchIndex(index, query);
+
+        const toolById = new Map<string, FlatTool>();
+        for (const t of allTools) {
+          toolById.set(`${t.server}::${t.name}`, t);
+        }
+
+        const rankedTools: FlatTool[] = [];
+        for (const { id } of scored) {
+          const t = toolById.get(id);
+          if (t) rankedTools.push(t);
+        }
+
+        if (rankedTools.length === 0) {
+          return {
+            content: [{ type: 'text', text: `No tools matched: ${query}` }]
+          };
+        }
+
+        const lines = rankedTools.map((t) => `${t.name} — ${t.description} (${t.server})`);
+        const serverSet = new Set(rankedTools.map((t) => t.server));
+        lines.push('');
+        lines.push(`${rankedTools.length} tool(s) across ${serverSet.size} server(s)`);
+
+        return { content: [{ type: 'text', text: lines.join('\n') }] };
+      }
+
+      // List mode: grouped by server
+      const byServer = new Map<string, FlatTool[]>();
+      for (const t of allTools) {
+        let list = byServer.get(t.server);
+        if (!list) {
+          list = [];
+          byServer.set(t.server, list);
+        }
+        list.push(t);
+      }
+
+      const sortedServers = Array.from(byServer.keys()).sort();
+      const lines: string[] = [];
+      for (const serverName of sortedServers) {
+        const tools = byServer
+          .get(serverName)!
+          .slice()
+          .sort((a, b) => a.name.localeCompare(b.name));
+        lines.push(serverName);
+        for (const t of tools) {
+          lines.push(`  ${t.name}${t.description ? ' — ' + t.description : ''}`);
+        }
+        lines.push('');
+      }
+
+      const serverSet = new Set(allTools.map((t) => t.server));
+      lines.push(`${allTools.length} tool(s) across ${serverSet.size} server(s)`);
+
+      return { content: [{ type: 'text', text: lines.join('\n') }] };
     }
   );
 
