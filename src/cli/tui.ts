@@ -13,6 +13,7 @@ import type {
 } from './pages/types.js';
 import { homePage } from './pages/home.js';
 import { marketplacePage } from './pages/marketplace.js';
+import { stackPage } from './pages/stack.js';
 import { communityPage } from './pages/community.js';
 import { newsPage } from './pages/news.js';
 import { settingsPage } from './pages/settings.js';
@@ -25,7 +26,14 @@ const CUR_SHOW = '\x1b[?25h';
 const CLEAR = '\x1b[2J\x1b[H';
 const HOME_CUR = '\x1b[H';
 
-const PAGE_ORDER: ReadonlyArray<PageId> = ['home', 'marketplace', 'community', 'news', 'settings'];
+const PAGE_ORDER: ReadonlyArray<PageId> = [
+  'home',
+  'marketplace',
+  'stack',
+  'community',
+  'news',
+  'settings'
+];
 
 function getPage(id: PageId): Page {
   switch (id) {
@@ -33,6 +41,8 @@ function getPage(id: PageId): Page {
       return homePage;
     case 'marketplace':
       return marketplacePage;
+    case 'stack':
+      return stackPage;
     case 'community':
       return communityPage;
     case 'news':
@@ -168,7 +178,7 @@ function renderFooter(
     if (globalKeys.has(hk.key.toLowerCase())) continue;
     parts.push(style.accent(hk.key) + ' ' + hk.label);
   }
-  parts.push(style.accent('1-5') + ' page');
+  parts.push(style.accent('1-6') + ' page');
   const text = ' ' + parts.join(style.dim('  \u00b7  '));
   const hotkeyLine = padRight(truncate(text, width), width);
 
@@ -246,7 +256,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
     lines.push('');
     lines.push('  ' + style.dim('Global'));
     lines.push('    ' + style.accent('Esc') + '    back / quit');
-    lines.push('    ' + style.accent('1-5') + '    switch page');
+    lines.push('    ' + style.accent('1-6') + '    switch page');
     lines.push('    ' + style.accent('Tab') + '    next page');
     lines.push('    ' + style.accent('?') + '      toggle this help');
     lines.push('    ' + style.accent('Ctrl-L') + ' redraw');
@@ -364,7 +374,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
         }
         return;
       }
-      if (/^[1-5]$/.test(ev.key)) {
+      if (/^[1-6]$/.test(ev.key)) {
         const next = PAGE_ORDER[Number(ev.key) - 1];
         if (next && next !== current) {
           await getPage(current).unmount?.(ctxFor());
