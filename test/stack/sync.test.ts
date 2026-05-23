@@ -1159,6 +1159,234 @@ describe('no-op update with extra keys present (Fix 1)', () => {
   });
 });
 
+// ── --from flag tests ─────────────────────────────────────────────────────────
+
+describe('agora sync --from', () => {
+  const sharedToml = '[mcp.shared-server]\ncommand = ["npx", "@mcp/shared"]\n';
+
+  test('--from <file path>: dry-run uses shared manifest, ignores missing local agora.toml', async () => {
+    const cwd = makeTmp('agora-sync-from-file-');
+    const home = makeTmp('agora-sync-from-file-home-');
+    try {
+      // No agora.toml in cwd
+      writeFileSync(join(cwd, 'opencode.json'), JSON.stringify({ mcp: {} }));
+
+      // Write shared manifest to a temp file
+      const sharedPath = join(cwd, 'shared.toml');
+      writeFileSync(sharedPath, sharedToml);
+
+      const { io, out } = createIo(cwd, home);
+      const code = await runCli(['sync', '--from', sharedPath, '--tool', 'opencode'], io);
+      expect(code).toBe(0);
+      expect(out()).toContain('+ shared-server');
+      // No warning for file source
+      expect(out()).not.toContain('remote source');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('--from <file path>: --write --yes applies shared manifest', async () => {
+    const cwd = makeTmp('agora-sync-from-file-apply-');
+    const home = makeTmp('agora-sync-from-file-apply-home-');
+    try {
+      const filePath = join(cwd, 'opencode.json');
+      writeFileSync(filePath, JSON.stringify({ mcp: {} }));
+
+      const sharedPath = join(cwd, 'shared.toml');
+      writeFileSync(sharedPath, sharedToml);
+
+      const { io } = createIo(cwd, home);
+      const code = await runCli(
+        ['sync', '--from', sharedPath, '--tool', 'opencode', '--write', '--yes'],
+        io
+      );
+      expect(code).toBe(0);
+
+      const result = JSON.parse(readFileSync(filePath, 'utf8'));
+      expect(result.mcp['shared-server']).toBeDefined();
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('--from <url>: fake fetcher returns manifest, plan reflects fetched servers', async () => {
+    const cwd = makeTmp('agora-sync-from-url-');
+    const home = makeTmp('agora-sync-from-url-home-');
+    try {
+      writeFileSync(join(cwd, 'opencode.json'), JSON.stringify({ mcp: {} }));
+
+      const fakeFetcher = async (_url: string) =>
+        ({ ok: true, status: 200, text: async () => sharedToml }) as Response;
+
+      const { io, out } = createIo(cwd, home);
+      (io as any).fetcher = fakeFetcher;
+
+      const code = await runCli(
+        ['sync', '--from', 'https://example.com/agora.toml', '--tool', 'opencode'],
+        io
+      );
+      expect(code).toBe(0);
+      expect(out()).toContain('+ shared-server');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('--from <url>: fetcher returns 404 → usageError', async () => {
+    const cwd = makeTmp('agora-sync-from-url-404-');
+    const home = makeTmp('agora-sync-from-url-404-home-');
+    try {
+      const fakeFetcher = async (_url: string) =>
+        ({ ok: false, status: 404, text: async () => '' }) as Response;
+
+      const { io, err } = createIo(cwd, home);
+      (io as any).fetcher = fakeFetcher;
+
+      const code = await runCli(
+        ['sync', '--from', 'https://example.com/agora.toml', '--tool', 'opencode'],
+        io
+      );
+      expect(code).not.toBe(0);
+      expect(err()).toContain('Could not fetch manifest');
+      expect(err()).toContain('404');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('--from <url>: fetcher throws → usageError', async () => {
+    const cwd = makeTmp('agora-sync-from-url-throw-');
+    const home = makeTmp('agora-sync-from-url-throw-home-');
+    try {
+      const fakeFetcher = async (_url: string): Promise<Response> => {
+        throw new Error('network unreachable');
+      };
+
+      const { io, err } = createIo(cwd, home);
+      (io as any).fetcher = fakeFetcher;
+
+      const code = await runCli(
+        ['sync', '--from', 'https://example.com/agora.toml', '--tool', 'opencode'],
+        io
+      );
+      expect(code).not.toBe(0);
+      expect(err()).toContain('Could not fetch manifest');
+      expect(err()).toContain('network unreachable');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('--from with malformed TOML → usageError', async () => {
+    const cwd = makeTmp('agora-sync-from-bad-toml-');
+    const home = makeTmp('agora-sync-from-bad-toml-home-');
+    try {
+      const sharedPath = join(cwd, 'bad.toml');
+      writeFileSync(sharedPath, 'this is not valid toml [[[');
+
+      const { io, err } = createIo(cwd, home);
+      const code = await runCli(['sync', '--from', sharedPath, '--tool', 'opencode'], io);
+      expect(code).not.toBe(0);
+      expect(err()).toContain('Invalid manifest');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('--from missing file path → usageError', async () => {
+    const cwd = makeTmp('agora-sync-from-missing-');
+    const home = makeTmp('agora-sync-from-missing-home-');
+    try {
+      const { io, err } = createIo(cwd, home);
+      const code = await runCli(
+        ['sync', '--from', join(cwd, 'nonexistent.toml'), '--tool', 'opencode'],
+        io
+      );
+      expect(code).not.toBe(0);
+      expect(err()).toContain('Could not read manifest');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('remote-source warning appears in human dry-run for URL source', async () => {
+    const cwd = makeTmp('agora-sync-from-url-warn-');
+    const home = makeTmp('agora-sync-from-url-warn-home-');
+    try {
+      writeFileSync(join(cwd, 'opencode.json'), JSON.stringify({ mcp: {} }));
+
+      const fakeFetcher = async (_url: string) =>
+        ({ ok: true, status: 200, text: async () => sharedToml }) as Response;
+
+      const { io, out } = createIo(cwd, home);
+      (io as any).fetcher = fakeFetcher;
+
+      const code = await runCli(
+        ['sync', '--from', 'https://example.com/agora.toml', '--tool', 'opencode'],
+        io
+      );
+      expect(code).toBe(0);
+      expect(out()).toContain('remote source');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('remote-source warning does NOT appear for file source', async () => {
+    const cwd = makeTmp('agora-sync-from-file-nowarn-');
+    const home = makeTmp('agora-sync-from-file-nowarn-home-');
+    try {
+      writeFileSync(join(cwd, 'opencode.json'), JSON.stringify({ mcp: {} }));
+      const sharedPath = join(cwd, 'shared.toml');
+      writeFileSync(sharedPath, sharedToml);
+
+      const { io, out } = createIo(cwd, home);
+      const code = await runCli(['sync', '--from', sharedPath, '--tool', 'opencode'], io);
+      expect(code).toBe(0);
+      expect(out()).not.toContain('remote source');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('remote-source warning does NOT appear in --json mode', async () => {
+    const cwd = makeTmp('agora-sync-from-url-json-nowarn-');
+    const home = makeTmp('agora-sync-from-url-json-nowarn-home-');
+    try {
+      writeFileSync(join(cwd, 'opencode.json'), JSON.stringify({ mcp: {} }));
+
+      const fakeFetcher = async (_url: string) =>
+        ({ ok: true, status: 200, text: async () => sharedToml }) as Response;
+
+      const { io, out } = createIo(cwd, home);
+      (io as any).fetcher = fakeFetcher;
+
+      const code = await runCli(
+        ['sync', '--from', 'https://example.com/agora.toml', '--tool', 'opencode', '--json'],
+        io
+      );
+      expect(code).toBe(0);
+      const payload = JSON.parse(out());
+      expect(payload.mode).toBe('plan');
+      // No warning in JSON mode — raw JSON should be parseable and not contain extra text
+      expect(out()).not.toContain('remote source');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
 // ── Fix 2: Transport detection robustness ────────────────────────────────────
 
 describe('transport detection robustness (Fix 2)', () => {

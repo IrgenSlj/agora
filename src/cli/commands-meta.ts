@@ -1071,7 +1071,8 @@ export const COMMANDS: CommandMeta[] = [
     name: 'sync',
     group: 'Stack',
     summary: "Reconcile your agora.toml manifest into each agent tool's MCP config",
-    usage: 'agora sync [--tool <id>] [--scope project|user] [--prune] [--write --yes] [--json]',
+    usage:
+      'agora sync [--from <url|path>] [--tool <id>] [--scope project|user] [--prune] [--write --yes] [--json]',
     details:
       'Reads the agora.toml manifest (created by `agora freeze --write`) and reconciles its MCP ' +
       'server entries into the real config files of each detected agent tool. ' +
@@ -1080,6 +1081,10 @@ export const COMMANDS: CommandMeta[] = [
       'without --prune, unmanaged servers are left intact. --scope controls whether project ' +
       'or user config files are targeted (default project).',
     flags: [
+      {
+        flag: '--from',
+        description: 'Apply a shared manifest from a URL or file path instead of ./agora.toml'
+      },
       {
         flag: '--tool',
         description: 'Target a single tool: opencode, claude-code, cursor, or windsurf'
@@ -1104,6 +1109,7 @@ export const COMMANDS: CommandMeta[] = [
     ],
     examples: [
       'agora sync',
+      'agora sync --from https://example.com/agora.toml',
       'agora sync --tool opencode',
       'agora sync --write --yes',
       'agora sync --prune --write --yes'

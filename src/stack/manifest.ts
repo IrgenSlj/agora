@@ -1,6 +1,7 @@
 import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
+import type { FetchLike } from '../live.js';
 import type { ConfiguredServer, StackEnv } from './types.js';
 
 // ── Public types ──────────────────────────────────────────────────────────────
@@ -342,4 +343,50 @@ export function readManifest(path: string): StackManifest | null {
 
 export function writeManifest(path: string, m: StackManifest): void {
   atomicWriteFile(path, serializeManifest(m), 0o644);
+}
+
+// ── Remote/file loader ────────────────────────────────────────────────────────
+
+/**
+ * Load a StackManifest from a URL or file path.
+ * Throws a descriptive Error on fetch failure, missing file, or parse error.
+ * The caller is responsible for mapping thrown errors to usageError output.
+ */
+export async function loadManifestFromSource(
+  source: string,
+  opts: { cwd?: string; fetcher?: FetchLike }
+): Promise<StackManifest> {
+  let text: string;
+
+  if (/^https?:\/\//i.test(source)) {
+    // URL source
+    const fetcher = opts.fetcher ?? globalThis.fetch;
+    let res: Response;
+    try {
+      res = await fetcher(source);
+    } catch (e) {
+      throw new Error(
+        `Could not fetch manifest from ${source}: ${e instanceof Error ? e.message : String(e)}`
+      );
+    }
+    if (!res.ok) {
+      throw new Error(`Could not fetch manifest from ${source}: HTTP ${res.status}`);
+    }
+    text = await res.text();
+  } else {
+    // File path source
+    const absPath = resolve(opts.cwd ?? process.cwd(), source);
+    if (!existsSync(absPath)) {
+      throw new Error(`Could not read manifest from ${source}: file not found`);
+    }
+    text = readFileSync(absPath, 'utf8');
+  }
+
+  try {
+    return parseManifest(text);
+  } catch (e) {
+    throw new Error(
+      `Invalid manifest from ${source}: ${e instanceof Error ? e.message : String(e)}`
+    );
+  }
 }

@@ -1,5 +1,5 @@
 import { ALL_ADAPTERS, detectTools } from '../../stack/registry.js';
-import { manifestPath, readManifest } from '../../stack/manifest.js';
+import { manifestPath, readManifest, loadManifestFromSource } from '../../stack/manifest.js';
 import { planSync, applySync, type ToolSyncPlan } from '../../stack/sync.js';
 import type { AgentToolId, StackEnv } from '../../stack/types.js';
 import type { CommandHandler } from './types.js';
@@ -97,18 +97,32 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
     );
   }
 
+  // --from <url|path>
+  const fromFlag = stringFlag(parsed, 'from');
+
   // Read manifest
-  const mPath = manifestPath(env);
-  const manifest = readManifest(mPath);
-  if (manifest === null) {
-    return usageError(
-      io,
-      `No agora.toml manifest found at ${mPath}. ` +
-        'Run `agora freeze --write` to create one from your current stack.'
-    );
+  let manifest;
+  const isRemoteSource = fromFlag !== undefined && /^https?:\/\//i.test(fromFlag);
+
+  if (fromFlag !== undefined) {
+    try {
+      manifest = await loadManifestFromSource(fromFlag, { cwd: io.cwd, fetcher: io.fetcher });
+    } catch (e) {
+      return usageError(io, e instanceof Error ? e.message : String(e));
+    }
+  } else {
+    const mPath = manifestPath(env);
+    const loaded = readManifest(mPath);
+    if (loaded === null) {
+      return usageError(
+        io,
+        `No agora.toml manifest found at ${mPath}. ` +
+          'Run `agora freeze --write` to create one from your current stack.'
+      );
+    }
+    manifest = loaded;
   }
 
-  // Parse errors from readManifest are thrown; wrap them
   const mcpCount = Object.keys(manifest.mcp).length;
 
   // Determine target tools
@@ -182,6 +196,15 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
 
     writeLine(io.stdout, style.accent('agora sync — dry run'));
     writeLine(io.stdout);
+    if (isRemoteSource) {
+      writeLine(
+        io.stdout,
+        style.dim(
+          'Manifest fetched from a remote source — review the servers below before applying.'
+        )
+      );
+      writeLine(io.stdout);
+    }
     writeLine(io.stdout, formatPlan(plans, style));
     writeLine(io.stdout);
     writeLine(
