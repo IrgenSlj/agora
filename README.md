@@ -106,11 +106,12 @@ agora install mcp-github --write --save   # install AND record it in agora.toml
 agora freeze --write            # snapshot your whole stack into agora.toml
 agora sync                      # dry-run: what would change to match agora.toml
 agora sync --write --yes        # apply it (preserves every unrelated config key)
+agora sync --from <url|path>    # apply a shared manifest — clone someone's setup
 agora try mcp-filesystem        # ephemeral test-drive: handshake, list tools, discard
 agora capabilities "query a database"   # which of my servers can do X?
 ```
 
-`agora.toml` is a portable, declarative manifest — commit it to a repo so anyone can reproduce your agent setup with `agora sync`. `sync` is dry-run by default and never touches config keys it doesn't own. `doctor --probe`, `try`, and `capabilities` share a local cache of each server's discovered tool schemas — the local foundation for capability search.
+`agora.toml` is a portable, declarative manifest — commit it to a repo so anyone can reproduce your agent setup with `agora sync --from <url>`. `sync` is dry-run by default and never touches config keys it doesn't own. `doctor --probe`, `try`, and `capabilities` share a local cache of each server's discovered tool schemas — the local foundation for capability search.
 
 ## Configuration
 
