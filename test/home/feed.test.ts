@@ -6,8 +6,15 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { summarizeStack, computeOpportunities, buildHomeFeed } from '../../src/home/feed';
+import {
+  summarizeStack,
+  computeOpportunities,
+  buildHomeFeed,
+  getHotRepos
+} from '../../src/home/feed';
 import type { Opportunity } from '../../src/home/feed';
+import { writeCache } from '../../src/news/cache';
+import type { NewsItem } from '../../src/news/types';
 import type { ConfiguredServer } from '../../src/stack/types';
 import type { StackHealth, ServerHealth } from '../../src/stack/doctor';
 import type { StackManifest } from '../../src/stack/manifest';
@@ -466,6 +473,188 @@ describe('buildHomeFeed', () => {
       const env = { cwd: tmp, home: tmp, env: { PATH: process.env.PATH ?? '' } };
       const result = await buildHomeFeed(env, tmp);
       expect(result.summary.capabilityCount).toBe(4);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── getHotRepos ───────────────────────────────────────────────────────────────
+
+function makeGhItem(
+  repoPath: string,
+  engagement: number,
+  tags: string[],
+  overrides: Partial<NewsItem> = {}
+): NewsItem {
+  const [owner, repo] = repoPath.split('/');
+  return {
+    id: `gh:${repoPath.replace('/', '-')}`,
+    source: 'github-trending',
+    title: repoPath,
+    url: `https://github.com/${repoPath}`,
+    author: owner,
+    publishedAt: new Date().toISOString(),
+    fetchedAt: new Date().toISOString(),
+    engagement,
+    tags,
+    summary: `${repo} description`,
+    ...overrides
+  };
+}
+
+function makeNonGhItem(id: string): NewsItem {
+  return {
+    id,
+    source: 'hn',
+    title: 'Some HN post',
+    url: 'https://news.ycombinator.com/item?id=1',
+    publishedAt: new Date().toISOString(),
+    fetchedAt: new Date().toISOString(),
+    engagement: 9999,
+    tags: ['ai']
+  };
+}
+
+describe('getHotRepos', () => {
+  test('returns only github-trending items', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'agora-hotrepos-test-'));
+    try {
+      const items: NewsItem[] = [
+        makeGhItem('owner/alpha', 100, ['ai']),
+        makeNonGhItem('hn-1'),
+        makeGhItem('owner/beta', 50, ['mcp'])
+      ];
+      writeCache(tmp, items);
+      const repos = getHotRepos(tmp, { limit: 10, topicsOnly: false });
+      expect(repos.every((r) => r.host === 'github.com')).toBe(true);
+      expect(repos.length).toBe(2);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('ranked by engagement descending', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'agora-hotrepos-test-'));
+    try {
+      const items: NewsItem[] = [
+        makeGhItem('owner/low', 10, ['ai']),
+        makeGhItem('owner/high', 500, ['ai']),
+        makeGhItem('owner/mid', 200, ['cli'])
+      ];
+      writeCache(tmp, items);
+      const repos = getHotRepos(tmp, { limit: 10, topicsOnly: false });
+      expect(repos[0]!.name).toBe('owner/high');
+      expect(repos[1]!.name).toBe('owner/mid');
+      expect(repos[2]!.name).toBe('owner/low');
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('slices to limit', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'agora-hotrepos-test-'));
+    try {
+      const items: NewsItem[] = [
+        makeGhItem('owner/a', 100, ['ai']),
+        makeGhItem('owner/b', 90, ['ai']),
+        makeGhItem('owner/c', 80, ['ai']),
+        makeGhItem('owner/d', 70, ['ai']),
+        makeGhItem('owner/e', 60, ['ai']),
+        makeGhItem('owner/f', 50, ['ai'])
+      ];
+      writeCache(tmp, items);
+      const repos = getHotRepos(tmp, { limit: 3, topicsOnly: false });
+      expect(repos.length).toBe(3);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('topicsOnly prefers tagged items', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'agora-hotrepos-test-'));
+    try {
+      // High engagement but no agentic tags
+      const untagged = makeGhItem('owner/untagged', 9000, ['database']);
+      // Lower engagement but has agentic tag
+      const tagged1 = makeGhItem('owner/agent-repo', 100, ['agents']);
+      const tagged2 = makeGhItem('owner/mcp-tool', 80, ['mcp']);
+      const tagged3 = makeGhItem('owner/llm-lib', 70, ['llm']);
+      const tagged4 = makeGhItem('owner/cli-thing', 60, ['cli']);
+      const tagged5 = makeGhItem('owner/ai-stuff', 50, ['ai']);
+      writeCache(tmp, [untagged, tagged1, tagged2, tagged3, tagged4, tagged5]);
+      const repos = getHotRepos(tmp, { limit: 5, topicsOnly: true });
+      // All 5 tagged items fill the limit — untagged should be excluded
+      expect(repos.every((r) => r.name !== 'owner/untagged')).toBe(true);
+      expect(repos.length).toBe(5);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('topicsOnly falls back to all when too few tagged items', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'agora-hotrepos-test-'));
+    try {
+      // Only 2 tagged, but limit is 5 — should fall back to all
+      const tagged1 = makeGhItem('owner/agent-repo', 100, ['agents']);
+      const tagged2 = makeGhItem('owner/mcp-tool', 80, ['mcp']);
+      const untagged1 = makeGhItem('owner/rust-lib', 200, ['database']);
+      const untagged2 = makeGhItem('owner/go-server', 300, ['devtools']);
+      const untagged3 = makeGhItem('owner/py-thing', 150, ['tools']);
+      writeCache(tmp, [tagged1, tagged2, untagged1, untagged2, untagged3]);
+      const repos = getHotRepos(tmp, { limit: 5, topicsOnly: true });
+      // Falls back to all 5 items
+      expect(repos.length).toBe(5);
+      // top item by engagement (go-server: 300) should lead
+      expect(repos[0]!.name).toBe('owner/go-server');
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('empty cache returns [] without throwing', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'agora-hotrepos-test-'));
+    try {
+      // No cache written — directory exists but no file
+      const repos = getHotRepos(tmp, { limit: 5 });
+      expect(repos).toEqual([]);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('nonexistent dataDir returns [] without throwing', () => {
+    const repos = getHotRepos('/tmp/agora-does-not-exist-xyz-' + Date.now(), { limit: 5 });
+    expect(repos).toEqual([]);
+  });
+
+  test('default limit is 5', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'agora-hotrepos-test-'));
+    try {
+      const items: NewsItem[] = Array.from({ length: 10 }, (_, i) =>
+        makeGhItem(`owner/repo${i}`, (10 - i) * 100, ['ai'])
+      );
+      writeCache(tmp, items);
+      const repos = getHotRepos(tmp);
+      expect(repos.length).toBe(5);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  test('tie-break by name ascending', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'agora-hotrepos-test-'));
+    try {
+      const items: NewsItem[] = [
+        makeGhItem('owner/zzz', 100, ['ai']),
+        makeGhItem('owner/aaa', 100, ['ai']),
+        makeGhItem('owner/mmm', 100, ['ai'])
+      ];
+      writeCache(tmp, items);
+      const repos = getHotRepos(tmp, { limit: 10, topicsOnly: false });
+      expect(repos[0]!.name).toBe('owner/aaa');
+      expect(repos[1]!.name).toBe('owner/mmm');
+      expect(repos[2]!.name).toBe('owner/zzz');
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

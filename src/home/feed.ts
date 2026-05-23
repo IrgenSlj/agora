@@ -8,6 +8,84 @@ import type { StackManifest } from '../stack/manifest.js';
 import { getHotItems } from '../marketplace.js';
 import type { MarketplaceItem } from '../marketplace.js';
 import type { ConfiguredServer, StackEnv } from '../stack/types.js';
+import { readCache } from '../news/cache.js';
+import { hostFromUrl } from '../news/types.js';
+
+// ── Hot repos feed ────────────────────────────────────────────────────────────
+
+export interface HotRepo {
+  name: string;
+  url: string;
+  author: string;
+  hot: number;
+  tags: string[];
+  host: string;
+}
+
+const AGENTIC_TOPICS = [
+  'mcp',
+  'agent',
+  'agents',
+  'llm',
+  'ai',
+  'tool',
+  'tools',
+  'cli',
+  'workflow',
+  'prompt'
+];
+
+export function getHotRepos(
+  dataDir: string,
+  opts?: { limit?: number; topicsOnly?: boolean }
+): HotRepo[] {
+  const limit = opts?.limit ?? 5;
+  const topicsOnly = opts?.topicsOnly ?? true;
+
+  let cached: ReturnType<typeof readCache>;
+  try {
+    cached = readCache(dataDir);
+  } catch {
+    cached = [];
+  }
+
+  const ghItems = cached.filter((item) => item.source === 'github-trending');
+
+  function toHotRepo(item: (typeof ghItems)[number]): HotRepo {
+    const name = item.title;
+    const author = item.author ?? name.split('/')[0];
+    return {
+      name,
+      url: item.url,
+      author,
+      hot: item.engagement,
+      tags: item.tags,
+      host: hostFromUrl(item.url)
+    };
+  }
+
+  function rankRepos(items: typeof ghItems): HotRepo[] {
+    return items
+      .map(toHotRepo)
+      .sort((a, b) => b.hot - a.hot || a.name.localeCompare(b.name))
+      .slice(0, limit);
+  }
+
+  if (!topicsOnly) {
+    return rankRepos(ghItems);
+  }
+
+  // topicsOnly: prefer items whose tags intersect the agentic set
+  const tagged = ghItems.filter((item) =>
+    item.tags.some((tag: string) => AGENTIC_TOPICS.includes(tag))
+  );
+
+  // Fall back to all github-trending items if too few tagged ones
+  if (tagged.length >= limit) {
+    return rankRepos(tagged);
+  }
+  return rankRepos(ghItems);
+}
 
 // ── Public types ──────────────────────────────────────────────────────────────
 

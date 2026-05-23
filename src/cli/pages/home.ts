@@ -11,8 +11,8 @@ import { rankItems } from '../../news/score.js';
 import { communityThreadsSource } from '../../community/client.js';
 import { vlen, sep, fmtCount, frame, pageSourceOptions, truncate } from './helpers.js';
 import { formatNumber } from '../../format.js';
-import { buildHomeFeed } from '../../home/feed.js';
-import type { StackSummary, Opportunity } from '../../home/feed.js';
+import { buildHomeFeed, getHotRepos } from '../../home/feed.js';
+import type { StackSummary, Opportunity, HotRepo } from '../../home/feed.js';
 import type { StackEnv } from '../../stack/types.js';
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -31,7 +31,7 @@ interface HomeState {
   summary: StackSummary | null;
   opportunities: Opportunity[];
   feedLoading: boolean;
-  trendLens: 'hot' | 'top';
+  trendLens: 'hot' | 'top' | 'repos';
 }
 const state: HomeState = {
   cursor: 0,
@@ -210,6 +210,25 @@ function renderTrendingColumn(
   return { title, lines };
 }
 
+function renderReposColumn(repos: HotRepo[], style: PageContext['style']): RenderColumn {
+  const title = 'Trending · ' + style.dim('Repos');
+  if (repos.length === 0) {
+    return {
+      title,
+      lines: [style.dim('No trending repos cached — run `agora news --refresh`')]
+    };
+  }
+  const lines: string[] = [];
+  for (const repo of repos) {
+    const velocity = style.dim(style.accent(' ▲' + fmtCount(repo.hot)));
+    lines.push(style.bold(repo.name) + velocity);
+    const tagStr = repo.tags.slice(0, 2).join(' ');
+    const second = repo.host + (tagStr ? '  ' + tagStr : '');
+    lines.push('  ' + style.dim(second));
+  }
+  return { title, lines };
+}
+
 function renderStackBand(width: number, style: PageContext['style']): string[] {
   const lines: string[] = [];
   lines.push(' ' + sep('Your stack', width - 2, style));
@@ -314,7 +333,7 @@ export const homePage: Page = {
     { key: 'n', label: 'news' },
     { key: 'c', label: 'community' },
     { key: 'm', label: 'market' },
-    { key: 't', label: 'hot/top' },
+    { key: 't', label: 'hot/top/repos' },
     { key: 'r', label: 'refresh' },
     { key: 'Enter', label: 'open' }
   ],
@@ -326,9 +345,6 @@ export const homePage: Page = {
     const { style, width, height } = ctx;
     const { items: news, isFallback: newsFallback } = loadNews(ctx, 5);
 
-    const trendItems =
-      state.trendLens === 'hot' ? getHotItems({ limit: 5 }) : getTrendingItems({ limit: 5 });
-
     const newsCol = renderNewsColumn(news, newsFallback, style);
     const commCol = renderCommunityColumn(
       state.threads,
@@ -336,7 +352,16 @@ export const homePage: Page = {
       state.threadsLoading,
       style
     );
-    const trendCol = renderTrendingColumn(trendItems, state.trendLens, style);
+
+    let trendCol: RenderColumn;
+    if (state.trendLens === 'repos') {
+      const repos = getHotRepos(detectDataDir(ctx), { limit: 5 });
+      trendCol = renderReposColumn(repos, style);
+    } else {
+      const trendItems =
+        state.trendLens === 'hot' ? getHotItems({ limit: 5 }) : getTrendingItems({ limit: 5 });
+      trendCol = renderTrendingColumn(trendItems, state.trendLens, style);
+    }
 
     const headerRight = style.dim('press ') + style.accent('n c m') + style.dim(' for sections');
     const headerLeft = ' ' + style.bold(style.accent('HOME'));
@@ -368,10 +393,16 @@ export const homePage: Page = {
       case 'm':
       case '/':
         return { kind: 'switch', to: 'marketplace' };
-      case 't':
-        state.trendLens = state.trendLens === 'hot' ? 'top' : 'hot';
+      case 't': {
+        const cycle: Record<'hot' | 'top' | 'repos', 'hot' | 'top' | 'repos'> = {
+          hot: 'top',
+          top: 'repos',
+          repos: 'hot'
+        };
+        state.trendLens = cycle[state.trendLens];
         _ctx.repaint();
         return { kind: 'status', message: 'trending: ' + state.trendLens };
+      }
       case 'r':
         lastCommunityFetchAt = 0;
         refreshCommunity(_ctx);
