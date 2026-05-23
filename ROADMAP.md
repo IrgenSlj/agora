@@ -10,23 +10,23 @@ Three pillars are live end-to-end — a curated + live **marketplace**, a ranked
 
 **The wedge.** `agora` is the only marketplace in this space that lives *in the terminal where agentic coding happens* and is *itself consumable by an agent* (the `agora mcp` server). The website competitors can't install a capability for a running agent mid-task; `agora` can — behind its scan gate. So beyond the three content pillars, `agora` is evolving into two things they can't be: the **agent stack manager** (a cross-tool package-manager for the MCP servers / skills / workflows your agent uses daily) and the **safe capability-acquisition gateway** an autonomous agent calls when it hits a capability gap. These *amplify* the marketplace and community — they do not replace them. Discovery still happens in the marketplace; conversation still happens in the community; the stack manager is simply the daily-use loop that connects discover → install → manage → publish → discuss.
 
-## Status: Phase 1.5 + 1.6 shipped; 0.4.3 "Destination" cut in progress
+## Status: 0.4.3 shipped — the agent stack manager
 
-The "Destination" pillars (news / community / live marketplace hubs) and the Phase 1.6 polish list landed during 2026-05. Work has now begun on the **0.4.3 "Destination"** cut, sequenced into four waves below. Per release policy we sculpt heavily and bump once per landed cut, not per PR.
+**0.4.3 released 2026-05-23.** Phase 1.5 + 1.6 (news / community / live marketplace hubs + polish) landed earlier in 2026-05; the **0.4.3 "Destination"** cut then shipped Wave 1 (hardened AI curator, offline BM25 search, cross-session shell memory) **and the full agent stack manager + local capability search** (see [CHANGELOG](./CHANGELOG.md)). Per release policy we sculpt heavily and bump once per landed cut, not per PR. The next milestone is gated on the backend deploy — see [the next era](#the-next-era--agent-stack-manager-capability-search--self-curation) below.
 
 ---
 
-## The 0.4.3 "Destination" cut — detailed plan
+## The "Destination" waves
 
-Four waves, sequenced by dependency so each ships value on its own and nothing stalls. Legend: ✓ done · ◑ in progress · ☐ planned.
+Sequenced by dependency so each ships value on its own. **Wave 1 shipped in 0.4.3**, along with the [agent stack manager and local capability search](#the-next-era--agent-stack-manager-capability-search--self-curation) (Threads A & B below). Waves 2–4 are the next milestone, gated on the backend deploy. Legend: ✓ done · ◑ partial · ☐ planned.
 
-### Wave 1 — Command excellence & self-growing catalog *(no external accounts required)*
+### Wave 1 — Command excellence & self-growing catalog *(no external accounts required — shipped)*
 
 The local layer: make the tool sharper and the catalog able to grow itself.
 
 - ✓ **Cross-session shell memory** — `/recall <query>` searches every past per-cwd transcript; `/sessions` lists recent sessions with turn counts and last activity. Built on the existing transcript store (`src/transcript.ts` → `listSessions` / `searchTranscripts`).
 - ✓ **Never-dead daily surface** — `agora today` and the TUI Home news column fall back to recent cached items when nothing is fresh, and show an actionable `agora news --refresh` hint when the cache is empty — never a bare "Nothing in the last 24h."
-- ◑ **Compiled standalone binary** — `bun run build:binary` (`bun build --compile`) produces `dist/agora`. The compile works today; *distribution* of the binary (code signing for arm64 macOS, notarization, Homebrew) is deferred to Wave 4.
+- ✓ **Compiled standalone binary (build script)** — `bun run build:binary` (`bun build --compile`) produces `dist/agora`. The compile works today; *signed, notarized, Homebrew-distributable* binaries are deferred to Wave 4 (so `npm`/`npx` stays the supported install path).
 - ✓ **Harden the AI curator** — `src/curator/` discovers MCP servers/skills from GitHub + HuggingFace and AI-verifies each, now robust enough to run unattended: bounded concurrency (`--concurrency`), three modes (incremental / `--refresh` re-verifies items older than `--stale-days` for scheduled runs / `--force`), resumable progress via incremental cache writes, dedupe against the bundled catalog *and* the cache, per-failure-class stats with graceful degradation when `opencode` or repo metadata is unavailable, and a clear `agora curate --status` (mode + stats from the persisted run-state).
 - ✓ **Indexed + semantic catalog search** — replaced the linear substring scan with a no-dependency, offline **BM25 inverted index** (`src/search/catalog-index.ts`) with field weighting (name ×3, tags/id ×2, description ×1), stopword + intent-phrase stripping so "find something that does X" reduces to its content terms, and query-side dev-term synonym expansion (db→database, k8s→kubernetes, pg→postgresql…). `searchMarketplaceItems` ranks by BM25 when a query is present and stays fast as the curated catalog grows. The index is memoized alongside the item list.
 
@@ -52,7 +52,7 @@ The single roadmap blocker for the social layer. Everything is coded; this is op
 Turn the informational trust layer toward enforcement, then ship.
 
 - ☐ **Declared-vs-observed permission diff** — inspect an item against its declared manifest (does an MCP server's code touch fs/net/exec it didn't declare?). The remaining Phase 4 check.
-- ☐ **`agora doctor` for installed MCP servers** — does each configured server actually start? Does it stay within declared permissions? A pragmatic step toward runtime trust short of a full sandbox.
+- ✓ **`agora doctor` for installed MCP servers** *(shipped 0.4.3)* — checks each configured server (command resolvable, conflicting definitions) and, with `--probe`, actually starts it and runs the MCP handshake. Declared-vs-observed *permission* enforcement remains future work.
 - ☐ **Signed, distributable binary** — code-sign + notarize the `build:binary` output, a Homebrew tap, and GitHub-release automation so `brew install` / `curl | sh` work alongside `npm`.
 - ☐ **0.4.3 version bump + release notes** — finalize the changelog, tag, release.
 

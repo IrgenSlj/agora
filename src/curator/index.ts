@@ -431,7 +431,6 @@ export async function curateAll(
   }
 
   const todo = candidates.slice(0, limit);
-  const total = todo.length;
 
   // Determine which items to skip vs. process based on mode.
   // Incremental: skip items already in cache by id.

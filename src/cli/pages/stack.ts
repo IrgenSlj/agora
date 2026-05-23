@@ -4,7 +4,7 @@ import { readAllServers, groupServersByName, detectTools } from '../../stack/reg
 import { checkStack } from '../../stack/doctor.js';
 import { readCapabilityCache } from '../../stack/capability-cache.js';
 import { detectAgoraDataDir } from '../../state.js';
-import type { StackHealth, ServerHealth } from '../../stack/doctor.js';
+import type { StackHealth } from '../../stack/doctor.js';
 import type { ServerCapabilities } from '../../stack/capability-cache.js';
 import type { ConfiguredServer, StackEnv } from '../../stack/types.js';
 

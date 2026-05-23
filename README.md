@@ -156,7 +156,7 @@ src/community/        backend client + types
 src/news/             scoring, cache, per-source adapters
 src/state.ts          local state, saves, auth (atomic 0o600 writes)
 backend/src/index.ts  Cloudflare Workers + D1 (Hono router)
-test/                 907 tests, 38 files
+test/                 1155 tests, 51 files
 ```
 
 `agora` is, at its core, a **marketplace + community** hub for agentic coding. On
