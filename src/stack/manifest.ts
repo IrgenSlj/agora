@@ -27,6 +27,28 @@ export function manifestPath(env: StackEnv): string {
   return join(cwd, 'agora.toml');
 }
 
+// ── opencodeEntryToManifest ───────────────────────────────────────────────────
+
+export type OpencodeMcpEntry =
+  | { type: 'local'; command: string[]; environment?: Record<string, string>; enabled?: boolean }
+  | { type: 'remote'; url: string; enabled?: boolean };
+
+export function opencodeEntryToManifest(entry: OpencodeMcpEntry): ManifestEntry {
+  const result: ManifestEntry = {};
+  if (entry.type === 'local') {
+    result.command = entry.command;
+    if (entry.environment && Object.keys(entry.environment).length > 0) {
+      result.env = entry.environment;
+    }
+  } else {
+    result.url = entry.url;
+  }
+  if (entry.enabled === false) {
+    result.enabled = false;
+  }
+  return result;
+}
+
 // ── serverToEntry ─────────────────────────────────────────────────────────────
 
 export function serverToEntry(server: ConfiguredServer): ManifestEntry {

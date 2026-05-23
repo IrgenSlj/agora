@@ -185,6 +185,10 @@ export const COMMANDS: CommandMeta[] = [
       'With --write, opencode.json is updated and any required npm packages are installed.',
     flags: [
       { flag: '--write', description: 'Apply the install plan (update config + run npm install)' },
+      {
+        flag: '--save',
+        description: 'Also record the installed server in agora.toml (requires --write)'
+      },
       { flag: '--config', description: 'Path to opencode.json (auto-detected by default)' },
       { flag: '--type, -t', description: 'Item kind: package or workflow' },
       {
@@ -196,6 +200,7 @@ export const COMMANDS: CommandMeta[] = [
     examples: [
       'agora install mcp-github',
       'agora install mcp-github --write',
+      'agora install mcp-github --write --save',
       'agora install mcp-github --write --config ./opencode.json'
     ]
   },
