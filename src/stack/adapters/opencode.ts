@@ -103,7 +103,8 @@ export const opencodeAdapter: ToolAdapter = {
         parsed = JSON.parse(raw);
       } catch (e) {
         throw new Error(
-          `opencode config at ${filePath} is not valid JSON — refusing to overwrite: ${e instanceof Error ? e.message : String(e)}`
+          `opencode config at ${filePath} is not valid JSON — refusing to overwrite: ${e instanceof Error ? e.message : String(e)}`,
+          { cause: e }
         );
       }
       if (typeof parsed === 'object' && parsed !== null) {

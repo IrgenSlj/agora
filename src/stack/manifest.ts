@@ -366,7 +366,8 @@ export async function loadManifestFromSource(
       res = await fetcher(source);
     } catch (e) {
       throw new Error(
-        `Could not fetch manifest from ${source}: ${e instanceof Error ? e.message : String(e)}`
+        `Could not fetch manifest from ${source}: ${e instanceof Error ? e.message : String(e)}`,
+        { cause: e }
       );
     }
     if (!res.ok) {
@@ -386,7 +387,8 @@ export async function loadManifestFromSource(
     return parseManifest(text);
   } catch (e) {
     throw new Error(
-      `Invalid manifest from ${source}: ${e instanceof Error ? e.message : String(e)}`
+      `Invalid manifest from ${source}: ${e instanceof Error ? e.message : String(e)}`,
+      { cause: e }
     );
   }
 }

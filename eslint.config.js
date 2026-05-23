@@ -19,6 +19,21 @@ export default tseslint.config(
     }
   },
   {
+    // Plain Node.js test fixtures (executable scripts spawned by tests).
+    files: ['test/fixtures/**/*.js'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+        setInterval: 'readonly',
+        setTimeout: 'readonly',
+        clearInterval: 'readonly',
+        clearTimeout: 'readonly'
+      }
+    }
+  },
+  {
     ignores: ['dist/**', 'node_modules/**', 'hub/**', 'backend/dist/**', 'backend/node_modules/**']
   }
 );
