@@ -62,17 +62,20 @@ Turn the informational trust layer toward enforcement, then ship.
 
 Beyond the 0.4.3 cut, four strategic threads turn `agora` from a tool you *visit* into one you *live in* — without diluting the marketplace / news / community pillars, which remain the core. Sequenced so the local, no-backend work ships first.
 
-### Thread A — Agent stack manager *(local; no backend; in progress)*
+### Thread A — Agent stack manager *(local; no backend; shipped)*
 
 A **cross-tool package-manager for your agentic dev environment** — the daily-driver hook. Think `package.json` / Brewfile, but for the MCP servers, skills, and workflows your agent uses. Built in `src/stack/`, mirroring the pluggable `src/hubs/` pattern: one `ToolAdapter` per agent tool (**opencode**, **Claude Code**, **Cursor**, **Windsurf**) normalizing each tool's MCP config into one `ConfiguredServer` shape. Nobody owns this universal config layer today.
 
-- ◑ **Phase 1 — read-only stack view** *(building now)*: the adapter layer + `agora installed` (a unified view of every configured MCP server across all detected tools, grouped by name) + `agora doctor` (health: config parses, command resolvable on `PATH`, conflicting definitions, optional `--probe` to actually start a server). `doctor` is also the Wave 4 trust item — landed early.
-- ☐ **Phase 2 — `agora.toml` + `agora sync`**: a declarative manifest of the MCP servers / skills / workflows you want; `agora sync` reconciles each tool's real config to it (writes gated behind `--write`/`--yes` like `install`). `agora export` snapshots your current stack into a manifest. Shareable stacks = "clone someone's agent setup," a reproducible-environment + viral-growth loop.
-- ☐ **Phase 3 — close the loop**: marketplace `install` writes into the manifest; `agora update` (extends `src/outdated.ts`) bumps installed servers; `agora try <id>` does an ephemeral, auto-removed install for a test drive.
+- ✓ **Phase 1 — read-only stack view**: the adapter layer + `agora installed` (a unified view of every configured MCP server across all detected tools, grouped by name) + `agora doctor` (health: config parses, command resolvable on `PATH`, conflicting definitions, `--probe` does a real MCP handshake). `doctor` is also the Wave 4 trust item — landed early.
+- ✓ **Phase 2 — `agora.toml` + `agora sync`**: `agora freeze` snapshots your stack into a declarative `agora.toml` (a self-contained, no-dep TOML reader/writer); `agora sync` reconciles each tool's real config to it — dry-run diff by default, writes gated behind `--write --yes`, every unrelated config key preserved. Shareable stacks = "clone someone's agent setup."
+- ◑ **Phase 3 — close the loop**: ✓ marketplace `install --save` writes the installed server into `agora.toml`; ✓ `agora try <id>` does an ephemeral MCP test-drive (real `initialize` + `tools/list` handshake, nothing persisted). ☐ `agora update` (extends `src/outdated.ts`) to bump installed servers remains.
 
-### Thread B — Capability search *(local; builds on the BM25 index)*
+### Thread B — Capability search *(local slice shipped; catalog-wide needs the backend)*
 
-Index what MCP servers actually **expose** — their declared tool/resource schemas — and search over *capabilities*, not README prose. `agora find "talk to my postgres db"` matches servers whose tools are about SQL/query/db, ranked by capability overlap. This is the natural substrate for the agent-facing `agora mcp` `search` tool: an agent describes the capability it needs and gets the server that provides it. Novel and defensible — nobody indexes the tool schemas.
+Index what MCP servers actually **expose** — their tool schemas — and search over *capabilities*, not README prose.
+
+- ✓ **Local slice**: `agora doctor --probe` and `agora try` discover each server's tools via the MCP handshake and persist them to a local capability cache (`src/stack/capability-cache.ts`); `agora capabilities [query]` searches "which of my servers can do X" with the same offline BM25 engine the marketplace uses (`src/search/catalog-index.ts`).
+- ☐ **Catalog-wide**: have the server-side curator probe servers and store their tool schemas in the catalog, so `agora find "talk to my postgres db"` ranks the *whole* marketplace by capability overlap, and the agent-facing `agora mcp` `search` tool answers capability queries. Novel and defensible — nobody indexes the tool schemas. Needs Wave 2.
 
 ### Thread C — Self-curation flywheel *(needs Wave 2 backend)*
 
