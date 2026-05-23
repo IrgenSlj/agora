@@ -27,6 +27,7 @@ import * as curateModule from './commands/curate.js';
 import * as installedModule from './commands/installed.js';
 import * as doctorModule from './commands/doctor.js';
 import * as freezeModule from './commands/freeze.js';
+import * as syncModule from './commands/sync.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -178,6 +179,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       installed: installedModule.commandInstalled,
       doctor: doctorModule.commandDoctor,
       freeze: freezeModule.commandFreeze,
+      sync: syncModule.commandSync,
       author: marketplace.commandAuthor,
       bookmarks: operations.commandBookmarks,
       welcome: welcomeModule.commandWelcome,

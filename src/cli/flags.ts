@@ -33,6 +33,7 @@ const booleanFlags = new Set([
   'offline',
   'once',
   'probe',
+  'prune',
   'refresh',
   'sound',
   'status',

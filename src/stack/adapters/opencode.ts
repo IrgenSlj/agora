@@ -1,8 +1,16 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { atomicWriteFile } from '../../atomic-write.js';
 import { loadOpenCodeConfig } from '../../config-files.js';
-import type { ConfiguredServer, StackEnv, ToolAdapter, ToolConfigLocation } from '../types.js';
+import type {
+  ConfiguredServer,
+  DesiredServer,
+  StackEnv,
+  SyncChange,
+  ToolAdapter,
+  ToolConfigLocation
+} from '../types.js';
 
 function resolveHome(opts: StackEnv): string {
   return opts.home ?? homedir();
@@ -10,6 +18,27 @@ function resolveHome(opts: StackEnv): string {
 
 function resolveCwd(opts: StackEnv): string {
   return opts.cwd ?? process.cwd();
+}
+
+function toOpencodeEntry(ds: DesiredServer): Record<string, unknown> {
+  if (ds.url) {
+    const entry: Record<string, unknown> = { type: 'remote', url: ds.url };
+    if (ds.enabled === false) entry.enabled = false;
+    return entry;
+  }
+  const entry: Record<string, unknown> = {
+    type: 'local',
+    command: ds.command ?? []
+  };
+  if (ds.env && Object.keys(ds.env).length > 0) {
+    entry.environment = ds.env;
+  }
+  if (ds.enabled === false) entry.enabled = false;
+  return entry;
+}
+
+function entriesEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 export const opencodeAdapter: ToolAdapter = {
@@ -24,6 +53,89 @@ export const opencodeAdapter: ToolAdapter = {
       { path: join(home, '.config', 'opencode', 'opencode.json'), scope: 'user' },
       { path: join(home, '.opencode.json'), scope: 'user' }
     ];
+  },
+
+  writeLocation(opts: StackEnv, scope: 'project' | 'user'): ToolConfigLocation | null {
+    const cwd = resolveCwd(opts);
+    const home = resolveHome(opts);
+    if (scope === 'project') {
+      return { path: join(cwd, 'opencode.json'), scope: 'project' };
+    }
+    return { path: join(home, '.config', 'opencode', 'opencode.json'), scope: 'user' };
+  },
+
+  writeServers(
+    location: ToolConfigLocation,
+    desired: DesiredServer[],
+    opts: { prune: boolean }
+  ): SyncChange {
+    const filePath = location.path;
+
+    // Read existing file
+    let doc: Record<string, unknown> = {};
+    if (existsSync(filePath)) {
+      const raw = readFileSync(filePath, 'utf8');
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        throw new Error(
+          `opencode config at ${filePath} is not valid JSON — refusing to overwrite: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
+      if (typeof parsed === 'object' && parsed !== null) {
+        doc = parsed as Record<string, unknown>;
+      }
+    }
+
+    // Deep-clone to avoid mutation of original
+    const result: Record<string, unknown> = { ...doc };
+
+    // Get existing MCP container
+    const existingMcp: Record<string, unknown> =
+      typeof doc['mcp'] === 'object' && doc['mcp'] !== null
+        ? { ...(doc['mcp'] as Record<string, unknown>) }
+        : {};
+
+    const added: string[] = [];
+    const updated: string[] = [];
+    const removed: string[] = [];
+
+    // Build desired map
+    const desiredMap = new Map<string, DesiredServer>(desired.map((d) => [d.name, d]));
+
+    // New MCP container
+    const newMcp: Record<string, unknown> = opts.prune ? {} : { ...existingMcp };
+
+    // Apply desired
+    for (const ds of desired) {
+      const newEntry = toOpencodeEntry(ds);
+      const existingEntry = existingMcp[ds.name];
+      if (existingEntry === undefined) {
+        added.push(ds.name);
+      } else {
+        const existingNorm = existingEntry as Record<string, unknown>;
+        if (!entriesEqual(existingNorm, newEntry)) {
+          updated.push(ds.name);
+        }
+      }
+      newMcp[ds.name] = newEntry;
+    }
+
+    // Handle pruning
+    if (opts.prune) {
+      for (const name of Object.keys(existingMcp)) {
+        if (!desiredMap.has(name)) {
+          removed.push(name);
+        }
+      }
+    }
+
+    result['mcp'] = newMcp;
+
+    atomicWriteFile(filePath, JSON.stringify(result, null, 2) + '\n', 0o644);
+
+    return { added, updated, removed };
   },
 
   readServers(opts: StackEnv): ConfiguredServer[] {

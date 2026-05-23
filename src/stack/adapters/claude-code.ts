@@ -1,7 +1,15 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { ConfiguredServer, StackEnv, ToolAdapter, ToolConfigLocation } from '../types.js';
+import { atomicWriteFile } from '../../atomic-write.js';
+import type {
+  ConfiguredServer,
+  DesiredServer,
+  StackEnv,
+  SyncChange,
+  ToolAdapter,
+  ToolConfigLocation
+} from '../types.js';
 
 function resolveHome(opts: StackEnv): string {
   return opts.home ?? homedir();
@@ -75,6 +83,32 @@ function parseJson(path: string): unknown | null {
   }
 }
 
+function toClaudeEntry(ds: DesiredServer, existingEntry?: McpEntry): McpEntry | null {
+  // claude-code has no enabled field — skip disabled servers
+  if (ds.enabled === false) return null;
+
+  if (ds.url) {
+    // Preserve pre-existing type (e.g. 'sse') when updating
+    const existingType =
+      existingEntry && isRemoteEntry(existingEntry) ? existingEntry.type : undefined;
+    const entry: { type?: 'sse' | 'http'; url: string } = { url: ds.url };
+    if (existingType) entry.type = existingType;
+    return entry;
+  }
+
+  const [cmd, ...args] = ds.command ?? [];
+  const entry: { command: string; args?: string[]; env?: Record<string, string> } = {
+    command: cmd ?? ''
+  };
+  if (args.length > 0) entry.args = args;
+  if (ds.env && Object.keys(ds.env).length > 0) entry.env = ds.env;
+  return entry;
+}
+
+function entriesEqual(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export const claudeCodeAdapter: ToolAdapter = {
   id: 'claude-code',
   displayName: 'Claude Code',
@@ -86,6 +120,95 @@ export const claudeCodeAdapter: ToolAdapter = {
       { path: join(cwd, '.mcp.json'), scope: 'project' },
       { path: join(home, '.claude.json'), scope: 'user' }
     ];
+  },
+
+  writeLocation(opts: StackEnv, scope: 'project' | 'user'): ToolConfigLocation | null {
+    const cwd = resolveCwd(opts);
+    const home = resolveHome(opts);
+    if (scope === 'project') {
+      return { path: join(cwd, '.mcp.json'), scope: 'project' };
+    }
+    return { path: join(home, '.claude.json'), scope: 'user' };
+  },
+
+  writeServers(
+    location: ToolConfigLocation,
+    desired: DesiredServer[],
+    opts: { prune: boolean }
+  ): SyncChange {
+    const filePath = location.path;
+
+    // Read existing file
+    let doc: Record<string, unknown> = {};
+    if (existsSync(filePath)) {
+      const raw = readFileSync(filePath, 'utf8');
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        throw new Error(
+          `claude-code config at ${filePath} is not valid JSON — refusing to overwrite: ${e instanceof Error ? e.message : String(e)}`
+        );
+      }
+      if (typeof parsed === 'object' && parsed !== null) {
+        doc = parsed as Record<string, unknown>;
+      }
+    }
+
+    // Preserve all sibling keys; only mutate mcpServers
+    const result: Record<string, unknown> = { ...doc };
+
+    const existingMcp: Record<string, unknown> =
+      typeof doc['mcpServers'] === 'object' && doc['mcpServers'] !== null
+        ? { ...(doc['mcpServers'] as Record<string, unknown>) }
+        : {};
+
+    const added: string[] = [];
+    const updated: string[] = [];
+    const removed: string[] = [];
+    const skippedDisabled: string[] = [];
+
+    const desiredMap = new Map<string, DesiredServer>(desired.map((d) => [d.name, d]));
+
+    const newMcp: Record<string, unknown> = opts.prune ? {} : { ...existingMcp };
+
+    for (const ds of desired) {
+      const existingEntry = existingMcp[ds.name] as McpEntry | undefined;
+      const newEntry = toClaudeEntry(ds, existingEntry);
+
+      if (newEntry === null) {
+        // disabled — skip writing
+        skippedDisabled.push(ds.name);
+        if (opts.prune && existingEntry !== undefined) {
+          // remove from newMcp if pruning (it was already removed by the prune-start)
+          delete newMcp[ds.name];
+        }
+        continue;
+      }
+
+      if (existingEntry === undefined) {
+        added.push(ds.name);
+      } else {
+        if (!entriesEqual(existingEntry, newEntry)) {
+          updated.push(ds.name);
+        }
+      }
+      newMcp[ds.name] = newEntry;
+    }
+
+    if (opts.prune) {
+      for (const name of Object.keys(existingMcp)) {
+        if (!desiredMap.has(name) && !skippedDisabled.includes(name)) {
+          removed.push(name);
+        }
+      }
+    }
+
+    result['mcpServers'] = newMcp;
+
+    atomicWriteFile(filePath, JSON.stringify(result, null, 2) + '\n', 0o644);
+
+    return { added, updated, removed };
   },
 
   readServers(opts: StackEnv): ConfiguredServer[] {

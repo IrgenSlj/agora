@@ -1021,6 +1021,48 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'sync',
+    group: 'Stack',
+    summary: "Reconcile your agora.toml manifest into each agent tool's MCP config",
+    usage: 'agora sync [--tool <id>] [--scope project|user] [--prune] [--write --yes] [--json]',
+    details:
+      'Reads the agora.toml manifest (created by `agora freeze --write`) and reconciles its MCP ' +
+      'server entries into the real config files of each detected agent tool. ' +
+      'By default runs as a dry-run and prints what would change without touching any files. ' +
+      'Pass --write --yes to apply. --prune removes servers not listed in the manifest; ' +
+      'without --prune, unmanaged servers are left intact. --scope controls whether project ' +
+      'or user config files are targeted (default project).',
+    flags: [
+      {
+        flag: '--tool',
+        description: 'Target a single tool: opencode, claude-code, cursor, or windsurf'
+      },
+      {
+        flag: '--scope',
+        description: 'Config scope to write: project (default) or user'
+      },
+      {
+        flag: '--prune',
+        description: 'Remove servers from configs that are not in the manifest'
+      },
+      {
+        flag: '--write',
+        description: 'Enable write mode (must be combined with --yes)'
+      },
+      {
+        flag: '--yes',
+        description: 'Confirm write (required when --write is set)'
+      },
+      { flag: '--json', description: 'Output plan or applied result as JSON' }
+    ],
+    examples: [
+      'agora sync',
+      'agora sync --tool opencode',
+      'agora sync --write --yes',
+      'agora sync --prune --write --yes'
+    ]
+  },
+  {
     name: 'notify',
     group: 'Setup',
     summary: 'Send a desktop notification via macOS, Linux, or Windows',
