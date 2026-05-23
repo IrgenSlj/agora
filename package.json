@@ -1,6 +1,6 @@
 {
   "name": "opencode-agora",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Agora - The Developer's Terminal Marketplace & Community Hub for OpenCode",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,6 +27,7 @@
   ],
   "scripts": {
     "build": "rm -rf dist && tsc && chmod +x dist/cli.js",
+    "build:binary": "bun build src/cli.ts --compile --outfile dist/agora",
     "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
     "hub:dev": "bun hub/server.ts",
     "typecheck": "bun run typecheck:cli && bun run typecheck:backend",

@@ -1,12 +1,13 @@
 import { existsSync, readFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, execSync } from 'node:child_process';
 import { atomicWriteFile } from '../atomic-write.js';
 import { searchGithub } from '../hubs/github.js';
 import { searchHuggingFace } from '../hubs/huggingface.js';
 import { fetchRepoMetadata, fetchHfRepoMetadata } from '../hubs/enrichment.js';
 import type { HubItem } from '../hubs/types.js';
 import { FREE_MODELS } from '../cli/commands/chat.js';
+import { samplePackages } from '../data.js';
 
 const MAX_AI_ITEMS = 50;
 const MAX_RETRIES = 3;
@@ -34,6 +35,10 @@ export function curationCachePath(dataDir: string): string {
   return join(dataDir, 'curation-cache.json');
 }
 
+export function curationStatePath(dataDir: string): string {
+  return join(dataDir, 'curation-state.json');
+}
+
 export function readCuratedCache(dataDir: string): CuratedPackage[] {
   const path = curationCachePath(dataDir);
   if (!existsSync(path)) return [];
@@ -57,6 +62,156 @@ export function getCuratedItems(dataDir: string): CuratedPackage[] {
   const cached = readCuratedCache(dataDir);
   if (cached.length > 0) return cached;
   return [];
+}
+
+/**
+ * Normalises a repository URL for deduplication:
+ * lower-cases, strips trailing slashes and a trailing ".git".
+ */
+export function normaliseRepo(url: string): string {
+  return url
+    .trim()
+    .toLowerCase()
+    .replace(/\/+$/, '')
+    .replace(/\.git$/, '');
+}
+
+/**
+ * Filters out HubItem candidates whose id OR repository already exists in the
+ * bundled hand-curated catalog (src/data.ts samplePackages).
+ * Pure function — no I/O.
+ */
+export function filterBundledDuplicates(candidates: HubItem[]): HubItem[] {
+  const bundledIds = new Set(samplePackages.map((p) => p.id.toLowerCase()));
+  const bundledRepos = new Set(
+    samplePackages.filter((p) => p.repository).map((p) => normaliseRepo(p.repository!))
+  );
+  return candidates.filter((item) => {
+    if (bundledIds.has(item.id.toLowerCase())) return false;
+    if (item.repository && bundledRepos.has(normaliseRepo(item.repository))) return false;
+    return true;
+  });
+}
+
+/**
+ * Deduplicates an array of items by `id`, keeping the first occurrence.
+ * Pure function — no I/O.
+ */
+export function dedupeById<T extends { id: string }>(items: T[]): T[] {
+  const seen = new Set<string>();
+  const result: T[] = [];
+  for (const item of items) {
+    if (!seen.has(item.id)) {
+      seen.add(item.id);
+      result.push(item);
+    }
+  }
+  return result;
+}
+
+/**
+ * Returns true if the given ISO timestamp is older than `staleDays` days.
+ * Pure function — `now` defaults to the current date (injectable for tests).
+ */
+export function isStale(aiVerifiedAt: string, staleDays: number, now?: Date): boolean {
+  const verifiedMs = new Date(aiVerifiedAt).getTime();
+  const nowMs = (now ?? new Date()).getTime();
+  const staleLimitMs = staleDays * 24 * 60 * 60 * 1000;
+  return nowMs - verifiedMs >= staleLimitMs;
+}
+
+/**
+ * Runs `fn` over `items` with at most `limit` concurrent executions.
+ * Preserves input order in the returned array.
+ */
+export async function mapWithConcurrency<T, R>(
+  items: T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let nextIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (nextIndex < items.length) {
+      const i = nextIndex;
+      nextIndex += 1;
+      results[i] = await fn(items[i]!, i);
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
+/**
+ * Returns curation status without running discovery or verification.
+ */
+export interface CurationStatus {
+  count: number;
+  lastRunAt: string | null;
+  source: 'ai' | 'bundled';
+  lastRunStats?: RunStats;
+  lastRunMode?: 'incremental' | 'refresh' | 'force';
+}
+
+interface CurationState {
+  lastRunAt: string;
+  mode: 'incremental' | 'refresh' | 'force';
+  stats: RunStats;
+}
+
+interface RunStats {
+  discovered: number;
+  skippedBundled: number;
+  reused: number;
+  verified: number;
+  rejected: number;
+  fetchFailed: number;
+  aiFailed: number;
+}
+
+export function curationStatus(dataDir: string): CurationStatus {
+  const cached = readCuratedCache(dataDir);
+  const base: CurationStatus =
+    cached.length === 0
+      ? { count: samplePackages.length, lastRunAt: null, source: 'bundled' }
+      : (() => {
+          const dates = cached
+            .map((p) => p.aiVerifiedAt)
+            .filter(Boolean)
+            .sort()
+            .reverse();
+          const lastRunAt = dates[0] ?? null;
+          return { count: cached.length, lastRunAt, source: 'ai' as const };
+        })();
+
+  const statePath = curationStatePath(dataDir);
+  if (existsSync(statePath)) {
+    try {
+      const raw = readFileSync(statePath, 'utf8');
+      const state = JSON.parse(raw) as CurationState;
+      base.lastRunStats = state.stats;
+      base.lastRunMode = state.mode;
+    } catch {
+      // state file is optional — ignore parse errors
+    }
+  }
+
+  return base;
+}
+
+/**
+ * Returns true if the `opencode` binary is available on PATH.
+ */
+export function isOpencodeAvailable(): boolean {
+  try {
+    execSync('which opencode', { stdio: 'pipe', timeout: 2000 });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 interface VerifyResult {
@@ -172,7 +327,14 @@ async function verifyWithAi(name: string, readme: string): Promise<VerifyResult 
   return parseVerifyResponse(response);
 }
 
-async function processCandidate(hubItem: HubItem): Promise<CuratedPackage | null> {
+// Discriminated result type for processCandidate
+type CandidateOutcome =
+  | { kind: 'verified'; pkg: CuratedPackage }
+  | { kind: 'rejected' }
+  | { kind: 'fetch-failed' }
+  | { kind: 'ai-unavailable' };
+
+async function processCandidate(hubItem: HubItem): Promise<CandidateOutcome> {
   const repoId = hubItem.id.startsWith('gh:') ? hubItem.id.slice(3) : hubItem.id;
   const isHf = hubItem.source === 'hf';
 
@@ -181,18 +343,19 @@ async function processCandidate(hubItem: HubItem): Promise<CuratedPackage | null
 
   if (isHf) {
     const meta = await fetchHfRepoMetadata(repoId);
-    if (!meta) return null;
+    if (!meta) return { kind: 'fetch-failed' };
     readme = meta.readme;
     version = meta.version;
   } else {
     const meta = await fetchRepoMetadata(repoId);
-    if (!meta) return null;
+    if (!meta) return { kind: 'fetch-failed' };
     readme = meta.readme;
     version = meta.commitSha;
   }
 
   const result = await verifyWithAi(hubItem.name, readme);
-  if (!result || !result.isGenuine) return null;
+  if (!result) return { kind: 'ai-unavailable' };
+  if (!result.isGenuine) return { kind: 'rejected' };
 
   const published: CuratedPackage = {
     id: hubItem.id,
@@ -213,12 +376,16 @@ async function processCandidate(hubItem: HubItem): Promise<CuratedPackage | null
     aiVerifiedAt: new Date().toISOString()
   };
 
-  return published;
+  return { kind: 'verified', pkg: published };
 }
 
 export interface CurateAllOptions {
   limit?: number;
+  /** @deprecated prefer `mode: 'force'` */
   force?: boolean;
+  mode?: 'incremental' | 'refresh' | 'force';
+  staleDays?: number;
+  concurrency?: number;
   onProgress?: (message: string) => void;
 }
 
@@ -228,57 +395,158 @@ export async function curateAll(
 ): Promise<CuratedPackage[]> {
   const log = opts.onProgress || ((msg: string) => console.log(msg));
   const limit = opts.limit || MAX_AI_ITEMS;
+  const concurrency = opts.concurrency || 4;
+  const staleDays = opts.staleDays ?? 30;
 
-  let cached: CuratedPackage[] = [];
-  if (!opts.force) {
-    cached = readCuratedCache(dataDir);
-    if (cached.length > 0) {
-      log(`Found ${cached.length} cached curated items (use --force to re-curate)`);
-      return cached;
-    }
+  // Resolve mode: explicit `mode` wins; fall back to `force` boolean for compat.
+  const mode: 'incremental' | 'refresh' | 'force' =
+    opts.mode ?? (opts.force ? 'force' : 'incremental');
+
+  const cached = readCuratedCache(dataDir);
+  const cachedById = new Map<string, CuratedPackage>(cached.map((p) => [p.id, p]));
+
+  // Incremental mode: if cache is non-empty and no new candidates, short-circuit early.
+  // (Discovery is still needed for refresh/force modes.)
+  if (mode === 'incremental' && cached.length > 0) {
+    log(`Found ${cached.length} cached curated items (use --force to re-curate)`);
+    return cached;
+  }
+
+  if (!isOpencodeAvailable()) {
+    const msg =
+      'AI verification unavailable: `opencode` not found on PATH. ' +
+      'Install opencode (https://opencode.ai) or run with cached results.';
+    log(msg);
+    return cached;
   }
 
   log('Discovering candidates from GitHub and HuggingFace...');
-  const candidates = await discoverCandidates();
-  log(`Found ${candidates.length} candidate items`);
+  const rawCandidates = await discoverCandidates();
+  log(`Found ${rawCandidates.length} candidate items`);
 
-  const results: CuratedPackage[] = [];
-  const todo = candidates.slice(0, limit);
-
-  for (let i = 0; i < todo.length; i++) {
-    const item = todo[i]!;
-    const label = `[${i + 1}/${todo.length}] ${item.name}`;
-
-    const existing = cached.find((c) => c.id === item.id);
-    if (existing && !opts.force) {
-      results.push(existing);
-      continue;
-    }
-
-    log(`${label} — verifying...`);
-    const curated = await processCandidate(item);
-    if (curated) {
-      results.push(curated);
-      log(`${label} ✓ verified as ${curated.category}`);
-    } else {
-      log(`${label} ✗ skipped (not a genuine item)`);
-    }
-
-    if ((i + 1) % 5 === 0 || i === todo.length - 1) {
-      writeCuratedCache(dataDir, [
-        ...cached.filter((c) => !todo.find((t) => t.id === c.id)),
-        ...results
-      ]);
-    }
+  const candidates = filterBundledDuplicates(rawCandidates);
+  const skippedBundled = rawCandidates.length - candidates.length;
+  if (skippedBundled > 0) {
+    log(`Skipped ${skippedBundled} items already in the bundled catalog`);
   }
 
-  writeCuratedCache(dataDir, [
-    ...cached.filter((c) => !todo.find((t) => t.id === c.id)),
-    ...results
-  ]);
-  log(`\nDone. ${results.length} items curated and cached`);
+  const todo = candidates.slice(0, limit);
 
-  return results;
+  // Determine which items to skip vs. process based on mode.
+  // Incremental: skip items already in cache by id.
+  // Refresh: skip items in cache whose aiVerifiedAt is fresh (not stale).
+  // Force: process everything.
+  //
+  // Resumption logic: because incremental cache writes persist partial
+  // progress, an interrupted --refresh/--force run resumes correctly on
+  // re-run: items already written are present in the cache with a fresh
+  // aiVerifiedAt, so they are treated as fresh and reused automatically.
+  const reusedItems: CuratedPackage[] = [];
+  const itemsToProcess: HubItem[] = [];
+
+  for (const item of todo) {
+    const existing = cachedById.get(item.id);
+    if (!existing) {
+      itemsToProcess.push(item);
+      continue;
+    }
+    if (mode === 'force') {
+      itemsToProcess.push(item);
+      continue;
+    }
+    if (mode === 'refresh' && isStale(existing.aiVerifiedAt, staleDays)) {
+      itemsToProcess.push(item);
+      continue;
+    }
+    // Incremental: already cached (non-empty cache short-circuited above,
+    // but if somehow we're here, reuse it).
+    // Refresh: item is fresh, reuse without an AI call.
+    reusedItems.push(existing);
+  }
+
+  log(`Reusing ${reusedItems.length} fresh cached items, verifying ${itemsToProcess.length} items`);
+
+  const stats: RunStats = {
+    discovered: rawCandidates.length,
+    skippedBundled,
+    reused: reusedItems.length,
+    verified: 0,
+    rejected: 0,
+    fetchFailed: 0,
+    aiFailed: 0
+  };
+
+  // Shared completion counter for periodic cache writes.
+  let completions = 0;
+
+  // Cached items not in this run's todo list (they were never candidates this
+  // run — preserve them verbatim).
+  const todoIds = new Set(todo.map((t) => t.id));
+  const untouchedCached = cached.filter((c) => !todoIds.has(c.id));
+
+  // Accumulate verified results; we write incrementally so slot array up-front.
+  const verifiedResults: CuratedPackage[] = [];
+
+  await mapWithConcurrency(itemsToProcess, concurrency, async (item, _idx) => {
+    const label = `${item.name}`;
+    log(`${label} — verifying...`);
+
+    let outcome: CandidateOutcome;
+    try {
+      outcome = await processCandidate(item);
+    } catch (err) {
+      // Per-item exceptions must never abort the batch.
+      log(`${label} ✗ unexpected error: ${err instanceof Error ? err.message : String(err)}`);
+      stats.fetchFailed += 1;
+      return;
+    }
+
+    switch (outcome.kind) {
+      case 'verified':
+        verifiedResults.push(outcome.pkg);
+        stats.verified += 1;
+        log(`${label} ✓ verified as ${outcome.pkg.category}`);
+        break;
+      case 'rejected':
+        stats.rejected += 1;
+        log(`${label} ✗ rejected (not a genuine item)`);
+        break;
+      case 'fetch-failed':
+        stats.fetchFailed += 1;
+        log(`${label} ✗ fetch failed`);
+        break;
+      case 'ai-unavailable':
+        stats.aiFailed += 1;
+        log(`${label} ✗ AI unavailable or parse error`);
+        break;
+    }
+
+    completions += 1;
+    // Periodic incremental write every 5 completions.
+    if (completions % 5 === 0) {
+      const partial = dedupeById([...untouchedCached, ...reusedItems, ...verifiedResults]);
+      writeCuratedCache(dataDir, partial);
+    }
+  });
+
+  // Final merged result: untouched cached + reused fresh + newly verified.
+  const finalItems = dedupeById([...untouchedCached, ...reusedItems, ...verifiedResults]);
+  writeCuratedCache(dataDir, finalItems);
+
+  log(
+    `\nDone. ${stats.verified} new items verified, ${stats.reused} reused, ${stats.rejected} rejected, ${stats.fetchFailed} fetch-failed, ${stats.aiFailed} ai-failed`
+  );
+  log(`Total in cache: ${finalItems.length} items`);
+
+  // Persist run-state for --status
+  const state: CurationState = {
+    lastRunAt: new Date().toISOString(),
+    mode,
+    stats
+  };
+  atomicWriteFile(curationStatePath(dataDir), JSON.stringify(state, null, 2));
+
+  return finalItems;
 }
 
 export async function discoverCandidates(): Promise<HubItem[]> {

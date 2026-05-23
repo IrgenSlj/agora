@@ -1,5 +1,9 @@
 import { describe, test, expect } from 'bun:test';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createAgoraMcpServer } from '../src/cli/mcp-server';
+import { writeCapabilityCache } from '../src/stack/capability-cache';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 
@@ -21,7 +25,7 @@ async function createTestClient(opts?: Parameters<typeof createAgoraMcpServer>[0
 }
 
 describe('Agora MCP Server', () => {
-  test('lists all 8 tools', async () => {
+  test('lists all 11 tools', async () => {
     const { client } = await createTestClient();
     const result = await client.listTools();
     const toolNames = result.tools.map((t) => t.name).sort();
@@ -31,6 +35,9 @@ describe('Agora MCP Server', () => {
       'outdated',
       'scan',
       'search',
+      'stack_capabilities',
+      'stack_doctor',
+      'stack_installed',
       'trending',
       'tutorial',
       'tutorials'
@@ -205,5 +212,119 @@ describe('Agora MCP Server', () => {
     expect(text).toContain('@scope/foo');
     expect(text).toContain('@scope/bar');
     expect(text).toMatch(/\d+ fresh · \d+ stale · \d+ unknown/);
+  });
+});
+
+describe('Agora MCP Server — stack introspection tools', () => {
+  function makeStackEnv() {
+    const root = mkdtempSync(join(tmpdir(), 'agora-mcp-stack-'));
+    const proj = join(root, 'proj');
+    const home = join(root, 'home');
+    const data = join(root, 'data');
+    mkdirSync(proj, { recursive: true });
+    mkdirSync(home, { recursive: true });
+    mkdirSync(data, { recursive: true });
+    // an opencode config with a resolvable + a missing-binary server
+    writeFileSync(
+      join(proj, 'opencode.json'),
+      JSON.stringify({
+        mcp: {
+          faker: { type: 'local', command: ['node', '/tmp/x.js'] },
+          broken: { type: 'local', command: ['definitely-not-a-real-binary-xyz'] }
+        }
+      })
+    );
+    return {
+      root,
+      stack: { env: { HOME: home, PATH: process.env.PATH }, cwd: proj, dataDir: data }
+    };
+  }
+
+  test('stack_installed lists configured servers', async () => {
+    const { root, stack } = makeStackEnv();
+    try {
+      const { client } = await createTestClient({ stack });
+      const result = await client.callTool({ name: 'stack_installed', arguments: {} });
+      const text = extractText(result);
+      expect(text).toContain('faker');
+      expect(text).toContain('broken');
+      expect(text).toMatch(/server\(s\) configured/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test('stack_installed friendly text when nothing configured', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'agora-mcp-empty-'));
+    try {
+      const { client } = await createTestClient({
+        stack: { env: { HOME: join(root, 'h') }, cwd: join(root, 'c'), dataDir: join(root, 'd') }
+      });
+      const result = await client.callTool({ name: 'stack_installed', arguments: {} });
+      expect(extractText(result)).toContain('No MCP servers configured');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test('stack_doctor reports a summary and flags the missing binary', async () => {
+    const { root, stack } = makeStackEnv();
+    try {
+      const { client } = await createTestClient({ stack });
+      const result = await client.callTool({ name: 'stack_doctor', arguments: {} });
+      const text = extractText(result);
+      expect(text).toMatch(/ok: \d+ {2}warn: \d+ {2}error: \d+/);
+      expect(text).toContain('broken');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test('stack_capabilities lists and searches cached tools', async () => {
+    const { root, stack } = makeStackEnv();
+    try {
+      writeCapabilityCache(stack.dataDir, [
+        {
+          key: 'faker@aaaa1111',
+          name: 'faker',
+          command: ['node', '/tmp/x.js'],
+          serverInfo: { name: 'faker', version: '1.0' },
+          tools: [
+            { name: 'query_database', description: 'run a sql query' },
+            { name: 'echo', description: 'echo text' }
+          ],
+          ok: true,
+          probedAt: new Date().toISOString()
+        }
+      ]);
+      const { client } = await createTestClient({ stack });
+
+      const listed = extractText(
+        await client.callTool({ name: 'stack_capabilities', arguments: {} })
+      );
+      expect(listed).toContain('query_database');
+      expect(listed).toContain('echo');
+
+      const searched = extractText(
+        await client.callTool({ name: 'stack_capabilities', arguments: { query: 'database' } })
+      );
+      expect(searched).toContain('query_database');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test('stack_capabilities hints when the cache is empty', async () => {
+    const { root, stack } = makeStackEnv();
+    try {
+      const { client } = await createTestClient({ stack });
+      const text = extractText(
+        await client.callTool({ name: 'stack_capabilities', arguments: {} })
+      );
+      expect(text).toContain('No capability data found');
+      expect(text).toContain('agora doctor --probe');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

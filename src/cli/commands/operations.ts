@@ -9,6 +9,13 @@ import {
   writeOpenCodeConfig
 } from '../../config-files.js';
 import { createInstallPlan, hasPermissions, renderPermissionLines } from '../../marketplace.js';
+import {
+  manifestPath,
+  readManifest,
+  writeManifest,
+  opencodeEntryToManifest,
+  type StackManifest
+} from '../../stack/manifest.js';
 import { scanItem, type ScanResult } from '../../scan.js';
 import {
   findMarketplaceSource,
@@ -101,6 +108,16 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
     : null;
 
   if (parsed.flags.json) {
+    const mPathPreview = manifestPath({ cwd: io.cwd, env: io.env });
+    const newServersPreview = parsed.flags.save
+      ? Object.keys(plan.config.mcp ?? {}).filter((k) => {
+          const planEntry = plan.config.mcp?.[k];
+          const loadedEntry = loaded.config.mcp?.[k];
+          return (
+            planEntry !== undefined && JSON.stringify(planEntry) !== JSON.stringify(loadedEntry)
+          );
+        })
+      : undefined;
     writeJson(io.stdout, {
       source: source.source,
       apiUrl: source.apiUrl,
@@ -114,7 +131,10 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
       config: plan.config,
       cloneTarget: plan.cloneTarget,
       postInstallHint: plan.postInstallHint,
-      scan: scanResult
+      scan: scanResult,
+      savedToManifest: parsed.flags.save
+        ? { path: mPathPreview, servers: newServersPreview ?? [] }
+        : undefined
     });
     if (scanResult && scanResult.summary.fail > 0) return 1;
     return 0;
@@ -183,6 +203,9 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
       if (plan.cloneTarget) writeLine(io.stdout, `${style.dim('Location')} ${plan.cloneTarget}`);
       if (plan.postInstallHint)
         writeLine(io.stdout, `${style.dim('Next steps')} ${plan.postInstallHint}`);
+      if (parsed.flags.save) {
+        writeLine(io.stdout, style.dim('Note: --save is not yet recorded for git-clone installs.'));
+      }
     } else if (plan.kind === 'package-install') {
       if (plan.commands.length) {
         writeLine(io.stdout, 'Installing packages...');
@@ -196,6 +219,12 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
         }
       }
       writeLine(io.stdout, `Installed ${style.accent(item.name)}`);
+      if (parsed.flags.save) {
+        writeLine(
+          io.stdout,
+          style.dim('Note: --save is not yet recorded for package-install installs.')
+        );
+      }
     } else {
       writeOpenCodeConfig(configPath, plan.config);
       writeLine(io.stdout, `Installed ${style.accent(item.name)}`);
@@ -209,6 +238,33 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
           } catch {
             writeLine(io.stderr, `  ! Failed: ${cmd} (may already be installed)`);
           }
+        }
+      }
+      if (parsed.flags.save) {
+        const mPath = manifestPath({ cwd: io.cwd, env: io.env });
+        const newServers = Object.keys(plan.config.mcp ?? {}).filter((k) => {
+          const planEntry = plan.config.mcp?.[k];
+          const loadedEntry = loaded.config.mcp?.[k];
+          return (
+            planEntry !== undefined && JSON.stringify(planEntry) !== JSON.stringify(loadedEntry)
+          );
+        });
+        try {
+          const existing = readManifest(mPath);
+          const manifest: StackManifest = existing ?? { mcp: {} };
+          for (const name of newServers) {
+            const planEntry = plan.config.mcp![name]!;
+            manifest.mcp[name] = opencodeEntryToManifest(
+              planEntry as Parameters<typeof opencodeEntryToManifest>[0]
+            );
+          }
+          writeManifest(mPath, manifest);
+          writeLine(io.stdout, `Saved to ${style.dim(mPath)}`);
+        } catch (err) {
+          writeLine(
+            io.stderr,
+            `Warning: manifest update failed — ${err instanceof Error ? err.message : String(err)}`
+          );
         }
       }
     }
@@ -247,6 +303,9 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
 
   if (!parsed.flags.yes && !parsed.flags.y) {
     writeLine(io.stdout, '\nRun with --write to update the config file and install packages.');
+    if (parsed.flags.save) {
+      writeLine(io.stdout, style.dim('Note: --save only applies when --write is also set.'));
+    }
   } else {
     // --yes/-y: execute immediately (still showed preview above)
     if (plan.kind === 'git-clone') {
@@ -284,6 +343,33 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
           writeLine(io.stdout, `  ✓ ${cmd}`);
         } catch {
           writeLine(io.stdout, `  ! Failed: ${cmd} (may already be installed)`);
+        }
+      }
+      if (parsed.flags.save) {
+        const mPath = manifestPath({ cwd: io.cwd, env: io.env });
+        const newServers = Object.keys(plan.config.mcp ?? {}).filter((k) => {
+          const planEntry = plan.config.mcp?.[k];
+          const loadedEntry = loaded.config.mcp?.[k];
+          return (
+            planEntry !== undefined && JSON.stringify(planEntry) !== JSON.stringify(loadedEntry)
+          );
+        });
+        try {
+          const existing = readManifest(mPath);
+          const manifest: StackManifest = existing ?? { mcp: {} };
+          for (const name of newServers) {
+            const planEntry = plan.config.mcp![name]!;
+            manifest.mcp[name] = opencodeEntryToManifest(
+              planEntry as Parameters<typeof opencodeEntryToManifest>[0]
+            );
+          }
+          writeManifest(mPath, manifest);
+          writeLine(io.stdout, `Saved to ${style.dim(mPath)}`);
+        } catch (err) {
+          writeLine(
+            io.stderr,
+            `Warning: manifest update failed — ${err instanceof Error ? err.message : String(err)}`
+          );
         }
       }
     }

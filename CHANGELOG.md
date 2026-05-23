@@ -2,6 +2,41 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased]
+
+_Nothing yet._
+
+## [0.4.3] - 2026-05-23 — the agent stack manager
+
+The headline of this cut turns `agora` from a marketplace you *visit* into a daily driver you *live in*: a cross-tool **agent stack manager** — a package-manager for the MCP servers, skills, and workflows your agent uses, across opencode / Claude Code / Cursor / Windsurf. The marketplace, news, and community pillars remain the core; the stack manager is the loop that connects discover → install → manage → share → publish.
+
+Alongside it: the local slice of **capability search** (search the tools your servers actually expose), a hardened **AI curator** that can run unattended, an offline **BM25 catalog index**, and cross-session shell memory. Everything works offline with zero AI; the backend-dependent threads (self-curation flywheel, catalog-wide capability search, chat bots) are the next horizon — see [`ROADMAP.md`](./ROADMAP.md).
+
+### Added — agent stack manager
+A cross-tool package-manager for your agentic dev environment. New `src/stack/`, mirroring `src/hubs/` — one `ToolAdapter` per tool (opencode / Claude Code / Cursor / Windsurf) normalizing each config into one `ConfiguredServer` shape.
+- **`agora installed`** — unified view of every configured MCP server across all detected tools, grouped by name with transport + per-tool scope (and a tool count from the capability cache when available).
+- **`agora doctor`** — health report per server (command resolvable on `PATH`, valid remote url, disabled, conflicting definitions across tools); `--probe` performs a real MCP `initialize` + `tools/list` handshake; `--strict` exits non-zero on errors for CI.
+- **`agora.toml` + `agora freeze` + `agora sync`** — `freeze` snapshots the configured stack into a declarative `agora.toml` (self-contained, dependency-free TOML reader/writer); `sync` reconciles each tool's real config to it, dry-run diff by default and writes gated behind `--write --yes`, preserving every unrelated config key (Claude's `projects` map, opencode `$schema`/`theme`, …). `--scope project|user`, `--prune`. `sync --from <url|path>` applies a *shared* manifest — clone someone's agent setup — with a remote-source trust note.
+- **`agora install --save`** — records the installed server into the project `agora.toml`, so the manifest is built by installing rather than hand-editing (failure-isolated; never breaks the install).
+- **`agora try <id>`** — ephemeral MCP test-drive: runs the scan gate, spawns the server, does the MCP handshake, reports its advertised tools, then kills it and writes nothing.
+- **`agora capabilities [query]`** — searches the MCP *tools* discovered across your servers ("which of my servers can do X"), reusing the offline BM25 engine. Tool schemas are discovered by `doctor --probe` / `try` and persisted to a local capability cache (`src/stack/capability-cache.ts`).
+- **TUI Stack page** — `installed` + `doctor` + `capabilities` as a full-screen page (3rd tab), with probe-on-keypress and a per-server detail view.
+- **Stack introspection via `agora mcp`** — three read-only MCP tools (`stack_installed`, `stack_doctor`, `stack_capabilities`) let an agent see the user's configured servers, their static health, and the tools they expose, so an agent can reason about the stack it's running in. Mutating config still goes only through the gated CLI.
+- **`src/stack/mcp-probe.ts`** — a minimal, standalone MCP stdio client (newline-delimited JSON-RPC `initialize` + `tools/list`) with strict process cleanup and stderr-captured failure diagnostics; groundwork for catalog-wide capability search.
+
+### Added — command excellence & search
+- **Cross-session shell memory** — `/recall <query>` searches every past per-cwd transcript and shows matching exchanges (cwd · timestamp · snippet); `/sessions` lists recent sessions with turn counts and last activity. Built on the existing transcript store: `src/transcript.ts` gains `listSessions(dataDir)` and `searchTranscripts(dataDir, query)`. Brings Hermes-style "it remembers me" recall to the interactive shell.
+- **`build:binary` script** — `bun build src/cli.ts --compile --outfile dist/agora` produces a self-contained executable (no Node/bun needed at run-time). The compile works today; a *signed, notarized, Homebrew-distributable* binary is tracked for a later distribution cut (unsigned arm64 macOS binaries are killed on launch), so `npm`/`npx` stays the supported install path for now.
+- **Indexed + semantic catalog search** — new `src/search/catalog-index.ts`: a no-dependency, offline **BM25 inverted index** with field weighting (name ×3, tags/id ×2, description/author/category ×1), a tokenizer that strips stopwords *and* intent words so "find a tool that does X" reduces to its content terms, and query-side dev-term synonym expansion (db→database, k8s→kubernetes, pg→postgresql, …). `searchMarketplaceItems` now ranks by BM25 relevance when a query is present (filtering to scored matches, so nonsense queries still return empty), keeping search fast and well-ranked as the curated catalog grows past a hand-scannable size. The index is memoized alongside `getMarketplaceItems` and cleared by `clearMarketplaceItemsCache`.
+
+### Changed
+- **Never-dead daily surface** — `agora today` and the TUI Home news column no longer dead-end on an empty cache. When nothing is fresh in the last 24h they fall back to the most-recent cached items (flagged ` · recent`); when the cache is genuinely empty they show an actionable `run agora news --refresh` hint instead of "Nothing in the last 24h." Trending always renders. `--json` output is unchanged (still the 24h window) so scripts are unaffected.
+- **Hardened AI curator for unattended runs** — `src/curator/` is now robust enough to run on a schedule. A bounded-concurrency worker pool (`--concurrency`, default 4) replaces the fully sequential verify loop, with per-item `try/catch` so one bad repo never aborts the batch. Three modes: incremental (default, new items only), `--refresh` (re-verify cached items older than `--stale-days`, default 30 — the scheduled-cron mode), and `--force`. Incremental cache writes make an interrupted run resumable. Dedupe now runs against the bundled catalog *and* the cache. `processCandidate` returns a discriminated outcome so fetch-failed / ai-unavailable / rejected are counted separately instead of three silent nulls; stats are persisted to `curation-state.json` and surfaced by a richer `agora curate --status`. Fixes latent flag bugs (`--limit` was read as `typeof === 'number'`, always false and silently ignored; `-n`/`-c` short forms mapped to keys the command never read).
+
+### Internal
+- Repo-wide `prettier --write` pass and a lint-clean sweep so all CI gates (`format:check` → `lint` → `typecheck` → `test`) are green; merged the Dependabot bumps (#23–#30) and resolved the `main` divergence.
+- **1155 pass / 1 skip / 0 fail across 51 test files** (was 827 across 36). New tests cover the BM25 index, the curator hardening, the stack adapter layer + doctor, the `agora.toml` parser round-trip, `sync` config-preservation, the MCP stdio probe (against a fake-server fixture), the capability cache, the TUI Stack page, and the new commands.
+
 ## [0.4.2] - 2026-05-20
 
 ### Changed

@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runCli } from '../src/cli/app';
 import { parseArgs } from '../src/cli/flags';
 import type { FetchLike } from '../src/live';
+import { readManifest } from '../src/stack/manifest';
 
 function createIo(
   cwd = process.cwd(),
@@ -263,6 +264,103 @@ describe('CLI commands', () => {
       const out = stdout.join('');
       expect(out).toContain('Install preview');
       expect(out).not.toContain('Scan:');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('install --write --save writes opencode config and creates agora.toml', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-save-'));
+    const configPath = join(temp, 'opencode.json');
+    const { io, stdout } = createIo(temp, { env: { HOME: temp } });
+
+    try {
+      const code = await runCli(
+        ['install', 'mcp-github', '--write', '--skip-scan', '--save', '--config', configPath],
+        io
+      );
+
+      expect(code).toBe(0);
+      expect(stdout.join('')).toContain('Installed');
+      expect(stdout.join('')).toContain('Saved to');
+
+      const manifest = readManifest(join(temp, 'agora.toml'));
+      expect(manifest).not.toBeNull();
+      expect(manifest!.mcp['mcp-github']).toBeDefined();
+      expect(manifest!.mcp['mcp-github'].command).toEqual([
+        'npx',
+        '@modelcontextprotocol/server-github'
+      ]);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('install --write --save preserves pre-existing agora.toml entries', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-save-'));
+    const configPath = join(temp, 'opencode.json');
+    const { io } = createIo(temp, { env: { HOME: temp } });
+
+    // Write a pre-existing manifest with an unrelated entry
+    writeFileSync(
+      join(temp, 'agora.toml'),
+      '# agora stack manifest\n\n[mcp.existing-server]\ncommand = ["node", "server.js"]\n'
+    );
+
+    try {
+      const code = await runCli(
+        ['install', 'mcp-github', '--write', '--skip-scan', '--save', '--config', configPath],
+        io
+      );
+
+      expect(code).toBe(0);
+
+      const manifest = readManifest(join(temp, 'agora.toml'));
+      expect(manifest).not.toBeNull();
+      // New entry present
+      expect(manifest!.mcp['mcp-github']).toBeDefined();
+      // Pre-existing entry preserved
+      expect(manifest!.mcp['existing-server']).toBeDefined();
+      expect(manifest!.mcp['existing-server'].command).toEqual(['node', 'server.js']);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('install --save without --write does not create manifest', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-save-'));
+    const configPath = join(temp, 'opencode.json');
+    const { io, stdout } = createIo(temp, { env: { HOME: temp } });
+
+    try {
+      const code = await runCli(['install', 'mcp-github', '--save', '--config', configPath], io);
+
+      expect(code).toBe(0);
+      const out = stdout.join('');
+      expect(out).toContain('--save only applies when --write');
+      expect(existsSync(join(temp, 'agora.toml'))).toBe(false);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('install --write --save --json includes savedToManifest in output', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-save-'));
+    const configPath = join(temp, 'opencode.json');
+    const { io, stdout } = createIo(temp, { env: { HOME: temp } });
+
+    try {
+      const code = await runCli(
+        ['install', 'mcp-github', '--save', '--json', '--config', configPath],
+        io
+      );
+
+      expect(code).toBe(0);
+      const payload = JSON.parse(stdout.join(''));
+      expect(payload).toHaveProperty('savedToManifest');
+      expect(payload.savedToManifest.path).toContain('agora.toml');
+      expect(Array.isArray(payload.savedToManifest.servers)).toBe(true);
+      expect(payload.savedToManifest.servers).toContain('mcp-github');
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }

@@ -186,6 +186,26 @@ describe('classifyInput — new power commands', () => {
     expect(classifyInput('/again', neverExecutable)).toEqual({ kind: 'meta', sub: 'again' });
   });
 
+  test('/sessions → meta:sessions', () => {
+    expect(classifyInput('/sessions', neverExecutable)).toEqual({ kind: 'meta', sub: 'sessions' });
+  });
+
+  test('/recall foo bar → meta:recall with args', () => {
+    expect(classifyInput('/recall foo bar', neverExecutable)).toEqual({
+      kind: 'meta',
+      sub: 'recall',
+      args: 'foo bar'
+    });
+  });
+
+  test('/recall with no args → meta:recall with empty args', () => {
+    expect(classifyInput('/recall', neverExecutable)).toEqual({
+      kind: 'meta',
+      sub: 'recall',
+      args: ''
+    });
+  });
+
   test('/? install foo → meta:dry-run with args', () => {
     expect(classifyInput('/? install foo', neverExecutable)).toEqual({
       kind: 'meta',

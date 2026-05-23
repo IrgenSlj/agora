@@ -24,6 +24,12 @@ import * as pingModule from './commands/ping.js';
 import * as scanModule from './commands/scan.js';
 import * as outdatedModule from './commands/outdated.js';
 import * as curateModule from './commands/curate.js';
+import * as installedModule from './commands/installed.js';
+import * as doctorModule from './commands/doctor.js';
+import * as freezeModule from './commands/freeze.js';
+import * as syncModule from './commands/sync.js';
+import * as tryModule from './commands/try.js';
+import * as capabilitiesModule from './commands/capabilities.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -172,7 +178,13 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       scan: scanModule.commandScan,
       outdated: outdatedModule.commandOutdated,
       curate: curateModule.commandCurate,
+      installed: installedModule.commandInstalled,
+      doctor: doctorModule.commandDoctor,
+      freeze: freezeModule.commandFreeze,
+      sync: syncModule.commandSync,
       author: marketplace.commandAuthor,
+      try: tryModule.commandTry,
+      capabilities: capabilitiesModule.commandCapabilities,
       bookmarks: operations.commandBookmarks,
       welcome: welcomeModule.commandWelcome,
       auth: operations.commandAuth,

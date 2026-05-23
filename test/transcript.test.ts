@@ -6,9 +6,11 @@ import {
   appendTranscript,
   cwdHash,
   getTranscriptPath,
+  listSessions,
   loadSessionMeta,
   readTranscript,
   recentBashContext,
+  searchTranscripts,
   writeSessionMeta,
   type SessionMeta
 } from '../src/transcript';
@@ -233,6 +235,207 @@ describe('loadSessionMeta / writeSessionMeta', () => {
       const loaded = loadSessionMeta(dir, cwd);
       expect(loaded?.sessionId).toBe('second');
       expect(loaded?.turnCount).toBe(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('listSessions', () => {
+  test('returns empty array when transcripts dir does not exist', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-list-sessions-'));
+    try {
+      const sessions = listSessions(dir);
+      expect(sessions).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('returns sessions sorted most-recent first', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-list-sessions-'));
+    const cwdA = '/projects/alpha';
+    const cwdB = '/projects/beta';
+    try {
+      const metaA: SessionMeta = {
+        sessionId: 'sess-a',
+        cwd: cwdA,
+        createdAt: '2024-01-01T00:00:00.000Z',
+        lastUsedAt: '2024-01-01T10:00:00.000Z',
+        turnCount: 3
+      };
+      const metaB: SessionMeta = {
+        sessionId: 'sess-b',
+        cwd: cwdB,
+        createdAt: '2024-01-02T00:00:00.000Z',
+        lastUsedAt: '2024-01-02T10:00:00.000Z',
+        turnCount: 7
+      };
+      writeSessionMeta(dir, cwdA, metaA);
+      writeSessionMeta(dir, cwdB, metaB);
+
+      const sessions = listSessions(dir);
+      expect(sessions).toHaveLength(2);
+      // beta is more recent
+      expect(sessions[0].cwd).toBe(cwdB);
+      expect(sessions[0].turnCount).toBe(7);
+      expect(sessions[1].cwd).toBe(cwdA);
+      expect(sessions[1].turnCount).toBe(3);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('includes sessionId and lastActivity fields', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-list-sessions-'));
+    const cwd = '/projects/test';
+    try {
+      const meta: SessionMeta = {
+        sessionId: 'abc123',
+        cwd,
+        createdAt: '2024-03-01T00:00:00.000Z',
+        lastUsedAt: '2024-03-01T12:00:00.000Z',
+        turnCount: 2
+      };
+      writeSessionMeta(dir, cwd, meta);
+      const sessions = listSessions(dir);
+      expect(sessions).toHaveLength(1);
+      expect(sessions[0].sessionId).toBe('abc123');
+      expect(sessions[0].lastActivity).toBe('2024-03-01T12:00:00.000Z');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('searchTranscripts', () => {
+  test('returns empty array when transcripts dir does not exist', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-search-'));
+    try {
+      const results = searchTranscripts(dir, 'anything');
+      expect(results).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('finds matching entries across sessions', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-search-'));
+    const cwdA = '/projects/alpha';
+    const cwdB = '/projects/beta';
+    try {
+      appendTranscript(dir, cwdA, {
+        ts: '2024-01-01T10:00:00.000Z',
+        kind: 'bash',
+        input: 'ls -la',
+        output: 'total 8'
+      });
+      appendTranscript(dir, cwdA, {
+        ts: '2024-01-01T10:01:00.000Z',
+        kind: 'chat-user',
+        input: 'what is MCP protocol?'
+      });
+      appendTranscript(dir, cwdB, {
+        ts: '2024-01-02T09:00:00.000Z',
+        kind: 'bash',
+        input: 'agora search mcp',
+        output: 'Found 5 results'
+      });
+
+      // Write session meta so cwd can be resolved
+      writeSessionMeta(dir, cwdA, {
+        sessionId: null,
+        cwd: cwdA,
+        createdAt: '2024-01-01T10:00:00.000Z',
+        lastUsedAt: '2024-01-01T10:01:00.000Z',
+        turnCount: 2
+      });
+      writeSessionMeta(dir, cwdB, {
+        sessionId: null,
+        cwd: cwdB,
+        createdAt: '2024-01-02T09:00:00.000Z',
+        lastUsedAt: '2024-01-02T09:00:00.000Z',
+        turnCount: 1
+      });
+
+      const results = searchTranscripts(dir, 'mcp');
+      expect(results.length).toBeGreaterThanOrEqual(2);
+      const snippets = results.map((r) => r.snippet);
+      expect(snippets.some((s) => s.toLowerCase().includes('mcp'))).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('is case-insensitive', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-search-'));
+    const cwd = '/projects/test';
+    try {
+      appendTranscript(dir, cwd, {
+        ts: '2024-01-01T10:00:00.000Z',
+        kind: 'chat-user',
+        input: 'Tell me about OPENCODE'
+      });
+      writeSessionMeta(dir, cwd, {
+        sessionId: null,
+        cwd,
+        createdAt: '2024-01-01T10:00:00.000Z',
+        lastUsedAt: '2024-01-01T10:00:00.000Z',
+        turnCount: 1
+      });
+
+      const results = searchTranscripts(dir, 'opencode');
+      expect(results).toHaveLength(1);
+      expect(results[0].kind).toBe('chat-user');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('returns no matches for a query that does not exist', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-search-'));
+    const cwd = '/projects/test';
+    try {
+      appendTranscript(dir, cwd, {
+        ts: '2024-01-01T10:00:00.000Z',
+        kind: 'bash',
+        input: 'ls',
+        output: 'file.txt'
+      });
+      const results = searchTranscripts(dir, 'xyzzy-no-match');
+      expect(results).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('results are sorted most-recent first', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-search-'));
+    const cwd = '/projects/sorted';
+    try {
+      appendTranscript(dir, cwd, {
+        ts: '2024-01-01T08:00:00.000Z',
+        kind: 'bash',
+        input: 'agora today',
+        output: ''
+      });
+      appendTranscript(dir, cwd, {
+        ts: '2024-01-01T09:00:00.000Z',
+        kind: 'bash',
+        input: 'agora search',
+        output: ''
+      });
+      writeSessionMeta(dir, cwd, {
+        sessionId: null,
+        cwd,
+        createdAt: '2024-01-01T08:00:00.000Z',
+        lastUsedAt: '2024-01-01T09:00:00.000Z',
+        turnCount: 2
+      });
+
+      const results = searchTranscripts(dir, 'agora');
+      expect(results.length).toBe(2);
+      expect(results[0].timestamp > results[1].timestamp).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

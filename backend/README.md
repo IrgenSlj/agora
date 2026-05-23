@@ -45,10 +45,25 @@ bun run typecheck  # tsc --noEmit
 
 ## Deploy
 
+**Guided (recommended):**
+
+```bash
+cd backend && ./deploy.sh
+```
+
+`deploy.sh` walks the whole first-time deploy: Cloudflare login, creating the D1
+database and wiring its id into `wrangler.toml`, applying the schema, setting the
+secrets (auto-generating `AUTH_SECRET` if you leave it blank), and deploying. It's
+safe to re-run — each step detects whether it's already done. You'll need a
+Cloudflare account and a GitHub OAuth app (callback
+`https://<your-worker-domain>/api/auth/github/callback`).
+
+**Manual (equivalent steps):**
+
 ```bash
 wrangler login
-wrangler d1 create agora
-wrangler d1 execute agora --file=schema.sql
+wrangler d1 create agora                       # copy the database_id into wrangler.toml
+wrangler d1 execute agora --remote --file=schema.sql
 wrangler secret put AUTH_SECRET
 wrangler secret put GITHUB_CLIENT_ID
 wrangler secret put GITHUB_CLIENT_SECRET
