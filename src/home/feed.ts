@@ -175,36 +175,35 @@ export async function buildHomeFeed(
   env: StackEnv,
   dataDir: string
 ): Promise<{ summary: StackSummary; opportunities: Opportunity[] }> {
-  let servers: ConfiguredServer[] = [];
-  let health: StackHealth = { servers: [], summary: { ok: 0, warn: 0, error: 0 } };
-  let caps: ServerCapabilities[] = [];
-  let manifest: StackManifest | null = null;
-  let hot: MarketplaceItem[] = [];
-
+  let servers: ConfiguredServer[];
   try {
     servers = readAllServers(env);
   } catch {
     servers = [];
   }
 
+  let health: StackHealth;
   try {
     health = await checkStack(servers, { ...env });
   } catch {
     health = { servers: [], summary: { ok: 0, warn: 0, error: 0 } };
   }
 
+  let caps: ServerCapabilities[];
   try {
     caps = readCapabilityCache(dataDir);
   } catch {
     caps = [];
   }
 
+  let manifest: StackManifest | null;
   try {
     manifest = readManifest(manifestPath(env));
   } catch {
     manifest = null;
   }
 
+  let hot: MarketplaceItem[];
   try {
     hot = getHotItems({ category: 'package', limit: 8 });
   } catch {
