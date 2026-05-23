@@ -66,6 +66,7 @@ Run `agora help` for the grouped list, or `agora help <command>` for any of thes
 |---|---|
 | **Daily** | `welcome` · `today` · `bookmarks` · `share` · `open` · `author` |
 | **Marketplace** | `search` · `browse` · `trending` · `similar` · `compare` · `install` · `scan` · `outdated` · `workflows` |
+| **Stack** | `installed` · `doctor` · `freeze` · `sync` · `try` · `capabilities` |
 | **News** | `news` (CLI) · TUI reader with AI summarization |
 | **Community** | `community` · `thread` · `post` · `reply` · `vote` · `flag` · `discuss` |
 | **Account** | `auth login` · `auth status` · `profile` · `review` · `reviews` · `publish` |
@@ -92,6 +93,24 @@ $ echo $?
 The TUI install preview flips its footer to `g grant + install   d details   n cancel` when permissions are present. The list shows a dim `[fs net exec]` badge on any item with a non-empty manifest.
 
 `--write` also runs a **pre-install scan** first — repo reachability, npm existence, recency, declared-permission consistency, and community flag count — and refuses to apply if any check fails (e.g. an item flagged enough times to auto-hide, or a package that 404s on npm). Run the scan standalone with `agora scan <id>`, or bypass the install gate with `--skip-scan`.
+
+## Agent stack manager
+
+Beyond discovery, `agora` manages the MCP servers your agent actually uses — across **opencode, Claude Code, Cursor, and Windsurf** — from one place. Think `package.json` / Brewfile for your agent stack.
+
+```bash
+agora installed                 # every configured MCP server across all your tools, grouped
+agora doctor                    # health: command resolvable? conflicting definitions?
+agora doctor --probe            # actually start each server and list the tools it advertises
+agora install mcp-github --write --save   # install AND record it in agora.toml
+agora freeze --write            # snapshot your whole stack into agora.toml
+agora sync                      # dry-run: what would change to match agora.toml
+agora sync --write --yes        # apply it (preserves every unrelated config key)
+agora try mcp-filesystem        # ephemeral test-drive: handshake, list tools, discard
+agora capabilities "query a database"   # which of my servers can do X?
+```
+
+`agora.toml` is a portable, declarative manifest — commit it to a repo so anyone can reproduce your agent setup with `agora sync`. `sync` is dry-run by default and never touches config keys it doesn't own. `doctor --probe`, `try`, and `capabilities` share a local cache of each server's discovered tool schemas — the local foundation for capability search.
 
 ## Configuration
 
