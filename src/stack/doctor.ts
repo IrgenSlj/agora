@@ -1,5 +1,6 @@
-import { spawn } from 'node:child_process';
 import { KNOWN_RUNNERS, resolveOnPath } from './path-resolve.js';
+import { probeMcpServer, type McpProbeResult } from './mcp-probe.js';
+import { upsertCapabilities, capabilityKey } from './capability-cache.js';
 import type { ConfiguredServer, StackEnv } from './types.js';
 
 export type HealthStatus = 'ok' | 'warn' | 'error';
@@ -26,6 +27,7 @@ export interface StackHealth {
 export interface DoctorOptions extends StackEnv {
   probe?: boolean;
   probeTimeoutMs?: number;
+  dataDir?: string;
 }
 
 function deriveStatus(checks: HealthCheck[]): HealthStatus {
@@ -156,47 +158,46 @@ function checkConflictingDefinition(instances: ConfiguredServer[]): HealthCheck 
   return null;
 }
 
-async function probeServer(inst: ConfiguredServer, timeoutMs: number): Promise<HealthCheck> {
+async function probeServer(
+  inst: ConfiguredServer,
+  opts: DoctorOptions,
+  timeoutMs: number
+): Promise<{ check: HealthCheck; result: McpProbeResult }> {
   if (inst.transport !== 'local' || !inst.command || inst.command.length === 0) {
-    return { name: 'probe', ok: true, level: 'error', detail: 'skipped (not local)' };
+    const check: HealthCheck = {
+      name: 'probe',
+      ok: true,
+      level: 'error',
+      detail: 'skipped (not local)'
+    };
+    return { check, result: { ok: true } };
   }
 
-  const [cmd, ...args] = inst.command;
-  return new Promise<HealthCheck>((resolve) => {
-    const child = spawn(cmd!, args, {
-      stdio: 'ignore',
-      shell: false
-    });
-
-    const timer = setTimeout(() => {
-      child.kill();
-      resolve({ name: 'probe', ok: true, level: 'error', detail: 'stayed running (timeout)' });
-    }, timeoutMs);
-
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      if (code !== null && code !== 0) {
-        resolve({
-          name: 'probe',
-          ok: false,
-          level: 'error',
-          detail: `exited with code ${code}`
-        });
-      } else {
-        resolve({ name: 'probe', ok: true, level: 'error', detail: 'exited cleanly or killed' });
-      }
-    });
-
-    child.on('error', (err) => {
-      clearTimeout(timer);
-      resolve({
-        name: 'probe',
-        ok: false,
-        level: 'error',
-        detail: `spawn error: ${err.message}`
-      });
-    });
+  const result = await probeMcpServer(inst.command, {
+    env: opts.env,
+    cwd: opts.cwd,
+    timeoutMs
   });
+
+  let detail: string;
+  if (result.ok) {
+    const toolCount = result.tools?.length ?? 0;
+    const parts: string[] = [`started · ${toolCount} tool(s)`];
+    if (result.serverInfo?.name || result.serverInfo?.version) {
+      const info = [result.serverInfo.name, result.serverInfo.version].filter(Boolean).join(' ');
+      parts.push(info);
+    }
+    detail = parts.join(' · ');
+  } else {
+    detail =
+      result.error ??
+      (result.exitCode !== undefined && result.exitCode !== null
+        ? `exited with code ${result.exitCode}`
+        : 'probe failed');
+  }
+
+  const check: HealthCheck = { name: 'probe', ok: result.ok, level: 'error', detail };
+  return { check, result };
 }
 
 export function checkServer(
@@ -252,8 +253,23 @@ export async function checkStack(
     if (opts?.probe) {
       const localEnabled = instances.filter((s) => s.transport === 'local' && s.enabled !== false);
       for (const inst of localEnabled) {
-        const probeResult = await probeServer(inst, probeTimeoutMs);
-        health.checks.push(probeResult);
+        const { check, result } = await probeServer(inst, opts ?? {}, probeTimeoutMs);
+        health.checks.push(check);
+        if (opts?.dataDir && inst.command && inst.command.length > 0) {
+          try {
+            upsertCapabilities(opts.dataDir, {
+              key: capabilityKey(name, inst.command),
+              name,
+              command: inst.command,
+              serverInfo: result.serverInfo,
+              tools: result.tools ?? [],
+              ok: result.ok,
+              probedAt: new Date().toISOString()
+            });
+          } catch {
+            // best-effort
+          }
+        }
       }
       // Recompute status with probe results
       (health as { status: HealthStatus }).status = deriveStatus(health.checks);

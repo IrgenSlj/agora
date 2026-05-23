@@ -2,7 +2,7 @@ import { readAllServers, detectTools, ALL_ADAPTERS } from '../../stack/registry.
 import { checkStack } from '../../stack/doctor.js';
 import type { AgentToolId } from '../../stack/types.js';
 import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
+import { writeLine, writeJson, stringFlag, usageError, detectDataDir } from '../helpers.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 
@@ -54,7 +54,8 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
     );
   }
 
-  const health = await checkStack(servers, { ...env, probe });
+  const dataDir = detectDataDir(parsed, io);
+  const health = await checkStack(servers, { ...env, probe, dataDir });
 
   if (parsed.flags.json) {
     writeJson(io.stdout, health);
@@ -69,7 +70,19 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
           ? style.orange('⚠')
           : style.dim('✗');
 
-    writeLine(io.stdout, `${glyph}  ${style.bold(server.name)}`);
+    let serverLine = `${glyph}  ${style.bold(server.name)}`;
+
+    if (probe && server.status === 'ok') {
+      const probeCheck = server.checks.find((c) => c.name === 'probe');
+      if (probeCheck?.ok && probeCheck.detail) {
+        const toolMatch = probeCheck.detail.match(/(\d+) tool\(s\)/);
+        if (toolMatch) {
+          serverLine += style.dim(` (${toolMatch[1]} tools)`);
+        }
+      }
+    }
+
+    writeLine(io.stdout, serverLine);
 
     if (server.status !== 'ok') {
       for (const check of server.checks) {

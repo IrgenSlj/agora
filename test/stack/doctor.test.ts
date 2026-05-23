@@ -7,7 +7,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { checkServer, checkStack } from '../../src/stack/doctor';
+import { readCapabilityCache } from '../../src/stack/capability-cache';
 import type { ConfiguredServer } from '../../src/stack/types';
+
+const FAKE_SERVER = join(import.meta.dir, '../fixtures/mcp-fake-server.js');
 
 function makeTmp(): string {
   return mkdtempSync(join(tmpdir(), 'agora-doctor-test-'));
@@ -317,4 +320,88 @@ describe('checkStack', () => {
     expect(result.servers).toEqual([]);
     expect(result.summary).toEqual({ ok: 0, warn: 0, error: 0 });
   });
+});
+
+// ---------------------------------------------------------------------------
+// checkStack with probe=true (real MCP handshake)
+// ---------------------------------------------------------------------------
+describe('checkStack with probe=true', () => {
+  test('probe ok: detail mentions tool count, capability cache populated', async () => {
+    const dataDir = makeTmp();
+    try {
+      const server = makeServer({
+        name: 'fake-server',
+        command: ['node', FAKE_SERVER]
+      });
+
+      const result = await checkStack([server], {
+        probe: true,
+        probeTimeoutMs: 10000,
+        dataDir
+      });
+
+      const sh = result.servers[0]!;
+      const probeCheck = sh.checks.find((c) => c.name === 'probe')!;
+      expect(probeCheck).toBeDefined();
+      expect(probeCheck.ok).toBe(true);
+      expect(probeCheck.detail).toMatch(/2 tool\(s\)/);
+
+      // Capability cache should have been written
+      const cached = readCapabilityCache(dataDir);
+      expect(cached).toHaveLength(1);
+      const entry = cached[0]!;
+      expect(entry.ok).toBe(true);
+      const toolNames = entry.tools.map((t) => t.name);
+      expect(toolNames).toContain('echo');
+      expect(toolNames).toContain('add');
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  test('probe error: missing binary → probe check error, no crash', async () => {
+    const dataDir = makeTmp();
+    try {
+      const server = makeServer({
+        name: 'missing-server',
+        command: ['this-binary-does-not-exist-xyz-agora']
+      });
+
+      const result = await checkStack([server], {
+        probe: true,
+        probeTimeoutMs: 5000,
+        dataDir
+      });
+
+      const sh = result.servers[0]!;
+      const probeCheck = sh.checks.find((c) => c.name === 'probe');
+      // probe check may be absent if command-resolvable already failed,
+      // but no exception should be thrown
+      expect(sh).toBeDefined();
+      if (probeCheck) {
+        expect(probeCheck.ok).toBe(false);
+        expect(probeCheck.level).toBe('error');
+      }
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  }, 10000);
+
+  test('probe without dataDir: no crash, no cache file', async () => {
+    const server = makeServer({
+      name: 'fake-server',
+      command: ['node', FAKE_SERVER]
+    });
+
+    // No dataDir passed — must not crash
+    const result = await checkStack([server], {
+      probe: true,
+      probeTimeoutMs: 10000
+    });
+
+    const sh = result.servers[0]!;
+    const probeCheck = sh.checks.find((c) => c.name === 'probe')!;
+    expect(probeCheck).toBeDefined();
+    expect(probeCheck.ok).toBe(true);
+  }, 15000);
 });

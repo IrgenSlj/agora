@@ -1,8 +1,9 @@
 import { findMarketplaceItem, buildOpenCodeConfig } from '../../marketplace.js';
 import { scanItem, type ScanResult } from '../../scan.js';
 import { probeMcpServer, type McpProbeResult } from '../../stack/mcp-probe.js';
+import { upsertCapabilities, capabilityKey } from '../../stack/capability-cache.js';
 import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, numberFlag, usageError } from '../helpers.js';
+import { writeLine, writeJson, numberFlag, usageError, detectDataDir } from '../helpers.js';
 
 export const commandTry: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
@@ -57,6 +58,19 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
         cwd: io.cwd,
         timeoutMs
       });
+      try {
+        upsertCapabilities(detectDataDir(parsed, io), {
+          key: capabilityKey(item.id, command),
+          name: item.id,
+          command,
+          serverInfo: probe.serverInfo,
+          tools: probe.tools ?? [],
+          ok: probe.ok,
+          probedAt: new Date().toISOString()
+        });
+      } catch {
+        // best-effort
+      }
     }
 
     writeJson(io.stdout, {
@@ -108,6 +122,19 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
     cwd: io.cwd,
     timeoutMs
   });
+  try {
+    upsertCapabilities(detectDataDir(parsed, io), {
+      key: capabilityKey(item.id, command),
+      name: item.id,
+      command,
+      serverInfo: probe.serverInfo,
+      tools: probe.tools ?? [],
+      ok: probe.ok,
+      probedAt: new Date().toISOString()
+    });
+  } catch {
+    // best-effort
+  }
 
   if (probe.ok) {
     writeLine(io.stdout, `${style.accent('✓')} ${item.name} started`);
