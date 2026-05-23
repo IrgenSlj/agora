@@ -20,21 +20,44 @@ function resolveCwd(opts: StackEnv): string {
   return opts.cwd ?? process.cwd();
 }
 
-function toOpencodeEntry(ds: DesiredServer): Record<string, unknown> {
+/**
+ * Fix 1: Merge a DesiredServer into an existing opencode entry, preserving unknown keys.
+ * opencode uses `type:'local'|'remote'`, `command`(array), `environment`, `enabled`.
+ */
+function mergeOpencodeEntry(
+  ds: DesiredServer,
+  existing: Record<string, unknown> | undefined
+): Record<string, unknown> {
+  const base: Record<string, unknown> = existing !== undefined ? { ...existing } : {};
+
   if (ds.url) {
-    const entry: Record<string, unknown> = { type: 'remote', url: ds.url };
-    if (ds.enabled === false) entry.enabled = false;
-    return entry;
+    // REMOTE
+    base['type'] = 'remote';
+    base['url'] = ds.url;
+    // Remove local-only keys
+    delete base['command'];
+    delete base['environment'];
+  } else {
+    // LOCAL
+    base['type'] = 'local';
+    base['command'] = ds.command ?? [];
+    if (ds.env && Object.keys(ds.env).length > 0) {
+      base['environment'] = ds.env;
+    } else {
+      delete base['environment'];
+    }
+    // Remove remote-only keys
+    delete base['url'];
   }
-  const entry: Record<string, unknown> = {
-    type: 'local',
-    command: ds.command ?? []
-  };
-  if (ds.env && Object.keys(ds.env).length > 0) {
-    entry.environment = ds.env;
+
+  if (ds.enabled === false) {
+    base['enabled'] = false;
+  } else {
+    // If it was previously disabled and now enabled, remove the flag
+    delete base['enabled'];
   }
-  if (ds.enabled === false) entry.enabled = false;
-  return entry;
+
+  return base;
 }
 
 function entriesEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
@@ -109,17 +132,21 @@ export const opencodeAdapter: ToolAdapter = {
 
     // Apply desired
     for (const ds of desired) {
-      const newEntry = toOpencodeEntry(ds);
-      const existingEntry = existingMcp[ds.name];
+      const existingEntry =
+        typeof existingMcp[ds.name] === 'object' && existingMcp[ds.name] !== null
+          ? (existingMcp[ds.name] as Record<string, unknown>)
+          : undefined;
+
+      const mergedEntry = mergeOpencodeEntry(ds, existingEntry);
+
       if (existingEntry === undefined) {
         added.push(ds.name);
       } else {
-        const existingNorm = existingEntry as Record<string, unknown>;
-        if (!entriesEqual(existingNorm, newEntry)) {
+        if (!entriesEqual(existingEntry, mergedEntry)) {
           updated.push(ds.name);
         }
       }
-      newMcp[ds.name] = newEntry;
+      newMcp[ds.name] = mergedEntry;
     }
 
     // Handle pruning

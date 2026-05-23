@@ -19,12 +19,25 @@ function resolveCwd(opts: StackEnv): string {
   return opts.cwd ?? process.cwd();
 }
 
-type McpEntry =
-  | { command: string; args?: string[]; env?: Record<string, string> }
-  | { type?: 'sse' | 'http'; url: string };
+type McpEntry = Record<string, unknown>;
 
-function isRemoteEntry(entry: McpEntry): entry is { type?: 'sse' | 'http'; url: string } {
-  return 'url' in entry;
+const REMOTE_TYPES = new Set(['sse', 'http', 'streamable-http']);
+const LOCAL_TYPES = new Set(['stdio']);
+
+/** Fix 2: robust transport detection */
+function isRemoteEntry(entry: McpEntry): boolean {
+  const t = typeof entry['type'] === 'string' ? entry['type'] : undefined;
+  const tr = typeof entry['transport'] === 'string' ? entry['transport'] : undefined;
+  const hasUrl = 'url' in entry;
+  const hasCommand = 'command' in entry;
+
+  if (t && REMOTE_TYPES.has(t)) return true;
+  if (tr && REMOTE_TYPES.has(tr)) return true;
+  if (t && LOCAL_TYPES.has(t)) return false;
+  if (tr && LOCAL_TYPES.has(tr)) return false;
+
+  if (hasCommand) return false;
+  return hasUrl;
 }
 
 function parseEntry(
@@ -41,14 +54,19 @@ function parseEntry(
       scope,
       configPath,
       transport: 'remote',
-      url: entry.url,
+      url: typeof entry['url'] === 'string' ? entry['url'] : undefined,
       enabled: true,
       raw: entry
     };
   }
 
-  const { command, args, env } = entry;
-  const argv: string[] = [command, ...(args ?? [])];
+  const cmd = typeof entry['command'] === 'string' ? entry['command'] : '';
+  const args = Array.isArray(entry['args']) ? (entry['args'] as string[]) : [];
+  const env =
+    typeof entry['env'] === 'object' && entry['env'] !== null
+      ? (entry['env'] as Record<string, string>)
+      : undefined;
+  const argv: string[] = [cmd, ...args];
   return {
     name,
     tool,
@@ -83,26 +101,48 @@ function parseJson(path: string): unknown | null {
   }
 }
 
-function toClaudeEntry(ds: DesiredServer, existingEntry?: McpEntry): McpEntry | null {
+/**
+ * Fix 1: Merge a DesiredServer into an existing entry, preserving unknown keys.
+ * Returns null when the server should not be written (disabled).
+ */
+function mergeEntry(ds: DesiredServer, existing: McpEntry | undefined): McpEntry | null {
   // claude-code has no enabled field — skip disabled servers
   if (ds.enabled === false) return null;
 
+  const base: McpEntry = existing !== undefined ? { ...existing } : {};
+
   if (ds.url) {
-    // Preserve pre-existing type (e.g. 'sse') when updating
-    const existingType =
-      existingEntry && isRemoteEntry(existingEntry) ? existingEntry.type : undefined;
-    const entry: { type?: 'sse' | 'http'; url: string } = { url: ds.url };
-    if (existingType) entry.type = existingType;
-    return entry;
+    // REMOTE: set url; preserve existing sse/http type if present; remove local keys
+    base['url'] = ds.url;
+    delete base['command'];
+    delete base['args'];
+    delete base['env'];
+    const t = typeof base['type'] === 'string' ? base['type'] : undefined;
+    if (t && LOCAL_TYPES.has(t)) delete base['type'];
+    const tr = typeof base['transport'] === 'string' ? base['transport'] : undefined;
+    if (tr && LOCAL_TYPES.has(tr)) delete base['transport'];
+  } else {
+    // LOCAL: set command/args/env; remove remote keys
+    const [cmd, ...args] = ds.command ?? [];
+    base['command'] = cmd ?? '';
+    if (args.length > 0) {
+      base['args'] = args;
+    } else {
+      delete base['args'];
+    }
+    if (ds.env && Object.keys(ds.env).length > 0) {
+      base['env'] = ds.env;
+    } else {
+      delete base['env'];
+    }
+    delete base['url'];
+    const t = typeof base['type'] === 'string' ? base['type'] : undefined;
+    if (t && REMOTE_TYPES.has(t)) delete base['type'];
+    const tr = typeof base['transport'] === 'string' ? base['transport'] : undefined;
+    if (tr && REMOTE_TYPES.has(tr)) delete base['transport'];
   }
 
-  const [cmd, ...args] = ds.command ?? [];
-  const entry: { command: string; args?: string[]; env?: Record<string, string> } = {
-    command: cmd ?? ''
-  };
-  if (args.length > 0) entry.args = args;
-  if (ds.env && Object.keys(ds.env).length > 0) entry.env = ds.env;
-  return entry;
+  return base;
 }
 
 function entriesEqual(a: unknown, b: unknown): boolean {
@@ -173,14 +213,17 @@ export const claudeCodeAdapter: ToolAdapter = {
     const newMcp: Record<string, unknown> = opts.prune ? {} : { ...existingMcp };
 
     for (const ds of desired) {
-      const existingEntry = existingMcp[ds.name] as McpEntry | undefined;
-      const newEntry = toClaudeEntry(ds, existingEntry);
+      const existingEntry =
+        typeof existingMcp[ds.name] === 'object' && existingMcp[ds.name] !== null
+          ? (existingMcp[ds.name] as McpEntry)
+          : undefined;
 
-      if (newEntry === null) {
+      const mergedEntry = mergeEntry(ds, existingEntry);
+
+      if (mergedEntry === null) {
         // disabled — skip writing
         skippedDisabled.push(ds.name);
         if (opts.prune && existingEntry !== undefined) {
-          // remove from newMcp if pruning (it was already removed by the prune-start)
           delete newMcp[ds.name];
         }
         continue;
@@ -189,11 +232,11 @@ export const claudeCodeAdapter: ToolAdapter = {
       if (existingEntry === undefined) {
         added.push(ds.name);
       } else {
-        if (!entriesEqual(existingEntry, newEntry)) {
+        if (!entriesEqual(existingEntry, mergedEntry)) {
           updated.push(ds.name);
         }
       }
-      newMcp[ds.name] = newEntry;
+      newMcp[ds.name] = mergedEntry;
     }
 
     if (opts.prune) {
@@ -261,7 +304,10 @@ export const claudeCodeAdapter: ToolAdapter = {
                   if (s.configPath !== userPath) return false;
                   if (s.name !== name) return false;
                   const newArgv = !isRemoteEntry(entry)
-                    ? [entry.command, ...(entry.args ?? [])]
+                    ? [
+                        typeof entry['command'] === 'string' ? entry['command'] : '',
+                        ...(Array.isArray(entry['args']) ? (entry['args'] as string[]) : [])
+                      ]
                     : undefined;
                   return JSON.stringify(s.command) === JSON.stringify(newArgv);
                 });

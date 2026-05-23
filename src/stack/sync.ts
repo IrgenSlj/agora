@@ -110,9 +110,13 @@ function computeDiff(
   return { change: { added, updated, removed }, skipped };
 }
 
+const REMOTE_TYPES = new Set(['sse', 'http', 'streamable-http']);
+const LOCAL_TYPES = new Set(['stdio']);
+
 /**
  * Build what the new entry would look like for comparison purposes.
- * This mirrors the per-adapter toXxxEntry functions.
+ * Mirrors the merge logic in each adapter: starts from existingRaw, applies
+ * managed fields, removes keys that no longer apply.
  */
 function buildEntry(
   tool: AgentToolId,
@@ -120,33 +124,61 @@ function buildEntry(
   existingRaw: Record<string, unknown>
 ): Record<string, unknown> {
   if (tool === 'opencode') {
+    const base = { ...existingRaw };
     if (ds.url) {
-      const entry: Record<string, unknown> = { type: 'remote', url: ds.url };
-      if (ds.enabled === false) entry.enabled = false;
-      return entry;
+      base['type'] = 'remote';
+      base['url'] = ds.url;
+      delete base['command'];
+      delete base['environment'];
+    } else {
+      base['type'] = 'local';
+      base['command'] = ds.command ?? [];
+      if (ds.env && Object.keys(ds.env).length > 0) {
+        base['environment'] = ds.env;
+      } else {
+        delete base['environment'];
+      }
+      delete base['url'];
     }
-    const entry: Record<string, unknown> = {
-      type: 'local',
-      command: ds.command ?? []
-    };
-    if (ds.env && Object.keys(ds.env).length > 0) entry.environment = ds.env;
-    if (ds.enabled === false) entry.enabled = false;
-    return entry;
+    if (ds.enabled === false) {
+      base['enabled'] = false;
+    } else {
+      delete base['enabled'];
+    }
+    return base;
   }
 
-  // claude-code, cursor, windsurf — same format
+  // claude-code, cursor, windsurf — same merge format
+  const base = { ...existingRaw };
   if (ds.url) {
-    const existingType = typeof existingRaw.type === 'string' ? existingRaw.type : undefined;
-    const entry: Record<string, unknown> = { url: ds.url };
-    if (existingType) entry.type = existingType;
-    return entry;
+    base['url'] = ds.url;
+    delete base['command'];
+    delete base['args'];
+    delete base['env'];
+    const t = typeof base['type'] === 'string' ? base['type'] : undefined;
+    if (t && LOCAL_TYPES.has(t)) delete base['type'];
+    const tr = typeof base['transport'] === 'string' ? base['transport'] : undefined;
+    if (tr && LOCAL_TYPES.has(tr)) delete base['transport'];
+  } else {
+    const [cmd, ...args] = ds.command ?? [];
+    base['command'] = cmd ?? '';
+    if (args.length > 0) {
+      base['args'] = args;
+    } else {
+      delete base['args'];
+    }
+    if (ds.env && Object.keys(ds.env).length > 0) {
+      base['env'] = ds.env;
+    } else {
+      delete base['env'];
+    }
+    delete base['url'];
+    const t = typeof base['type'] === 'string' ? base['type'] : undefined;
+    if (t && REMOTE_TYPES.has(t)) delete base['type'];
+    const tr = typeof base['transport'] === 'string' ? base['transport'] : undefined;
+    if (tr && REMOTE_TYPES.has(tr)) delete base['transport'];
   }
-
-  const [cmd, ...args] = ds.command ?? [];
-  const entry: Record<string, unknown> = { command: cmd ?? '' };
-  if (args.length > 0) entry.args = args;
-  if (ds.env && Object.keys(ds.env).length > 0) entry.env = ds.env;
-  return entry;
+  return base;
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────

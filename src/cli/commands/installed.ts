@@ -4,9 +4,10 @@ import {
   groupServersByName,
   ALL_ADAPTERS
 } from '../../stack/registry.js';
+import { readCapabilityCache } from '../../stack/capability-cache.js';
 import type { AgentToolId } from '../../stack/types.js';
 import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
+import { writeLine, writeJson, stringFlag, usageError, detectDataDir } from '../helpers.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 
@@ -28,13 +29,32 @@ export const commandInstalled: CommandHandler = async (parsed, io, style) => {
     servers = servers.filter((s) => s.tool === toolFlag);
   }
 
+  // Best-effort: read capability cache for tool counts
+  let capCache: import('../../stack/capability-cache.js').ServerCapabilities[] = [];
+  try {
+    capCache = readCapabilityCache(detectDataDir(parsed, io));
+  } catch {
+    // non-fatal
+  }
+
+  // Build a lookup: server name → tool count (only when ok:true)
+  const toolCountByName = new Map<string, number>();
+  for (const entry of capCache) {
+    if (entry.ok) {
+      toolCountByName.set(entry.name, entry.tools.length);
+    }
+  }
+
   if (parsed.flags.json) {
     const toolResults = detectTools(env).map((t) => ({
       id: t.adapter.id,
       present: t.present
     }));
     writeJson(io.stdout, {
-      servers,
+      servers: servers.map((s) => {
+        const toolCount = toolCountByName.get(s.name);
+        return toolCount !== undefined ? { ...s, tools: toolCount } : s;
+      }),
       tools: toolResults,
       summary: {
         servers: servers.length,
@@ -76,9 +96,12 @@ export const commandInstalled: CommandHandler = async (parsed, io, style) => {
       return inst.enabled === false ? style.dim(label + ' (disabled)') : label;
     });
 
+    const cachedTools = toolCountByName.get(name);
+    const toolsSuffix = cachedTools !== undefined ? style.dim(` · ${cachedTools} tools`) : '';
+
     writeLine(
       io.stdout,
-      `  ${style.accent(name.padEnd(nameWidth))}  ${style.dim(transport)}  · ${parts.join(', ')}`
+      `  ${style.accent(name.padEnd(nameWidth))}  ${style.dim(transport)}  · ${parts.join(', ')}${toolsSuffix}`
     );
   }
 

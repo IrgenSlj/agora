@@ -6,6 +6,7 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, chmodSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runCli } from '../src/cli/app';
+import { writeCapabilityCache } from '../src/stack/capability-cache';
 
 // ── Test harness ─────────────────────────────────────────────────────────────
 
@@ -380,6 +381,157 @@ describe('agora doctor', () => {
       rmSync(cwd, { recursive: true, force: true });
       rmSync(home, { recursive: true, force: true });
       rmSync(binDir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── Fix 3: agora installed shows cached tool counts ──────────────────────────
+
+describe('agora installed: capability cache tool counts (Fix 3)', () => {
+  test('human output shows · N tools when cache entry exists', async () => {
+    const cwd = makeTmp('agora-inst-tc-');
+    const home = makeTmp('agora-inst-tc-home-');
+    try {
+      // Write a server config
+      writeOpencodeConfig(cwd, {
+        postgres: { type: 'local', command: ['npx', '@mcp/postgres'] }
+      });
+
+      // Use AGORA_HOME to deterministically control the data dir location
+      const dataDir = join(home, 'agora-data');
+      mkdirSync(dataDir, { recursive: true });
+      writeCapabilityCache(dataDir, [
+        {
+          key: 'postgres@abc12345',
+          name: 'postgres',
+          command: ['npx', '@mcp/postgres'],
+          tools: [{ name: 'query' }, { name: 'insert' }, { name: 'update' }],
+          ok: true,
+          probedAt: new Date().toISOString()
+        }
+      ]);
+
+      const { io, out } = createIo(cwd, home, { AGORA_HOME: dataDir });
+      const code = await runCli(['installed'], io);
+      expect(code).toBe(0);
+      const output = out();
+      expect(output).toContain('postgres');
+      expect(output).toContain('3 tools');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('human output shows nothing extra when no cache entry', async () => {
+    const cwd = makeTmp('agora-inst-tc-nocache-');
+    const home = makeTmp('agora-inst-tc-nocache-home-');
+    try {
+      writeOpencodeConfig(cwd, {
+        redis: { type: 'local', command: ['npx', '@mcp/redis'] }
+      });
+
+      // No capability cache written
+
+      const { io, out } = createIo(cwd, home);
+      const code = await runCli(['installed'], io);
+      expect(code).toBe(0);
+      const output = out();
+      expect(output).toContain('redis');
+      // Should NOT show "0 tools" — absence is the correct behavior
+      expect(output).not.toContain('0 tools');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('--json includes tools count per server when cache entry exists', async () => {
+    const cwd = makeTmp('agora-inst-tc-json-');
+    const home = makeTmp('agora-inst-tc-json-home-');
+    try {
+      writeOpencodeConfig(cwd, {
+        myserver: { type: 'local', command: ['npx', 'myserver'] }
+      });
+
+      const dataDir = join(home, 'agora-data');
+      mkdirSync(dataDir, { recursive: true });
+      writeCapabilityCache(dataDir, [
+        {
+          key: 'myserver@deadbeef',
+          name: 'myserver',
+          command: ['npx', 'myserver'],
+          tools: [{ name: 'toolA' }, { name: 'toolB' }],
+          ok: true,
+          probedAt: new Date().toISOString()
+        }
+      ]);
+
+      const { io, out } = createIo(cwd, home, { AGORA_HOME: dataDir });
+      const code = await runCli(['installed', '--json'], io);
+      expect(code).toBe(0);
+      const payload = JSON.parse(out());
+      expect(Array.isArray(payload.servers)).toBe(true);
+      const srv = payload.servers.find((s: { name: string }) => s.name === 'myserver');
+      expect(srv).toBeDefined();
+      expect(srv.tools).toBe(2);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('--json omits tools field when no cache entry', async () => {
+    const cwd = makeTmp('agora-inst-tc-json-no-');
+    const home = makeTmp('agora-inst-tc-json-no-home-');
+    try {
+      writeOpencodeConfig(cwd, {
+        alpha: { type: 'local', command: ['npx', 'alpha'] }
+      });
+
+      const { io, out } = createIo(cwd, home);
+      const code = await runCli(['installed', '--json'], io);
+      expect(code).toBe(0);
+      const payload = JSON.parse(out());
+      const srv = payload.servers.find((s: { name: string }) => s.name === 'alpha');
+      expect(srv).toBeDefined();
+      // No tools key when no cache entry
+      expect(srv.tools).toBeUndefined();
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('cache entry with ok:false does not show tool count', async () => {
+    const cwd = makeTmp('agora-inst-tc-notok-');
+    const home = makeTmp('agora-inst-tc-notok-home-');
+    try {
+      writeOpencodeConfig(cwd, {
+        broken: { type: 'local', command: ['npx', 'broken'] }
+      });
+
+      const dataDir = join(home, 'agora-data');
+      mkdirSync(dataDir, { recursive: true });
+      writeCapabilityCache(dataDir, [
+        {
+          key: 'broken@11111111',
+          name: 'broken',
+          command: ['npx', 'broken'],
+          tools: [],
+          ok: false,
+          probedAt: new Date().toISOString()
+        }
+      ]);
+
+      const { io, out } = createIo(cwd, home, { AGORA_HOME: dataDir });
+      const code = await runCli(['installed'], io);
+      expect(code).toBe(0);
+      // ok:false → no tool count shown
+      expect(out()).not.toContain(' tools');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
     }
   });
 });

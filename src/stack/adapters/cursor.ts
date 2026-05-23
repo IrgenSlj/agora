@@ -19,12 +19,27 @@ function resolveCwd(opts: StackEnv): string {
   return opts.cwd ?? process.cwd();
 }
 
-type McpEntry =
-  | { command: string; args?: string[]; env?: Record<string, string> }
-  | { type?: 'sse' | 'http'; url: string };
+type McpEntry = Record<string, unknown>;
 
-function isRemoteEntry(entry: McpEntry): entry is { type?: 'sse' | 'http'; url: string } {
-  return 'url' in entry;
+const REMOTE_TYPES = new Set(['sse', 'http', 'streamable-http']);
+const LOCAL_TYPES = new Set(['stdio']);
+
+/** Fix 2: robust transport detection */
+function isRemoteEntry(entry: McpEntry): boolean {
+  const t = typeof entry['type'] === 'string' ? entry['type'] : undefined;
+  const tr = typeof entry['transport'] === 'string' ? entry['transport'] : undefined;
+  const hasUrl = 'url' in entry;
+  const hasCommand = 'command' in entry;
+
+  // Explicit type wins
+  if (t && REMOTE_TYPES.has(t)) return true;
+  if (tr && REMOTE_TYPES.has(tr)) return true;
+  if (t && LOCAL_TYPES.has(t)) return false;
+  if (tr && LOCAL_TYPES.has(tr)) return false;
+
+  // Fall back to key presence; prefer local when both present
+  if (hasCommand) return false;
+  return hasUrl;
 }
 
 function parseJson(path: string): unknown | null {
@@ -57,12 +72,18 @@ function readServersFromFile(filePath: string, scope: 'project' | 'user'): Confi
         scope,
         configPath: filePath,
         transport: 'remote',
-        url: entry.url,
+        url: typeof entry['url'] === 'string' ? entry['url'] : undefined,
         enabled: true,
         raw: entry
       });
     } else {
-      const argv: string[] = [entry.command, ...(entry.args ?? [])];
+      const cmd = typeof entry['command'] === 'string' ? entry['command'] : '';
+      const args = Array.isArray(entry['args']) ? (entry['args'] as string[]) : [];
+      const env =
+        typeof entry['env'] === 'object' && entry['env'] !== null
+          ? (entry['env'] as Record<string, string>)
+          : undefined;
+      const argv: string[] = [cmd, ...args];
       servers.push({
         name,
         tool: 'cursor',
@@ -70,7 +91,7 @@ function readServersFromFile(filePath: string, scope: 'project' | 'user'): Confi
         configPath: filePath,
         transport: 'local',
         command: argv,
-        env: entry.env,
+        env,
         enabled: true,
         raw: entry
       });
@@ -79,21 +100,50 @@ function readServersFromFile(filePath: string, scope: 'project' | 'user'): Confi
   return servers;
 }
 
-function toCursorEntry(ds: DesiredServer): McpEntry | null {
+/**
+ * Fix 1: Merge a DesiredServer into an existing entry, preserving unknown keys.
+ * Returns the merged entry, or null if the server should not be written (disabled).
+ */
+function mergeEntry(ds: DesiredServer, existing: McpEntry | undefined): McpEntry | null {
   // cursor has no enabled field — skip disabled servers
   if (ds.enabled === false) return null;
 
+  const base: McpEntry = existing !== undefined ? { ...existing } : {};
+
   if (ds.url) {
-    return { url: ds.url };
+    // REMOTE: set url; remove local-only keys
+    base['url'] = ds.url;
+    delete base['command'];
+    delete base['args'];
+    delete base['env'];
+    // Remove stdio/local type markers but keep sse/http type markers
+    const t = typeof base['type'] === 'string' ? base['type'] : undefined;
+    if (t && LOCAL_TYPES.has(t)) delete base['type'];
+    const tr = typeof base['transport'] === 'string' ? base['transport'] : undefined;
+    if (tr && LOCAL_TYPES.has(tr)) delete base['transport'];
+  } else {
+    // LOCAL: set command/args/env; remove remote-only keys
+    const [cmd, ...args] = ds.command ?? [];
+    base['command'] = cmd ?? '';
+    if (args.length > 0) {
+      base['args'] = args;
+    } else {
+      delete base['args'];
+    }
+    if (ds.env && Object.keys(ds.env).length > 0) {
+      base['env'] = ds.env;
+    } else {
+      delete base['env'];
+    }
+    delete base['url'];
+    // Remove remote type markers
+    const t = typeof base['type'] === 'string' ? base['type'] : undefined;
+    if (t && REMOTE_TYPES.has(t)) delete base['type'];
+    const tr = typeof base['transport'] === 'string' ? base['transport'] : undefined;
+    if (tr && REMOTE_TYPES.has(tr)) delete base['transport'];
   }
 
-  const [cmd, ...args] = ds.command ?? [];
-  const entry: { command: string; args?: string[]; env?: Record<string, string> } = {
-    command: cmd ?? ''
-  };
-  if (args.length > 0) entry.args = args;
-  if (ds.env && Object.keys(ds.env).length > 0) entry.env = ds.env;
-  return entry;
+  return base;
 }
 
 function entriesEqual(a: unknown, b: unknown): boolean {
@@ -137,22 +187,27 @@ function writeServersToFile(
   const newMcp: Record<string, unknown> = opts.prune ? {} : { ...existingMcp };
 
   for (const ds of desired) {
-    const newEntry = toCursorEntry(ds);
-    if (newEntry === null) {
+    const existingEntry =
+      typeof existingMcp[ds.name] === 'object' && existingMcp[ds.name] !== null
+        ? (existingMcp[ds.name] as McpEntry)
+        : undefined;
+
+    const mergedEntry = mergeEntry(ds, existingEntry);
+    if (mergedEntry === null) {
       // disabled — skip writing
       if (opts.prune) delete newMcp[ds.name];
       continue;
     }
 
-    const existingEntry = existingMcp[ds.name];
     if (existingEntry === undefined) {
       added.push(ds.name);
     } else {
-      if (!entriesEqual(existingEntry, newEntry)) {
+      // Compare merged result against existing to detect real changes
+      if (!entriesEqual(existingEntry, mergedEntry)) {
         updated.push(ds.name);
       }
     }
-    newMcp[ds.name] = newEntry;
+    newMcp[ds.name] = mergedEntry;
   }
 
   if (opts.prune) {

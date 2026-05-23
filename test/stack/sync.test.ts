@@ -813,3 +813,474 @@ describe('agora sync command', () => {
     }
   });
 });
+
+// ── Fix 1: Field preservation on UPDATE ──────────────────────────────────────
+
+describe('field preservation on UPDATE (Fix 1)', () => {
+  test('opencode: extra user key survives update of managed fields', () => {
+    const cwd = makeTmp('agora-fp-oc-');
+    try {
+      const filePath = join(cwd, 'opencode.json');
+      const existing = {
+        mcp: {
+          pg: { type: 'local', command: ['old-cmd'], customFlag: true, retries: 3 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'project' as const };
+      const change = opencodeAdapter.writeServers(
+        location,
+        [{ name: 'pg', command: ['npx', '@mcp/postgres'] }],
+        { prune: false }
+      );
+
+      expect(change.updated).toContain('pg');
+      const result = JSON.parse(readFileSync(filePath, 'utf8'));
+      expect(result.mcp['pg'].command).toEqual(['npx', '@mcp/postgres']);
+      expect(result.mcp['pg'].customFlag).toBe(true);
+      expect(result.mcp['pg'].retries).toBe(3);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test('claude-code: extra user key survives update of managed fields', () => {
+    const home = makeTmp('agora-fp-cc-home-');
+    try {
+      const filePath = join(home, '.claude.json');
+      const existing = {
+        mcpServers: {
+          pg: { command: 'old-cmd', args: ['--old'], timeout: 5000 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'user' as const };
+      const change = claudeCodeAdapter.writeServers(
+        location,
+        [{ name: 'pg', command: ['npx', '@mcp/postgres'] }],
+        { prune: false }
+      );
+
+      expect(change.updated).toContain('pg');
+      const result = JSON.parse(readFileSync(filePath, 'utf8'));
+      expect(result.mcpServers['pg'].command).toBe('npx');
+      expect(result.mcpServers['pg'].args).toEqual(['@mcp/postgres']);
+      expect(result.mcpServers['pg'].timeout).toBe(5000);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('cursor: extra user key survives update of managed fields', () => {
+    const cwd = makeTmp('agora-fp-cur-');
+    try {
+      mkdirSync(join(cwd, '.cursor'), { recursive: true });
+      const filePath = join(cwd, '.cursor', 'mcp.json');
+      const existing = {
+        mcpServers: {
+          pg: { command: 'old-cmd', timeout: 5000 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'project' as const };
+      const change = cursorAdapter.writeServers(
+        location,
+        [{ name: 'pg', command: ['npx', '@mcp/postgres'] }],
+        { prune: false }
+      );
+
+      expect(change.updated).toContain('pg');
+      const result = JSON.parse(readFileSync(filePath, 'utf8'));
+      expect(result.mcpServers['pg'].command).toBe('npx');
+      expect(result.mcpServers['pg'].timeout).toBe(5000);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test('windsurf: extra user key survives update of managed fields', () => {
+    const home = makeTmp('agora-fp-ws-home-');
+    try {
+      mkdirSync(join(home, '.codeium', 'windsurf'), { recursive: true });
+      const filePath = join(home, '.codeium', 'windsurf', 'mcp_config.json');
+      const existing = {
+        mcpServers: {
+          pg: { command: 'old-cmd', timeout: 5000 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'user' as const };
+      const change = windsurfAdapter.writeServers(
+        location,
+        [{ name: 'pg', command: ['npx', '@mcp/postgres'] }],
+        { prune: false }
+      );
+
+      expect(change.updated).toContain('pg');
+      const result = JSON.parse(readFileSync(filePath, 'utf8'));
+      expect(result.mcpServers['pg'].command).toBe('npx');
+      expect(result.mcpServers['pg'].timeout).toBe(5000);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── Fix 1: Transport switch cleanup ──────────────────────────────────────────
+
+describe('transport switch cleanup (Fix 1)', () => {
+  test('cursor: LOCAL → REMOTE drops command/args/env, gains url', () => {
+    const cwd = makeTmp('agora-ts-cur-');
+    try {
+      mkdirSync(join(cwd, '.cursor'), { recursive: true });
+      const filePath = join(cwd, '.cursor', 'mcp.json');
+      const existing = {
+        mcpServers: {
+          srv: { command: 'node', args: ['server.js'], env: { KEY: 'val' }, timeout: 9999 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'project' as const };
+      cursorAdapter.writeServers(
+        location,
+        [{ name: 'srv', url: 'https://remote.example.com/sse' }],
+        { prune: false }
+      );
+
+      const result = JSON.parse(readFileSync(filePath, 'utf8'));
+      const entry = result.mcpServers['srv'];
+      expect(entry.url).toBe('https://remote.example.com/sse');
+      expect(entry.command).toBeUndefined();
+      expect(entry.args).toBeUndefined();
+      expect(entry.env).toBeUndefined();
+      expect(entry.timeout).toBe(9999);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test('cursor: REMOTE → LOCAL drops url, gains command/args', () => {
+    const cwd = makeTmp('agora-ts2-cur-');
+    try {
+      mkdirSync(join(cwd, '.cursor'), { recursive: true });
+      const filePath = join(cwd, '.cursor', 'mcp.json');
+      const existing = {
+        mcpServers: {
+          srv: { url: 'https://remote.example.com/sse', timeout: 1234 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'project' as const };
+      cursorAdapter.writeServers(location, [{ name: 'srv', command: ['npx', 'mcp-local'] }], {
+        prune: false
+      });
+
+      const result = JSON.parse(readFileSync(filePath, 'utf8'));
+      const entry = result.mcpServers['srv'];
+      expect(entry.command).toBe('npx');
+      expect(entry.args).toEqual(['mcp-local']);
+      expect(entry.url).toBeUndefined();
+      expect(entry.timeout).toBe(1234);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test('claude-code: LOCAL → REMOTE drops command/args/env, gains url', () => {
+    const home = makeTmp('agora-ts-cc-home-');
+    try {
+      const filePath = join(home, '.claude.json');
+      const existing = {
+        mcpServers: {
+          srv: { command: 'node', args: ['s.js'], env: { A: '1' }, timeout: 777 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'user' as const };
+      claudeCodeAdapter.writeServers(
+        location,
+        [{ name: 'srv', url: 'https://remote.example.com/mcp' }],
+        { prune: false }
+      );
+
+      const result = JSON.parse(readFileSync(filePath, 'utf8'));
+      const entry = result.mcpServers['srv'];
+      expect(entry.url).toBe('https://remote.example.com/mcp');
+      expect(entry.command).toBeUndefined();
+      expect(entry.args).toBeUndefined();
+      expect(entry.env).toBeUndefined();
+      expect(entry.timeout).toBe(777);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('opencode: LOCAL → REMOTE drops command/environment, gains url', () => {
+    const cwd = makeTmp('agora-ts-oc-');
+    try {
+      const filePath = join(cwd, 'opencode.json');
+      const existing = {
+        mcp: {
+          srv: { type: 'local', command: ['node', 's.js'], environment: { A: '1' }, retries: 5 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'project' as const };
+      opencodeAdapter.writeServers(
+        location,
+        [{ name: 'srv', url: 'https://remote.example.com/mcp' }],
+        { prune: false }
+      );
+
+      const result = JSON.parse(readFileSync(filePath, 'utf8'));
+      const entry = result.mcp['srv'];
+      expect(entry.type).toBe('remote');
+      expect(entry.url).toBe('https://remote.example.com/mcp');
+      expect(entry.command).toBeUndefined();
+      expect(entry.environment).toBeUndefined();
+      expect(entry.retries).toBe(5);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── Fix 1: No-op update with extra keys ──────────────────────────────────────
+
+describe('no-op update with extra keys present (Fix 1)', () => {
+  test('cursor: re-applying same server with extra keys reports no update', () => {
+    const cwd = makeTmp('agora-noop-cur-');
+    try {
+      mkdirSync(join(cwd, '.cursor'), { recursive: true });
+      const filePath = join(cwd, '.cursor', 'mcp.json');
+      const existing = {
+        mcpServers: {
+          pg: { command: 'npx', args: ['@mcp/postgres'], timeout: 5000 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'project' as const };
+      const change = cursorAdapter.writeServers(
+        location,
+        [{ name: 'pg', command: ['npx', '@mcp/postgres'] }],
+        { prune: false }
+      );
+
+      expect(change.updated).toHaveLength(0);
+      expect(change.added).toHaveLength(0);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test('claude-code: re-applying same server with extra keys reports no update', () => {
+    const home = makeTmp('agora-noop-cc-home-');
+    try {
+      const filePath = join(home, '.claude.json');
+      const existing = {
+        mcpServers: {
+          pg: { command: 'npx', args: ['@mcp/postgres'], timeout: 5000 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'user' as const };
+      const change = claudeCodeAdapter.writeServers(
+        location,
+        [{ name: 'pg', command: ['npx', '@mcp/postgres'] }],
+        { prune: false }
+      );
+
+      expect(change.updated).toHaveLength(0);
+      expect(change.added).toHaveLength(0);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('opencode: re-applying same server with extra keys reports no update', () => {
+    const cwd = makeTmp('agora-noop-oc-');
+    try {
+      const filePath = join(cwd, 'opencode.json');
+      const existing = {
+        mcp: {
+          pg: { type: 'local', command: ['npx', '@mcp/postgres'], retries: 3 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'project' as const };
+      const change = opencodeAdapter.writeServers(
+        location,
+        [{ name: 'pg', command: ['npx', '@mcp/postgres'] }],
+        { prune: false }
+      );
+
+      expect(change.updated).toHaveLength(0);
+      expect(change.added).toHaveLength(0);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test('windsurf: re-applying same server with extra keys reports no update', () => {
+    const home = makeTmp('agora-noop-ws-home-');
+    try {
+      mkdirSync(join(home, '.codeium', 'windsurf'), { recursive: true });
+      const filePath = join(home, '.codeium', 'windsurf', 'mcp_config.json');
+      const existing = {
+        mcpServers: {
+          pg: { command: 'npx', args: ['@mcp/postgres'], timeout: 5000 }
+        }
+      };
+      writeFileSync(filePath, JSON.stringify(existing, null, 2));
+
+      const location = { path: filePath, scope: 'user' as const };
+      const change = windsurfAdapter.writeServers(
+        location,
+        [{ name: 'pg', command: ['npx', '@mcp/postgres'] }],
+        { prune: false }
+      );
+
+      expect(change.updated).toHaveLength(0);
+      expect(change.added).toHaveLength(0);
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── Fix 2: Transport detection robustness ────────────────────────────────────
+
+describe('transport detection robustness (Fix 2)', () => {
+  test('cursor: type:sse entry is classified as remote', () => {
+    const cwd = makeTmp('agora-td-cur-sse-');
+    const home = makeTmp('agora-td-cur-sse-home-');
+    try {
+      mkdirSync(join(cwd, '.cursor'), { recursive: true });
+      const filePath = join(cwd, '.cursor', 'mcp.json');
+      writeFileSync(
+        filePath,
+        JSON.stringify({
+          mcpServers: { srv: { type: 'sse', url: 'https://example.com/sse' } }
+        })
+      );
+      const servers = cursorAdapter.readServers({ cwd, home });
+      const s = servers.find((x) => x.name === 'srv');
+      expect(s?.transport).toBe('remote');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('cursor: type:http entry is classified as remote', () => {
+    const cwd = makeTmp('agora-td-cur-http-');
+    const home = makeTmp('agora-td-cur-http-home-');
+    try {
+      mkdirSync(join(cwd, '.cursor'), { recursive: true });
+      const filePath = join(cwd, '.cursor', 'mcp.json');
+      writeFileSync(
+        filePath,
+        JSON.stringify({
+          mcpServers: { srv: { type: 'http', url: 'https://example.com/mcp' } }
+        })
+      );
+      const servers = cursorAdapter.readServers({ cwd, home });
+      const s = servers.find((x) => x.name === 'srv');
+      expect(s?.transport).toBe('remote');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('cursor: type:stdio entry is classified as local', () => {
+    const cwd = makeTmp('agora-td-cur-stdio-');
+    const home = makeTmp('agora-td-cur-stdio-home-');
+    try {
+      mkdirSync(join(cwd, '.cursor'), { recursive: true });
+      const filePath = join(cwd, '.cursor', 'mcp.json');
+      writeFileSync(
+        filePath,
+        JSON.stringify({
+          mcpServers: { srv: { type: 'stdio', command: 'node', args: ['s.js'] } }
+        })
+      );
+      const servers = cursorAdapter.readServers({ cwd, home });
+      const s = servers.find((x) => x.name === 'srv');
+      expect(s?.transport).toBe('local');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('windsurf: type:sse entry is classified as remote', () => {
+    const home = makeTmp('agora-td-ws-sse-home-');
+    try {
+      mkdirSync(join(home, '.codeium', 'windsurf'), { recursive: true });
+      const filePath = join(home, '.codeium', 'windsurf', 'mcp_config.json');
+      writeFileSync(
+        filePath,
+        JSON.stringify({
+          mcpServers: { srv: { type: 'sse', url: 'https://example.com/sse' } }
+        })
+      );
+      const servers = windsurfAdapter.readServers({ home });
+      const s = servers.find((x) => x.name === 'srv');
+      expect(s?.transport).toBe('remote');
+    } finally {
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('claude-code: type:sse entry is classified as remote', () => {
+    const cwd = makeTmp('agora-td-cc-sse-');
+    const home = makeTmp('agora-td-cc-sse-home-');
+    try {
+      const filePath = join(cwd, '.mcp.json');
+      writeFileSync(
+        filePath,
+        JSON.stringify({
+          mcpServers: { srv: { type: 'sse', url: 'https://example.com/sse' } }
+        })
+      );
+      const servers = claudeCodeAdapter.readServers({ cwd, home });
+      const s = servers.find((x) => x.name === 'srv');
+      expect(s?.transport).toBe('remote');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  test('claude-code: type:stdio with command prefers local (stdio wins)', () => {
+    const cwd = makeTmp('agora-td-cc-both-');
+    const home = makeTmp('agora-td-cc-both-home-');
+    try {
+      const filePath = join(cwd, '.mcp.json');
+      writeFileSync(
+        filePath,
+        JSON.stringify({
+          mcpServers: { srv: { type: 'stdio', command: 'node', url: 'https://example.com' } }
+        })
+      );
+      const servers = claudeCodeAdapter.readServers({ cwd, home });
+      const s = servers.find((x) => x.name === 'srv');
+      expect(s?.transport).toBe('local');
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
