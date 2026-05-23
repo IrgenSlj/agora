@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { probeMcpServer } from '../../src/stack/mcp-probe';
 
 const FAKE_SERVER = join(import.meta.dir, '../fixtures/mcp-fake-server.js');
+const STDERR_SERVER = join(import.meta.dir, '../fixtures/mcp-stderr-server.js');
 
 describe('probeMcpServer', () => {
   test('happy path: ok=true, serverInfo, two tools', async () => {
@@ -99,6 +100,57 @@ process.stdin.on('end', () => process.exit(0));
       rmSync(tmpDir, { recursive: true, force: true });
     }
   }, 15000);
+
+  // ── stderr capture ──────────────────────────────────────────────────────────
+
+  test('server that exits with stderr: result.stderr contains the known line', async () => {
+    const result = await probeMcpServer(['node', STDERR_SERVER], {
+      timeoutMs: 5000,
+      env: { MCP_STDERR_MODE: 'exit' }
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/exited/);
+    expect(result.stderr).toBeDefined();
+    expect(result.stderr).toContain('AGORA_TEST_STDERR_LINE');
+    // error string should include a stderr snippet
+    expect(result.error).toMatch(/stderr:/);
+    expect(result.error).toContain('AGORA_TEST_STDERR_LINE');
+  }, 10000);
+
+  test('server that hangs with stderr: result.stderr captured on timeout', async () => {
+    const result = await probeMcpServer(['node', STDERR_SERVER], {
+      timeoutMs: 500,
+      env: { MCP_STDERR_MODE: 'hang' }
+    });
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/timed out/);
+    expect(result.stderr).toBeDefined();
+    expect(result.stderr).toContain('AGORA_TEST_STDERR_LINE');
+    // error string should include a stderr snippet
+    expect(result.error).toMatch(/stderr:/);
+  }, 5000);
+
+  test('happy path: result.stderr is absent when no stderr output', async () => {
+    const result = await probeMcpServer(['node', FAKE_SERVER], { timeoutMs: 10000 });
+    expect(result.ok).toBe(true);
+    expect(result.stderr).toBeUndefined();
+  }, 15000);
+
+  test('buffer cap: stderr beyond 4000 chars keeps tail only', async () => {
+    // Inline server that spams stderr then exits
+    const spamScript = [
+      `process.stderr.write('A'.repeat(3000));`,
+      `process.stderr.write('B'.repeat(2000));`,
+      `process.exit(1);`
+    ].join('\n');
+    const result = await probeMcpServer(['node', '-e', spamScript], { timeoutMs: 5000 });
+    expect(result.ok).toBe(false);
+    expect(result.stderr).toBeDefined();
+    // Captured tail must be at most 4000 chars (trimEnd may trim trailing whitespace)
+    expect(result.stderr!.length).toBeLessThanOrEqual(4000);
+    // Must end with Bs (the tail)
+    expect(result.stderr!.trimEnd()).toMatch(/B+$/);
+  }, 10000);
 
   test('tools/list RPC error after successful initialize: ok=true with empty tools and error field', async () => {
     const tmpDir = mkdtempSync(join(tmpdir(), 'agora-mcp-probe-'));

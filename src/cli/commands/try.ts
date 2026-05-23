@@ -169,5 +169,13 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
   if (probe.exitCode !== undefined && probe.exitCode !== null) {
     writeLine(io.stdout, `  Exit code: ${probe.exitCode}`);
   }
+  if (probe.stderr) {
+    const lines = probe.stderr.split('\n');
+    const displayed = lines.slice(-8);
+    writeLine(io.stdout, style.dim('  stderr:'));
+    for (const l of displayed) {
+      writeLine(io.stdout, style.dim(`    ${l}`));
+    }
+  }
   return 1;
 };

@@ -26,8 +26,26 @@ export interface McpProbeResult {
   capabilities?: unknown;
   tools?: McpTool[];
   error?: string;
+  stderr?: string;
   exitCode?: number | null;
   durationMs?: number;
+}
+
+const STDERR_CAP = 4000;
+
+function appendStderr(buf: string, chunk: string): string {
+  const combined = buf + chunk;
+  if (combined.length <= STDERR_CAP) return combined;
+  // Keep the tail
+  return combined.slice(combined.length - STDERR_CAP);
+}
+
+function stderrSnippet(buf: string): string {
+  const trimmed = buf.trimEnd();
+  if (!trimmed) return '';
+  // Last ~200 chars, collapsed to a single line
+  const tail = trimmed.length > 200 ? trimmed.slice(trimmed.length - 200) : trimmed;
+  return tail.replace(/\r?\n/g, ' ').trim();
 }
 
 export async function probeMcpServer(
@@ -67,6 +85,8 @@ export async function probeMcpServer(
     const pending = new Map<number, (msg: unknown) => void>();
     // Partial line buffer for stdout
     let lineBuffer = '';
+    // Bounded stderr capture (tail up to STDERR_CAP chars)
+    let stderrBuf = '';
 
     function durationMs(): number {
       return Date.now() - startMs;
@@ -96,21 +116,41 @@ export async function probeMcpServer(
       if (settled) return;
       settled = true;
       cleanup();
-      resolveOuter({ ...result, durationMs: durationMs() });
+      const capturedStderr = stderrBuf.trimEnd();
+      const withStderr: McpProbeResult = {
+        ...result,
+        durationMs: durationMs(),
+        ...(capturedStderr ? { stderr: capturedStderr } : {})
+      };
+      resolveOuter(withStderr);
     }
+
+    // Capture stderr (bounded)
+    child.stderr!.on('data', (chunk: Buffer) => {
+      stderrBuf = appendStderr(stderrBuf, chunk.toString('utf8'));
+    });
 
     // Set overall timeout
     timer = setTimeout(() => {
-      resolve({ ok: false, error: `timed out waiting for ${currentStage}` });
+      const snippet = stderrSnippet(stderrBuf);
+      const base = `timed out waiting for ${currentStage}`;
+      resolve({ ok: false, error: snippet ? `${base} — stderr: ${snippet}` : base });
     }, timeoutMs);
 
     child.on('error', (err) => {
-      resolve({ ok: false, error: err.message });
+      const snippet = stderrSnippet(stderrBuf);
+      resolve({ ok: false, error: snippet ? `${err.message} — stderr: ${snippet}` : err.message });
     });
 
     child.on('close', (code) => {
       if (!settled) {
-        resolve({ ok: false, error: 'server exited', exitCode: code });
+        const snippet = stderrSnippet(stderrBuf);
+        const base = 'server exited';
+        resolve({
+          ok: false,
+          error: snippet ? `${base} — stderr: ${snippet}` : base,
+          exitCode: code
+        });
       }
     });
 

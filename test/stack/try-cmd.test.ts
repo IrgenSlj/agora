@@ -6,6 +6,7 @@ import { runCli } from '../../src/cli/app';
 import { clearMarketplaceItemsCache } from '../../src/marketplace';
 
 const FAKE_SERVER = join(import.meta.dir, '../fixtures/mcp-fake-server.js');
+const STDERR_SERVER = join(import.meta.dir, '../fixtures/mcp-stderr-server.js');
 
 function makeIo(cwd: string, extraEnv?: Record<string, string | undefined>) {
   const out: string[] = [];
@@ -128,6 +129,21 @@ describe('agora try', () => {
     expect(result.tools).toBeDefined();
     expect(result.tools!.length).toBeGreaterThan(0);
   }, 15000);
+
+  test('--json probe carries stderr field when server writes to stderr', async () => {
+    // Directly invoke probe (same path that commandTry --json uses) against the
+    // stderr fixture and verify the shape of the result.
+    const { probeMcpServer } = await import('../../src/stack/mcp-probe');
+    const result = await probeMcpServer(['node', STDERR_SERVER], {
+      timeoutMs: 5000,
+      env: { MCP_STDERR_MODE: 'exit' }
+    });
+    // --json serialises the full probe object; verify the field is present
+    const json = JSON.parse(JSON.stringify(result));
+    expect(json.ok).toBe(false);
+    expect(typeof json.stderr).toBe('string');
+    expect(json.stderr).toContain('AGORA_TEST_STDERR_LINE');
+  }, 10000);
 
   test('no config file written after try, even on success', async () => {
     // Directly invoke commandTry with a fake item that uses our fixture server.
