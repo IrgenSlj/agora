@@ -943,6 +943,28 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'try',
+    group: 'Stack',
+    summary: 'Ephemeral test-drive a marketplace MCP server without saving any config',
+    usage: 'agora try <id> [--timeout <ms>] [--skip-scan] [--json]',
+    details:
+      'Spawns the MCP server for the given marketplace item, performs a real MCP ' +
+      'initialize + tools/list handshake over stdio, reports the server name and tools, ' +
+      'then kills the process — without writing any configuration file. ' +
+      'Runs the pre-install scan by default (same as agora install); pass --skip-scan ' +
+      'to bypass. Use --timeout to override the default 15-second probe window. ' +
+      'Returns exit code 1 if the probe fails or scan blocks.',
+    flags: [
+      { flag: '--timeout', description: 'Probe timeout in milliseconds (default 15000)' },
+      {
+        flag: '--skip-scan',
+        description: 'Bypass the pre-install scan gate'
+      },
+      { flag: '--json', description: 'Output { item, command, scan, probe } as JSON' }
+    ],
+    examples: ['agora try mcp-github', 'agora try mcp-filesystem --timeout 20000']
+  },
+  {
     name: 'installed',
     group: 'Stack',
     summary: 'List MCP servers configured across all agent tools',
