@@ -965,6 +965,26 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora try mcp-github', 'agora try mcp-filesystem --timeout 20000']
   },
   {
+    name: 'capabilities',
+    group: 'Stack',
+    summary: 'List and search MCP tools discovered across configured servers',
+    usage: 'agora capabilities [query] [--server <name>] [--json]',
+    details:
+      'Reads the local capability cache (populated by `agora doctor --probe` or `agora try`) ' +
+      'and lists every MCP tool exposed by your configured servers. ' +
+      'Provide a query to rank results with BM25 — "which of my servers can do X". ' +
+      'Use --server to filter to a single server (case-insensitive exact match, else substring).',
+    flags: [
+      { flag: '--server', description: 'Filter to a specific server (exact or substring match)' },
+      { flag: '--json', description: 'Output as JSON: { query, server, results, summary }' }
+    ],
+    examples: [
+      'agora capabilities',
+      'agora capabilities "query a database"',
+      'agora capabilities --server github'
+    ]
+  },
+  {
     name: 'installed',
     group: 'Stack',
     summary: 'List MCP servers configured across all agent tools',

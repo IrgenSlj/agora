@@ -29,6 +29,7 @@ import * as doctorModule from './commands/doctor.js';
 import * as freezeModule from './commands/freeze.js';
 import * as syncModule from './commands/sync.js';
 import * as tryModule from './commands/try.js';
+import * as capabilitiesModule from './commands/capabilities.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -183,6 +184,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       sync: syncModule.commandSync,
       author: marketplace.commandAuthor,
       try: tryModule.commandTry,
+      capabilities: capabilitiesModule.commandCapabilities,
       bookmarks: operations.commandBookmarks,
       welcome: welcomeModule.commandWelcome,
       auth: operations.commandAuth,
