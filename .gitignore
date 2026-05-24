@@ -11,3 +11,6 @@ dist/
 .idea/
 .vscode/
 
+
+# never commit a stray literal-tilde dir (unexpanded ~ path bug)
+/~/
