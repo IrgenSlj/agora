@@ -19,7 +19,19 @@ import {
   flagSource
 } from '../../community/client.js';
 import { BOARD_LABELS } from '../../community/types.js';
-import { vlen, rail, noRail, sep, frame, pageSourceOptions } from './helpers.js';
+import { frame, pageSourceOptions } from './helpers.js';
+import { liftStyler } from '../theme.js';
+import {
+  vlen,
+  padRight,
+  truncate,
+  rule as componentRule,
+  rail as componentRail,
+  pill,
+  status as componentStatus,
+  pageHeader,
+  bp
+} from './components.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -410,62 +422,59 @@ function searchFlatList(results: SearchResult): SearchHit[] {
 }
 
 function renderSearchView(ctx: PageContext, width: number, height: number): string {
-  const { style } = ctx;
+  const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
   const s = state.search;
   if (!s) return frame([], width, height);
   const lines: string[] = [];
-  const rule = ' ' + style.dim('─'.repeat(Math.max(0, width - 2)));
+  const ruleStr = ' ' + componentRule(Math.max(0, width - 2), undefined, theme);
 
   // Header
-  const scopeLabel = 'scope: ' + s.scope;
-  const headerLeft = style.bold('─ SEARCH ─');
-  const headerRight = style.dim(scopeLabel);
-  const gap = Math.max(2, width - vlen(' ' + headerLeft) - vlen(headerRight) - 2);
-  lines.push(' ' + headerLeft + ' '.repeat(gap) + headerRight);
+  const scopeLabel = theme.dim('scope: ' + s.scope);
+  lines.push(pageHeader({ title: 'SEARCH', right: scopeLabel, width, theme }));
 
   // Query input line
-  const cursor = style.dim('▏');
+  const cursor = theme.dim('▏');
   const queryBefore = s.query.slice(0, s.cursorCol);
   const queryAfter = s.query.slice(s.cursorCol);
-  lines.push(' ' + style.accent('> ') + queryBefore + cursor + queryAfter);
-  lines.push(rule);
+  lines.push(' ' + theme.accent('> ') + queryBefore + cursor + queryAfter);
+  lines.push(ruleStr);
 
   if (!s.results && !s.loading) {
-    lines.push(' ' + style.dim('type to search (min 2 chars) · Tab to change scope'));
+    lines.push(' ' + theme.dim('type to search (min 2 chars) · Tab to change scope'));
   } else if (s.loading) {
-    lines.push(' ' + style.dim('(loading…)'));
+    lines.push(' ' + theme.dim('(loading…)'));
   } else if (s.results) {
     const flat = searchFlatList(s.results);
     if (flat.length === 0) {
-      lines.push(' ' + style.dim('(no results)'));
+      lines.push(' ' + theme.dim('(no results)'));
     } else {
       if (s.results.truncated) {
-        lines.push(' ' + style.dim('(truncated — refine query)'));
+        lines.push(' ' + theme.dim('(truncated — refine query)'));
       }
       const threads = s.results.results.threads;
       const replies = s.results.results.replies;
 
       if (threads.length > 0) {
-        lines.push(' ' + style.bold('THREADS (' + threads.length + ')'));
+        lines.push(' ' + theme.bold('THREADS (' + threads.length + ')'));
         threads.forEach((hit, i) => {
           const absIdx = i;
           const sel = absIdx === s.selectedIndex;
-          const lead = sel ? style.accent('> ') : '  ';
+          const lead = sel ? theme.accent('> ') : '  ';
           lines.push(
-            lead + style.dim('/' + hit.board + ' · ') + (sel ? style.bold(hit.title) : hit.title)
+            lead + theme.dim('/' + hit.board + ' · ') + (sel ? theme.bold(hit.title) : hit.title)
           );
-          lines.push('  ' + style.dim('  ') + renderSnippet(hit.snippet, style));
+          lines.push('  ' + theme.dim('  ') + renderSnippet(hit.snippet, theme));
         });
       }
 
       if (replies.length > 0) {
-        lines.push(' ' + style.bold('REPLIES (' + replies.length + ')'));
+        lines.push(' ' + theme.bold('REPLIES (' + replies.length + ')'));
         replies.forEach((hit, i) => {
           const absIdx = threads.length + i;
           const sel = absIdx === s.selectedIndex;
-          const lead = sel ? style.accent('> ') : '  ';
-          lines.push(lead + style.dim('/' + hit.board + ' · in "' + hit.title + '"'));
-          lines.push('  ' + style.dim('  ') + renderSnippet(hit.snippet, style));
+          const lead = sel ? theme.accent('> ') : '  ';
+          lines.push(lead + theme.dim('/' + hit.board + ' · in "' + hit.title + '"'));
+          lines.push('  ' + theme.dim('  ') + renderSnippet(hit.snippet, theme));
         });
       }
     }
@@ -476,10 +485,10 @@ function renderSearchView(ctx: PageContext, width: number, height: number): stri
 
 function renderSnippet(
   snippet: string,
-  style: { accent(s: string): string; dim(s: string): string }
+  theme: { accent(s: string): string; dim(s: string): string }
 ): string {
   // Highlight [matched] text with accent style; keep surrounding text dim
-  return snippet.replace(/\[([^\]]*)\]/g, (_match, inner) => style.accent(inner));
+  return snippet.replace(/\[([^\]]*)\]/g, (_match, inner) => theme.accent(inner));
 }
 
 // ── Render ────────────────────────────────────────────────────────────────────
@@ -525,9 +534,13 @@ export const communityPage: Page = {
     state.userVotes.clear();
   },
   render(ctx: PageContext): string {
-    const { style, width, height } = ctx;
+    const { width, height } = ctx;
+    const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
     const lines: string[] = [];
-    const rule = ' ' + style.dim('─'.repeat(Math.max(0, width - 2)));
+    const narrow = bp(width) === 'xs';
+
+    // ── rule helper ──
+    const hrFull = () => ' ' + componentRule(Math.max(0, width - 2), undefined, theme);
 
     // Search overlay takes priority over all other views
     if (state.search?.active) {
@@ -535,28 +548,27 @@ export const communityPage: Page = {
     }
 
     if (boardsLoading) {
-      lines.push(' ' + style.dim('Loading community…'));
+      lines.push(' ' + theme.dim('Loading community…'));
       return frame(lines, width, height);
     }
 
     if (state.view === 'boards') {
+      // ── boards header ──
       const newTotal = cachedBoards.reduce((s, b) => s + b.newToday, 0);
-      lines.push(
-        ' ' +
-          style.bold(style.accent('COMMUNITY')) +
-          style.dim('  ' + cachedBoards.length + ' boards · ' + newTotal + ' new today')
-      );
-      lines.push(rule);
+      const rightMeta = theme.dim(cachedBoards.length + ' boards · ' + newTotal + ' new today');
+      lines.push(pageHeader({ title: 'COMMUNITY', right: narrow ? '' : rightMeta, width, theme }));
+      lines.push(hrFull());
+
       const list = cachedBoards.filter((b) => !state.filter || b.id.includes(state.filter));
       if (list.length === 0) {
-        lines.push(' ' + style.dim('No boards match.'));
+        lines.push(' ' + theme.dim('No boards match.'));
       } else {
         list.forEach((b, i) => {
           const sel = i === state.boardCur;
-          const lead = sel ? rail(style) : noRail();
+          const lead = componentRail(theme, sel);
           const displayName = '/' + b.id;
-          const name = sel ? style.bold(displayName) : displayName;
-          const stats = style.dim(
+          const name = sel ? theme.bold(displayName) : displayName;
+          const stats = theme.dim(
             b.threadCount.toString().padStart(4) +
               ' th  ' +
               b.newToday.toString().padStart(2) +
@@ -565,105 +577,150 @@ export const communityPage: Page = {
           const gap = Math.max(2, width - vlen(' ' + lead + displayName) - vlen(stats) - 1);
           lines.push(' ' + lead + name + ' '.repeat(gap) + stats);
           const label = BOARD_LABELS[b.id];
-          if (label) lines.push('     ' + style.dim(label));
+          if (label && !narrow) lines.push('     ' + theme.dim(label));
+          lines.push(hrFull());
         });
       }
     } else if (state.view === 'threads') {
+      // ── thread list header ──
       const board = state.board ?? cachedBoards[state.boardCur]?.id ?? 'mcp';
       const list = cachedThreads.filter(
         (t) => !state.filter || t.title.toLowerCase().includes(state.filter.toLowerCase())
       );
+      const sortBadge = theme.dim('sort: ') + theme.accent(state.threadSort);
+      const threadCount = theme.dim(list.length + ' threads');
+      const rightCluster = narrow ? sortBadge : threadCount + '   ' + sortBadge;
       lines.push(
-        ' ' +
-          style.bold(style.accent('/' + board)) +
-          style.dim('  ' + list.length + ' threads') +
-          '   ' +
-          style.dim('sort: ') +
-          style.accent(state.threadSort)
+        pageHeader({
+          title: 'COMMUNITY',
+          crumbs: ['/' + board],
+          right: rightCluster,
+          width,
+          theme
+        })
       );
-      lines.push(rule);
+      lines.push(hrFull());
+
       if (list.length === 0) {
-        lines.push(' ' + style.dim('Empty board. ') + style.accent('n') + style.dim(' to start.'));
+        lines.push(' ' + theme.dim('Empty board. ') + theme.accent('n') + theme.dim(' to start.'));
       } else {
         list.forEach((t, i) => {
           const sel = i === state.threadCur;
-          const lead = sel ? rail(style) : noRail();
+          const lead = componentRail(theme, sel);
           const age = fmtAge(hoursAgo(t.createdAt));
 
           if (isCollapsed(t.id, t.flagCount, state.expandedItems)) {
             const collapsed = renderCollapsed(t.flagCount);
-            const title = sel ? style.bold(collapsed) : style.dim(collapsed);
-            lines.push(' ' + lead + title);
-            lines.push(rule);
+            const flagStr = componentStatus('warning', collapsed, theme);
+            lines.push(' ' + lead + (sel ? theme.bold(flagStr) : flagStr));
+            lines.push(hrFull());
             return;
           }
 
-          const title = sel ? style.bold(t.title) : t.title;
-          let authorMeta = t.author;
-          if (t.authorIsLLM) authorMeta += style.dim(' [bot · ' + (t.authorModel ?? 'llm') + ']');
-          const meta = style.dim(authorMeta + ' · ' + age);
+          const title = sel ? theme.bold(t.title) : t.title;
+
+          // Dense metadata row: author · age · replies · score — all on one line
+          const authorPart = t.author;
+          const botChip = t.authorIsLLM
+            ? ' ' + pill('bot · ' + (t.authorModel ?? 'llm'), 'muted', theme)
+            : '';
           const myVote = state.userVotes.get(t.id) ?? 0;
-          const voteStr = voteGlyph(myVote as -1 | 0 | 1, t.score, style);
-          const counts =
-            voteStr +
-            style.dim('  ') +
-            style.accent(t.replyCount.toString().padStart(2)) +
-            style.dim(' replies');
+          const voteStr = voteGlyph(myVote as -1 | 0 | 1, t.score, theme);
+          const replyPart = theme.accent(t.replyCount.toString()) + theme.dim(' replies');
+          const meta =
+            theme.dim(authorPart + botChip + ' · ' + age) + '  ' + replyPart + '  ' + voteStr;
+
           lines.push(' ' + lead + title);
-          lines.push('     ' + meta + '   ' + counts);
-          lines.push(rule);
+          lines.push('     ' + meta);
+          lines.push(hrFull());
         });
       }
     } else {
+      // ── reader view ──
       const tid = state.thread ?? '';
       const t = cachedThreads.find((x) => x.id === tid);
       if (!t) {
-        lines.push(' ' + style.dim('Thread not found. Esc to go back.'));
+        lines.push(' ' + theme.dim('Thread not found. Esc to go back.'));
       } else {
         const age = fmtAge(hoursAgo(t.createdAt));
-        let authorMeta = t.author;
-        if (t.authorIsLLM) authorMeta += style.dim(' [bot · ' + (t.authorModel ?? 'llm') + ']');
         const myVoteThread = state.userVotes.get(t.id) ?? 0;
-        const threadVoteStr = voteGlyph(myVoteThread as -1 | 0 | 1, t.score, style);
-        lines.push(' ' + style.bold(t.title) + '  ' + threadVoteStr);
-        lines.push(' ' + style.dim(authorMeta + ' · ' + age + ' · ' + t.replyCount + ' replies'));
-        lines.push(' ' + sep('body', width - 2, style));
+        const threadVoteStr = voteGlyph(myVoteThread as -1 | 0 | 1, t.score, theme);
+        const boardName = t.board ? '/' + t.board : '';
+
+        // Header with breadcrumb: COMMUNITY > /board > thread-title (truncated)
+        const crumbTitle = truncate(t.title, Math.max(10, width - 30));
+        lines.push(
+          pageHeader({
+            title: 'COMMUNITY',
+            crumbs: boardName ? [boardName, crumbTitle] : [crumbTitle],
+            width,
+            theme
+          })
+        );
+        lines.push(hrFull());
+
+        // Thread title + vote
+        lines.push(' ' + theme.bold(t.title) + '  ' + threadVoteStr);
+
+        // Dense op-meta row
+        let opMeta = t.author;
+        if (t.authorIsLLM) {
+          opMeta = opMeta + ' ' + pill('bot · ' + (t.authorModel ?? 'llm'), 'muted', theme);
+        }
+        lines.push(' ' + theme.dim(opMeta + ' · ' + age + ' · ' + t.replyCount + ' replies'));
+
+        // Body section
+        lines.push(' ' + componentRule(Math.max(0, width - 2), 'body', theme));
         lines.push(' ' + t.content);
-        lines.push(' ' + sep('replies', width - 2, style));
+
+        // Replies section
+        lines.push(' ' + componentRule(Math.max(0, width - 2), 'replies', theme));
+
         const flatReplies = flattenReplies(cachedReplies);
         flatReplies.forEach((rn, i) => {
           const sel = i === state.replyCur;
-          const lead = sel ? rail(style) : noRail();
-          const indent = '│ '.repeat(rn.depth);
+          const lead = componentRail(theme, sel);
+          // Theme-aware reply rail indent: unicode → '│ ', NO_COLOR → '| '
+          const railChar = theme.unicode ? '│ ' : '| ';
+          const indent = railChar.repeat(rn.depth);
           const ra = fmtAge(hoursAgo(rn.reply.createdAt));
 
           if (isCollapsed(rn.reply.id, rn.reply.flagCount, state.expandedItems)) {
-            lines.push(' ' + indent + lead + style.dim(renderCollapsed(rn.reply.flagCount)));
-            lines.push(rule);
+            const flagStr = componentStatus('warning', renderCollapsed(rn.reply.flagCount), theme);
+            lines.push(' ' + indent + lead + theme.dim(flagStr));
+            lines.push(hrFull());
             return;
           }
 
-          let replyAuthor = rn.reply.author;
-          if (rn.reply.authorIsLLM)
-            replyAuthor += style.dim(' [bot · ' + (rn.reply.authorModel ?? 'llm') + ']');
+          const replyAuthor = rn.reply.author;
+          const botChipR = rn.reply.authorIsLLM
+            ? ' ' + pill('bot · ' + (rn.reply.authorModel ?? 'llm'), 'muted', theme)
+            : '';
           const myVoteReply = state.userVotes.get(rn.reply.id) ?? 0;
-          const replyVoteStr = voteGlyph(myVoteReply as -1 | 0 | 1, rn.reply.score, style);
+          const replyVoteStr = voteGlyph(myVoteReply as -1 | 0 | 1, rn.reply.score, theme);
+
+          // Dense reply header: author [bot chip] · age  vote
           lines.push(
-            ' ' + indent + lead + style.dim(replyAuthor + ' · ' + ra) + '  ' + replyVoteStr
+            ' ' +
+              indent +
+              lead +
+              theme.dim(replyAuthor + botChipR + ' · ' + ra) +
+              '  ' +
+              replyVoteStr
           );
           lines.push('     ' + indent + rn.reply.content);
-          lines.push(rule);
+          lines.push(hrFull());
         });
       }
     }
 
     // Status message
     if (state.statusMessage) {
-      lines.push(' ' + style.dim(state.statusMessage));
+      lines.push(' ' + theme.dim(state.statusMessage));
     }
 
     if (state.filtering) {
-      lines.push(' ' + style.accent('/') + ' ' + state.filter + style.dim('▏'));
+      lines.push(' ' + theme.accent('/') + ' ' + state.filter + theme.dim('▏'));
     }
 
     // Flag modal overlay (last — overwrites bottom lines in frame)
@@ -671,22 +728,22 @@ export const communityPage: Page = {
       const fm = state.flagModal;
       const rendered = frame(lines, width, height).split('\n');
       const modalLines = [
-        ' ' + style.bold('Flag reason:'),
-        '   ' + style.accent('1') + style.dim('. spam'),
-        '   ' + style.accent('2') + style.dim('. harassment'),
-        '   ' + style.accent('3') + style.dim('. undisclosed-llm'),
-        '   ' + style.accent('4') + style.dim('. malicious'),
-        '   ' + style.accent('5') + style.dim('. other'),
-        ' ' + style.dim('Esc to cancel')
+        ' ' + theme.bold('Flag reason:'),
+        '   ' + theme.accent('1') + theme.dim('. spam'),
+        '   ' + theme.accent('2') + theme.dim('. harassment'),
+        '   ' + theme.accent('3') + theme.dim('. undisclosed-llm'),
+        '   ' + theme.accent('4') + theme.dim('. malicious'),
+        '   ' + theme.accent('5') + theme.dim('. other'),
+        ' ' + theme.dim('Esc to cancel')
       ];
       if (fm.awaitingNotes) {
-        modalLines.push(' Notes: ' + fm.notes + style.dim('▏'));
+        modalLines.push(' Notes: ' + fm.notes + theme.dim('▏'));
       }
       const startLine = Math.max(0, height - modalLines.length - 1);
-      rendered[startLine] = ' ' + style.dim('─'.repeat(Math.max(0, width - 2)));
+      rendered[startLine] = ' ' + componentRule(Math.max(0, width - 2), undefined, theme);
       for (let i = 0; i < modalLines.length; i++) {
         if (startLine + 1 + i < height) {
-          rendered[startLine + 1 + i] = modalLines[i]!.padEnd(width).slice(0, width);
+          rendered[startLine + 1 + i] = padRight(truncate(modalLines[i] ?? '', width), width);
         }
       }
       return rendered.join('\n');
@@ -701,11 +758,11 @@ export const communityPage: Page = {
           ? '[REPLY to ' + (comp.replyTo ?? '') + ']'
           : '[NEW THREAD in /' + (comp.board ?? 'meta') + ']';
       const compLines: string[] = [];
-      compLines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
-      compLines.push(' ' + style.accent(label) + style.dim('  ' + comp.lines.length + ' lines'));
+      compLines.push(' ' + componentRule(Math.max(0, width - 2), undefined, theme));
+      compLines.push(' ' + theme.accent(label) + theme.dim('  ' + comp.lines.length + ' lines'));
       if (comp.mode === 'new-thread') {
         compLines.push(
-          ' Title: ' + (comp.title ?? '') + (comp.status === 'editing' ? style.dim('▏') : '')
+          ' Title: ' + (comp.title ?? '') + (comp.status === 'editing' ? theme.dim('▏') : '')
         );
       }
       const visibleContentLines = Math.max(3, height - rendered.length + compLines.length - 2);
@@ -720,7 +777,7 @@ export const communityPage: Page = {
           compLines.push(
             ' ' +
               lineText.slice(0, comp.cursorCol) +
-              style.dim('▏') +
+              theme.dim('▏') +
               lineText.slice(comp.cursorCol)
           );
         } else {
@@ -728,17 +785,17 @@ export const communityPage: Page = {
         }
       }
       if (comp.status === 'sending') {
-        compLines.push(' ' + style.dim('Sending…'));
+        compLines.push(' ' + theme.dim('Sending…'));
       } else if (comp.status === 'error') {
-        compLines.push(' ' + style.dim('Error: ' + (comp.errorMessage ?? 'unknown')));
+        compLines.push(' ' + theme.dim('Error: ' + (comp.errorMessage ?? 'unknown')));
       } else {
-        compLines.push(' ' + style.dim('Ctrl+S send · Esc cancel'));
+        compLines.push(' ' + theme.dim('Ctrl+S send · Esc cancel'));
       }
 
       const startLine = Math.max(0, height - compLines.length);
       for (let i = 0; i < compLines.length; i++) {
         if (startLine + i < height) {
-          rendered[startLine + i] = (compLines[i] ?? '').padEnd(width).slice(0, width);
+          rendered[startLine + i] = padRight(truncate(compLines[i] ?? '', width), width);
         }
       }
       return rendered.join('\n');

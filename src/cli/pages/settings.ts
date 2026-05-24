@@ -1,6 +1,7 @@
 import type { Page, PageAction, PageContext } from './types.js';
 import { loadSettings, writeSettings, type AgoraSettings } from '../../settings.js';
-import { vlen, rail, noRail, frame } from './helpers.js';
+import { liftStyler } from '../theme.js';
+import { vlen, frame, rule, rail, kvRow, pill, status, pageHeader } from './components.js';
 
 interface Field {
   section: 'Account' | 'Display' | 'News' | 'Community';
@@ -120,6 +121,9 @@ const FIELDS: ReadonlyArray<Field> = [
   }
 ];
 
+// Key column width — wide enough for the longest label
+const KEY_W = 24;
+
 interface SettState {
   cursor: number;
   current: AgoraSettings | undefined;
@@ -137,9 +141,41 @@ const state: SettState = {
   helpOpen: false
 };
 
+/** Reset module-level state — for test isolation only. */
+export function _resetSettingsState(): void {
+  state.cursor = 0;
+  state.current = undefined;
+  state.editing = false;
+  state.buffer = '';
+  state.dirty = false;
+  state.helpOpen = false;
+}
+
 function ensureLoaded(_ctx: PageContext): AgoraSettings {
   if (!state.current) state.current = loadSettings('~/.config/agora');
   return state.current;
+}
+
+/** Render a field value using pills for toggle/select, accent+caret for editing. */
+function renderValue(
+  f: Field,
+  raw: string,
+  editing: boolean,
+  theme: ReturnType<typeof liftStyler>
+): string {
+  if (editing) {
+    return theme.accent(raw) + theme.dim('▏');
+  }
+  if (f.kind === 'toggle') {
+    return raw === 'on' ? pill('on', 'success', theme) : pill('off', 'muted', theme);
+  }
+  if (f.kind === 'select') {
+    return pill(raw || '—', 'accent', theme);
+  }
+  if (f.kind === 'number') {
+    return theme.accent(raw || '0') + theme.dim('  +/-');
+  }
+  return theme.accent(raw.length ? raw : '—');
 }
 
 export const settingsPage: Page = {
@@ -158,76 +194,102 @@ export const settingsPage: Page = {
     { key: '?', label: 'help' }
   ],
   render(ctx: PageContext): string {
-    const { style, width, height } = ctx;
+    const { style, width, height, trueColor } = ctx;
+    const theme = liftStyler(style, { trueColor });
     const s = ensureLoaded(ctx);
 
+    // ── Help overlay ──────────────────────────────────────────────────────────
     if (state.helpOpen) {
       const lines: string[] = [];
-      lines.push(' ' + style.bold(style.accent('SETTINGS HELP')));
-      lines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
+      lines.push(pageHeader({ title: 'SETTINGS HELP', width, theme }));
+      lines.push(' ' + rule(Math.max(0, width - 2), undefined, theme));
       lines.push('');
-      lines.push(' ' + style.bold('Hotkeys'));
-      lines.push('   ' + style.accent('j/k') + style.dim('        navigate fields'));
-      lines.push('   ' + style.accent('Space') + style.dim('      toggle on/off or cycle select'));
-      lines.push('   ' + style.accent('Enter') + style.dim('      edit text field'));
-      lines.push('   ' + style.accent('+/-') + style.dim('        increment/decrement number'));
-      lines.push('   ' + style.accent('w') + style.dim('          write (save) to disk'));
-      lines.push('   ' + style.accent('r') + style.dim('          revert unsaved changes'));
-      lines.push('   ' + style.accent('Esc') + style.dim('        cancel edit'));
-      lines.push('   ' + style.accent('?') + style.dim('          toggle this help'));
+      lines.push(' ' + theme.bold('Hotkeys'));
+      lines.push('   ' + theme.accent('j/k') + theme.dim('        navigate fields'));
+      lines.push('   ' + theme.accent('Space') + theme.dim('      toggle on/off or cycle select'));
+      lines.push('   ' + theme.accent('Enter') + theme.dim('      edit text field'));
+      lines.push('   ' + theme.accent('+/-') + theme.dim('        increment/decrement number'));
+      lines.push('   ' + theme.accent('w') + theme.dim('          write (save) to disk'));
+      lines.push('   ' + theme.accent('r') + theme.dim('          revert unsaved changes'));
+      lines.push('   ' + theme.accent('Esc') + theme.dim('        cancel edit'));
+      lines.push('   ' + theme.accent('?') + theme.dim('          toggle this help'));
       lines.push('');
-      lines.push(' ' + style.bold('Fields'));
+      lines.push(' ' + theme.bold('Fields'));
       for (const [key, desc] of Object.entries(FIELD_HELP)) {
-        lines.push('   ' + style.accent(key.padEnd(26)) + style.dim(desc));
+        lines.push('   ' + theme.accent(key.padEnd(26)) + theme.dim(desc));
       }
       lines.push('');
-      lines.push(' ' + style.dim('Press ? or Esc to dismiss.'));
+      lines.push(' ' + theme.dim('Press ? or Esc to dismiss.'));
       return frame(lines, width, height);
     }
 
+    // ── Main settings view ────────────────────────────────────────────────────
     const lines: string[] = [];
-    const head =
-      ' ' + style.bold(style.accent('SETTINGS')) + style.dim('  ~/.config/agora/settings.toml');
-    const right = state.dirty
-      ? style.accent('unsaved') + style.dim('  (') + style.accent('w') + style.dim(' to write)')
-      : style.dim('clean');
-    const gap = Math.max(2, width - vlen(head) - vlen(right) - 2);
-    lines.push(head + ' '.repeat(gap) + right);
-    lines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
+
+    // Header: title + unsaved/saved indicator
+    const indicator = state.dirty
+      ? status('warning', 'unsaved', theme)
+      : status('success', 'saved', theme);
+    lines.push(
+      pageHeader({
+        title: 'SETTINGS',
+        crumbs: ['~/.config/agora/settings.toml'],
+        right: indicator,
+        width,
+        theme
+      })
+    );
 
     let lastSection = '';
     FIELDS.forEach((f, i) => {
       if (f.section !== lastSection) {
-        if (lastSection !== '') lines.push('');
-        lines.push(' ' + style.dim('[' + f.section.toLowerCase() + ']'));
+        // Section rule — indented one space, fills remaining width
+        lines.push(' ' + rule(Math.max(0, width - 2), f.section.toLowerCase(), theme));
         lastSection = f.section;
       }
+
       const sel = i === state.cursor;
-      const lead = sel ? rail(style) : noRail();
+      const lead = rail(theme, sel);
       const raw = state.editing && sel ? state.buffer : f.read(s);
-      const value =
-        state.editing && sel
-          ? style.accent(raw) + style.dim('▏')
-          : style.accent(raw.length ? raw : '—');
-      const hintText =
-        f.kind === 'toggle'
-          ? 'space'
-          : f.kind === 'select'
-            ? 'space cycle'
-            : f.kind === 'number'
-              ? '+/-'
-              : 'Enter';
-      const hint = sel ? '   ' + style.dim(hintText) : '';
-      lines.push(' ' + lead + style.bold(f.label.padEnd(28)) + '= ' + value + hint);
+      const value = renderValue(f, raw, state.editing && sel, theme);
+
+      // kvRow for the label; rail prefix eats 2 chars
+      const labelStr = kvRow(f.label, '', KEY_W, theme);
+      const row = ' ' + lead + labelStr + value;
+      lines.push(row);
+
+      // Inline hint on the selected row (edit/toggle affordance)
+      if (sel && !state.editing) {
+        const hintText =
+          f.kind === 'toggle'
+            ? 'space'
+            : f.kind === 'select'
+              ? 'space cycle'
+              : f.kind === 'number'
+                ? '+/-'
+                : 'enter';
+        // Append hint after value if space allows, else skip (narrow)
+        // eslint-disable-next-line no-control-regex
+        const rowPlain = row.replace(/\x1b\[[0-9;]*m/g, '');
+        const hintStr = '   ' + theme.dim(hintText);
+        if (rowPlain.length + vlen(hintStr) < width) {
+          // replace last line with hint appended
+          lines[lines.length - 1] = row + hintStr;
+        }
+      }
+
+      // Focused row: inline help text below
       if (sel) {
         const helpText = FIELD_HELP[f.key];
         if (helpText) {
-          lines.push('     ' + style.dim(helpText));
+          lines.push('   ' + theme.dim('  ' + helpText));
         }
       }
     });
-    lines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
-    lines.push(' ' + style.dim('TOML is hand-editable; the TUI re-reads on next launch.'));
+
+    lines.push(' ' + rule(Math.max(0, width - 2), undefined, theme));
+    lines.push(' ' + theme.dim('TOML is hand-editable; the TUI re-reads on next launch.'));
+
     return frame(lines, width, height);
   },
   handleKey(event, ctx): PageAction {

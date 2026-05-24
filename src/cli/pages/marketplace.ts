@@ -11,7 +11,7 @@ import {
   type MarketplaceItem,
   type InstallPlan
 } from '../../marketplace.js';
-import { vlen, rail, noRail, sep, fmtCount, frame, scrollbar } from './helpers.js';
+import { fmtCount, frame, scrollbar } from './helpers.js';
 import { enrichItem, enrichHfItem, type EnrichmentEntry } from '../../hubs/enrichment.js';
 import { scanItem, type ScanResult } from '../../scan.js';
 import {
@@ -20,6 +20,20 @@ import {
   saveItemToState,
   writeAgoraState
 } from '../../state.js';
+import { liftStyler } from '../theme.js';
+import {
+  pageHeader,
+  rule,
+  pill,
+  tagList,
+  kvRow,
+  status,
+  rail,
+  vlen,
+  padRight,
+  truncate,
+  bp
+} from './components.js';
 
 type SortKey = 'installs' | 'stars' | 'name';
 type SourceFilter = 'all' | 'curated' | 'github' | 'hf';
@@ -127,265 +141,302 @@ export const marketplacePage: Page = {
     { key: 'p', label: 'price' }
   ],
   render(ctx: PageContext): string {
-    const { style, width, height } = ctx;
+    const { style, width, height, trueColor } = ctx;
+    const theme = liftStyler(style, { trueColor });
+    const narrow = bp(width) === 'xs';
 
+    // ── SCAN view ──────────────────────────────────────────────────────────────
     if (state.view === 'scan') {
       const lines: string[] = [];
-      lines.push(' ' + style.bold(style.accent('SCAN')));
-      lines.push(' ' + sep('', width - 2, style));
+      lines.push(pageHeader({ title: 'SCAN', width, theme }));
+      lines.push(' ' + rule(width - 2, undefined, theme));
       lines.push('');
       const it = filtered(getMarketplaceItems())[state.cursor];
-      if (it) lines.push(' ' + style.bold(it.name) + style.dim('  ' + it.id));
+      if (it) {
+        lines.push(' ' + theme.bold(it.name) + theme.muted('  ' + it.id));
+      }
       lines.push('');
       if (state.scanLoading) {
-        lines.push(' ' + style.dim('Scanning…'));
+        lines.push(' ' + theme.dim('Scanning…'));
       } else if (state.scanResult) {
         for (const c of state.scanResult.checks) {
-          const icon =
-            c.status === 'pass'
-              ? style.accent('✓')
-              : c.status === 'warn'
-                ? style.orange('⚠')
-                : style.bold('✗');
-          lines.push('   ' + icon + '  ' + style.dim(c.label) + '  ' + c.message);
+          const tone = c.status === 'pass' ? 'success' : c.status === 'warn' ? 'warning' : 'error';
+          const row = status(tone, theme.dim(c.label) + '  ' + c.message, theme);
+          lines.push('   ' + row);
         }
         lines.push('');
         const { pass, warn, fail } = state.scanResult.summary;
-        lines.push(' ' + style.dim(`${pass} pass · ${warn} warning(s) · ${fail} failure(s)`));
+        lines.push(' ' + theme.muted(`${pass} pass · ${warn} warning(s) · ${fail} failure(s)`));
       } else {
-        lines.push(' ' + style.dim('No scan result.'));
+        lines.push(' ' + theme.dim('No scan result.'));
       }
       lines.push('');
-      lines.push(' ' + style.accent('esc') + style.dim(' back'));
+      lines.push(' ' + theme.accent('esc') + theme.dim(' back'));
       return frame(lines, width, height);
     }
 
+    // ── INSTALL PREVIEW view ───────────────────────────────────────────────────
     if (state.view === 'install-preview' && state.installPlan) {
       const plan = state.installPlan;
       const lines: string[] = [];
-      lines.push(' ' + style.bold(style.accent('INSTALL PREVIEW')));
-      lines.push(' ' + sep('', width - 2, style));
+      lines.push(pageHeader({ title: 'INSTALL PREVIEW', width, theme }));
+      lines.push(' ' + rule(width - 2, undefined, theme));
       lines.push('');
-      lines.push(' ' + style.bold(plan.item.name) + style.dim('  ' + plan.kind));
+      lines.push(' ' + theme.bold(plan.item.name) + '  ' + theme.muted(plan.kind));
       lines.push('');
       if (plan.kind === 'git-clone') {
-        if (plan.cloneTarget) lines.push(' ' + style.dim('Target  ') + plan.cloneTarget);
+        if (plan.cloneTarget) {
+          lines.push(' ' + kvRow('Target', plan.cloneTarget, 8, theme));
+        }
         if (plan.commands.length) {
           lines.push('');
-          lines.push(' ' + style.dim('Command'));
+          lines.push(' ' + theme.muted('Command'));
           for (const cmd of plan.commands) lines.push('   ' + cmd);
         }
         if (plan.postInstallHint) {
           lines.push('');
-          lines.push(' ' + style.dim('Next steps  ') + plan.postInstallHint);
+          lines.push(' ' + kvRow('Next steps', plan.postInstallHint, 12, theme));
         }
       } else if (plan.kind === 'package-install') {
         if (plan.commands.length) {
-          lines.push(' ' + style.dim('Commands'));
+          lines.push(' ' + theme.muted('Commands'));
           for (const cmd of plan.commands) lines.push('   ' + cmd);
         }
       } else {
         if (plan.commands.length) {
-          lines.push(' ' + style.dim('Commands'));
+          lines.push(' ' + theme.muted('Commands'));
           for (const cmd of plan.commands) lines.push('   ' + cmd);
         }
         if (plan.notes.length) {
           lines.push('');
-          for (const note of plan.notes) lines.push(' ' + style.dim(note));
+          for (const note of plan.notes) lines.push(' ' + theme.dim(note));
         }
       }
       lines.push('');
       const permLines = renderPermissionLines(plan.permissions);
       if (permLines.length === 1) {
-        lines.push(' ' + style.dim(permLines[0]));
+        lines.push(' ' + theme.dim(permLines[0]));
       } else {
-        lines.push(' ' + style.dim(permLines[0]));
+        lines.push(' ' + theme.dim(permLines[0]));
         for (const row of permLines.slice(1)) {
           const spaceIdx = row.indexOf(' ', 2);
           const label = row.slice(2, spaceIdx);
           const value = row.slice(spaceIdx + 1);
-          lines.push('   ' + style.dim(label) + '  ' + value);
+          lines.push('   ' + theme.muted(padRight(label, 6)) + value);
         }
       }
       if (state.installStatus) {
         lines.push('');
-        lines.push(' ' + style.accent(state.installStatus));
+        lines.push(' ' + theme.accent(state.installStatus));
       }
       lines.push('');
       if (hasPermissions(plan.permissions)) {
         lines.push(
           ' ' +
-            style.accent('g') +
-            style.dim(' grant + install   ') +
-            style.accent('d') +
-            style.dim(' details   ') +
-            style.accent('n') +
-            style.dim('/') +
-            style.accent('Esc') +
-            style.dim(' cancel')
+            theme.accent('g') +
+            theme.dim(' grant + install   ') +
+            theme.accent('d') +
+            theme.dim(' details   ') +
+            theme.accent('n') +
+            theme.dim('/') +
+            theme.accent('Esc') +
+            theme.dim(' cancel')
         );
       } else {
         lines.push(
           ' ' +
-            style.accent('y') +
-            style.dim(' confirm   ') +
-            style.accent('n') +
-            style.dim('/') +
-            style.accent('Esc') +
-            style.dim(' cancel')
+            theme.accent('y') +
+            theme.dim(' confirm   ') +
+            theme.accent('n') +
+            theme.dim('/') +
+            theme.accent('Esc') +
+            theme.dim(' cancel')
         );
       }
       return frame(lines, width, height);
     }
 
+    // ── PERMISSIONS DETAIL view ────────────────────────────────────────────────
     if (state.view === 'install-perm-details' && state.installPlan) {
       const perms = state.installPlan.permissions;
       const lines: string[] = [];
-      lines.push(' ' + style.bold(style.accent('PERMISSIONS DETAIL')));
-      lines.push(' ' + sep('', width - 2, style));
+      lines.push(pageHeader({ title: 'PERMISSIONS DETAIL', width, theme }));
+      lines.push(' ' + rule(width - 2, undefined, theme));
       lines.push('');
       const renderGroup = (label: string, legend: string, values: string[] | undefined): void => {
         if (!values?.length) return;
-        lines.push(' ' + style.dim(label) + '  ' + style.dim(legend));
+        lines.push(' ' + theme.muted(padRight(label, 6)) + theme.dim(legend));
         for (const v of values) {
           const note = describePermissionGlob(v);
-          lines.push('   ' + v + (note ? '  ' + style.dim('— ' + note) : ''));
+          lines.push('   ' + v + (note ? '  ' + theme.dim('— ' + note) : ''));
         }
         lines.push('');
       };
-      renderGroup('fs  ', 'What the package can read or write on disk.', perms?.fs);
-      renderGroup('net ', 'Hosts the package will reach over the network.', perms?.net);
+      renderGroup('fs', 'What the package can read or write on disk.', perms?.fs);
+      renderGroup('net', 'Hosts the package will reach over the network.', perms?.net);
       renderGroup('exec', 'Binaries the package will invoke.', perms?.exec);
-      lines.push(' ' + style.accent('Esc') + style.dim(' back'));
+      lines.push(' ' + theme.accent('Esc') + theme.dim(' back'));
       return frame(lines, width, height);
     }
 
+    // ── LIST + DETAIL views ────────────────────────────────────────────────────
     const allItems = getMarketplaceItems();
     const items = filtered(allItems);
     state.cursor = Math.min(state.cursor, Math.max(0, items.length - 1));
     const lines: string[] = [];
 
-    // Source breakdown counts
-    let sourceBreakdown = '';
-    if (state.sourceFilter === 'all') {
-      const nCurated = allItems.filter((i) => !itemSource(i)).length;
-      const nGh = allItems.filter((i) => itemSource(i) === 'github').length;
-      const nHf = allItems.filter((i) => itemSource(i) === 'hf').length;
-      const parts: string[] = [];
-      if (nCurated) parts.push(nCurated + ' curated');
-      if (nGh) parts.push(nGh + ' gh');
-      if (nHf) parts.push(nHf + ' hf');
-      if (parts.length) sourceBreakdown = '   ' + style.dim(parts.join(' · '));
+    // Source breakdown counts for right cluster
+    const countCluster = (() => {
+      const cnt = items.length;
+      const countStr = theme.muted(cnt + (cnt === 1 ? ' item' : ' items'));
+      if (!narrow && state.sourceFilter === 'all') {
+        const nCurated = allItems.filter((i) => !itemSource(i)).length;
+        const nGh = allItems.filter((i) => itemSource(i) === 'github').length;
+        const nHf = allItems.filter((i) => itemSource(i) === 'hf').length;
+        const parts: string[] = [];
+        if (nCurated) parts.push(nCurated + ' curated');
+        if (nGh) parts.push(nGh + ' gh');
+        if (nHf) parts.push(nHf + ' hf');
+        return countStr + (parts.length ? '  ' + theme.dim(parts.join(' · ')) : '');
+      }
+      return countStr;
+    })();
+
+    // Right cluster: category · sort · count (elide on xs)
+    const rightCluster = narrow
+      ? theme.muted(state.category) + ' ' + theme.muted(state.sort)
+      : theme.muted('cat:') +
+        theme.accent(state.category) +
+        theme.muted('  sort:') +
+        theme.accent(state.sort) +
+        theme.muted('  src:') +
+        theme.accent(state.sourceFilter) +
+        theme.muted('  price:') +
+        theme.accent(state.pricingFilter) +
+        '   ' +
+        countCluster;
+
+    // Detail breadcrumb or plain header
+    if (state.detail) {
+      const it = items[state.cursor];
+      const crumbName = it ? truncate(it.name, 30) : '';
+      lines.push(
+        pageHeader({
+          title: 'MARKETPLACE',
+          crumbs: crumbName ? [crumbName] : [],
+          right: rightCluster,
+          width,
+          theme
+        })
+      );
+    } else {
+      lines.push(pageHeader({ title: 'MARKETPLACE', right: rightCluster, width, theme }));
     }
+    lines.push(' ' + rule(width - 2, undefined, theme));
 
-    const top =
-      ' ' +
-      style.bold(style.accent('MARKETPLACE')) +
-      '   ' +
-      style.dim('category: ') +
-      style.accent(state.category) +
-      style.dim('  ·  sort: ') +
-      style.accent(state.sort) +
-      style.dim('  ·  src: ') +
-      style.accent(state.sourceFilter) +
-      style.dim('  ·  price: ') +
-      style.accent(state.pricingFilter) +
-      '   ' +
-      style.dim(items.length + (items.length === 1 ? ' item' : ' items')) +
-      sourceBreakdown;
-    lines.push(top);
-    lines.push(' ' + sep('', width - 2, style));
-
+    // Filter input bar
     if (state.filtering) {
-      lines.push(' ' + style.accent('/') + ' ' + state.query + style.dim('▏'));
+      lines.push(' ' + theme.accent('/') + ' ' + state.query + theme.dim('▏'));
       lines.push('');
     }
 
+    // Empty state
     if (items.length === 0) {
       lines.push('');
       lines.push(
         '   ' +
-          style.dim('No items match ') +
-          style.accent(state.query || state.category) +
-          style.dim('.')
+          theme.dim('No items match ') +
+          theme.accent(state.query || state.category) +
+          theme.dim('.')
       );
       lines.push(
         '   ' +
-          style.dim('Press ') +
-          style.accent('/') +
-          style.dim(' to change filter, ') +
-          style.accent('c') +
-          style.dim(' to reset category.')
+          theme.dim('Press ') +
+          theme.accent('/') +
+          theme.dim(' to change filter, ') +
+          theme.accent('c') +
+          theme.dim(' to reset category.')
       );
       if (process.env.AGORA_LIVE_HUBS !== '1' && state.sourceFilter !== 'curated') {
         lines.push('');
         lines.push(
-          '   ' + style.dim('Tip: set AGORA_LIVE_HUBS=1 to pull live GitHub + HuggingFace items.')
+          '   ' + theme.dim('Tip: set AGORA_LIVE_HUBS=1 to pull live GitHub + HuggingFace items.')
         );
       }
       return frame(lines, width, height);
     }
 
+    // ── DETAIL view ────────────────────────────────────────────────────────────
     if (state.detail) {
       const it = items[state.cursor];
       if (!it) return frame(lines, width, height);
 
       const detail: string[] = [];
-      // Header line: badge + name + pricing + author
-      const badge = style.dim(sourceBadge(it));
-      const pricing = itemPricing(it) === 'paid' ? '  ' + style.accent('PAID') : '';
-      detail.push(' ' + badge + style.bold(style.accent(it.name)) + pricing);
-      const metaLine =
-        (it.author ? style.dim('by ' + it.author) : '') +
-        (it.version ? style.dim('   v' + it.version) : '');
-      if (metaLine.trim()) detail.push(' ' + metaLine);
-      detail.push(' ' + sep('', width - 2, style));
 
-      // Description block (AI-enriched when available)
+      // Source pill + pricing pill
+      const src = itemSource(it);
+      const srcPill =
+        src === 'github'
+          ? pill('gh', 'info', theme) + ' '
+          : src === 'hf'
+            ? pill('hf', 'warning', theme) + ' '
+            : pill('curated', 'muted', theme) + ' ';
+      const pricePill = itemPricing(it) === 'paid' ? pill('PAID', 'accent', theme) + ' ' : '';
+      detail.push(' ' + srcPill + pricePill + theme.bold(theme.accent(it.name)));
+
+      // Author + version
+      const metaParts: string[] = [];
+      if (it.author) metaParts.push('by ' + it.author);
+      if (it.version) metaParts.push('v' + it.version);
+      if (metaParts.length) detail.push(' ' + theme.muted(metaParts.join('   ')));
+
+      detail.push(' ' + rule(width - 2, undefined, theme));
+
+      // Description (AI-enriched when available)
       const displayDesc = state.enrichment?.description
-        ? state.enrichment.description + style.dim(' (ai)')
+        ? state.enrichment.description + theme.dim(' (ai)')
         : (it.description ?? '');
       if (displayDesc) detail.push(' ' + displayDesc);
-      if (state.enrichmentLoading) detail.push(' ' + style.dim('(enriching…)'));
+      if (state.enrichmentLoading) detail.push(' ' + theme.dim('(enriching…)'));
 
-      // Stats line
+      // Stats
       detail.push('');
       const statsParts: string[] = [];
       if (it.installs !== undefined) {
-        statsParts.push(style.accent(fmtCount(it.installs)) + style.dim(' installs'));
+        statsParts.push(theme.accent(fmtCount(it.installs)) + theme.muted(' installs'));
       }
       if (it.stars !== undefined) {
-        statsParts.push(style.accent(fmtCount(it.stars)) + style.dim(' ★'));
+        statsParts.push(theme.accent(fmtCount(it.stars)) + theme.muted(' ★'));
       }
       const pushedAt = itemPushedAt(it);
       if (pushedAt) {
         const ageH = (Date.now() - new Date(pushedAt).getTime()) / 3600000;
         const age = ageH < 24 ? Math.round(ageH) + 'h' : Math.round(ageH / 24) + 'd';
-        statsParts.push(style.dim('updated ' + age + ' ago'));
+        statsParts.push(theme.dim('updated ' + age + ' ago'));
       }
       if (statsParts.length) detail.push(' ' + statsParts.join('   '));
 
       // Tags
       if (it.tags?.length) {
-        detail.push(' ' + style.dim((it.tags ?? []).map((t) => '[' + t + ']').join(' ')));
+        detail.push(' ' + tagList(it.tags, theme));
       }
 
-      // Repository link
+      // Repository
       const repoUrl = itemRepository(it);
       if (repoUrl) {
-        detail.push(' ' + style.dim('repo  ') + repoUrl);
+        detail.push(' ' + kvRow('repo', repoUrl, 6, theme));
       }
 
-      // Permissions block (always shown — none-declared is informative)
+      // Permissions block
       const itPerms = it.kind === 'package' ? it.permissions : undefined;
       if (hasPermissions(itPerms)) {
         detail.push('');
-        detail.push(' ' + sep('Permissions', width - 2, style));
+        detail.push(' ' + rule(width - 2, 'Permissions', theme));
         for (const row of renderPermissionLines(itPerms).slice(1)) {
           const spaceIdx = row.indexOf(' ', 2);
           const label = row.slice(2, spaceIdx);
           const value = row.slice(spaceIdx + 1);
-          detail.push('   ' + style.dim(label) + '  ' + value);
+          detail.push('   ' + kvRow(label, value, 6, theme));
         }
       }
 
@@ -395,30 +446,28 @@ export const marketplacePage: Page = {
       const relatedFiltered = related.filter((r) => r.id !== it.id).slice(0, 3);
       if (relatedFiltered.length > 0) {
         detail.push('');
-        detail.push(' ' + sep('Related', width - 2, style));
+        detail.push(' ' + rule(width - 2, 'Related', theme));
         for (const rel of relatedFiltered) {
-          const relStats = style.dim(fmtCount(rel.installs ?? 0) + ' installs');
-          detail.push('   ' + style.bold(rel.name.padEnd(28)) + relStats);
+          const relStats = theme.muted(fmtCount(rel.installs ?? 0) + ' installs');
+          detail.push('   ' + theme.bold(padRight(rel.name, 28)) + relStats);
           if (rel.description) {
-            detail.push(
-              '   ' + style.dim((rel.description ?? '').slice(0, Math.max(0, width - 6)))
-            );
+            detail.push('   ' + theme.dim(truncate(rel.description, Math.max(0, width - 6))));
           }
         }
       }
 
       // Footer — pinned via padding
       const footer = [
-        ' ' + sep('', width - 2, style),
+        ' ' + rule(width - 2, undefined, theme),
         ' ' +
-          style.accent('i') +
-          style.dim(' install   ') +
-          style.accent('s') +
-          style.dim(' save   ') +
-          style.accent('o') +
-          style.dim(' open repo   ') +
-          style.accent('Esc') +
-          style.dim(' back')
+          theme.accent('i') +
+          theme.dim(' install   ') +
+          theme.accent('s') +
+          theme.dim(' save   ') +
+          theme.accent('o') +
+          theme.dim(' open repo   ') +
+          theme.accent('Esc') +
+          theme.dim(' back')
       ];
       const padCount = Math.max(0, height - lines.length - detail.length - footer.length);
       lines.push(...detail);
@@ -427,6 +476,7 @@ export const marketplacePage: Page = {
       return frame(lines, width, height);
     }
 
+    // ── LIST view ──────────────────────────────────────────────────────────────
     const limit = Math.max(0, height - lines.length - 1);
     const start = Math.max(0, Math.min(state.cursor - Math.floor(limit / 2), items.length - limit));
     const sbar = scrollbar(items.length, limit, state.cursor, style);
@@ -434,32 +484,42 @@ export const marketplacePage: Page = {
       const it = items[start + i];
       if (!it) continue;
       const selected = start + i === state.cursor;
-      const lead = selected ? rail(style) : noRail();
-      const badge = style.dim(sourceBadge(it));
-      const pricingBadge = itemPricing(it) === 'paid' ? style.accent('PAID') + ' ' : '';
+      const railStr = rail(theme, selected);
+      const src = itemSource(it);
+      const srcLabel =
+        src === 'github'
+          ? theme.info('[gh]')
+          : src === 'hf'
+            ? theme.warning('[hf]')
+            : theme.muted('[c] ');
+      const pricingBadge = itemPricing(it) === 'paid' ? theme.accent('PAID') + ' ' : '';
       const stats =
         pricingBadge +
-        style.accent(fmtCount(it.installs ?? 0).padStart(7)) +
-        style.dim(' installs') +
+        theme.accent(fmtCount(it.installs ?? 0).padStart(7)) +
+        theme.muted(' installs') +
         (it.stars !== undefined
-          ? '  ' + style.accent(fmtCount(it.stars).padStart(5)) + style.dim(' ★')
+          ? '  ' + theme.accent(fmtCount(it.stars).padStart(5)) + theme.muted(' ★')
           : '');
-      const nameCell = selected ? style.bold(it.name) : it.name;
+      const nameCell = selected ? theme.bold(it.name) : it.name;
       const perms = it.kind === 'package' ? it.permissions : undefined;
       const permCats = perms
         ? (['fs', 'net', 'exec'] as const).filter((k) => perms[k]?.length).join(' ')
         : '';
-      const permSuffix = permCats ? ' ' + style.dim('[' + permCats + ']') : '';
-      const left = ' ' + lead + badge + nameCell + permSuffix;
+      const permSuffix = permCats ? ' ' + theme.dim('[' + permCats + ']') : '';
+
+      // On narrow (xs), skip source badge to save space
+      const left = narrow
+        ? ' ' + railStr + nameCell + permSuffix
+        : ' ' + railStr + srcLabel + ' ' + nameCell + permSuffix;
       const room = width - vlen(left) - vlen(stats) - 2;
-      const desc = style.dim((it.description ?? '').slice(0, Math.max(0, room - 2)));
+      const desc = theme.dim((it.description ?? '').slice(0, Math.max(0, room - 2)));
       const pad = ' '.repeat(Math.max(1, room - vlen(desc) - 1));
       lines.push(left + '  ' + desc + pad + stats + ' ' + sbar[i]!);
     }
     lines.push(
       '  ' +
         (items.length > limit
-          ? style.dim(
+          ? theme.muted(
               'items ' +
                 (start + 1) +
                 '–' +
@@ -467,7 +527,7 @@ export const marketplacePage: Page = {
                 ' of ' +
                 items.length
             )
-          : style.dim(items.length + (items.length === 1 ? ' item' : ' items')))
+          : theme.muted(items.length + (items.length === 1 ? ' item' : ' items')))
     );
     return frame(lines, width, height);
   },

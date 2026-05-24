@@ -10,8 +10,13 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 - **"Hot in the ecosystem" repos** — the fastest-growing GitHub repos (the trending-page "stars today" velocity already captured by the news source) surfaced as a third trending lens.
 - **"Since you last looked"** — a delta line showing new items + stack changes since your previous visit (persisted via a `home` marker in state).
 
+### Added — design system (Claude Design "Agora TUI System")
+- **Semantic theme** (`src/cli/theme.ts`) — a `Theme` over the existing `Styler` with `success`/`warning`/`error`/`info`/`muted`/`fg` tones (24-bit, 256-color, and `NO_COLOR` identity), a colorblind-tuned palette, and `glyph()` with unicode→ASCII degradation. `liftStyler()` wraps the existing styler preserving the four legacy methods bit-for-bit.
+- **Component vocabulary** (`src/cli/pages/components.ts`) — pure, ANSI-aware string components: `pageHeader` (title + breadcrumbs + right cluster), `keyHintBar`, `statusLine`, `status`, `pill`, `tagList`, `kvRow`, `rule`, `rail`, `healthStripe`, `sparkline`, `progress`, `spinner`, `tableRow`, responsive `bp()`.
+
 ### Changed
 - **Velocity-aware trending** — `agora`'s "trending" sorted by absolute stars (so it really meant "most popular, ever"). Added a real velocity score (`trendScore` = stars + stars/age + recency) and a **Hot** (velocity) vs **Top** (all-time) lens; the home trending column cycles **Hot → Top → Repos** with `t`. `getHotItems` is the new Hot lens; `getTrendingItems` stays as Top.
+- **TUI restyled onto the design system** — the chrome (header tabs, footer hotkeys, status line) and all six pages (home, stack, marketplace, community, news, settings) now render through the theme tokens + component vocabulary, with `status()` health glyphs that stay meaningful under `NO_COLOR`. Densities follow the design's recommendation (home/marketplace calm; community/news/settings dense). All existing functionality preserved.
 
 ## [0.4.3] - 2026-05-23 — the agent stack manager
 

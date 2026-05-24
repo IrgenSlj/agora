@@ -1,9 +1,14 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { scoreItem, rankItems } from '../src/news/score.js';
 import { readCache, writeCache, isStale } from '../src/news/cache.js';
 import { hostFromUrl, slugFromUrl } from '../src/news/types.js';
 import type { NewsItem, NewsConfig, ScoredNewsItem } from '../src/news/types.js';
-import { visible } from '../src/cli/pages/news.js';
+import { visible, newsPage, _resetNewsState } from '../src/cli/pages/news.js';
+import { createStyler } from '../src/ui.js';
+import type { PageContext, AppState } from '../src/cli/pages/types.js';
 
 const BASE_CONFIG: NewsConfig = {
   sources: {
@@ -324,5 +329,304 @@ describe('visible() — boolean filters', () => {
       saved: new Set(['reddit:1'])
     });
     expect(visible(st)).toHaveLength(0);
+  });
+});
+
+// ── render() integration tests ───────────────────────────────────────────────
+
+function makeNewsItem(overrides: Partial<NewsItem> & { id: string }): NewsItem {
+  return {
+    source: 'hn',
+    title: 'A Test Story',
+    url: 'https://example.com/test',
+    publishedAt: new Date().toISOString(),
+    fetchedAt: new Date().toISOString(),
+    engagement: 150,
+    tags: [],
+    ...overrides
+  };
+}
+
+function makeRenderCtx(opts: {
+  tmp: string;
+  width?: number;
+  height?: number;
+  color?: boolean;
+}): PageContext {
+  const { tmp, width = 100, height = 30, color = false } = opts;
+  const style = createStyler(color);
+  return {
+    io: {
+      stdout: { write: () => {} } as any,
+      stderr: { write: () => {} } as any,
+      env: { HOME: tmp, AGORA_HOME: tmp, PATH: process.env.PATH ?? '' },
+      cwd: tmp
+    },
+    style,
+    width,
+    height,
+    trueColor: false,
+    app: { user: {}, cwd: tmp, unread: { news: 0, community: 0 } } as AppState,
+    repaint() {}
+  } as PageContext;
+}
+
+describe('news render — list view', () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'agora-news-render-'));
+    _resetNewsState();
+  });
+
+  afterEach(() => {
+    _resetNewsState();
+  });
+
+  test('renders story list with title and host', () => {
+    const items: NewsItem[] = [
+      makeNewsItem({
+        id: 'hn:1',
+        title: 'MCP in production',
+        url: 'https://news.ycombinator.com/item?id=1'
+      }),
+      makeNewsItem({
+        id: 'reddit:1',
+        source: 'reddit',
+        title: 'Claude tricks',
+        url: 'https://reddit.com/r/x/comments/1'
+      })
+    ];
+    writeCache(tmp, items);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    const out = newsPage.render(ctx);
+    expect(out).toContain('MCP in production');
+    expect(out).toContain('Claude tricks');
+    expect(out).toContain('news.ycombinator.com');
+  });
+
+  test('renders NEWS header', () => {
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1' })]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    const out = newsPage.render(ctx);
+    expect(out).toContain('NEWS');
+  });
+
+  test('renders source label in header (src: all by default)', () => {
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1' })]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    const out = newsPage.render(ctx);
+    expect(out).toContain('src:');
+    expect(out).toContain('all');
+  });
+
+  test('shows empty-feed message when no items match (loading=false, items empty)', () => {
+    // Pre-seed a non-empty cache, mount, then remove items to simulate filter+empty
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1', tags: ['mcp'] })]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    // Switch to a tab that won't match (search tab, index 7) → empty visible list
+    for (let i = 0; i < 7; i++) {
+      newsPage.handleKey({ key: 'tab', raw: '\t', ctrl: false, shift: false, meta: false }, ctx);
+    }
+    const out = newsPage.render(ctx);
+    expect(out).toMatch(/[Ee]mpty feed/);
+    expect(out).toContain('r');
+  });
+
+  test('shows loading indicator before data arrives', () => {
+    // mount with empty cache → loading=true
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    const out = newsPage.render(ctx);
+    // Should either show loading or the empty-feed fallback — both are valid
+    expect(out).toContain('NEWS');
+    expect(out.length).toBeGreaterThan(0);
+  });
+
+  test('ranked items appear in scored order (fresh+high before old+low)', () => {
+    const now = new Date();
+    const old = new Date(now.getTime() - 48 * 3600 * 1000).toISOString();
+    const fresh = new Date(now.getTime() - 1 * 3600 * 1000).toISOString();
+    // Different URLs so rankItems dedup doesn't collapse them
+    const items: NewsItem[] = [
+      makeNewsItem({
+        id: 'a',
+        title: 'OldLow',
+        publishedAt: old,
+        engagement: 5,
+        url: 'https://example.com/old-low'
+      }),
+      makeNewsItem({
+        id: 'b',
+        title: 'FreshHigh',
+        publishedAt: fresh,
+        engagement: 999,
+        url: 'https://example.com/fresh-high'
+      })
+    ];
+    writeCache(tmp, items);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    const out = newsPage.render(ctx);
+    const posA = out.indexOf('OldLow');
+    const posB = out.indexOf('FreshHigh');
+    expect(posB).toBeGreaterThanOrEqual(0);
+    expect(posA).toBeGreaterThanOrEqual(0);
+    expect(posB).toBeLessThan(posA);
+  });
+
+  test('save/unread markers appear in output after saving item', () => {
+    const items: NewsItem[] = [
+      makeNewsItem({ id: 'hn:99', title: 'SaveMe', url: 'https://example.com/saved' })
+    ];
+    writeCache(tmp, items);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    newsPage.handleKey({ key: 's', raw: 's', ctrl: false, shift: false, meta: false }, ctx);
+    const out = newsPage.render(ctx);
+    expect(out).toContain('saved');
+  });
+
+  test('saved-only badge appears when savedOnly is active', () => {
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1' })]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    newsPage.handleKey({ key: 'b', raw: 'b', ctrl: false, shift: false, meta: false }, ctx);
+    const out = newsPage.render(ctx);
+    expect(out).toContain('saved');
+  });
+
+  test('unread-only badge appears when unreadOnly is active', () => {
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1' })]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    newsPage.handleKey({ key: 'u', raw: 'u', ctrl: false, shift: false, meta: false }, ctx);
+    const out = newsPage.render(ctx);
+    expect(out).toContain('unread');
+  });
+
+  test('source filter cycles via S key and shows source in header', () => {
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1', source: 'hn', title: 'HN Story' })]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    // S cycles source: all → hn
+    newsPage.handleKey({ key: 'S', raw: 'S', ctrl: false, shift: false, meta: false }, ctx);
+    const out = newsPage.render(ctx);
+    // Header should show the source label HN
+    expect(out).toContain('HN');
+    // src: key still present
+    expect(out).toContain('src:');
+  });
+
+  test('NO_COLOR mode produces readable plain text without ANSI codes', () => {
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1', title: 'PlainStory' })]);
+    const ctx = makeRenderCtx({ tmp, color: false });
+    newsPage.mount!(ctx);
+    const out = newsPage.render(ctx);
+    // eslint-disable-next-line no-control-regex
+    expect(out).not.toMatch(/\x1b\[/);
+    expect(out).toContain('NEWS');
+    expect(out).toContain('PlainStory');
+  });
+
+  test('narrow width renders within bounds (no line exceeds width)', () => {
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1', title: 'Narrow title story here' })]);
+    const ctx = makeRenderCtx({ tmp, width: 50, height: 20, color: false });
+    newsPage.mount!(ctx);
+    const out = newsPage.render(ctx);
+    for (const line of out.split('\n')) {
+      // eslint-disable-next-line no-control-regex
+      const plain = line.replace(/\x1b\[[0-9;]*m/g, '');
+      expect(plain.length).toBeLessThanOrEqual(50);
+    }
+  });
+});
+
+describe('news render — detail view', () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'agora-news-detail-'));
+    _resetNewsState();
+  });
+
+  afterEach(() => {
+    _resetNewsState();
+  });
+
+  test('Enter opens detail view with title and host', () => {
+    const item = makeNewsItem({
+      id: 'hn:1',
+      title: 'DetailStory',
+      url: 'https://example.com/detail'
+    });
+    writeCache(tmp, [item]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    newsPage.handleKey({ key: 'enter', raw: '\r', ctrl: false, shift: false, meta: false }, ctx);
+    const out = newsPage.render(ctx);
+    expect(out).toContain('DetailStory');
+    expect(out).toContain('example.com');
+  });
+
+  test('Esc from detail returns to list view', () => {
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1', title: 'ReturnStory' })]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    newsPage.handleKey({ key: 'enter', raw: '\r', ctrl: false, shift: false, meta: false }, ctx);
+    newsPage.handleKey({ key: 'esc', raw: '\x1b', ctrl: false, shift: false, meta: false }, ctx);
+    const out = newsPage.render(ctx);
+    expect(out).toContain('NEWS');
+    expect(out).toContain('ReturnStory');
+  });
+
+  test('detail view shows src label and engagement', () => {
+    const item = makeNewsItem({ id: 'hn:1', title: 'EngagedStory', engagement: 500 });
+    writeCache(tmp, [item]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    newsPage.handleKey({ key: 'enter', raw: '\r', ctrl: false, shift: false, meta: false }, ctx);
+    const out = newsPage.render(ctx);
+    expect(out).toContain('HN');
+    expect(out).toContain('500');
+  });
+});
+
+describe('news render — preview view', () => {
+  let tmp: string;
+
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'agora-news-preview-'));
+    _resetNewsState();
+  });
+
+  afterEach(() => {
+    _resetNewsState();
+  });
+
+  test('preview loading state renders without error', () => {
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1', title: 'PreviewStory' })]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    newsPage.handleKey({ key: 'enter', raw: '\r', ctrl: false, shift: false, meta: false }, ctx);
+    newsPage.handleKey({ key: 'p', raw: 'p', ctrl: false, shift: false, meta: false }, ctx);
+    const out = newsPage.render(ctx);
+    expect(out.length).toBeGreaterThan(0);
+  });
+
+  test('Esc from preview returns to detail view', () => {
+    writeCache(tmp, [makeNewsItem({ id: 'hn:1', title: 'PreviewEscStory' })]);
+    const ctx = makeRenderCtx({ tmp });
+    newsPage.mount!(ctx);
+    newsPage.handleKey({ key: 'enter', raw: '\r', ctrl: false, shift: false, meta: false }, ctx);
+    newsPage.handleKey({ key: 'p', raw: 'p', ctrl: false, shift: false, meta: false }, ctx);
+    newsPage.handleKey({ key: 'esc', raw: '\x1b', ctrl: false, shift: false, meta: false }, ctx);
+    const out = newsPage.render(ctx);
+    // Back in detail view — title is shown
+    expect(out).toContain('PreviewEscStory');
   });
 });

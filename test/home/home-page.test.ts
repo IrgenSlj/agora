@@ -471,7 +471,110 @@ describe('home page: since-last-visit delta', () => {
   });
 });
 
-// Cleanup after each test (best-effort)
+// ── Health glyphs (status() component) ───────────────────────────────────────
+
+describe('home page: health glyphs — with servers', () => {
+  let tmp: string;
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'agora-home-healthglyph-'));
+  });
+
+  test('ok glyph (✓ or v under NO_COLOR) appears in stack band when server is healthy', async () => {
+    const cfg = {
+      mcp: {
+        'healthy-server': {
+          type: 'local',
+          command: ['node', 'server.js'],
+          enabled: true
+        }
+      }
+    };
+    const caps: ServerCapabilities[] = [
+      {
+        key: 'healthy-server@abc12345',
+        name: 'healthy-server',
+        command: ['node', 'server.js'],
+        tools: [makeTool('tool_x')],
+        ok: true,
+        probedAt: new Date().toISOString()
+      }
+    ];
+    writeCapabilityCache(tmp, caps);
+
+    const ctx = makeCtx({ tmp, opencodeCfg: cfg });
+    homePage.mount!(ctx);
+    await new Promise((r) => setTimeout(r, 100));
+
+    const output = homePage.render(ctx);
+    // Under NO_COLOR (plain styler), unicode glyphs may appear but createStyler(false)
+    // returns an identity styler; the theme falls back to ASCII glyphs based on unicode flag.
+    // status('success', '1', theme) emits either '✓ 1' or 'v 1'.
+    expect(output).toMatch(/[✓v]\s*\d/);
+  });
+
+  test('health glyphs are present in NO_COLOR mode (ASCII fallback)', async () => {
+    const cfg = {
+      mcp: {
+        'any-server': {
+          type: 'local',
+          command: ['node', 'srv.js'],
+          enabled: true
+        }
+      }
+    };
+    const caps: ServerCapabilities[] = [
+      {
+        key: 'any-server@deadbeef',
+        name: 'any-server',
+        command: ['node', 'srv.js'],
+        tools: [],
+        ok: true,
+        probedAt: new Date().toISOString()
+      }
+    ];
+    writeCapabilityCache(tmp, caps);
+
+    // NO_COLOR context (plain styler already used by default makeCtx)
+    const ctx = makeCtx({ tmp, opencodeCfg: cfg });
+    homePage.mount!(ctx);
+    await new Promise((r) => setTimeout(r, 100));
+
+    const output = homePage.render(ctx);
+    // At least one health glyph from the set {✓, ⚠, ✗, v, !, x} must appear
+    expect(output).toMatch(/[✓⚠✗vx!]/);
+  });
+});
+
+// ── Opportunity bullet glyphs ─────────────────────────────────────────────────
+
+describe('home page: opportunity bullets', () => {
+  let tmp: string;
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'agora-home-opp-'));
+  });
+
+  test('opportunity line contains an arrow/command indicator', async () => {
+    const ctx = makeCtx({ tmp });
+    homePage.mount!(ctx);
+    await new Promise((r) => setTimeout(r, 100));
+
+    const output = homePage.render(ctx);
+    // getting-started opportunity always has "agora search" command
+    expect(output).toContain('agora search');
+  });
+
+  test('opportunity contains a bullet glyph (· or *)', async () => {
+    const ctx = makeCtx({ tmp });
+    homePage.mount!(ctx);
+    await new Promise((r) => setTimeout(r, 100));
+
+    const output = homePage.render(ctx);
+    // The bullet glyph from theme.glyph('bullet') is · (unicode) or * (ascii)
+    expect(output).toMatch(/[·*]/);
+  });
+});
+
+// ── Cleanup after each test (best-effort) ─────────────────────────────────────
 // Note: beforeEach creates tmp; we clean up here per describe block
 // For simplicity just leave them to OS cleanup; or add afterEach via a shared ref.
 // The mkdtempSync dirs are small and bun test is short-lived.
