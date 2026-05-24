@@ -10,7 +10,8 @@ import {
   summarizeStack,
   computeOpportunities,
   buildHomeFeed,
-  getHotRepos
+  getHotRepos,
+  computeSinceLastSeen
 } from '../../src/home/feed';
 import type { Opportunity } from '../../src/home/feed';
 import { writeCache } from '../../src/news/cache';
@@ -658,5 +659,110 @@ describe('getHotRepos', () => {
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
+  });
+});
+
+// ── computeSinceLastSeen ──────────────────────────────────────────────────────
+
+function makeNewsItem(publishedAt: string, overrides: Partial<NewsItem> = {}): NewsItem {
+  return {
+    id: 'item-' + publishedAt,
+    source: 'hn',
+    title: 'Test item',
+    url: 'https://example.com',
+    publishedAt,
+    fetchedAt: publishedAt,
+    engagement: 1,
+    tags: [],
+    ...overrides
+  };
+}
+
+describe('computeSinceLastSeen', () => {
+  test('no prev → newItems=0, serverDelta=0 (first visit)', () => {
+    const news = [makeNewsItem('2026-05-20T10:00:00.000Z')];
+    const result = computeSinceLastSeen(undefined, { news, serverCount: 3 });
+    expect(result).toEqual({ newItems: 0, serverDelta: 0 });
+  });
+
+  test('prev with no lastSeenAt → newItems=0, serverDelta=0', () => {
+    const news = [makeNewsItem('2026-05-20T10:00:00.000Z')];
+    const result = computeSinceLastSeen({ serverCount: 2 }, { news, serverCount: 3 });
+    expect(result).toEqual({ newItems: 0, serverDelta: 1 });
+  });
+
+  test('counts items published after lastSeenAt', () => {
+    const lastSeenAt = '2026-05-20T12:00:00.000Z';
+    const news = [
+      makeNewsItem('2026-05-20T11:00:00.000Z'), // before — not counted
+      makeNewsItem('2026-05-20T13:00:00.000Z'), // after — counted
+      makeNewsItem('2026-05-20T14:00:00.000Z'), // after — counted
+      makeNewsItem('2026-05-20T12:00:00.000Z') // exactly equal — NOT counted (strictly >)
+    ];
+    const result = computeSinceLastSeen({ lastSeenAt, serverCount: 0 }, { news, serverCount: 0 });
+    expect(result.newItems).toBe(2);
+  });
+
+  test('serverDelta is positive when serverCount grew', () => {
+    const result = computeSinceLastSeen(
+      { lastSeenAt: '2026-05-01T00:00:00.000Z', serverCount: 2 },
+      { news: [], serverCount: 5 }
+    );
+    expect(result.serverDelta).toBe(3);
+  });
+
+  test('serverDelta is negative when serverCount shrank', () => {
+    const result = computeSinceLastSeen(
+      { lastSeenAt: '2026-05-01T00:00:00.000Z', serverCount: 5 },
+      { news: [], serverCount: 3 }
+    );
+    expect(result.serverDelta).toBe(-2);
+  });
+
+  test('serverDelta is zero when serverCount unchanged', () => {
+    const result = computeSinceLastSeen(
+      { lastSeenAt: '2026-05-01T00:00:00.000Z', serverCount: 4 },
+      { news: [], serverCount: 4 }
+    );
+    expect(result.serverDelta).toBe(0);
+  });
+
+  test('serverDelta is 0 when prev.serverCount is null/undefined', () => {
+    const result = computeSinceLastSeen(
+      { lastSeenAt: '2026-05-01T00:00:00.000Z' },
+      { news: [], serverCount: 7 }
+    );
+    expect(result.serverDelta).toBe(0);
+  });
+
+  test('unparseable lastSeenAt → newItems=0, no throw', () => {
+    const news = [makeNewsItem('2026-05-20T10:00:00.000Z')];
+    expect(() => {
+      const result = computeSinceLastSeen(
+        { lastSeenAt: 'not-a-date', serverCount: 1 },
+        { news, serverCount: 1 }
+      );
+      expect(result.newItems).toBe(0);
+    }).not.toThrow();
+  });
+
+  test('unparseable publishedAt on item is ignored, no throw', () => {
+    const news = [makeNewsItem('not-a-date'), makeNewsItem('2026-05-21T10:00:00.000Z')];
+    expect(() => {
+      const result = computeSinceLastSeen(
+        { lastSeenAt: '2026-05-20T00:00:00.000Z', serverCount: 0 },
+        { news, serverCount: 0 }
+      );
+      // Only the valid item (2026-05-21) is after lastSeenAt
+      expect(result.newItems).toBe(1);
+    }).not.toThrow();
+  });
+
+  test('empty news list → newItems=0', () => {
+    const result = computeSinceLastSeen(
+      { lastSeenAt: '2026-05-01T00:00:00.000Z', serverCount: 2 },
+      { news: [], serverCount: 2 }
+    );
+    expect(result).toEqual({ newItems: 0, serverDelta: 0 });
   });
 });

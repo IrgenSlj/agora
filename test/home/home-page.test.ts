@@ -13,6 +13,7 @@ import { createStyler } from '../../src/ui';
 import { vlen } from '../../src/cli/pages/helpers';
 import { writeCapabilityCache } from '../../src/stack/capability-cache';
 import { writeCache } from '../../src/news/cache';
+import { writeAgoraState, loadAgoraState } from '../../src/state';
 import type { PageContext, KeyEvent, AppState } from '../../src/cli/pages/types';
 import type { ServerCapabilities } from '../../src/stack/capability-cache';
 import type { NewsItem } from '../../src/news/types';
@@ -366,6 +367,107 @@ describe('home page: Repos lens', () => {
     for (const line of output.split('\n')) {
       expect(vlen(line)).toBeLessThanOrEqual(120);
     }
+  });
+});
+
+// ── Since-last-visit delta ─────────────────────────────────────────────────────
+
+describe('home page: since-last-visit delta', () => {
+  let tmp: string;
+  beforeEach(() => {
+    tmp = mkdtempSync(join(tmpdir(), 'agora-home-since-test-'));
+  });
+
+  function makeNewsItemAt(publishedAt: string): NewsItem {
+    return {
+      id: 'item-' + publishedAt,
+      source: 'hn' as const,
+      title: 'Test item ' + publishedAt,
+      url: 'https://example.com',
+      publishedAt,
+      fetchedAt: publishedAt,
+      engagement: 10,
+      tags: []
+    };
+  }
+
+  test('fresh state (no home) shows no delta line', async () => {
+    // No state written — fresh dir
+    const ctx = makeCtx({ tmp });
+    homePage.mount!(ctx);
+    await new Promise((r) => setTimeout(r, 100));
+
+    const output = homePage.render(ctx);
+    expect(output).not.toContain('Since last visit');
+  });
+
+  test('with prior lastSeenAt and newer news items, shows "Since last visit" with correct count', async () => {
+    const lastSeenAt = new Date(Date.now() - 2 * 3600 * 1000).toISOString(); // 2 hours ago
+
+    // Write a state with home.lastSeenAt set in the past
+    writeAgoraState(tmp, {
+      version: 1,
+      savedItems: [],
+      home: { lastSeenAt, serverCount: 0 }
+    });
+
+    // Seed news cache with 2 newer items + 1 older item
+    const newerItems: NewsItem[] = [
+      makeNewsItemAt(new Date(Date.now() - 1 * 3600 * 1000).toISOString()), // 1h ago → newer
+      makeNewsItemAt(new Date(Date.now() - 30 * 60 * 1000).toISOString()) // 30m ago → newer
+    ];
+    const olderItem = makeNewsItemAt(new Date(Date.now() - 3 * 3600 * 1000).toISOString()); // 3h ago → older
+    writeCache(tmp, [...newerItems, olderItem]);
+
+    const ctx = makeCtx({ tmp });
+    homePage.mount!(ctx);
+    await new Promise((r) => setTimeout(r, 150));
+
+    const output = homePage.render(ctx);
+    expect(output).toContain('Since last visit');
+    expect(output).toContain('2 new');
+  });
+
+  test('marker is updated after mount (lastSeenAt advances)', async () => {
+    const before = new Date(Date.now() - 5 * 60 * 1000).toISOString(); // 5 min ago
+
+    writeAgoraState(tmp, {
+      version: 1,
+      savedItems: [],
+      home: { lastSeenAt: before, serverCount: 0 }
+    });
+
+    const ctx = makeCtx({ tmp });
+    homePage.mount!(ctx);
+    await new Promise((r) => setTimeout(r, 150));
+
+    const loaded = loadAgoraState(tmp);
+    expect(loaded.home).toBeDefined();
+    expect(loaded.home!.lastSeenAt).toBeDefined();
+    // lastSeenAt should be newer than 'before'
+    const updated = new Date(loaded.home!.lastSeenAt!).getTime();
+    const original = new Date(before).getTime();
+    expect(updated).toBeGreaterThan(original);
+  });
+
+  test('no delta line shown when both newItems=0 and serverDelta=0', async () => {
+    const lastSeenAt = new Date(Date.now() - 1 * 3600 * 1000).toISOString();
+
+    writeAgoraState(tmp, {
+      version: 1,
+      savedItems: [],
+      home: { lastSeenAt, serverCount: 0 }
+    });
+
+    // All news items older than lastSeenAt
+    writeCache(tmp, [makeNewsItemAt(new Date(Date.now() - 2 * 3600 * 1000).toISOString())]);
+
+    const ctx = makeCtx({ tmp });
+    homePage.mount!(ctx);
+    await new Promise((r) => setTimeout(r, 150));
+
+    const output = homePage.render(ctx);
+    expect(output).not.toContain('Since last visit');
   });
 });
 

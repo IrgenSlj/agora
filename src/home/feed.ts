@@ -10,6 +10,7 @@ import type { MarketplaceItem } from '../marketplace.js';
 import type { ConfiguredServer, StackEnv } from '../stack/types.js';
 import { readCache } from '../news/cache.js';
 import { hostFromUrl } from '../news/types.js';
+import type { NewsItem } from '../news/types.js';
 
 // ── Hot repos feed ────────────────────────────────────────────────────────────
 
@@ -245,6 +246,40 @@ export function computeOpportunities(input: {
   });
 
   return opportunities.slice(0, 6);
+}
+
+// ── Since-last-seen delta ─────────────────────────────────────────────────────
+
+export interface SinceDelta {
+  newItems: number;
+  serverDelta: number;
+}
+
+export function computeSinceLastSeen(
+  prev: { lastSeenAt?: string; serverCount?: number } | undefined,
+  current: { news: NewsItem[]; serverCount: number },
+  _now?: Date
+): SinceDelta {
+  try {
+    let newItems = 0;
+    if (prev?.lastSeenAt) {
+      const cutoff = new Date(prev.lastSeenAt).getTime();
+      if (!Number.isNaN(cutoff)) {
+        for (const item of current.news) {
+          try {
+            const t = new Date(item.publishedAt).getTime();
+            if (!Number.isNaN(t) && t > cutoff) newItems++;
+          } catch {
+            // ignore unparseable publishedAt
+          }
+        }
+      }
+    }
+    const serverDelta = prev?.serverCount == null ? 0 : current.serverCount - prev.serverCount;
+    return { newItems, serverDelta };
+  } catch {
+    return { newItems: 0, serverDelta: 0 };
+  }
 }
 
 // ── Gather wrapper (does the I/O) ─────────────────────────────────────────────

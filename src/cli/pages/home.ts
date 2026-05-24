@@ -11,9 +11,10 @@ import { rankItems } from '../../news/score.js';
 import { communityThreadsSource } from '../../community/client.js';
 import { vlen, sep, fmtCount, frame, pageSourceOptions, truncate } from './helpers.js';
 import { formatNumber } from '../../format.js';
-import { buildHomeFeed, getHotRepos } from '../../home/feed.js';
-import type { StackSummary, Opportunity, HotRepo } from '../../home/feed.js';
+import { buildHomeFeed, getHotRepos, computeSinceLastSeen } from '../../home/feed.js';
+import type { StackSummary, Opportunity, HotRepo, SinceDelta } from '../../home/feed.js';
 import type { StackEnv } from '../../stack/types.js';
+import { loadAgoraState, writeAgoraState } from '../../state.js';
 
 const SOURCE_LABELS: Record<string, string> = {
   hn: 'HN',
@@ -32,6 +33,7 @@ interface HomeState {
   opportunities: Opportunity[];
   feedLoading: boolean;
   trendLens: 'hot' | 'top' | 'repos';
+  since: SinceDelta | null;
 }
 const state: HomeState = {
   cursor: 0,
@@ -41,7 +43,8 @@ const state: HomeState = {
   summary: null,
   opportunities: [],
   feedLoading: false,
-  trendLens: 'hot'
+  trendLens: 'hot',
+  since: null
 };
 
 let lastCommunityFetchAt = 0;
@@ -125,6 +128,23 @@ async function refreshFeed(ctx: PageContext): Promise<void> {
     const { summary, opportunities } = await buildHomeFeed(stackEnv, dataDir);
     state.summary = summary;
     state.opportunities = opportunities;
+
+    // Compute since-last-seen delta and update marker — best-effort, never crashes page
+    try {
+      const st = loadAgoraState(dataDir);
+      const news = readCache(dataDir);
+      state.since = computeSinceLastSeen(st.home, { news, serverCount: summary?.serverCount ?? 0 });
+      writeAgoraState(dataDir, {
+        ...st,
+        home: {
+          lastSeenAt: new Date().toISOString(),
+          serverCount: summary?.serverCount ?? 0
+        }
+      });
+      ctx.repaint();
+    } catch {
+      // best-effort — ignore any I/O errors
+    }
   } catch {
     state.summary = null;
     state.opportunities = [];
@@ -232,6 +252,23 @@ function renderReposColumn(repos: HotRepo[], style: PageContext['style']): Rende
 function renderStackBand(width: number, style: PageContext['style']): string[] {
   const lines: string[] = [];
   lines.push(' ' + sep('Your stack', width - 2, style));
+
+  // Since-last-visit delta line
+  const { since } = state;
+  if (since !== null && (since.newItems > 0 || since.serverDelta !== 0)) {
+    let deltaText = 'Since last visit: ';
+    if (since.newItems > 0) {
+      deltaText += style.accent(since.newItems + ' new');
+    }
+    if (since.serverDelta !== 0) {
+      const sign = since.serverDelta > 0 ? '+' : '';
+      const abs = Math.abs(since.serverDelta);
+      const label = sign + since.serverDelta + ' server' + (abs === 1 ? '' : 's');
+      if (since.newItems > 0) deltaText += ' · ';
+      deltaText += style.accent(label);
+    }
+    lines.push(' ' + style.dim(truncate(deltaText, width - 2)));
+  }
 
   // Summary line
   const { summary, feedLoading } = state;
