@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import type { Styler } from '../ui.js';
 import { createStyler, supportsTrueColor } from '../ui.js';
+import { liftStyler } from './theme.js';
+import type { Theme } from './theme.js';
 import type { CliIo } from './flags.js';
 import type {
   Page,
@@ -18,6 +20,7 @@ import { communityPage } from './pages/community.js';
 import { newsPage } from './pages/news.js';
 import { settingsPage } from './pages/settings.js';
 import { vlen, padRight, truncate } from './pages/helpers.js';
+import { keyHintBar, statusLine as statusLineComponent } from './pages/components.js';
 
 const ALT_ON = '\x1b[?1049h';
 const ALT_OFF = '\x1b[?1049l';
@@ -114,13 +117,14 @@ function shortCwd(cwd: string, home: string | undefined): string {
 interface HeaderOpts {
   width: number;
   style: Styler;
+  theme: Theme;
   current: PageId;
   app: AppState;
   narrow: boolean;
 }
 
-function renderHeader(o: HeaderOpts): [string, string] {
-  const { width, style, current, app, narrow } = o;
+export function renderHeader(o: HeaderOpts): [string, string] {
+  const { width, style, theme, current, app, narrow } = o;
   const brand = ' ' + style.accent('AGORA') + ' ';
   const brandWidth = vlen(brand);
 
@@ -129,16 +133,21 @@ function renderHeader(o: HeaderOpts): [string, string] {
     const p = getPage(id);
     const lab = narrow ? (p.navIcon ?? p.navLabel.slice(0, 1)) : p.navLabel;
     const badgeN = id === 'news' ? app.unread.news : id === 'community' ? app.unread.community : 0;
-    const badge = badgeN > 0 ? style.accent(superscript(badgeN)) : '';
-    if (id === current) tabParts.push(style.accent('[' + lab + ']') + badge);
-    else tabParts.push(style.dim(lab) + badge);
+    const badge =
+      badgeN > 0
+        ? id === 'community'
+          ? theme.warning(superscript(badgeN))
+          : theme.info(superscript(badgeN))
+        : '';
+    if (id === current) tabParts.push(theme.accent('[' + lab + ']') + badge);
+    else tabParts.push(theme.dim(lab) + badge);
   }
-  const tabs = ' ' + tabParts.join(style.dim(' \u00b7 ')) + ' ';
+  const tabs = ' ' + tabParts.join(theme.dim(' \u00b7 ')) + ' ';
 
   const user = app.user.username || 'anon';
   const cwd = shortCwd(app.cwd, process.env.HOME);
   const time = fmtTime(new Date());
-  const right = style.dim(' ' + user + ' \u00b7 ' + cwd + ' \u00b7 ' + time + ' ');
+  const right = theme.dim(' ' + user + ' \u00b7 ' + cwd + ' \u00b7 ' + time + ' ');
 
   const leftCap = '\u250c\u2500' + brand + '\u2500\u252c\u2500';
   const rightCap = '\u2500\u2510';
@@ -146,7 +155,7 @@ function renderHeader(o: HeaderOpts): [string, string] {
   const gap = inner - vlen(tabs) - vlen(right);
   const middle =
     gap >= 0
-      ? tabs + style.dim('\u2500'.repeat(gap)) + right
+      ? tabs + theme.dim('\u2500'.repeat(gap)) + right
       : padRight(truncate(tabs, inner), inner);
   const row1 = leftCap + middle + rightCap;
 
@@ -159,48 +168,40 @@ function renderHeader(o: HeaderOpts): [string, string] {
   return [row1, div];
 }
 
-function renderFooter(
+export function renderFooter(
   width: number,
-  style: Styler,
+  theme: Theme,
   hotkeys: ReadonlyArray<Hotkey>,
   status: { msg: string; tone?: 'info' | 'warn' | 'error' } | null
 ): [string, string] {
-  const parts: string[] = [];
-  parts.push(style.accent('Esc') + ' back');
-  parts.push(style.accent('q') + ' quit');
-  parts.push(style.accent('Enter') + ' open');
-  parts.push(style.accent('j/k') + ' nav');
-  parts.push(style.accent('/') + ' filter');
-  parts.push(style.accent('?') + ' help');
   const globalKeys = new Set(['esc', 'q', 'enter', 'j/k', '/', '?']);
+  const hints: Array<{ key: string; label: string }> = [
+    { key: 'Esc', label: 'back' },
+    { key: 'q', label: 'quit' },
+    { key: 'Enter', label: 'open' },
+    { key: 'j/k', label: 'nav' },
+    { key: '/', label: 'filter' },
+    { key: '?', label: 'help' }
+  ];
   for (const hk of hotkeys) {
     if (hk.hidden) continue;
     if (globalKeys.has(hk.key.toLowerCase())) continue;
-    parts.push(style.accent(hk.key) + ' ' + hk.label);
+    hints.push({ key: hk.key, label: hk.label });
   }
-  parts.push(style.accent('1-6') + ' page');
-  const text = ' ' + parts.join(style.dim('  \u00b7  '));
-  const hotkeyLine = padRight(truncate(text, width), width);
+  hints.push({ key: '1-6', label: 'page' });
 
-  let statusLine: string;
+  const rawHotkeyLine = keyHintBar(hints, width, theme);
+  // Guard: keyHintBar may be 1 col over at some widths \u2014 truncate to width.
+  const hotkeyLine = padRight(truncate(rawHotkeyLine, width), width);
+
+  let sl: string;
   if (status) {
-    const icon =
-      status.tone === 'error'
-        ? style.accent('\u26a0')
-        : status.tone === 'warn'
-          ? style.accent('!')
-          : style.dim('\u00b7');
-    const body =
-      status.tone === 'error'
-        ? style.accent(status.msg)
-        : status.tone === 'warn'
-          ? status.msg
-          : style.dim(status.msg);
-    statusLine = padRight(' ' + icon + ' ' + body, width);
+    const tone = status.tone === 'error' ? 'error' : status.tone === 'warn' ? 'warning' : 'info';
+    sl = statusLineComponent(status.msg, tone, width, theme);
   } else {
-    statusLine = padRight('', width);
+    sl = statusLineComponent('', undefined, width, theme);
   }
-  return [statusLine, hotkeyLine];
+  return [sl, hotkeyLine];
 }
 
 export interface RunOpts {
@@ -213,6 +214,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
   const useColor = env.NO_COLOR === undefined && env.TERM !== 'dumb';
   const tc = useColor && supportsTrueColor(env);
   const style = createStyler(useColor, tc);
+  const theme = liftStyler(style, { trueColor: tc });
 
   const out = io.stdout;
   const stdin = process.stdin;
@@ -277,14 +279,14 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
       return 'agora tui needs at least 60\u00d720 (current ' + w + '\u00d7' + h + ')\n';
     }
     const narrow = w < 80;
-    const [r1, r2] = renderHeader({ width: w, style, current, app, narrow });
+    const [r1, r2] = renderHeader({ width: w, style, theme, current, app, narrow });
     const page = getPage(current);
     const ctx = ctxFor();
     const body = helpOpen ? renderHelp(page) : page.render(ctx);
     const lines = body.split('\n');
     while (lines.length < ctx.height) lines.push('');
     if (lines.length > ctx.height) lines.length = ctx.height;
-    const [statusLine, footerLine] = renderFooter(w, style, page.hotkeys, status);
+    const [statusLine, footerLine] = renderFooter(w, theme, page.hotkeys, status);
     const rendered = [
       r1,
       r2,
