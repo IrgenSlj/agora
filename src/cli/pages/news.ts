@@ -11,8 +11,11 @@ import { arxivSource } from '../../news/sources/arxiv.js';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { vlen, rail, noRail, frame, scrollbar, sep } from './helpers.js';
+import { vlen, frame, scrollbar } from './helpers.js';
 import { FREE_MODELS } from '../commands/chat.js';
+import { liftStyler } from '../theme.js';
+import type { Tone } from '../theme.js';
+import { pageHeader, rule, pill, status, truncate, padRight, bp } from './components.js';
 
 const SOURCE_LABELS: Record<string, string> = {
   hn: 'HN',
@@ -30,6 +33,15 @@ const SOURCE_CYCLE: Array<NewsSource | 'all'> = [
   'arxiv',
   'rss'
 ];
+
+// Per-source tone for colored source labels (matches home news column style).
+const SOURCE_TONES: Record<string, Tone> = {
+  hn: 'accent',
+  reddit: 'warning',
+  'github-trending': 'success',
+  arxiv: 'info',
+  rss: 'muted'
+};
 
 const ITEM_LINES = 3;
 
@@ -109,6 +121,37 @@ const state: NewsState = {
   previewChild: null,
   dataDir: null
 };
+
+/** Reset module-level state to defaults. Exported for test isolation. */
+export function _resetNewsState(): void {
+  state.cursor = 0;
+  state.tab = 0;
+  state.source = 'all';
+  state.filter = '';
+  state.filtering = false;
+  state.savedOnly = false;
+  state.unreadOnly = false;
+  state.items = [];
+  state.read = new Set();
+  state.saved = new Set();
+  state.loading = true;
+  state.view = 'list';
+  state.previewItem = null;
+  state.previewContent = null;
+  state.previewLines = [];
+  state.previewScroll = 0;
+  state.previewLoading = false;
+  state.previewPhase = '';
+  if (state.previewAbort) {
+    state.previewAbort.abort();
+    state.previewAbort = null;
+  }
+  if (state.previewChild && !state.previewChild.killed) {
+    state.previewChild.kill();
+    state.previewChild = null;
+  }
+  state.dataDir = null;
+}
 
 function detectDataDir(ctx: PageContext): string {
   const env = ctx.io.env ?? {};
@@ -407,40 +450,48 @@ export const newsPage: Page = {
   },
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
+    const theme = liftStyler(style, { trueColor: ctx.trueColor });
+    const narrow = bp(width) === 'xs';
 
+    // ── preview view ──────────────────────────────────────────────────────────
     if (state.view === 'preview') {
       const lines: string[] = [];
       const item = state.previewItem;
 
       if (state.previewLoading) {
-        const dots = state.previewPhase === 'Summarizing…' ? '◔' : '◙';
-        lines.push(' ' + dots + '  ' + style.dim(state.previewPhase || 'Loading…'));
+        const spinGlyph = state.previewPhase === 'Summarizing…' ? '◔' : '◙';
+        lines.push(
+          ' ' + theme.accent(spinGlyph) + '  ' + theme.muted(state.previewPhase || 'Loading…')
+        );
         return frame(lines, width, height);
       }
       if (!item) {
-        lines.push(' ' + style.dim('No article selected.'));
+        lines.push(' ' + theme.muted('No article selected.'));
         return frame(lines, width, height);
       }
 
+      const srcTone = SOURCE_TONES[item.source] ?? 'muted';
+      const srcLabel = SOURCE_LABELS[item.source] ?? item.source.toUpperCase();
       const headerLines = [
-        ' ' + style.bold(item.title),
+        pageHeader({ title: truncate(item.title, width - 2), width, theme }),
         ' ' +
-          style.dim(SOURCE_LABELS[item.source] ?? item.source.toUpperCase()) +
-          style.dim('  ·  ' + fmtAge(new Date(item.publishedAt))) +
-          style.dim('  ·  ↑ ' + formatNumber(item.engagement)) +
-          style.dim('  ·  s' + item.score.toFixed(2)),
-        ' ' + sep('', width - 2, style)
+          theme.tone(srcTone, srcLabel) +
+          theme.dim('  ·  ' + fmtAge(new Date(item.publishedAt))) +
+          theme.dim('  ·  ') +
+          theme.accent('↑ ' + formatNumber(item.engagement)) +
+          theme.dim('  ·  s' + item.score.toFixed(2)),
+        ' ' + rule(width - 2, undefined, theme)
       ];
       lines.push(...headerLines);
 
       const footerLines = [
         ' ' +
-          style.accent('o') +
-          style.dim(' open in browser  ') +
-          style.accent('Esc') +
-          style.dim(' back  ') +
-          style.accent('j/k') +
-          style.dim(' nav')
+          theme.accent('o') +
+          theme.dim(' open  ') +
+          theme.accent('Esc') +
+          theme.dim(' back  ') +
+          theme.accent('j/k') +
+          theme.dim(' nav')
       ];
 
       const hdr = headerLines.length;
@@ -448,12 +499,12 @@ export const newsPage: Page = {
       const max = height - hdr - ftr;
 
       if (state.previewLines.length === 0) {
-        lines.push(' ' + style.dim('No content available.'));
+        lines.push(' ' + theme.muted('No content available.'));
       } else {
         const total = state.previewLines.length;
         if (state.previewScroll > total - max) state.previewScroll = Math.max(0, total - max);
         const end = Math.min(total, state.previewScroll + max);
-        const sbar = scrollbar(total, max, state.previewScroll, style);
+        const sbar = scrollbar(total, max, state.previewScroll, theme);
         for (let i = state.previewScroll; i < end; i++) {
           lines.push(' ' + state.previewLines[i]! + ' ' + (sbar[i - state.previewScroll] ?? ''));
         }
@@ -465,75 +516,81 @@ export const newsPage: Page = {
       return frame(lines, width, height);
     }
 
+    // ── detail view ───────────────────────────────────────────────────────────
     if (state.view === 'detail') {
       const s = visible()[state.cursor];
       if (!s) {
         state.view = 'list';
       } else {
         const lines: string[] = [];
-        const ageH = (Date.now() - new Date(s.publishedAt).getTime()) / 3600000;
-        const age = Math.round(ageH) + 'h ago';
-        lines.push(' ' + style.bold(s.title));
+        const srcTone = SOURCE_TONES[s.source] ?? 'muted';
+        const srcLabel = SOURCE_LABELS[s.source] ?? s.source.toUpperCase();
+        const age = fmtAge(new Date(s.publishedAt));
+        lines.push(pageHeader({ title: truncate(s.title, width - 2), width, theme }));
         lines.push(
           ' ' +
-            style.dim(SOURCE_LABELS[s.source] ?? s.source.toUpperCase()) +
-            style.dim('  ·  ' + age) +
-            style.dim('  ·  ↑ ' + formatNumber(s.engagement)) +
-            style.dim('  ·  s' + s.score.toFixed(2))
+            theme.tone(srcTone, srcLabel) +
+            theme.dim('  ·  ' + age) +
+            theme.dim('  ·  ') +
+            theme.accent('↑ ' + formatNumber(s.engagement)) +
+            theme.dim('  ·  s' + s.score.toFixed(2))
         );
-        lines.push(' ' + style.accent(s.url));
+        lines.push(' ' + theme.muted(hostFromUrl(s.url)));
+        if (!narrow) lines.push(' ' + theme.dim(s.url));
         if (s.tags && s.tags.length > 0) {
-          lines.push(' ' + style.dim('Tags: ') + s.tags.map((t) => style.accent(t)).join(', '));
+          lines.push(
+            ' ' + theme.dim('tags: ') + s.tags.map((t) => theme.accent(t)).join(theme.dim(', '))
+          );
         }
         if (s.summary) {
-          lines.push(' ' + sep('summary', width - 2, style));
+          lines.push(' ' + rule(width - 2, 'summary', theme));
           lines.push(' ' + s.summary);
         }
-        lines.push(' ' + sep('', width - 2, style));
-        lines.push(' ' + style.accent('o') + style.dim(' open in browser  '));
-        lines.push(' ' + style.accent('p') + style.dim(' preview article  '));
-        lines.push(' ' + style.accent('Esc') + style.dim(' back'));
+        lines.push(' ' + rule(width - 2, undefined, theme));
+        lines.push(' ' + theme.accent('o') + theme.dim(' open in browser  '));
+        lines.push(' ' + theme.accent('p') + theme.dim(' preview article  '));
+        lines.push(' ' + theme.accent('Esc') + theme.dim(' back'));
         return frame(lines, width, height);
       }
     }
 
+    // ── list view ─────────────────────────────────────────────────────────────
     const list = visible();
     ctx.app.unread.news = state.loading ? 0 : list.length;
     state.cursor = Math.min(state.cursor, Math.max(0, list.length - 1));
     const lines: string[] = [];
 
+    // Header — pageHeader with source-filter cluster on the right
     const srcLabel = state.source === 'all' ? 'all' : (SOURCE_LABELS[state.source] ?? state.source);
-    const head = ' ' + style.bold(style.accent('NEWS'));
+    const srcToneRight: Tone =
+      state.source === 'all' ? 'muted' : (SOURCE_TONES[state.source] ?? 'muted');
     const pos =
-      list.length > 0 ? style.dim(' [' + (state.cursor + 1) + '/' + list.length + ']') : '';
-    const filterBadge =
-      (state.savedOnly ? style.accent(' saved-only') : '') +
-      (state.unreadOnly ? style.accent(' unread-only') : '');
-    const right =
-      pos +
-      style.dim('  ' + list.length + ' stories · src: ') +
-      style.accent(srcLabel) +
-      filterBadge;
-    const gap = Math.max(2, width - vlen(head) - vlen(right) - 2);
-    lines.push(head + ' '.repeat(gap) + right);
+      list.length > 0 ? theme.dim('[' + (state.cursor + 1) + '/' + list.length + '] ') : '';
+    const savedBadge = state.savedOnly ? pill('saved', 'accent', theme) + ' ' : '';
+    const unreadBadge = state.unreadOnly ? pill('unread', 'info', theme) + ' ' : '';
+    const srcBadge = theme.dim('src: ') + theme.tone(srcToneRight, srcLabel);
+    const headerRight = pos + savedBadge + unreadBadge + srcBadge;
+    lines.push(pageHeader({ title: 'NEWS', right: headerRight, width, theme }));
 
+    // Category tab bar
     const tabLine =
       ' ' +
-      TABS.map((t, i) => (i === state.tab ? style.accent(t.label) : style.dim(t.label))).join(
-        style.dim('  ') + '·' + style.dim('  ')
+      TABS.map((t, i) => (i === state.tab ? theme.accent(t.label) : theme.dim(t.label))).join(
+        theme.dim('  ·  ')
       );
     lines.push(tabLine);
-    lines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
+    lines.push(' ' + rule(width - 2, undefined, theme));
+
     if (state.filtering) {
-      lines.push(' ' + style.accent('/') + ' ' + state.filter + style.dim('▏'));
+      lines.push(' ' + theme.accent('/') + ' ' + state.filter + theme.dim('▏'));
     }
     if (state.loading) {
-      lines.push(' ' + style.dim('Loading news…'));
+      lines.push(' ' + status('info', 'Loading news…', theme));
       return frame(lines, width, height);
     }
     if (list.length === 0) {
       lines.push(
-        ' ' + style.dim('Empty feed. Press ') + style.accent('r') + style.dim(' to refresh.')
+        ' ' + theme.muted('Empty feed. Press ') + theme.accent('r') + theme.muted(' to refresh.')
       );
       return frame(lines, width, height);
     }
@@ -545,40 +602,51 @@ export const newsPage: Page = {
     if (start + maxItems > list.length) start = Math.max(0, list.length - maxItems);
     const end = Math.min(list.length, start + maxItems);
 
-    const sbar = scrollbar(list.length, end - start, state.cursor, style);
+    const sbar = scrollbar(list.length, end - start, state.cursor, theme);
     for (let si = start; si < end; si++) {
       const s = list[si]!;
       const sel = si === state.cursor;
-      const lead = sel ? rail(style) : noRail();
-      const rank = (si + 1).toString().padStart(2);
-      const src = style.accent((SOURCE_LABELS[s.source] ?? s.source.toUpperCase()).padEnd(6));
-      const ageH = (Date.now() - new Date(s.publishedAt).getTime()) / 3600000;
-      const age = style.dim((Math.round(ageH) + 'h').padEnd(4));
-      const up = style.accent(('↑ ' + formatNumber(s.engagement)).padStart(7));
-      const score = style.dim('s' + s.score.toFixed(2));
+      // Rail: accent ▌ when selected (or > in NO_COLOR), blank when not
+      const lead = sel ? (theme.useColor ? theme.accent(theme.glyph('rail')) + ' ' : '> ') : '  ';
+      const rank = theme.dim((si + 1).toString().padStart(2) + '.');
+      const itemSrcLabel = SOURCE_LABELS[s.source] ?? s.source.toUpperCase();
+      const itemSrcTone: Tone = SOURCE_TONES[s.source] ?? 'muted';
+      // Dense: source · age · score on one line (narrow omits score)
+      const srcPill = pill(itemSrcLabel, itemSrcTone, theme);
+      const ageStr = theme.dim(fmtAge(new Date(s.publishedAt)));
+      const up = theme.accent('↑ ' + formatNumber(s.engagement));
+      const score = narrow ? '' : theme.dim(' s' + s.score.toFixed(2));
+      const metaLine = srcPill + ' ' + ageStr + ' ' + up + score;
+
       const isRead = state.read.has(s.id);
       const isSaved = state.saved.has(s.id);
-      const titleColor = isRead ? style.dim(s.title) : sel ? style.bold(s.title) : s.title;
+      const unreadDot = !isRead ? theme.accent(theme.glyph('bullet')) + ' ' : '  ';
+      const savedMark = isSaved ? ' ' + theme.accent('saved') : '';
+
+      // Title: dim if read, bold if selected, plain otherwise
+      const maxTitleW = width - 2 - vlen(' ' + lead) - vlen(unreadDot) - 1;
+      const rawTitle = isRead ? theme.dim(s.title) : sel ? theme.bold(s.title) : s.title;
+      const titleStr = truncate(rawTitle, Math.max(10, maxTitleW));
+
+      // Row 1: rank  [src-pill] age · ↑engagement · s0.00  <title>  [scrollbar]
+      const row1Meta = padRight(metaLine, narrow ? 16 : 24);
       lines.push(
         ' ' +
           lead +
-          style.dim(rank + '. ') +
-          src +
+          rank +
           ' ' +
-          age +
-          '  ' +
-          up +
-          '  ' +
-          score +
-          '   ' +
-          titleColor +
+          unreadDot +
+          row1Meta +
           ' ' +
-          sbar[si - start]!
+          titleStr +
+          ' ' +
+          (sbar[si - start] ?? '')
       );
-      lines.push(
-        '         ' + style.dim(hostFromUrl(s.url)) + (isSaved ? style.accent('  saved') : '')
-      );
-      lines.push(' ' + style.dim('─'.repeat(Math.max(0, width - 2))));
+      // Row 2: host · saved marker
+      const host = theme.muted(hostFromUrl(s.url));
+      lines.push('         ' + host + savedMark);
+      // Divider between items (dense)
+      lines.push(' ' + rule(width - 2, undefined, theme));
     }
 
     return frame(lines, width, height);
