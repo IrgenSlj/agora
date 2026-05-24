@@ -1,5 +1,17 @@
 import type { Page, PageAction, PageContext } from './types.js';
-import { vlen, rail, noRail, sep, frame, padRight, truncate } from './helpers.js';
+import { frame, padRight, truncate, vlen } from './components.js';
+import {
+  pageHeader,
+  rule,
+  rail,
+  status,
+  kvRow,
+  tagList,
+  spinnerFrame,
+  pill
+} from './components.js';
+import { liftStyler } from '../theme.js';
+import type { Theme } from '../theme.js';
 import { readAllServers, groupServersByName, detectTools } from '../../stack/registry.js';
 import { checkStack } from '../../stack/doctor.js';
 import { readCapabilityCache } from '../../stack/capability-cache.js';
@@ -7,6 +19,9 @@ import { detectAgoraDataDir } from '../../state.js';
 import type { StackHealth } from '../../stack/doctor.js';
 import type { ServerCapabilities } from '../../stack/capability-cache.js';
 import type { ConfiguredServer, StackEnv } from '../../stack/types.js';
+
+// suppress unused-import warning for pill (used below)
+void pill;
 
 interface StackEntry {
   name: string;
@@ -21,6 +36,7 @@ interface StackState {
   mode: 'list' | 'detail';
   probing: boolean;
   loaded: boolean;
+  tick: number;
   error?: string;
 }
 
@@ -32,6 +48,7 @@ const state: StackState = {
   mode: 'list',
   probing: false,
   loaded: false,
+  tick: 0,
   error: undefined
 };
 
@@ -79,16 +96,11 @@ async function loadStack(ctx: PageContext): Promise<void> {
   }
 }
 
-function healthGlyph(status: 'ok' | 'warn' | 'error', style: PageContext['style']): string {
-  if (status === 'ok') return style.accent('✓');
-  if (status === 'warn') return style.orange('⚠');
-  return style.bold('✗');
-}
-
-function checkGlyph(ok: boolean, level: 'warn' | 'error', style: PageContext['style']): string {
-  if (ok) return style.accent('✓');
-  if (level === 'warn') return style.orange('⚠');
-  return style.bold('✗');
+// Map doctor health status → theme tone for status()
+function healthTone(s: 'ok' | 'warn' | 'error'): 'success' | 'warning' | 'error' {
+  if (s === 'ok') return 'success';
+  if (s === 'warn') return 'warning';
+  return 'error';
 }
 
 export const stackPage: Page = {
@@ -108,52 +120,55 @@ export const stackPage: Page = {
     state.mode = 'list';
     state.selected = 0;
     state.loaded = false;
+    state.tick = 0;
     await loadStack(ctx);
   },
 
   render(ctx: PageContext): string {
-    const { style, width, height } = ctx;
+    const { width, height } = ctx;
+    const theme: Theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
     const lines: string[] = [];
+    const health = state.health;
 
     // ── Header ────────────────────────────────────────────────────────────────
     const totalServers = state.servers.length;
-    const totalTools = state.servers.reduce((n, e) => n + e.instances.length, 0);
-    const summary =
+    const totalInstances = state.servers.reduce((n, e) => n + e.instances.length, 0);
+
+    let rightCluster = '';
+    if (health) {
+      rightCluster =
+        theme.tone('success', theme.glyph('ok') + ' ' + health.summary.ok) +
+        '  ' +
+        theme.tone('warning', theme.glyph('warn') + ' ' + health.summary.warn) +
+        '  ' +
+        theme.tone('error', theme.glyph('err') + ' ' + health.summary.error);
+    }
+
+    const crumbs =
       totalServers === 0
-        ? style.dim('no servers configured')
-        : style.dim(
-            totalServers +
-              (totalServers === 1 ? ' server' : ' servers') +
-              ' · ' +
-              totalTools +
-              (totalTools === 1 ? ' instance' : ' instances')
-          );
-    const health = state.health;
-    const healthSummary = health
-      ? '   ' +
-        style.accent('ok: ' + health.summary.ok) +
-        style.dim('  ·  ') +
-        style.orange('warn: ' + health.summary.warn) +
-        style.dim('  ·  ') +
-        style.dim('error: ' + health.summary.error)
-      : '';
-    lines.push(' ' + style.bold(style.accent('STACK')) + '   ' + summary + healthSummary);
-    lines.push(' ' + sep('', width - 2, style));
+        ? []
+        : [
+            totalServers + (totalServers === 1 ? ' server' : ' servers'),
+            totalInstances + (totalInstances === 1 ? ' instance' : ' instances')
+          ];
+
+    lines.push(pageHeader({ title: 'STACK', crumbs, right: rightCluster, width, theme }));
+    lines.push(' ' + rule(width - 2, undefined, theme));
 
     // ── Error state ────────────────────────────────────────────────────────────
     if (state.error) {
       lines.push('');
-      lines.push('   ' + style.bold('Error loading stack:'));
-      lines.push('   ' + style.dim(state.error));
+      lines.push('   ' + theme.bold('Error loading stack:'));
+      lines.push('   ' + theme.dim(state.error));
       lines.push('');
-      lines.push('   ' + style.accent('r') + style.dim(' refresh'));
+      lines.push('   ' + theme.accent('r') + theme.dim(' refresh'));
       return frame(lines, width, height);
     }
 
     // ── Loading ────────────────────────────────────────────────────────────────
     if (!state.loaded) {
       lines.push('');
-      lines.push('   ' + style.dim('Loading…'));
+      lines.push('   ' + theme.dim('Loading…'));
       return frame(lines, width, height);
     }
 
@@ -163,27 +178,27 @@ export const stackPage: Page = {
       const toolResults = detectTools(buildStackEnv(ctx));
       const detected = toolResults.filter((t) => t.present).map((t) => t.adapter.displayName);
       if (detected.length > 0) {
-        lines.push('   ' + style.dim('Detected tools: ') + detected.join(', '));
+        lines.push('   ' + theme.dim('Detected tools: ') + detected.join(', '));
         lines.push('');
       }
-      lines.push('   ' + style.dim('No MCP servers configured.'));
+      lines.push('   ' + theme.dim('No MCP servers configured.'));
       lines.push(
         '   ' +
-          style.dim('Run ') +
-          style.accent('agora install <name>') +
-          style.dim(' to add a server, or ') +
-          style.accent('agora search') +
-          style.dim(' to browse.')
+          theme.dim('Run ') +
+          theme.accent('agora install <name>') +
+          theme.dim(' to add a server, or ') +
+          theme.accent('agora search') +
+          theme.dim(' to browse.')
       );
       lines.push('');
       lines.push(
         '   ' +
-          style.dim('Tools appear here after they are probed with ') +
-          style.accent('p') +
-          style.dim('.')
+          theme.dim('Tools appear here after they are probed with ') +
+          theme.accent('p') +
+          theme.dim('.')
       );
       lines.push('');
-      lines.push('   ' + style.accent('r') + style.dim(' refresh'));
+      lines.push('   ' + theme.accent('r') + theme.dim(' refresh'));
       return frame(lines, width, height);
     }
 
@@ -193,66 +208,87 @@ export const stackPage: Page = {
       if (!entry) return frame(lines, width, height);
 
       const serverHealth = health?.servers.find((h) => h.name === entry.name);
-      const glyph = serverHealth ? healthGlyph(serverHealth.status, style) : style.dim('?');
+      const tone = serverHealth ? healthTone(serverHealth.status) : 'info';
+      const healthBadge = status(tone, entry.name, theme);
 
       const detail: string[] = [];
-      detail.push(' ' + glyph + '  ' + style.bold(style.accent(entry.name)));
-      detail.push(' ' + sep('', width - 2, style));
+      detail.push(pageHeader({ title: 'STACK', crumbs: [entry.name], width, theme }));
+      detail.push(' ' + rule(width - 2, undefined, theme));
+      detail.push('');
+
+      // Health badge row
+      detail.push('   ' + healthBadge);
       detail.push('');
 
       // Instances
-      detail.push(' ' + style.dim('Instances'));
+      detail.push(' ' + rule(width - 2, 'Instances', theme));
+      const kW = 12;
       for (const inst of entry.instances) {
-        const transport = inst.transport === 'local' ? style.dim('local') : style.dim('remote');
-        const scope = style.dim('[' + inst.scope + ']');
+        const transport = inst.transport === 'local' ? 'local' : 'remote';
         const cmd = inst.transport === 'local' ? (inst.command ?? []).join(' ') : (inst.url ?? '');
-        const enabledNote = inst.enabled === false ? '  ' + style.orange('disabled') : '';
-        detail.push('   ' + style.bold(inst.tool) + '  ' + scope + '  ' + transport + enabledNote);
+        const enabledNote = inst.enabled === false ? '  ' + theme.tone('warning', 'disabled') : '';
+        detail.push(
+          '   ' +
+            kvRow(
+              inst.tool,
+              theme.dim('[' + inst.scope + ']') + '  ' + theme.dim(transport) + enabledNote,
+              kW,
+              theme
+            )
+        );
         if (cmd) {
-          detail.push('   ' + style.dim(truncate(cmd, width - 6)));
+          detail.push('   ' + theme.dim(truncate(cmd, width - 6)));
         }
       }
       detail.push('');
 
       // Health checks
       if (serverHealth && serverHealth.checks.length > 0) {
-        detail.push(' ' + sep('Health checks', width - 2, style));
+        detail.push(' ' + rule(width - 2, 'Health checks', theme));
         for (const check of serverHealth.checks) {
-          const g = checkGlyph(check.ok, check.level, style);
+          const checkTone = check.ok ? 'success' : check.level === 'warn' ? 'warning' : 'error';
+          const g = status(checkTone, '', theme);
           const name = padRight(check.name, 28);
-          const detail2 = check.detail ? style.dim(check.detail) : '';
+          const detail2 = check.detail ? theme.dim(check.detail) : '';
           detail.push('   ' + g + '  ' + name + detail2);
         }
         detail.push('');
       } else if (serverHealth && serverHealth.checks.length === 0) {
-        detail.push(' ' + style.dim('No issues detected.'));
+        detail.push('   ' + theme.dim('No issues detected.'));
         detail.push('');
       }
 
       // Cached capabilities
-      const caps = state.caps.get(entry.name);
-      detail.push(' ' + sep('Tools', width - 2, style));
+      detail.push(' ' + rule(width - 2, 'Tools', theme));
       if (state.probing) {
-        detail.push('   ' + style.dim('Probing…'));
-      } else if (caps && caps.tools.length > 0) {
+        state.tick++;
+        detail.push('   ' + spinnerFrame(state.tick, theme) + '  ' + theme.dim('Probing…'));
+      } else if (
+        state.caps.get(entry.name) &&
+        (state.caps.get(entry.name)?.tools.length ?? 0) > 0
+      ) {
+        const caps = state.caps.get(entry.name)!;
+        const toolNames = caps.tools.map((t) => t.name);
+        detail.push('   ' + tagList(toolNames, theme));
+        detail.push('');
         for (const tool of caps.tools) {
-          const desc = tool.description ? style.dim('  — ' + tool.description) : '';
-          detail.push('   ' + style.bold(tool.name) + desc);
+          const desc = tool.description ? theme.dim('  — ' + tool.description) : '';
+          detail.push('   ' + theme.bold(tool.name) + desc);
         }
       } else {
         detail.push(
           '   ' +
-            style.dim('(probe to discover tools — press ') +
-            style.accent('p') +
-            style.dim(')')
+            theme.dim('(probe to discover tools — press ') +
+            theme.accent('p') +
+            theme.dim(')')
         );
       }
       detail.push('');
 
       // Footer
       const footer = [
-        ' ' + sep('', width - 2, style),
-        ' ' + style.accent('p') + style.dim(' probe   ') + style.accent('Esc') + style.dim(' back')
+        ' ' + rule(width - 2, undefined, theme),
+        ' ' + theme.accent('p') + theme.dim(' probe   ') + theme.accent('Esc') + theme.dim(' back')
       ];
       const padCount = Math.max(0, height - lines.length - detail.length - footer.length);
       lines.push(...detail);
@@ -273,10 +309,19 @@ export const stackPage: Page = {
       const entry = state.servers[start + i];
       if (!entry) continue;
       const selected = start + i === state.selected;
-      const lead = selected ? rail(style) : noRail();
 
       const serverHealth = health?.servers.find((h) => h.name === entry.name);
-      const glyph = serverHealth ? healthGlyph(serverHealth.status, style) : style.dim('·');
+      const tone = serverHealth ? healthTone(serverHealth.status) : 'info';
+      const healthGlyph = serverHealth
+        ? theme.tone(
+            tone,
+            serverHealth.status === 'ok'
+              ? theme.glyph('ok')
+              : serverHealth.status === 'warn'
+                ? theme.glyph('warn')
+                : theme.glyph('err')
+          )
+        : theme.dim(theme.glyph('info'));
 
       // Tools this server is configured in
       const toolList = [...new Set(entry.instances.map((inst) => inst.tool + ':' + inst.scope))];
@@ -285,18 +330,24 @@ export const stackPage: Page = {
       // Cached tool count
       const caps = state.caps.get(entry.name);
       const toolCount =
-        caps && caps.tools.length > 0 ? style.dim(' · ' + caps.tools.length + ' tools') : '';
+        caps && caps.tools.length > 0 ? theme.dim(' · ' + caps.tools.length + ' tools') : '';
 
       // Transport type
       const transports = [...new Set(entry.instances.map((inst) => inst.transport))].join('/');
 
-      const probingNote = state.probing && selected ? '  ' + style.dim('probing…') : '';
+      // Spinner while probing this entry
+      let probingNote = '';
+      if (state.probing && selected) {
+        state.tick++;
+        probingNote = '  ' + spinnerFrame(state.tick, theme);
+      }
 
-      const nameCell = selected ? style.bold(entry.name) : entry.name;
-      const left = ' ' + lead + glyph + '  ' + nameCell + probingNote;
-      const right = style.dim(transports) + toolCount;
+      const nameCell = selected ? theme.bold(entry.name) : entry.name;
+      const railStr = rail(theme, selected);
+      const left = ' ' + railStr + healthGlyph + '  ' + nameCell + probingNote;
+      const right = theme.dim(transports) + toolCount;
       const room = width - vlen(left) - vlen(right) - 3;
-      const mid = room > 2 ? '  ' + style.dim(truncate(toolStr, Math.max(0, room - 2))) : '';
+      const mid = room > 2 ? '  ' + theme.dim(truncate(toolStr, Math.max(0, room - 2))) : '';
       const gap = ' '.repeat(Math.max(1, room - vlen(mid) - 1));
       lines.push(left + mid + gap + right);
     }
@@ -304,7 +355,7 @@ export const stackPage: Page = {
     lines.push(
       '  ' +
         (state.servers.length > limit
-          ? style.dim(
+          ? theme.dim(
               'servers ' +
                 (start + 1) +
                 '–' +
@@ -312,7 +363,7 @@ export const stackPage: Page = {
                 ' of ' +
                 state.servers.length
             )
-          : style.dim(state.servers.length + (state.servers.length === 1 ? ' server' : ' servers')))
+          : theme.dim(state.servers.length + (state.servers.length === 1 ? ' server' : ' servers')))
     );
     return frame(lines, width, height);
   },
@@ -333,6 +384,7 @@ export const stackPage: Page = {
             return { kind: 'status', message: 'No local instances to probe for ' + entry.name };
           }
           state.probing = true;
+          state.tick = 0;
           ctx.repaint();
           try {
             const env = buildStackEnv(ctx);
@@ -400,6 +452,7 @@ export const stackPage: Page = {
           return { kind: 'status', message: 'No local instances to probe for ' + entry.name };
         }
         state.probing = true;
+        state.tick = 0;
         ctx.repaint();
         try {
           const env = buildStackEnv(ctx);
