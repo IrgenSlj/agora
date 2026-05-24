@@ -1,5 +1,6 @@
 import type { Page, PageAction, PageContext } from './types.js';
 import { loadSettings, writeSettings, type AgoraSettings } from '../../settings.js';
+import { detectAgoraDataDir } from '../../state.js';
 import { liftStyler } from '../theme.js';
 import { vlen, frame, rule, rail, kvRow, pill, status, pageHeader } from './components.js';
 
@@ -151,8 +152,12 @@ export function _resetSettingsState(): void {
   state.helpOpen = false;
 }
 
-function ensureLoaded(_ctx: PageContext): AgoraSettings {
-  if (!state.current) state.current = loadSettings('~/.config/agora');
+function resolveDataDir(ctx: PageContext): string {
+  return detectAgoraDataDir({ cwd: ctx.io.cwd, home: ctx.io.env?.HOME, env: ctx.io.env });
+}
+
+function ensureLoaded(ctx: PageContext): AgoraSettings {
+  if (!state.current) state.current = loadSettings(resolveDataDir(ctx));
   return state.current;
 }
 
@@ -368,12 +373,12 @@ export const settingsPage: Page = {
         }
         return { kind: 'none' };
       case 'w':
-        if (state.current) writeSettings('~/.config/agora', state.current);
+        if (state.current) writeSettings(resolveDataDir(ctx), state.current);
         state.dirty = false;
         return { kind: 'status', message: 'wrote settings.toml' };
       case 'r':
         if (state.dirty) {
-          state.current = loadSettings('~/.config/agora');
+          state.current = loadSettings(resolveDataDir(ctx));
           state.dirty = false;
           return { kind: 'status', message: 'reverted' };
         }
