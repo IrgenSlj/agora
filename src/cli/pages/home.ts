@@ -9,12 +9,14 @@ import { readCache } from '../../news/cache.js';
 import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
 import { rankItems } from '../../news/score.js';
 import { communityThreadsSource } from '../../community/client.js';
-import { vlen, sep, fmtCount, frame, pageSourceOptions, truncate } from './helpers.js';
+import { vlen, fmtCount, frame, pageSourceOptions, truncate } from './helpers.js';
 import { formatNumber } from '../../format.js';
 import { buildHomeFeed, getHotRepos, computeSinceLastSeen } from '../../home/feed.js';
 import type { StackSummary, Opportunity, HotRepo, SinceDelta } from '../../home/feed.js';
 import type { StackEnv } from '../../stack/types.js';
 import { loadAgoraState, writeAgoraState } from '../../state.js';
+import { liftStyler } from '../theme.js';
+import { rule, status, pageHeader, bp } from './components.js';
 
 const SOURCE_LABELS: Record<string, string> = {
   hn: 'HN',
@@ -171,22 +173,23 @@ interface RenderColumn {
 function renderNewsColumn(
   items: ScoredNewsItem[],
   isFallback: boolean,
-  style: PageContext['style']
+  ctx: PageContext
 ): RenderColumn {
+  const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
   if (items.length === 0) {
     return {
       title: 'News',
-      lines: [style.dim('No news cached yet — run `agora news --refresh`')]
+      lines: [theme.dim('No news cached yet — run `agora news --refresh`')]
     };
   }
-  const title = isFallback ? 'News' + style.dim(' · recent') : 'News';
+  const title = isFallback ? 'News' + theme.dim(' · recent') : 'News';
   const lines: string[] = [];
   for (const item of items) {
-    const src = style.dim((SOURCE_LABELS[item.source] ?? item.source.toUpperCase()).padEnd(3));
-    const age = style.dim(fmtAge(item.publishedAt).padStart(3));
-    const up = style.accent(('↑ ' + formatNumber(item.engagement)).padStart(7));
+    const src = theme.muted((SOURCE_LABELS[item.source] ?? item.source.toUpperCase()).padEnd(3));
+    const age = theme.dim(fmtAge(item.publishedAt).padStart(3));
+    const up = theme.accent(('↑ ' + formatNumber(item.engagement)).padStart(7));
     lines.push(src + '  ' + age + '  ' + up + '  ' + item.title);
-    lines.push('         ' + style.dim(hostFromUrl(item.url)));
+    lines.push('         ' + theme.muted(hostFromUrl(item.url)));
   }
   return { title, lines };
 }
@@ -195,18 +198,19 @@ function renderCommunityColumn(
   threads: Thread[],
   hint: string,
   loading: boolean,
-  style: PageContext['style']
+  ctx: PageContext
 ): RenderColumn {
-  if (loading) return { title: 'Community', lines: [style.dim('Loading…')] };
+  const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
+  if (loading) return { title: 'Community', lines: [theme.dim('Loading…')] };
   if (threads.length === 0) {
-    return { title: 'Community', lines: [style.dim(hint || 'No threads yet.')] };
+    return { title: 'Community', lines: [theme.dim(hint || 'No threads yet.')] };
   }
   const lines: string[] = [];
   for (const t of threads) {
-    const board = style.accent('/' + t.board);
-    const meta = style.dim(' · ' + fmtAge(t.createdAt) + ' · ' + t.replyCount + ' replies');
+    const board = theme.accent('/' + t.board);
+    const meta = theme.dim(' · ' + fmtAge(t.createdAt) + ' · ' + t.replyCount + ' replies');
     lines.push(board + '  ' + t.title);
-    lines.push('       ' + style.dim(t.author) + meta);
+    lines.push('       ' + theme.muted(t.author) + meta);
   }
   return { title: 'Community', lines };
 }
@@ -214,113 +218,120 @@ function renderCommunityColumn(
 function renderTrendingColumn(
   items: MarketplaceItem[],
   lens: 'hot' | 'top',
-  style: PageContext['style']
+  ctx: PageContext
 ): RenderColumn {
+  const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
   const lensLabel = lens === 'hot' ? 'Hot' : 'Top';
-  const title = 'Trending · ' + style.dim(lensLabel);
+  const title = 'Trending · ' + theme.dim(lensLabel);
   if (items.length === 0) {
-    return { title, lines: [style.dim('No trending items right now.')] };
+    return { title, lines: [theme.dim('No trending items right now.')] };
   }
   const lines: string[] = [];
   for (const t of items) {
-    const stats = style.dim(' · ' + fmtCount(t.installs ?? 0) + ' installs');
-    lines.push(style.bold(t.name) + stats);
-    if (t.description) lines.push('  ' + style.dim(truncate(t.description, 60)));
+    const stats = theme.dim(' · ' + fmtCount(t.installs ?? 0) + ' installs');
+    lines.push(theme.bold(t.name) + stats);
+    if (t.description) lines.push('  ' + theme.muted(truncate(t.description, 60)));
   }
   return { title, lines };
 }
 
-function renderReposColumn(repos: HotRepo[], style: PageContext['style']): RenderColumn {
-  const title = 'Trending · ' + style.dim('Repos');
+function renderReposColumn(repos: HotRepo[], ctx: PageContext): RenderColumn {
+  const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
+  const title = 'Trending · ' + theme.dim('Repos');
   if (repos.length === 0) {
     return {
       title,
-      lines: [style.dim('No trending repos cached — run `agora news --refresh`')]
+      lines: [theme.dim('No trending repos cached — run `agora news --refresh`')]
     };
   }
   const lines: string[] = [];
   for (const repo of repos) {
-    const velocity = style.dim(style.accent(' ▲' + fmtCount(repo.hot)));
-    lines.push(style.bold(repo.name) + velocity);
+    const velocity = theme.accent(' ▲' + fmtCount(repo.hot));
+    lines.push(theme.bold(repo.name) + velocity);
     const tagStr = repo.tags.slice(0, 2).join(' ');
     const second = repo.host + (tagStr ? '  ' + tagStr : '');
-    lines.push('  ' + style.dim(second));
+    lines.push('  ' + theme.muted(second));
   }
   return { title, lines };
 }
 
-function renderStackBand(width: number, style: PageContext['style']): string[] {
+function renderStackBand(width: number, ctx: PageContext): string[] {
+  const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
   const lines: string[] = [];
-  lines.push(' ' + sep('Your stack', width - 2, style));
+  lines.push(' ' + rule(width - 2, 'Your stack', theme));
 
   // Since-last-visit delta line
   const { since } = state;
   if (since !== null && (since.newItems > 0 || since.serverDelta !== 0)) {
     let deltaText = 'Since last visit: ';
     if (since.newItems > 0) {
-      deltaText += style.accent(since.newItems + ' new');
+      deltaText += theme.accent(since.newItems + ' new');
     }
     if (since.serverDelta !== 0) {
       const sign = since.serverDelta > 0 ? '+' : '';
       const abs = Math.abs(since.serverDelta);
       const label = sign + since.serverDelta + ' server' + (abs === 1 ? '' : 's');
       if (since.newItems > 0) deltaText += ' · ';
-      deltaText += style.accent(label);
+      deltaText += theme.accent(label);
     }
-    lines.push(' ' + style.dim(truncate(deltaText, width - 2)));
+    lines.push(' ' + theme.dim(truncate(deltaText, width - 2)));
   }
 
   // Summary line
   const { summary, feedLoading } = state;
   if (feedLoading && !summary) {
-    lines.push(' ' + style.dim('Loading…'));
+    lines.push(' ' + theme.dim('Loading…'));
   } else if (!summary || summary.serverCount === 0) {
-    lines.push(' ' + style.dim('No MCP servers configured yet'));
+    lines.push(' ' + theme.dim('No MCP servers configured yet'));
   } else {
     const { serverCount, toolCount, capabilityCount, health } = summary;
-    const ok = style.accent('✓') + style.dim(String(health.ok));
-    const warn = style.orange('⚠') + style.dim(String(health.warn));
-    const err = style.bold('✗') + style.dim(String(health.error));
-    const summaryLine =
-      style.dim(String(serverCount)) +
-      style.dim(' servers · ') +
-      style.dim(String(toolCount)) +
-      style.dim(' tools · ') +
-      style.dim(String(capabilityCount)) +
-      style.dim(' capabilities · ') +
-      ok +
-      ' ' +
-      warn +
-      ' ' +
-      err;
+    const ok = status('success', String(health.ok), theme);
+    const warn = status('warning', String(health.warn), theme);
+    const err = status('error', String(health.error), theme);
+    const counts =
+      theme.dim(String(serverCount)) +
+      theme.dim(' servers · ') +
+      theme.dim(String(toolCount)) +
+      theme.dim(' tools · ') +
+      theme.dim(String(capabilityCount)) +
+      theme.dim(' capabilities');
+    const summaryLine = counts + '   ' + ok + '  ' + warn + '  ' + err;
     lines.push(' ' + truncate(summaryLine, width - 2));
   }
 
   // Opportunities (up to 3)
   const opps = state.opportunities.slice(0, 3);
   for (const opp of opps) {
-    const bullet = style.accent('•') + ' ' + opp.title;
-    const suffix = opp.command ? style.dim(' → ' + opp.command) : '';
-    const line = truncate(bullet + suffix, width - 2);
+    const bulletTone =
+      opp.kind === 'health'
+        ? theme.warning(theme.glyph('bullet'))
+        : opp.kind === 'gap'
+          ? theme.accent(theme.glyph('bullet'))
+          : theme.dim(theme.glyph('bullet'));
+    const title = ' ' + opp.title;
+    const suffix = opp.command ? theme.dim(' → ' + opp.command) : '';
+    const line = truncate(bulletTone + title + suffix, width - 2);
     lines.push(' ' + line);
   }
 
   return lines;
 }
 
-function focusedTitle(title: string, focused: boolean, style: PageContext['style']): string {
-  return focused ? style.accent('▸ ' + title) : title;
+function focusedTitle(title: string, focused: boolean, ctx: PageContext): string {
+  const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
+  return focused ? theme.accent('▸ ' + title) : title;
 }
 
 function composeStacked(
   width: number,
   cols: RenderColumn[],
   focusedIdx: number,
-  style: PageContext['style']
+  ctx: PageContext
 ): string[] {
+  const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
   const out: string[] = [];
   cols.forEach((col, i) => {
-    out.push(' ' + sep(focusedTitle(col.title, i === focusedIdx, style), width - 2, style));
+    out.push(' ' + rule(width - 2, focusedTitle(col.title, i === focusedIdx, ctx), theme));
     for (const line of col.lines) out.push(' ' + line);
     out.push('');
   });
@@ -333,20 +344,21 @@ function composeTwoColumn(
   rightTop: RenderColumn,
   rightBottom: RenderColumn,
   focusedIdx: number,
-  style: PageContext['style']
+  ctx: PageContext
 ): string[] {
+  const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
   const leftWidth = Math.floor((width - 3) * 0.55);
   const rightWidth = width - leftWidth - 3;
   const leftLines = [
-    ' ' + sep(focusedTitle(left.title, focusedIdx === 0, style), leftWidth - 1, style),
+    ' ' + rule(leftWidth - 1, focusedTitle(left.title, focusedIdx === 0, ctx), theme),
     ...left.lines.map((l) => ' ' + l)
   ];
   const rightTopLines = [
-    sep(focusedTitle(rightTop.title, focusedIdx === 1, style), rightWidth - 1, style),
+    rule(rightWidth - 1, focusedTitle(rightTop.title, focusedIdx === 1, ctx), theme),
     ...rightTop.lines.map((l) => ' ' + l)
   ];
   const rightBottomLines = [
-    sep(focusedTitle(rightBottom.title, focusedIdx === 2, style), rightWidth - 1, style),
+    rule(rightWidth - 1, focusedTitle(rightBottom.title, focusedIdx === 2, ctx), theme),
     ...rightBottom.lines.map((l) => ' ' + l)
   ];
   const rightLines = [...rightTopLines, '', ...rightBottomLines];
@@ -356,7 +368,7 @@ function composeTwoColumn(
     const l = leftLines[i] ?? '';
     const r = rightLines[i] ?? '';
     const pad = ' '.repeat(Math.max(0, leftWidth - vlen(l) + 1));
-    out.push(l + pad + style.dim('│') + ' ' + r);
+    out.push(l + pad + theme.dim('│') + ' ' + r);
   }
   return out;
 }
@@ -380,43 +392,42 @@ export const homePage: Page = {
   },
   render(ctx: PageContext): string {
     const { style, width, height } = ctx;
+    const theme = liftStyler(style, { trueColor: ctx.trueColor });
     const { items: news, isFallback: newsFallback } = loadNews(ctx, 5);
 
-    const newsCol = renderNewsColumn(news, newsFallback, style);
+    const newsCol = renderNewsColumn(news, newsFallback, ctx);
     const commCol = renderCommunityColumn(
       state.threads,
       state.threadsHint,
       state.threadsLoading,
-      style
+      ctx
     );
 
     let trendCol: RenderColumn;
     if (state.trendLens === 'repos') {
       const repos = getHotRepos(detectDataDir(ctx), { limit: 5 });
-      trendCol = renderReposColumn(repos, style);
+      trendCol = renderReposColumn(repos, ctx);
     } else {
       const trendItems =
         state.trendLens === 'hot' ? getHotItems({ limit: 5 }) : getTrendingItems({ limit: 5 });
-      trendCol = renderTrendingColumn(trendItems, state.trendLens, style);
+      trendCol = renderTrendingColumn(trendItems, state.trendLens, ctx);
     }
 
-    const headerRight = style.dim('press ') + style.accent('n c m') + style.dim(' for sections');
-    const headerLeft = ' ' + style.bold(style.accent('HOME'));
-    const gap = Math.max(2, width - vlen(headerLeft) - vlen(headerRight) - 2);
+    const headerRight = theme.dim('press ') + theme.accent('n c m') + theme.dim(' for sections');
     const lines: string[] = [];
-    lines.push(headerLeft + ' '.repeat(gap) + headerRight);
+    lines.push(pageHeader({ title: 'HOME', right: headerRight, width, theme }));
     lines.push('');
 
     // Top band: Your stack + opportunities
-    const band = renderStackBand(width, style);
+    const band = renderStackBand(width, ctx);
     lines.push(...band);
     lines.push('');
 
-    // Bottom columns
+    // Bottom columns — two-column layout at ≥100 wide, stacked below
     const body =
-      width >= 100
-        ? composeTwoColumn(width, newsCol, commCol, trendCol, state.cursor, style)
-        : composeStacked(width, [newsCol, commCol, trendCol], state.cursor, style);
+      bp(width) !== 'xs' && width >= 100
+        ? composeTwoColumn(width, newsCol, commCol, trendCol, state.cursor, ctx)
+        : composeStacked(width, [newsCol, commCol, trendCol], state.cursor, ctx);
     lines.push(...body);
 
     return frame(lines, width, height);
