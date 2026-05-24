@@ -4,7 +4,14 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added — a living home page
+- **"Your stack" band** — the home page now opens with a personal summary of your MCP stack (servers · tools · advertised capabilities · `✓ ⚠ ✗` health) drawn from the agent stack manager, fully offline.
+- **Opportunities feed** — up to three ranked, actionable suggestions with the exact command to run: fix unhealthy servers (`doctor`), capture an untracked stack (`freeze`), reconcile `agora.toml` drift (`sync`), or install a velocity-trending server you don't have yet (`scan`).
+- **"Hot in the ecosystem" repos** — the fastest-growing GitHub repos (the trending-page "stars today" velocity already captured by the news source) surfaced as a third trending lens.
+- **"Since you last looked"** — a delta line showing new items + stack changes since your previous visit (persisted via a `home` marker in state).
+
+### Changed
+- **Velocity-aware trending** — `agora`'s "trending" sorted by absolute stars (so it really meant "most popular, ever"). Added a real velocity score (`trendScore` = stars + stars/age + recency) and a **Hot** (velocity) vs **Top** (all-time) lens; the home trending column cycles **Hot → Top → Repos** with `t`. `getHotItems` is the new Hot lens; `getTrendingItems` stays as Top.
 
 ## [0.4.3] - 2026-05-23 — the agent stack manager
 
