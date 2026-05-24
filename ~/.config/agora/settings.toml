@@ -1,0 +1,38 @@
+# Agora settings
+# Generated 2026-05-24
+
+[account]
+username = ""
+backend = ""
+declared_llm = ""
+
+[display]
+color = "auto"
+banner = true
+
+[news]
+feeds = []
+
+[news.sources.hn]
+enabled = false
+ttl_minutes = 10
+
+[news.sources.reddit]
+enabled = true
+ttl_minutes = 15
+
+[news.sources.github-trending]
+enabled = true
+ttl_minutes = 30
+
+[news.sources.arxiv]
+enabled = false
+ttl_minutes = 60
+
+[news.sources.rss]
+enabled = false
+ttl_minutes = 60
+
+[community]
+default_board = "mcp"
+collapse_flag_threshold = 3
