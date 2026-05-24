@@ -12,6 +12,7 @@ import {
   extractPostInstallHint,
   findMarketplaceItem,
   getInstallKind,
+  getHotItems,
   getMarketplaceItems,
   getTrendingItems,
   getTutorials,
@@ -22,6 +23,7 @@ import {
   renderPermissionLines,
   searchMarketplaceItems,
   similarItems,
+  trendScore,
   type MarketplaceItem,
   type PackageMarketplaceItem
 } from '../src/marketplace';
@@ -855,5 +857,137 @@ describe('describePermissionGlob', () => {
   });
   test('arbitrary value returns empty annotation', () => {
     expect(describePermissionGlob('api.openai.com')).toBe('');
+  });
+});
+
+// ── trendScore + getHotItems ─────────────────────────────────────────────────
+
+// Helper: build a minimal PackageMarketplaceItem for scoring tests.
+function makePkg(id: string, stars: number, createdAt: string, pushedAt?: string): MarketplaceItem {
+  return {
+    kind: 'package',
+    id,
+    name: id,
+    description: 'test',
+    author: 'test',
+    version: '1.0.0',
+    category: 'mcp',
+    tags: [],
+    stars,
+    installs: stars,
+    repository: '',
+    createdAt,
+    pricing: { kind: 'free' },
+    ...(pushedAt !== undefined ? { pushedAt } : {})
+  } as PackageMarketplaceItem;
+}
+
+// Helper: build a minimal WorkflowMarketplaceItem (no pushedAt field).
+function makeWorkflow(id: string, stars: number, createdAt: string): MarketplaceItem {
+  return {
+    kind: 'workflow',
+    id,
+    name: id,
+    description: 'test',
+    author: 'test',
+    prompt: 'do stuff',
+    tags: [],
+    stars,
+    forks: 0,
+    installs: 0,
+    category: 'workflow',
+    createdAt
+  } as MarketplaceItem;
+}
+
+describe('trendScore', () => {
+  // Fixed reference time: 2026-05-22T00:00:00Z
+  const NOW = new Date('2026-05-22T00:00:00Z');
+
+  test('velocity beats absolute popularity — young riser > old giant', () => {
+    // Old giant: created 5 years ago, 50 000 stars, pushed 1 year ago.
+    // Growth rate ≈ 27 stars/day; recency ≈ 0 (pushedAt 8760h ago >> tau 720h).
+    const oldGiant = makePkg('old-giant', 50_000, '2021-05-22T00:00:00Z', '2025-05-22T00:00:00Z');
+    // Young riser: created 10 days ago, 800 stars, pushed 2 hours ago.
+    // Growth rate = 80 stars/day; recency ≈ exp(-2/720) ≈ 0.997 (very fresh).
+    // score ≈ 0.5*log10(801) + 1.0*log10(81) + 1.0*0.997 ≈ 1.45 + 1.91 + 0.997 ≈ 4.36
+    // vs oldGiant ≈ 0.5*log10(50001) + 1.0*log10(28.4) + 0  ≈ 2.35 + 1.45 + 0  ≈ 3.80
+    const youngRiser = makePkg('young-riser', 800, '2026-05-12T00:00:00Z', '2026-05-21T22:00:00Z');
+
+    const scoreOld = trendScore(oldGiant, NOW);
+    const scoreYoung = trendScore(youngRiser, NOW);
+
+    expect(Number.isFinite(scoreOld)).toBe(true);
+    expect(Number.isFinite(scoreYoung)).toBe(true);
+    expect(scoreYoung).toBeGreaterThan(scoreOld);
+  });
+
+  test('missing pushedAt falls back to createdAt and does not NaN/throw (workflow)', () => {
+    const wf = makeWorkflow('wf-test', 100, '2026-04-01T00:00:00Z');
+    const score = trendScore(wf, NOW);
+    expect(Number.isFinite(score)).toBe(true);
+    expect(score).toBeGreaterThan(0);
+  });
+
+  test('recency decay — same stars/age, more-recent pushedAt → higher score', () => {
+    const older = makePkg('pkg-older', 1000, '2025-01-01T00:00:00Z', '2025-12-01T00:00:00Z');
+    const newer = makePkg('pkg-newer', 1000, '2025-01-01T00:00:00Z', '2026-05-01T00:00:00Z');
+    expect(trendScore(newer, NOW)).toBeGreaterThan(trendScore(older, NOW));
+  });
+
+  test('invalid/garbage createdAt → finite score, no throw', () => {
+    const bad = makePkg('bad-date', 500, 'not-a-date');
+    let score: number;
+    expect(() => {
+      score = trendScore(bad, NOW);
+    }).not.toThrow();
+    expect(Number.isFinite(trendScore(bad, NOW))).toBe(true);
+  });
+
+  test('zero stars → score is finite and non-negative', () => {
+    const zeroStars = makePkg('zero-stars', 0, '2026-05-01T00:00:00Z', '2026-05-21T00:00:00Z');
+    const score = trendScore(zeroStars, NOW);
+    expect(Number.isFinite(score)).toBe(true);
+    expect(score).toBeGreaterThanOrEqual(0);
+  });
+});
+
+describe('getHotItems', () => {
+  test('default limit is 5', () => {
+    const items = getHotItems();
+    expect(items.length).toBe(5);
+  });
+
+  test('custom limit is respected', () => {
+    const items = getHotItems({ limit: 3 });
+    expect(items.length).toBe(3);
+  });
+
+  test('category filter is respected', () => {
+    const packages = getHotItems({ category: 'package', limit: 10 });
+    expect(packages.every((i) => i.kind === 'package')).toBe(true);
+    expect(packages.length).toBeGreaterThan(0);
+  });
+
+  test('category filter — workflow — returns only workflows', () => {
+    const workflows = getHotItems({ category: 'workflow', limit: 10 });
+    expect(workflows.every((i) => i.kind === 'workflow')).toBe(true);
+    expect(workflows.length).toBeGreaterThan(0);
+  });
+
+  test('items are ranked by trendScore descending', () => {
+    // Verify the ordering is consistent with trendScore applied to each item.
+    const items = getHotItems({ limit: 10 });
+    const now = new Date();
+    for (let i = 0; i < items.length - 1; i++) {
+      expect(trendScore(items[i], now)).toBeGreaterThanOrEqual(trendScore(items[i + 1], now));
+    }
+  });
+
+  test('getTrendingItems order is unchanged (installs desc, then stars)', () => {
+    const items = getTrendingItems({ limit: 10 });
+    for (let i = 0; i < items.length - 1; i++) {
+      expect(items[i].installs).toBeGreaterThanOrEqual(items[i + 1].installs);
+    }
   });
 });

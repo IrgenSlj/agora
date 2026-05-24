@@ -10,7 +10,8 @@ import {
   loadAgoraState,
   saveItemToState,
   writeAgoraState,
-  type AgoraState
+  type AgoraState,
+  type HomeMeta
 } from '../src/state';
 import {
   detectOpenCodeConfigPath,
@@ -133,6 +134,60 @@ describe('loadAgoraState / writeAgoraState', () => {
       writeAgoraState(dir, state);
       const loaded = loadAgoraState(dir);
       expect(loaded.savedItems).toHaveLength(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('home field round-trips through write/load', () => {
+    const dir = makeTmp();
+    try {
+      const home: HomeMeta = {
+        lastSeenAt: '2026-05-20T10:00:00.000Z',
+        serverCount: 3
+      };
+      const state: AgoraState = { version: 1, savedItems: [], home };
+      writeAgoraState(dir, state);
+
+      const loaded = loadAgoraState(dir);
+      expect(loaded.home).toBeDefined();
+      expect(loaded.home!.lastSeenAt).toBe('2026-05-20T10:00:00.000Z');
+      expect(loaded.home!.serverCount).toBe(3);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('state without home field loads fine (backward compat)', () => {
+    const dir = makeTmp();
+    try {
+      // Write raw JSON without a home field
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(
+        join(dir, 'state.json'),
+        JSON.stringify({ version: 1, savedItems: [] }),
+        'utf8'
+      );
+      const loaded = loadAgoraState(dir);
+      expect(loaded.version).toBe(1);
+      expect(loaded.home).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('home field with only lastSeenAt (no serverCount) round-trips', () => {
+    const dir = makeTmp();
+    try {
+      const state: AgoraState = {
+        version: 1,
+        savedItems: [],
+        home: { lastSeenAt: '2026-05-22T08:00:00.000Z' }
+      };
+      writeAgoraState(dir, state);
+      const loaded = loadAgoraState(dir);
+      expect(loaded.home!.lastSeenAt).toBe('2026-05-22T08:00:00.000Z');
+      expect(loaded.home!.serverCount).toBeUndefined();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -27,10 +27,16 @@ export interface AuthState {
   savedAt: string;
 }
 
+export interface HomeMeta {
+  lastSeenAt?: string;
+  serverCount?: number;
+}
+
 export interface AgoraState {
   version: 1;
   savedItems: SavedItem[];
   auth?: AuthState;
+  home?: HomeMeta;
 }
 
 export interface ResolvedSavedItem {
@@ -197,11 +203,27 @@ function normalizeState(state: Partial<AgoraState>): AgoraState {
         })
     : [];
 
+  const home = normalizeHomeMeta(state.home);
+
   return {
     version: 1,
     savedItems,
-    auth: normalizeAuthState(state.auth)
+    auth: normalizeAuthState(state.auth),
+    ...(home !== undefined ? { home } : {})
   };
+}
+
+function normalizeHomeMeta(home: unknown): HomeMeta | undefined {
+  if (!home || typeof home !== 'object') return undefined;
+  const candidate = home as Record<string, unknown>;
+  const result: HomeMeta = {};
+  if (typeof candidate.lastSeenAt === 'string' && candidate.lastSeenAt) {
+    result.lastSeenAt = candidate.lastSeenAt;
+  }
+  if (typeof candidate.serverCount === 'number') {
+    result.serverCount = candidate.serverCount;
+  }
+  return result;
 }
 
 function normalizeAuthState(auth: unknown): AuthState | undefined {
