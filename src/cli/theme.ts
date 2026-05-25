@@ -15,6 +15,8 @@
 // ASCII equivalents (✓→v, ✗→x, ⚠→!, ▰→#, ▸→>, ·→*, ▌→>).
 
 import type { Styler } from '../ui.js';
+import { supportsTrueColor } from '../ui.js';
+import type { CliIo } from './flags.js';
 
 export type Tone =
   | 'accent'
@@ -199,4 +201,9 @@ export function liftStyler(legacy: Styler, opts: { trueColor: boolean; unicode?:
   fresh.bold = legacy.bold.bind(legacy);
   fresh.dim = legacy.dim.bind(legacy);
   return fresh;
+}
+
+/** Lift a one-shot CLI Styler into a full Theme, deriving trueColor from the env. */
+export function cliTheme(style: Styler, io: CliIo): Theme {
+  return liftStyler(style, { trueColor: supportsTrueColor(io.env ?? process.env) });
 }

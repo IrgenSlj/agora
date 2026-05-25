@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'bun:test';
 import { formatStars, formatInstalls } from '../src/format';
 import { formatProfileDetail } from '../src/cli/format.js';
-import { createStyler } from '../src/ui.js';
+import { createTheme } from '../src/cli/theme.js';
 import type { ApiProfile } from '../src/live.js';
 
 describe('Formatting Utilities', () => {
@@ -31,7 +31,7 @@ describe('Formatting Utilities', () => {
 });
 
 describe('formatProfileDetail', () => {
-  const style = createStyler(false);
+  const theme = createTheme({ useColor: false });
 
   const baseProfile: ApiProfile = {
     id: 'u-1',
@@ -45,14 +45,14 @@ describe('formatProfileDetail', () => {
   };
 
   test('includes Reputation line', () => {
-    const output = formatProfileDetail(baseProfile, style);
+    const output = formatProfileDetail(baseProfile, theme);
     expect(output).toContain('reputation');
     expect(output).toContain('42.5');
   });
 
   test('defaults reputation to 0 when not provided', () => {
     const profile: ApiProfile = { ...baseProfile, reputation: undefined };
-    const output = formatProfileDetail(profile, style);
+    const output = formatProfileDetail(profile, theme);
     expect(output).toContain('reputation');
     expect(output).toContain('0');
   });

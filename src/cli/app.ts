@@ -5,6 +5,7 @@ import { runTui } from './tui.js';
 import { getMarketplaceItems, type MarketplaceItem } from '../marketplace.js';
 import { createStyler, shouldUseColor, supportsTrueColor, type Styler } from '../ui.js';
 import { usage, welcome } from './format.js';
+import { cliTheme } from './theme.js';
 import { parseArgs, type CliIo } from './flags.js';
 import { writeLine, isInteractive } from './helpers.js';
 import type { CommandMap } from './commands/types.js';
@@ -101,7 +102,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     if (parsed.command && COMMANDS.some((c) => c.name === parsed.command)) {
       writeLine(io.stdout, commandManual(parsed.command));
     } else {
-      writeLine(io.stdout, usage(style, VERSION));
+      writeLine(io.stdout, usage(cliTheme(style, io), VERSION));
     }
     return 0;
   }
@@ -111,7 +112,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       const { runShell } = await import('./shell.js');
       return runShell(io, style);
     }
-    writeLine(io.stdout, welcome(useColor, supportsTrueColor(env), style, VERSION));
+    writeLine(io.stdout, welcome(useColor, supportsTrueColor(env), cliTheme(style, io), VERSION));
     return 0;
   }
 
@@ -214,7 +215,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         }
         writeLine(io.stdout, commandManual(helpTarget));
       } else {
-        writeLine(io.stdout, usage(style, VERSION));
+        writeLine(io.stdout, usage(cliTheme(style, io), VERSION));
       }
       return 0;
     }

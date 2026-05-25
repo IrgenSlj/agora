@@ -7,6 +7,7 @@ import { getTrendingItems } from '../../marketplace.js';
 import { formatNumber } from '../../format.js';
 import { writeLine, writeJson, stringFlag, detectDataDir } from '../helpers.js';
 import { header } from '../format.js';
+import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 import type { ScoredNewsItem } from '../../news/types.js';
 import type { Thread } from '../../community/types.js';
@@ -104,6 +105,7 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
+  const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
     header(
@@ -111,7 +113,7 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
       [
         new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
       ],
-      style
+      theme
     )
   );
   writeLine(io.stdout, '');

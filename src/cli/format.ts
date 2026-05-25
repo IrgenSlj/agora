@@ -1,4 +1,4 @@
-import type { Styler } from '../ui.js';
+import type { Theme } from './theme.js';
 import { formatNumber } from '../format.js';
 import { getInstallKind, renderPermissionLines, type MarketplaceItem } from '../marketplace.js';
 import type { ResolvedSavedItem } from '../state.js';
@@ -6,11 +6,12 @@ import type { Tutorial, Pricing } from '../types.js';
 import type { ApiReview, ApiProfile } from '../live.js';
 import { COMMANDS } from './commands-meta.js';
 import { renderBanner, renderBox } from '../ui.js';
+import { pill, tagList, kvRow } from './pages/components.js';
 
-function pricingBadge(pricing: Pricing | undefined, style: Styler): string {
+function pricingBadge(pricing: Pricing | undefined, theme: Theme): string {
   if (!pricing) return '';
-  if (pricing.kind === 'free') return ' ' + style.dim('FREE');
-  if (pricing.kind === 'paid') return ' ' + style.accent('PAID');
+  if (pricing.kind === 'free') return ' ' + pill('FREE', 'success', theme);
+  if (pricing.kind === 'paid') return ' ' + pill('PAID', 'accent', theme);
   return '';
 }
 
@@ -26,7 +27,7 @@ export function formatDate(value: string): string {
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-export function formatItemList(items: MarketplaceItem[], style: Styler): string {
+export function formatItemList(items: MarketplaceItem[], theme: Theme): string {
   const idWidth = Math.max(...items.map((item) => item.id.length));
   return items
     .map((item) => {
@@ -34,18 +35,18 @@ export function formatItemList(items: MarketplaceItem[], style: Styler): string 
         item.kind === 'package'
           ? `${formatNumber(item.installs)} installs · ${formatNumber(item.stars)} ★`
           : `${formatNumber(item.stars)} ★`;
-      const badge = item.kind === 'package' ? pricingBadge(item.pricing, style) : '';
+      const badge = item.kind === 'package' ? pricingBadge(item.pricing, theme) : '';
       return [
-        `${style.accent(item.id.padEnd(idWidth))}  ${style.dim(metrics)}`,
-        style.dim(item.name) + badge,
+        `${theme.accent(item.id.padEnd(idWidth))}  ${theme.dim(metrics)}`,
+        theme.dim(item.name) + badge,
         truncate(item.description, 88),
-        style.dim(`${item.category} · by ${item.author}`)
+        theme.dim(`${item.category} · by ${item.author}`)
       ].join('\n');
     })
     .join('\n\n');
 }
 
-export function formatItemTable(items: MarketplaceItem[], style: Styler): string {
+export function formatItemTable(items: MarketplaceItem[], theme: Theme): string {
   const idW = Math.max(4, ...items.map((i) => i.id.length));
   const nameW = Math.max(4, ...items.map((i) => i.name.length));
   const starW = 6;
@@ -72,157 +73,154 @@ export function formatItemTable(items: MarketplaceItem[], style: Styler): string
     (item) =>
       sep +
       ' ' +
-      style.accent(item.id.padEnd(idW)) +
+      theme.accent(item.id.padEnd(idW)) +
       ' │ ' +
-      style.dim(item.name.padEnd(nameW)) +
+      theme.dim(item.name.padEnd(nameW)) +
       ' │ ' +
-      style.dim(formatNumber(item.stars).padStart(starW)) +
+      theme.dim(formatNumber(item.stars).padStart(starW)) +
       ' │ ' +
-      style.dim(formatNumber(item.installs).padStart(installW)) +
+      theme.dim(formatNumber(item.installs).padStart(installW)) +
       ' │'
   );
 
   return [top, hdr, ...rows, bot].join('\n');
 }
 
-export function formatItemDetail(item: MarketplaceItem, style: Styler): string {
-  const badge = item.kind === 'package' ? pricingBadge(item.pricing, style) : '';
+const KV_KEY_WIDTH = 10;
+
+export function formatItemDetail(item: MarketplaceItem, theme: Theme): string {
+  const badge = item.kind === 'package' ? pricingBadge(item.pricing, theme) : '';
   const lines = [
-    style.bold(item.name) + badge,
-    `${style.dim('id')}        ${style.accent(item.id)}`,
-    `${style.dim('type')}      ${item.kind}`,
-    `${style.dim('category')}  ${item.category}`,
-    `${style.dim('author')}    ${item.author}`,
-    `${style.dim('stars')}     ${formatNumber(item.stars)}`,
-    `${style.dim('install')}   ${getInstallKind(item)}`,
+    theme.bold(item.name) + badge,
+    kvRow('id', theme.accent(item.id), KV_KEY_WIDTH, theme),
+    kvRow('type', item.kind, KV_KEY_WIDTH, theme),
+    kvRow('category', item.category, KV_KEY_WIDTH, theme),
+    kvRow('author', item.author, KV_KEY_WIDTH, theme),
+    kvRow('stars', formatNumber(item.stars), KV_KEY_WIDTH, theme),
+    kvRow('install', getInstallKind(item), KV_KEY_WIDTH, theme),
     '',
     item.description,
     '',
-    `${style.dim('tags')}      ${item.tags.join(', ')}`
+    kvRow('tags', tagList(item.tags, theme), KV_KEY_WIDTH, theme)
   ];
 
   if (item.kind === 'package') {
-    lines.splice(5, 0, `${style.dim('version')}   ${item.version}`);
-    lines.push(`${style.dim('installs')}  ${formatNumber(item.installs)}`);
-    if (item.repository) lines.push(`${style.dim('repo')}      ${item.repository}`);
-    if (item.npmPackage) lines.push(`${style.dim('npm')}       ${item.npmPackage}`);
+    lines.splice(5, 0, kvRow('version', item.version, KV_KEY_WIDTH, theme));
+    lines.push(kvRow('installs', formatNumber(item.installs), KV_KEY_WIDTH, theme));
+    if (item.repository) lines.push(kvRow('repo', item.repository, KV_KEY_WIDTH, theme));
+    if (item.npmPackage) lines.push(kvRow('npm', item.npmPackage, KV_KEY_WIDTH, theme));
     if (item.permissions) {
       const permRows = renderPermissionLines(item.permissions);
       if (permRows.length > 1) {
         lines.push('');
         // First row is "Permissions" label; subsequent rows are the indented values.
-        lines.push(style.dim(permRows[0]!));
+        lines.push(theme.muted(permRows[0]!));
         for (const row of permRows.slice(1)) lines.push(row);
       }
     }
   }
 
   if (item.kind === 'workflow') {
-    lines.push(`${style.dim('forks')}     ${item.forks}`);
-    if (item.model) lines.push(`${style.dim('model')}     ${item.model}`);
-    lines.push('', style.dim('prompt'), item.prompt);
+    lines.push(kvRow('forks', String(item.forks), KV_KEY_WIDTH, theme));
+    if (item.model) lines.push(kvRow('model', item.model, KV_KEY_WIDTH, theme));
+    lines.push('', theme.dim('prompt'), item.prompt);
   }
 
   return lines.join('\n');
 }
 
-export function formatSavedList(items: ResolvedSavedItem[], style: Styler): string {
+export function formatSavedList(items: ResolvedSavedItem[], theme: Theme): string {
   return items
     .map((entry, index) => {
       if (!entry.item) {
         return [
-          `${index + 1}. ${style.accent(entry.saved.id)} ${style.dim('[missing]')}`,
-          `   ${style.dim('saved ' + formatDate(entry.saved.savedAt))}`
+          `${index + 1}. ${theme.accent(entry.saved.id)} ${theme.dim('[missing]')}`,
+          `   ${theme.dim('saved ' + formatDate(entry.saved.savedAt))}`
         ].join('\n');
       }
 
       return [
-        `${index + 1}. ${style.accent(entry.item.id)} ${style.dim('[' + entry.item.category + ']')}`,
-        `   ${style.dim(entry.item.name)}`,
+        `${index + 1}. ${theme.accent(entry.item.id)} ${theme.dim('[' + entry.item.category + ']')}`,
+        `   ${theme.dim(entry.item.name)}`,
         `   ${truncate(entry.item.description, 88)}`,
-        `   ${style.dim('saved ' + formatDate(entry.saved.savedAt))}`
+        `   ${theme.dim('saved ' + formatDate(entry.saved.savedAt))}`
       ].join('\n');
     })
     .join('\n\n');
 }
 
-export function formatReviewList(reviews: ApiReview[], style: Styler): string {
+export function formatReviewList(reviews: ApiReview[], theme: Theme): string {
   return reviews
     .map((review, index) => {
       return [
-        `${index + 1}. ${style.accent(review.itemId)} ${style.dim('[' + review.itemType + ']')}`,
-        `   ${style.dim('rating ' + review.rating + '/5 by ' + review.author)}`,
+        `${index + 1}. ${theme.accent(review.itemId)} ${theme.dim('[' + review.itemType + ']')}`,
+        `   ${theme.dim('rating ' + review.rating + '/5 by ' + review.author)}`,
         `   ${truncate(review.content, 88)}`
       ].join('\n');
     })
     .join('\n\n');
 }
 
-export function formatProfileDetail(profile: ApiProfile, style: Styler): string {
+export function formatProfileDetail(profile: ApiProfile, theme: Theme): string {
   const lines = [
-    style.bold(profile.displayName),
-    `${style.dim('username')} ${style.accent(profile.username)}`,
-    `${style.dim('packages')} ${formatNumber(profile.packages)}`,
-    `${style.dim('workflows')} ${formatNumber(profile.workflows)}`,
-    `${style.dim('discussions')} ${formatNumber(profile.discussions)}`,
-    `${style.dim('reputation')} ${profile.reputation ?? 0}`
+    theme.bold(profile.displayName),
+    `${theme.muted('username')} ${theme.accent(profile.username)}`,
+    `${theme.muted('packages')} ${formatNumber(profile.packages)}`,
+    `${theme.muted('workflows')} ${formatNumber(profile.workflows)}`,
+    `${theme.muted('discussions')} ${formatNumber(profile.discussions)}`,
+    `${theme.muted('reputation')} ${profile.reputation ?? 0}`
   ];
 
-  if (profile.bio) lines.splice(2, 0, `${style.dim('bio')} ${profile.bio}`);
-  if (profile.avatarUrl) lines.push(`${style.dim('avatar')} ${profile.avatarUrl}`);
-  if (profile.joinedAt) lines.push(`${style.dim('joined')} ${formatDate(profile.joinedAt)}`);
+  if (profile.bio) lines.splice(2, 0, `${theme.muted('bio')} ${profile.bio}`);
+  if (profile.avatarUrl) lines.push(`${theme.muted('avatar')} ${profile.avatarUrl}`);
+  if (profile.joinedAt) lines.push(`${theme.muted('joined')} ${formatDate(profile.joinedAt)}`);
 
   return lines.join('\n');
 }
 
-export function formatTutorialList(tutorials: Tutorial[], style: Styler): string {
+export function formatTutorialList(tutorials: Tutorial[], theme: Theme): string {
   return tutorials
     .map((tutorial, index) => {
       return [
-        `${index + 1}. ${style.accent(tutorial.id)} ${style.dim('[' + tutorial.level + ']')}`,
-        `   ${style.dim(tutorial.title)}`,
+        `${index + 1}. ${theme.accent(tutorial.id)} ${theme.dim('[' + tutorial.level + ']')}`,
+        `   ${theme.dim(tutorial.title)}`,
         `   ${truncate(tutorial.description, 88)}`,
-        `   ${style.dim(tutorial.duration + ' | ' + tutorial.steps.length + ' steps')}`
+        `   ${theme.dim(tutorial.duration + ' | ' + tutorial.steps.length + ' steps')}`
       ].join('\n');
     })
     .join('\n\n');
 }
 
-export function formatTutorialStep(tutorial: Tutorial, stepNumber: number, style: Styler): string {
+export function formatTutorialStep(tutorial: Tutorial, stepNumber: number, theme: Theme): string {
   const step = tutorial.steps[stepNumber - 1];
 
   if (!step) {
     return [
-      style.bold(tutorial.title),
-      style.dim(`Completed ${tutorial.steps.length}/${tutorial.steps.length} steps.`),
+      theme.bold(tutorial.title),
+      theme.dim(`Completed ${tutorial.steps.length}/${tutorial.steps.length} steps.`),
       'Run agora tutorials for more tutorials.'
     ].join('\n');
   }
 
   const lines = [
-    style.bold(tutorial.title),
-    `${style.dim('id')} ${style.accent(tutorial.id)}`,
-    `${style.dim('level')} ${tutorial.level}`,
-    `${style.dim('duration')} ${tutorial.duration}`,
-    `${style.dim('step')} ${stepNumber}/${tutorial.steps.length}`,
+    theme.bold(tutorial.title),
+    `${theme.dim('id')} ${theme.accent(tutorial.id)}`,
+    `${theme.dim('level')} ${tutorial.level}`,
+    `${theme.dim('duration')} ${tutorial.duration}`,
+    `${theme.dim('step')} ${stepNumber}/${tutorial.steps.length}`,
     '',
     step.title || '',
     step.content || ''
   ];
 
   if (step.code) {
-    lines.push('', style.dim('code:'), step.code);
+    lines.push('', theme.dim('code:'), step.code);
   }
 
   return lines.join('\n');
 }
 
-export function welcome(
-  color: boolean,
-  trueColor: boolean,
-  style: Styler,
-  version: string
-): string {
+export function welcome(color: boolean, trueColor: boolean, theme: Theme, version: string): string {
   if (!color) {
     return [
       '',
@@ -247,39 +245,39 @@ export function welcome(
     { color, trueColor }
   );
   const hint = [
-    `${style.dim('Search')}    agora search <query>`,
-    `${style.dim('Browse')}    agora trending · agora browse <id>`,
-    `${style.dim('Learn')}     agora tutorials · agora tutorial <id>`,
-    `${style.dim('Install')}   agora install <id> [--write]`,
-    `${style.dim('Setup')}     agora init [--mcp] · agora use <workflow>`,
-    `${style.dim('Auth')}      agora login [--api-url <url>]`
+    `${theme.muted('Search')}    agora search <query>`,
+    `${theme.muted('Browse')}    agora trending · agora browse <id>`,
+    `${theme.muted('Learn')}     agora tutorials · agora tutorial <id>`,
+    `${theme.muted('Install')}   agora install <id> [--write]`,
+    `${theme.muted('Setup')}     agora init [--mcp] · agora use <workflow>`,
+    `${theme.muted('Auth')}      agora login [--api-url <url>]`
   ].join('\n');
   return `\n${banner}\n\n${box}\n\n${hint}\n`;
 }
 
-export function header(title: string, meta: string[], style: Styler): string {
-  return [style.accent(title), ...meta.map((part) => style.dim(part))].join(style.dim(' · '));
+export function header(title: string, meta: string[], theme: Theme): string {
+  return [theme.accent(title), ...meta.map((part) => theme.muted(part))].join(theme.dim(' · '));
 }
 
-export function usage(style: Styler, version: string): string {
+export function usage(theme: Theme, version: string): string {
   const nameWidth = Math.max(...COMMANDS.map((c) => c.name.length));
   const groups = ['Marketplace', 'Setup', 'Stack', 'Library', 'Learn', 'Community'] as const;
 
   const lines: string[] = [
-    `${style.accent('agora')}${style.dim(` · Developers' CLI marketplace and community hub · v${version}`)}`,
+    `${theme.accent('agora')}${theme.dim(` · Developers' CLI marketplace and community hub · v${version}`)}`,
     ''
   ];
 
   for (const group of groups) {
     const groupCmds = COMMANDS.filter((c) => c.group === group);
-    lines.push(style.dim(group));
+    lines.push(theme.muted(group));
     for (const cmd of groupCmds) {
-      lines.push(`  ${style.accent(cmd.name.padEnd(nameWidth))}  ${style.dim(cmd.summary)}`);
+      lines.push(`  ${theme.accent(cmd.name.padEnd(nameWidth))}  ${theme.dim(cmd.summary)}`);
     }
     lines.push('');
   }
 
-  lines.push(style.dim('Run `agora help <command>` for details on any command.'));
+  lines.push(theme.dim('Run `agora help <command>` for details on any command.'));
 
   return lines.join('\n');
 }

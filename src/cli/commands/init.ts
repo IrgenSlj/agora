@@ -13,6 +13,7 @@ import { sampleWorkflows } from '../../data.js';
 import { stringFlag, writeLine, writeJson, usageError } from '../helpers.js';
 import { header } from '../format.js';
 import { renderMeander, supportsTrueColor } from '../../ui.js';
+import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 const TEMPLATES: Record<
@@ -283,9 +284,10 @@ export const commandInit: CommandHandler = async (parsed, io, style) => {
 export const commandUse: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
   if (!id) {
+    const theme = cliTheme(style, io);
     writeLine(
       io.stdout,
-      header('agora use', [`${sampleWorkflows.length} available workflows`], style)
+      header('agora use', [`${sampleWorkflows.length} available workflows`], theme)
     );
     writeLine(io.stdout, '');
     writeLine(

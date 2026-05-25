@@ -10,6 +10,7 @@ import {
   usageError
 } from '../helpers.js';
 import { header } from '../format.js';
+import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 type ExportFormat = 'json' | 'csv' | 'markdown' | 'table';
@@ -125,14 +126,15 @@ export const commandExport: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
+  const theme = cliTheme(style, io);
   if (format === 'markdown') {
-    writeLine(io.stdout, header('agora export', [`${items.length} items`, format], style));
+    writeLine(io.stdout, header('agora export', [`${items.length} items`, format], theme));
     writeLine(io.stdout, '');
     writeLine(io.stdout, toMarkdown(items));
     return 0;
   }
 
-  writeLine(io.stdout, header('agora export', [`${items.length} items`, format], style));
+  writeLine(io.stdout, header('agora export', [`${items.length} items`, format], theme));
   writeLine(io.stdout, '');
   writeLine(io.stdout, toTable(items, style));
   return 0;
