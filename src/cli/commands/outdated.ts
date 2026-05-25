@@ -3,8 +3,11 @@ import { extractPackageFromConfig } from '../../config.js';
 import { checkOutdated } from '../../outdated.js';
 import type { CommandHandler } from './types.js';
 import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
+import { cliTheme } from '../theme.js';
+import { status } from '../pages/components.js';
 
 export const commandOutdated: CommandHandler = async (parsed, io, style) => {
+  const theme = cliTheme(style, io);
   const path = detectOpenCodeConfigPath({
     explicitPath: stringFlag(parsed, 'config'),
     cwd: io.cwd,
@@ -23,7 +26,7 @@ export const commandOutdated: CommandHandler = async (parsed, io, style) => {
     if (parsed.flags.json) {
       writeJson(io.stdout, { entries: [], summary: { fresh: 0, stale: 0, unknown: 0 } });
     } else {
-      writeLine(io.stdout, style.dim('No MCP packages found in ' + path));
+      writeLine(io.stdout, theme.muted('No MCP packages found in ' + path));
     }
     return 0;
   }
@@ -42,10 +45,10 @@ export const commandOutdated: CommandHandler = async (parsed, io, style) => {
   for (const entry of result.entries) {
     const icon =
       entry.status === 'fresh'
-        ? style.accent('✓')
+        ? status('success', '', theme)
         : entry.status === 'stale'
-          ? style.orange('⚠')
-          : style.dim('?');
+          ? status('warning', '', theme)
+          : theme.info('?');
     const suffix = entry.status === 'stale' ? ' — may be unmaintained' : '';
     writeLine(io.stdout, `  ${icon}  ${entry.pkg.padEnd(nameWidth)}  ${entry.message}${suffix}`);
   }

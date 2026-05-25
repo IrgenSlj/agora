@@ -2,6 +2,7 @@ import { readCapabilityCache } from '../../stack/capability-cache.js';
 import { buildIndex, searchIndex, type IndexableItem } from '../../search/catalog-index.js';
 import type { CommandHandler } from './types.js';
 import { writeLine, writeJson, stringFlag, detectDataDir } from '../helpers.js';
+import { cliTheme } from '../theme.js';
 
 interface FlatTool {
   server: string;
@@ -11,6 +12,7 @@ interface FlatTool {
 }
 
 export const commandCapabilities: CommandHandler = async (parsed, io, style) => {
+  const theme = cliTheme(style, io);
   const dataDir = detectDataDir(parsed, io);
   const entries = readCapabilityCache(dataDir);
 
@@ -38,7 +40,7 @@ export const commandCapabilities: CommandHandler = async (parsed, io, style) => 
     const filtered =
       exact.length > 0 ? exact : allTools.filter((t) => t.server.toLowerCase().includes(lower));
     if (filtered.length === 0 && !parsed.flags.json) {
-      writeLine(io.stdout, style.dim(`No tools found for server: ${serverFilter}`));
+      writeLine(io.stdout, theme.muted(`No tools found for server: ${serverFilter}`));
     }
     allTools = filtered;
   }
@@ -56,13 +58,13 @@ export const commandCapabilities: CommandHandler = async (parsed, io, style) => 
     }
     writeLine(
       io.stdout,
-      style.dim(
+      theme.muted(
         'No capability data found. Tools are discovered by probing your configured MCP servers.'
       )
     );
-    writeLine(io.stdout, style.dim('Hints:'));
-    writeLine(io.stdout, style.dim('  agora doctor --probe   (probe all configured servers)'));
-    writeLine(io.stdout, style.dim('  agora try <id>         (test-drive a marketplace item)'));
+    writeLine(io.stdout, theme.muted('Hints:'));
+    writeLine(io.stdout, theme.muted('  agora doctor --probe   (probe all configured servers)'));
+    writeLine(io.stdout, theme.muted('  agora try <id>         (test-drive a marketplace item)'));
     return 0;
   }
 
@@ -109,21 +111,21 @@ export const commandCapabilities: CommandHandler = async (parsed, io, style) => 
     }
 
     if (rankedTools.length === 0) {
-      writeLine(io.stdout, style.dim(`No tools matched: ${query}`));
+      writeLine(io.stdout, theme.muted(`No tools matched: ${query}`));
       return 0;
     }
 
     for (const t of rankedTools) {
       writeLine(
         io.stdout,
-        `${style.accent(t.name)}  ${style.dim(t.server + '  — ' + t.description)}`
+        `${theme.accent(t.name)}  ${theme.dim(t.server + '  — ' + t.description)}`
       );
     }
     writeLine(io.stdout);
     const serverSet = new Set(rankedTools.map((t) => t.server));
     writeLine(
       io.stdout,
-      style.dim(`${rankedTools.length} tool(s) across ${serverSet.size} server(s)`)
+      theme.muted(`${rankedTools.length} tool(s) across ${serverSet.size} server(s)`)
     );
   } else {
     // List mode: grouped by server (servers sorted by name, tools sorted by name)
@@ -162,13 +164,13 @@ export const commandCapabilities: CommandHandler = async (parsed, io, style) => 
       const firstTool = tools[0];
       const version = firstTool?.serverInfo?.version;
       const header = version
-        ? `${style.accent(serverName)} ${style.dim('v' + version)}`
-        : style.accent(serverName);
+        ? `${theme.accent(serverName)} ${theme.dim('v' + version)}`
+        : theme.accent(serverName);
       writeLine(io.stdout, header);
       for (const t of tools) {
         writeLine(
           io.stdout,
-          `  ${t.name}${t.description ? style.dim('  — ' + t.description) : ''}`
+          `  ${t.name}${t.description ? theme.dim('  — ' + t.description) : ''}`
         );
       }
       writeLine(io.stdout);
@@ -177,7 +179,7 @@ export const commandCapabilities: CommandHandler = async (parsed, io, style) => 
     const serverSet = new Set(allTools.map((t) => t.server));
     writeLine(
       io.stdout,
-      style.dim(`${allTools.length} tool(s) across ${serverSet.size} server(s)`)
+      theme.muted(`${allTools.length} tool(s) across ${serverSet.size} server(s)`)
     );
   }
 

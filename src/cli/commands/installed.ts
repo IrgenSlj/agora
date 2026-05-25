@@ -8,10 +8,12 @@ import { readCapabilityCache } from '../../stack/capability-cache.js';
 import type { AgentToolId } from '../../stack/types.js';
 import type { CommandHandler } from './types.js';
 import { writeLine, writeJson, stringFlag, usageError, detectDataDir } from '../helpers.js';
+import { cliTheme } from '../theme.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 
 export const commandInstalled: CommandHandler = async (parsed, io, style) => {
+  const theme = cliTheme(style, io);
   const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
 
   const toolFlag = stringFlag(parsed, 'tool');
@@ -67,15 +69,15 @@ export const commandInstalled: CommandHandler = async (parsed, io, style) => {
   if (servers.length === 0) {
     const toolResults = detectTools(env);
     const detected = toolResults.filter((t) => t.present).map((t) => t.adapter.displayName);
-    writeLine(io.stdout, style.dim('No MCP servers configured.'));
+    writeLine(io.stdout, theme.muted('No MCP servers configured.'));
     if (detected.length > 0) {
-      writeLine(io.stdout, style.dim('Detected tools: ' + detected.join(', ')));
+      writeLine(io.stdout, theme.muted('Detected tools: ' + detected.join(', ')));
     } else {
-      writeLine(io.stdout, style.dim('No supported agent tools detected.'));
+      writeLine(io.stdout, theme.muted('No supported agent tools detected.'));
     }
     writeLine(
       io.stdout,
-      style.dim('Run `agora search` to find servers, `agora install` to add them.')
+      theme.muted('Run `agora search` to find servers, `agora install` to add them.')
     );
     return 0;
   }
@@ -83,7 +85,7 @@ export const commandInstalled: CommandHandler = async (parsed, io, style) => {
   const grouped = groupServersByName(servers);
   const toolCount = new Set(servers.map((s) => s.tool)).size;
 
-  writeLine(io.stdout, style.accent('Installed MCP servers'));
+  writeLine(io.stdout, theme.accent('Installed MCP servers'));
   writeLine(io.stdout);
 
   const nameWidth = Math.max(...Array.from(grouped.keys()).map((n) => n.length));
@@ -93,20 +95,20 @@ export const commandInstalled: CommandHandler = async (parsed, io, style) => {
 
     const parts = instances.map((inst) => {
       const label = `${inst.tool} (${inst.scope})`;
-      return inst.enabled === false ? style.dim(label + ' (disabled)') : label;
+      return inst.enabled === false ? theme.dim(label + ' (disabled)') : label;
     });
 
     const cachedTools = toolCountByName.get(name);
-    const toolsSuffix = cachedTools !== undefined ? style.dim(` · ${cachedTools} tools`) : '';
+    const toolsSuffix = cachedTools !== undefined ? theme.dim(` · ${cachedTools} tools`) : '';
 
     writeLine(
       io.stdout,
-      `  ${style.accent(name.padEnd(nameWidth))}  ${style.dim(transport)}  · ${parts.join(', ')}${toolsSuffix}`
+      `  ${theme.accent(name.padEnd(nameWidth))}  ${theme.dim(transport)}  · ${parts.join(', ')}${toolsSuffix}`
     );
   }
 
   writeLine(io.stdout);
-  writeLine(io.stdout, style.dim(`${grouped.size} server(s) across ${toolCount} tool(s)`));
+  writeLine(io.stdout, theme.muted(`${grouped.size} server(s) across ${toolCount} tool(s)`));
 
   return 0;
 };
