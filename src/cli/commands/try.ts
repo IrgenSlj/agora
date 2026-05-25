@@ -4,6 +4,8 @@ import { probeMcpServer, type McpProbeResult } from '../../stack/mcp-probe.js';
 import { upsertCapabilities, capabilityKey } from '../../stack/capability-cache.js';
 import type { CommandHandler } from './types.js';
 import { writeLine, writeJson, numberFlag, usageError, detectDataDir } from '../helpers.js';
+import { cliTheme } from '../theme.js';
+import { status } from '../pages/components.js';
 
 export const commandTry: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
@@ -85,15 +87,17 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
   }
 
   // Human output
+  const theme = cliTheme(style, io);
+
   if (scanResult) {
     writeLine(io.stdout, 'Scan:');
     for (const c of scanResult.checks) {
       const icon =
         c.status === 'pass'
-          ? style.accent('✓')
+          ? status('success', '', theme)
           : c.status === 'warn'
-            ? style.orange('⚠')
-            : style.bold('✗');
+            ? status('warning', '', theme)
+            : status('error', '', theme);
       writeLine(io.stdout, `  ${icon}  ${c.label}: ${c.message}`);
     }
     const { pass, warn, fail } = scanResult.summary;
@@ -103,16 +107,16 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
     if (fail > 0) {
       writeLine(
         io.stderr,
-        `${style.bold('Refusing try-run')} — ${fail} scan check(s) failed. Re-run with --skip-scan to override.`
+        `${theme.error('Refusing try-run')} — ${fail} scan check(s) failed. Re-run with --skip-scan to override.`
       );
       return 1;
     }
   }
 
-  writeLine(io.stdout, `Starting ${style.accent(item.name)} — ephemeral, nothing will be saved.`);
+  writeLine(io.stdout, `Starting ${theme.accent(item.name)} — ephemeral, nothing will be saved.`);
   writeLine(
     io.stdout,
-    style.dim(`This runs the server (may npx-download on first use): ${command.join(' ')}`)
+    theme.dim(`This runs the server (may npx-download on first use): ${command.join(' ')}`)
   );
   writeLine(io.stdout, '');
 
@@ -137,7 +141,7 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
   }
 
   if (probe.ok) {
-    writeLine(io.stdout, `${style.accent('✓')} ${item.name} started`);
+    writeLine(io.stdout, `${status('success', '', theme)} ${item.name} started`);
     if (probe.serverInfo?.name || probe.serverInfo?.version) {
       const info = [probe.serverInfo.name, probe.serverInfo.version].filter(Boolean).join(' ');
       writeLine(io.stdout, `  Server: ${info}`);
@@ -147,24 +151,24 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
       writeLine(io.stdout, `Tools (${probe.tools.length}):`);
       for (const tool of probe.tools) {
         const desc = tool.description ? ` — ${tool.description}` : '';
-        writeLine(io.stdout, `  ${style.accent(tool.name)}${desc}`);
+        writeLine(io.stdout, `  ${theme.accent(tool.name)}${desc}`);
       }
     } else {
       writeLine(io.stdout, '(no tools advertised)');
     }
     if (probe.error) {
-      writeLine(io.stdout, style.dim(`Note: ${probe.error}`));
+      writeLine(io.stdout, theme.dim(`Note: ${probe.error}`));
     }
     writeLine(io.stdout, '');
     writeLine(
       io.stdout,
-      style.dim('Nothing was saved. To keep this server: agora install ' + id + ' --write --save')
+      theme.dim('Nothing was saved. To keep this server: agora install ' + id + ' --write --save')
     );
     return 0;
   }
 
   // Probe failed
-  writeLine(io.stdout, `${style.bold('✗')} could not start ${item.name}`);
+  writeLine(io.stdout, `${status('error', '', theme)} could not start ${item.name}`);
   if (probe.error) writeLine(io.stdout, `  Error: ${probe.error}`);
   if (probe.exitCode !== undefined && probe.exitCode !== null) {
     writeLine(io.stdout, `  Exit code: ${probe.exitCode}`);
@@ -172,9 +176,9 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
   if (probe.stderr) {
     const lines = probe.stderr.split('\n');
     const displayed = lines.slice(-8);
-    writeLine(io.stdout, style.dim('  stderr:'));
+    writeLine(io.stdout, theme.dim('  stderr:'));
     for (const l of displayed) {
-      writeLine(io.stdout, style.dim(`    ${l}`));
+      writeLine(io.stdout, theme.dim(`    ${l}`));
     }
   }
   return 1;

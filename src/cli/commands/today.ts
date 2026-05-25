@@ -7,6 +7,7 @@ import { getTrendingItems } from '../../marketplace.js';
 import { formatNumber } from '../../format.js';
 import { writeLine, writeJson, stringFlag, detectDataDir } from '../helpers.js';
 import { header } from '../format.js';
+import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 import type { ScoredNewsItem } from '../../news/types.js';
 import type { Thread } from '../../community/types.js';
@@ -104,6 +105,7 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
+  const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
     header(
@@ -111,55 +113,55 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
       [
         new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
       ],
-      style
+      theme
     )
   );
   writeLine(io.stdout, '');
 
   if (wantsNews) {
-    const newsHeading = newsIsFallback ? 'News' + style.dim(' · recent') : 'News';
-    writeLine(io.stdout, style.accent(newsHeading));
+    const newsHeading = newsIsFallback ? 'News' + theme.dim(' · recent') : 'News';
+    writeLine(io.stdout, theme.accent(newsHeading));
     if (newsItems.length === 0) {
-      writeLine(io.stdout, style.dim('No news cached yet — run `agora news --refresh`'));
+      writeLine(io.stdout, theme.muted('No news cached yet — run `agora news --refresh`'));
     } else {
       for (const item of newsItems) {
-        const src = style.dim(item.source.toUpperCase().slice(0, 2).padEnd(3));
-        const age = style.dim(fmtAge(item.publishedAt).padStart(3));
-        const up = style.accent(('↑ ' + formatNumber(item.engagement)).padStart(7));
+        const src = theme.dim(item.source.toUpperCase().slice(0, 2).padEnd(3));
+        const age = theme.dim(fmtAge(item.publishedAt).padStart(3));
+        const up = theme.accent(('↑ ' + formatNumber(item.engagement)).padStart(7));
         writeLine(io.stdout, src + '  ' + age + '  ' + up + '  ' + item.title);
-        writeLine(io.stdout, '         ' + style.dim(hostFromUrl(item.url)));
+        writeLine(io.stdout, '         ' + theme.dim(hostFromUrl(item.url)));
       }
     }
     writeLine(io.stdout, '');
   }
 
   if (wantsCommunity) {
-    writeLine(io.stdout, style.accent('Community'));
+    writeLine(io.stdout, theme.accent('Community'));
     if (communityHint) {
-      writeLine(io.stdout, style.dim(communityHint));
+      writeLine(io.stdout, theme.muted(communityHint));
     } else if (threads.length === 0) {
-      writeLine(io.stdout, style.dim('Nothing in the last 24h.'));
+      writeLine(io.stdout, theme.muted('Nothing in the last 24h.'));
     } else {
       for (const t of threads) {
-        const board = style.accent('/' + t.board);
-        const meta = style.dim(' · ' + fmtAge(t.createdAt) + ' · ' + t.replyCount + ' replies');
+        const board = theme.accent('/' + t.board);
+        const meta = theme.dim(' · ' + fmtAge(t.createdAt) + ' · ' + t.replyCount + ' replies');
         writeLine(io.stdout, board + '  ' + t.title);
-        writeLine(io.stdout, '       ' + style.dim(t.author) + meta);
+        writeLine(io.stdout, '       ' + theme.dim(t.author) + meta);
       }
     }
     writeLine(io.stdout, '');
   }
 
   if (wantsMarket) {
-    writeLine(io.stdout, style.accent('Trending'));
+    writeLine(io.stdout, theme.accent('Trending'));
     if (trending.length === 0) {
-      writeLine(io.stdout, style.dim('Nothing in the last 24h.'));
+      writeLine(io.stdout, theme.muted('Nothing in the last 24h.'));
     } else {
       for (const item of trending) {
-        const stats = style.dim(' · ' + formatNumber(item.installs ?? 0) + ' installs');
-        writeLine(io.stdout, style.bold(item.name) + stats);
+        const stats = theme.dim(' · ' + formatNumber(item.installs ?? 0) + ' installs');
+        writeLine(io.stdout, theme.bold(item.name) + stats);
         if (item.description) {
-          writeLine(io.stdout, '  ' + style.dim(item.description.slice(0, 60)));
+          writeLine(io.stdout, '  ' + theme.dim(item.description.slice(0, 60)));
         }
       }
     }

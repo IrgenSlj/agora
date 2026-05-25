@@ -71,6 +71,7 @@ import {
   formatProfileDetail,
   formatDate
 } from '../format.js';
+import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 export const commandInstall: CommandHandler = async (parsed, io, style) => {
@@ -451,8 +452,9 @@ export const commandSaved: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  writeLine(io.stdout, header('agora saved', [`${saved.length} items`], style));
-  writeLine(io.stdout, formatSavedList(saved, style));
+  const theme = cliTheme(style, io);
+  writeLine(io.stdout, header('agora saved', [`${saved.length} items`], theme));
+  writeLine(io.stdout, formatSavedList(saved, theme));
   return 0;
 };
 
@@ -606,12 +608,13 @@ export const commandReviews: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
+  const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
-    header('agora reviews', [`${result.data.length} results`, sourceLabel(result)], style)
+    header('agora reviews', [`${result.data.length} results`, sourceLabel(result)], theme)
   );
   writeLine(io.stdout, '');
-  writeLine(io.stdout, formatReviewList(result.data, style));
+  writeLine(io.stdout, formatReviewList(result.data, theme));
   return 0;
 };
 
@@ -630,7 +633,8 @@ export const commandProfile: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  writeLine(io.stdout, formatProfileDetail(result.data, style));
+  const theme = cliTheme(style, io);
+  writeLine(io.stdout, formatProfileDetail(result.data, theme));
   return 0;
 };
 
@@ -1301,10 +1305,11 @@ export const commandBookmarks: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
+  const theme = cliTheme(style, io);
   if (kind !== 'news' && hasMarketplace) {
     writeLine(io.stdout, style.accent('Marketplace'));
     writeLine(io.stdout, style.dim('─'.repeat(40)));
-    writeLine(io.stdout, formatSavedList(marketplaceItems, style));
+    writeLine(io.stdout, formatSavedList(marketplaceItems, theme));
     writeLine(io.stdout, '');
   }
 

@@ -10,10 +10,12 @@ import {
 import type { AgentToolId } from '../../stack/types.js';
 import type { CommandHandler } from './types.js';
 import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
+import { cliTheme } from '../theme.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 
 export const commandFreeze: CommandHandler = async (parsed, io, style) => {
+  const theme = cliTheme(style, io);
   const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
 
   // --tool filter
@@ -34,10 +36,10 @@ export const commandFreeze: CommandHandler = async (parsed, io, style) => {
 
   // Empty stack
   if (servers.length === 0) {
-    writeLine(io.stdout, style.dim('No MCP servers configured.'));
+    writeLine(io.stdout, theme.muted('No MCP servers configured.'));
     writeLine(
       io.stdout,
-      style.dim('Run `agora search` to find servers, `agora install` to add them.')
+      theme.muted('Run `agora search` to find servers, `agora install` to add them.')
     );
     return 0;
   }
@@ -57,7 +59,7 @@ export const commandFreeze: CommandHandler = async (parsed, io, style) => {
         .join(', ');
       writeLine(
         io.stderr,
-        style.dim(
+        theme.dim(
           `Warning: "${name}" configured in multiple tools; kept ${winner.tool} (${winner.scope}), ignored ${loserTools}`
         )
       );

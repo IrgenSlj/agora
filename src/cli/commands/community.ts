@@ -38,6 +38,7 @@ import {
   discussionCategoryFlag
 } from '../helpers.js';
 import { header, truncate } from '../format.js';
+import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 export const commandNews: CommandHandler = async (parsed, io, style) => {
@@ -134,12 +135,13 @@ export const commandNews: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
+  const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
     header(
       'agora news',
       [`${items.length} stories`, source ? `source: ${source}` : 'all sources'],
-      style
+      theme
     )
   );
   writeLine(io.stdout, '');
@@ -185,9 +187,10 @@ export const commandCommunity: CommandHandler = async (parsed, io, style) => {
       return 0;
     }
 
+    const theme = cliTheme(style, io);
     writeLine(
       io.stdout,
-      header(`agora community /${board}`, [`${threads.length} threads`, `sort: ${sort}`], style)
+      header(`agora community /${board}`, [`${threads.length} threads`, `sort: ${sort}`], theme)
     );
     writeLine(io.stdout, '');
     for (const t of threads) {
@@ -209,7 +212,8 @@ export const commandCommunity: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  writeLine(io.stdout, header('agora community', [`${boards.length} boards`], style));
+  const theme2 = cliTheme(style, io);
+  writeLine(io.stdout, header('agora community', [`${boards.length} boards`], theme2));
   writeLine(io.stdout, '');
   for (const b of boards) {
     writeLine(
@@ -423,9 +427,10 @@ export const commandDiscussions: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
+  const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
-    header('agora discussions', [`${discussions.length} results`, sourceLabel(result)], style)
+    header('agora discussions', [`${discussions.length} results`, sourceLabel(result)], theme)
   );
   writeLine(io.stdout, '');
   writeLine(

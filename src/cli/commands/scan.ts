@@ -2,6 +2,8 @@ import { findMarketplaceItem } from '../../marketplace.js';
 import { scanItem } from '../../scan.js';
 import type { CommandHandler } from './types.js';
 import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
+import { cliTheme } from '../theme.js';
+import { status } from '../pages/components.js';
 
 export const commandScan: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
@@ -25,17 +27,19 @@ export const commandScan: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  writeLine(io.stdout, `Scan: ${item.name} ${style.dim('(' + item.id + ')')}`);
+  const theme = cliTheme(style, io);
+
+  writeLine(io.stdout, `Scan: ${item.name} ${theme.dim('(' + item.id + ')')}`);
   writeLine(io.stdout);
 
   const labelWidth = Math.max(...result.checks.map((c) => c.label.length));
   for (const check of result.checks) {
     const icon =
       check.status === 'pass'
-        ? style.accent('✓')
+        ? status('success', '', theme)
         : check.status === 'warn'
-          ? style.orange('⚠')
-          : style.bold('✗');
+          ? status('warning', '', theme)
+          : status('error', '', theme);
     writeLine(io.stdout, `  ${icon}  ${check.label.padEnd(labelWidth)}  ${check.message}`);
   }
 

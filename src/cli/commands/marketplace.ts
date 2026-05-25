@@ -24,6 +24,7 @@ import {
   detectDataDir
 } from '../helpers.js';
 import { header, formatItemList, formatItemTable, formatItemDetail } from '../format.js';
+import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 export const commandSearch: CommandHandler = async (parsed, io, style) => {
@@ -70,20 +71,21 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
+  const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
     header(
       'agora search',
       [`"${query || 'all'}"`, `${results.length} results`, sourceLabel(result)],
-      style
+      theme
     )
   );
   writeLine(io.stdout, '');
 
   if (table) {
-    writeLine(io.stdout, formatItemTable(results, style));
+    writeLine(io.stdout, formatItemTable(results, theme));
   } else {
-    writeLine(io.stdout, formatItemList(results, style));
+    writeLine(io.stdout, formatItemList(results, theme));
   }
 
   if (perPage > 0) {
@@ -121,7 +123,8 @@ export const commandBrowse: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  writeLine(io.stdout, formatItemDetail(item, style));
+  const theme = cliTheme(style, io);
+  writeLine(io.stdout, formatItemDetail(item, theme));
 
   const related = similarItems(id, {
     limit: 3,
@@ -163,13 +166,14 @@ export const commandTrending: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  writeLine(io.stdout, header('agora trending', [category, sourceLabel(result)], style));
+  const theme = cliTheme(style, io);
+  writeLine(io.stdout, header('agora trending', [category, sourceLabel(result)], theme));
   writeLine(io.stdout, '');
 
   if (table) {
-    writeLine(io.stdout, formatItemTable(items, style));
+    writeLine(io.stdout, formatItemTable(items, theme));
   } else {
-    writeLine(io.stdout, formatItemList(items, style));
+    writeLine(io.stdout, formatItemList(items, theme));
   }
 
   writeLine(io.stdout, '');
@@ -194,12 +198,13 @@ export const commandWorkflows: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
+  const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
-    header('agora workflows', [`${workflows.length} results`, sourceLabel(result)], style)
+    header('agora workflows', [`${workflows.length} results`, sourceLabel(result)], theme)
   );
   writeLine(io.stdout, '');
-  writeLine(io.stdout, formatItemList(workflows, style));
+  writeLine(io.stdout, formatItemList(workflows, theme));
   return 0;
 };
 
@@ -222,9 +227,10 @@ export const commandSimilar: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  writeLine(io.stdout, header('agora similar', [`to ${id}`, `${results.length} results`], style));
+  const theme = cliTheme(style, io);
+  writeLine(io.stdout, header('agora similar', [`to ${id}`, `${results.length} results`], theme));
   writeLine(io.stdout, '');
-  writeLine(io.stdout, formatItemList(results, style));
+  writeLine(io.stdout, formatItemList(results, theme));
   return 0;
 };
 
@@ -257,7 +263,8 @@ export const commandAuthor: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  writeLine(io.stdout, header('agora author', [name, `${matches.length} items`], style));
+  const theme = cliTheme(style, io);
+  writeLine(io.stdout, header('agora author', [name, `${matches.length} items`], theme));
   writeLine(io.stdout, '');
 
   const kindW = Math.max(4, ...paged.map((i) => i.kind.length));
@@ -417,12 +424,13 @@ export const commandCompare: CommandHandler = async (parsed, io, style) => {
     '─'.repeat(totalW - labelW - 6) +
     style.accent('┤');
 
+  const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
     header(
       'agora compare',
       items.map((i) => i.id),
-      style
+      theme
     )
   );
   writeLine(io.stdout, '');

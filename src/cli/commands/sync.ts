@@ -4,10 +4,12 @@ import { planSync, applySync, type ToolSyncPlan } from '../../stack/sync.js';
 import type { AgentToolId, StackEnv } from '../../stack/types.js';
 import type { CommandHandler } from './types.js';
 import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
+import { cliTheme } from '../theme.js';
+import type { Theme } from '../theme.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 
-function formatPlan(plan: ToolSyncPlan[], style: { dim: (s: string) => string }): string {
+function formatPlan(plan: ToolSyncPlan[], theme: Theme): string {
   const lines: string[] = [];
   let totalAdded = 0;
   let totalUpdated = 0;
@@ -21,7 +23,7 @@ function formatPlan(plan: ToolSyncPlan[], style: { dim: (s: string) => string })
     if (p.location === null) {
       for (const s of p.skipped) {
         lines.push(
-          `    ${style.dim(`skipped: ${s.name === '*' ? '<all>' : s.name} (${s.reason})`)}`
+          `    ${theme.dim(`skipped: ${s.name === '*' ? '<all>' : s.name} (${s.reason})`)}`
         );
       }
       continue;
@@ -40,7 +42,7 @@ function formatPlan(plan: ToolSyncPlan[], style: { dim: (s: string) => string })
       totalRemoved++;
     }
     for (const s of p.skipped) {
-      lines.push(`    ${style.dim(`skipped: ${s.name} (${s.reason})`)}`);
+      lines.push(`    ${theme.dim(`skipped: ${s.name} (${s.reason})`)}`);
     }
 
     const hasChanges =
@@ -49,19 +51,20 @@ function formatPlan(plan: ToolSyncPlan[], style: { dim: (s: string) => string })
       p.change.removed.length > 0 ||
       p.skipped.length > 0;
     if (!hasChanges) {
-      lines.push(`    ${style.dim('(no changes)')}`);
+      lines.push(`    ${theme.dim('(no changes)')}`);
     }
   }
 
   lines.push('');
   lines.push(
-    style.dim(`Total: +${totalAdded} added, ~${totalUpdated} updated, -${totalRemoved} removed`)
+    theme.muted(`Total: +${totalAdded} added, ~${totalUpdated} updated, -${totalRemoved} removed`)
   );
 
   return lines.join('\n');
 }
 
 export const commandSync: CommandHandler = async (parsed, io, style) => {
+  const theme = cliTheme(style, io);
   const env: StackEnv = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
 
   // --tool filter
@@ -145,8 +148,8 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
       writeJson(io.stdout, { mode: doWrite ? 'applied' : 'plan', tools: [] });
       return 0;
     }
-    writeLine(io.stdout, style.dim('Nothing to sync: manifest has no MCP servers.'));
-    writeLine(io.stdout, style.dim('Run `agora freeze --write` to populate the manifest first.'));
+    writeLine(io.stdout, theme.muted('Nothing to sync: manifest has no MCP servers.'));
+    writeLine(io.stdout, theme.muted('Run `agora freeze --write` to populate the manifest first.'));
     return 0;
   }
 
@@ -164,9 +167,9 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
       return 0;
     }
 
-    writeLine(io.stdout, style.accent('agora sync — applied'));
+    writeLine(io.stdout, theme.accent('agora sync — applied'));
     writeLine(io.stdout);
-    writeLine(io.stdout, formatPlan(results, style));
+    writeLine(io.stdout, formatPlan(results, theme));
     writeLine(io.stdout);
 
     const filesWritten = results
@@ -183,7 +186,7 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
         writeLine(io.stdout, `  ${f}`);
       }
     } else {
-      writeLine(io.stdout, style.dim('No files changed.'));
+      writeLine(io.stdout, theme.muted('No files changed.'));
     }
   } else {
     // Dry-run mode (default)
@@ -194,25 +197,25 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
       return 0;
     }
 
-    writeLine(io.stdout, style.accent('agora sync — dry run'));
+    writeLine(io.stdout, theme.accent('agora sync — dry run'));
     writeLine(io.stdout);
     if (isRemoteSource) {
       writeLine(
         io.stdout,
-        style.dim(
+        theme.muted(
           'Manifest fetched from a remote source — review the servers below before applying.'
         )
       );
       writeLine(io.stdout);
     }
-    writeLine(io.stdout, formatPlan(plans, style));
+    writeLine(io.stdout, formatPlan(plans, theme));
     writeLine(io.stdout);
     writeLine(
       io.stdout,
-      style.dim('No files written. Run with --write --yes to apply these changes.')
+      theme.muted('No files written. Run with --write --yes to apply these changes.')
     );
     if (prune) {
-      writeLine(io.stdout, style.dim('(--prune is active: unmanaged servers will be removed)'));
+      writeLine(io.stdout, theme.muted('(--prune is active: unmanaged servers will be removed)'));
     }
   }
 

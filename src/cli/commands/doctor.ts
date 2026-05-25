@@ -3,6 +3,8 @@ import { checkStack } from '../../stack/doctor.js';
 import type { AgentToolId } from '../../stack/types.js';
 import type { CommandHandler } from './types.js';
 import { writeLine, writeJson, stringFlag, usageError, detectDataDir } from '../helpers.js';
+import { cliTheme } from '../theme.js';
+import { status } from '../pages/components.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 
@@ -32,25 +34,28 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
       writeJson(io.stdout, { servers: [], summary: { ok: 0, warn: 0, error: 0 } });
       return 0;
     }
+    const theme = cliTheme(style, io);
     const toolResults = detectTools(env);
     const detected = toolResults.filter((t) => t.present).map((t) => t.adapter.displayName);
-    writeLine(io.stdout, style.dim('No MCP servers configured.'));
+    writeLine(io.stdout, theme.muted('No MCP servers configured.'));
     if (detected.length > 0) {
-      writeLine(io.stdout, style.dim('Detected tools: ' + detected.join(', ')));
+      writeLine(io.stdout, theme.muted('Detected tools: ' + detected.join(', ')));
     } else {
-      writeLine(io.stdout, style.dim('No supported agent tools detected.'));
+      writeLine(io.stdout, theme.muted('No supported agent tools detected.'));
     }
     writeLine(
       io.stdout,
-      style.dim('Run `agora search` to find servers, `agora install` to add them.')
+      theme.muted('Run `agora search` to find servers, `agora install` to add them.')
     );
     return 0;
   }
 
+  const theme = cliTheme(style, io);
+
   if (probe) {
     writeLine(
       io.stdout,
-      style.dim('Probing: starting each local server briefly to verify it runs…')
+      theme.muted('Probing: starting each local server briefly to verify it runs…')
     );
   }
 
@@ -65,19 +70,19 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
   for (const server of health.servers) {
     const glyph =
       server.status === 'ok'
-        ? style.accent('✓')
+        ? status('success', '', theme)
         : server.status === 'warn'
-          ? style.orange('⚠')
-          : style.dim('✗');
+          ? status('warning', '', theme)
+          : status('error', '', theme);
 
-    let serverLine = `${glyph}  ${style.bold(server.name)}`;
+    let serverLine = `${glyph}  ${theme.bold(server.name)}`;
 
     if (probe && server.status === 'ok') {
       const probeCheck = server.checks.find((c) => c.name === 'probe');
       if (probeCheck?.ok && probeCheck.detail) {
         const toolMatch = probeCheck.detail.match(/(\d+) tool\(s\)/);
         if (toolMatch) {
-          serverLine += style.dim(` (${toolMatch[1]} tools)`);
+          serverLine += theme.dim(` (${toolMatch[1]} tools)`);
         }
       }
     }
@@ -87,7 +92,7 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
     if (server.status !== 'ok') {
       for (const check of server.checks) {
         if (!check.ok && check.detail) {
-          writeLine(io.stdout, `     ${style.dim(check.detail)}`);
+          writeLine(io.stdout, `     ${theme.dim(check.detail)}`);
         }
       }
     }
@@ -97,7 +102,7 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
   const { ok, warn, error } = health.summary;
   writeLine(
     io.stdout,
-    `${style.accent(`ok: ${ok}`)}  ${style.orange(`warn: ${warn}`)}  ${style.dim(`error: ${error}`)}`
+    `${theme.success(`ok: ${ok}`)}  ${theme.warning(`warn: ${warn}`)}  ${theme.error(`error: ${error}`)}`
   );
 
   if (strict && error > 0) return 1;

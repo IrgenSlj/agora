@@ -13,6 +13,7 @@ import {
   tutorialStepPayload
 } from '../helpers.js';
 import { header, formatTutorialList, formatTutorialStep } from '../format.js';
+import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 export const commandTutorials: CommandHandler = async (parsed, io, style) => {
@@ -43,12 +44,13 @@ export const commandTutorials: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
+  const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
-    header('agora tutorials', [`${tutorials.length} results`, sourceLabel(result)], style)
+    header('agora tutorials', [`${tutorials.length} results`, sourceLabel(result)], theme)
   );
   writeLine(io.stdout, '');
-  writeLine(io.stdout, formatTutorialList(tutorials, style));
+  writeLine(io.stdout, formatTutorialList(tutorials, theme));
   return 0;
 };
 
@@ -56,9 +58,10 @@ export const commandTutorial: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
   if (!id) {
     const { sampleTutorials } = await import('../../data.js');
+    const theme = cliTheme(style, io);
     writeLine(
       io.stdout,
-      header('agora tutorial', [`${sampleTutorials.length} available tutorials`], style)
+      header('agora tutorial', [`${sampleTutorials.length} available tutorials`], theme)
     );
     writeLine(io.stdout, '');
     writeLine(
@@ -94,6 +97,7 @@ export const commandTutorial: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  writeLine(io.stdout, formatTutorialStep(tutorial, step.value, style));
+  const theme = cliTheme(style, io);
+  writeLine(io.stdout, formatTutorialStep(tutorial, step.value, theme));
   return 0;
 };
