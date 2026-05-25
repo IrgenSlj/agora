@@ -4,6 +4,10 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-05-25 — the living home & one cohesive look
+
+`agora` now greets you with a home page that knows your stack, ranks the *fastest-growing* servers rather than just the most-starred, and wears a single, coherent visual identity end to end — the Claude Design "Agora TUI System" now drives both the full-screen TUI and the one-shot CLI. No new backend dependency; everything here works offline. The marketplace, news, and community pillars remain the core.
+
 ### Added — a living home page
 - **"Your stack" band** — the home page now opens with a personal summary of your MCP stack (servers · tools · advertised capabilities · `✓ ⚠ ✗` health) drawn from the agent stack manager, fully offline.
 - **Opportunities feed** — up to three ranked, actionable suggestions with the exact command to run: fix unhealthy servers (`doctor`), capture an untracked stack (`freeze`), reconcile `agora.toml` drift (`sync`), or install a velocity-trending server you don't have yet (`scan`).
