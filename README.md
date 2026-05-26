@@ -6,7 +6,7 @@
   <a href="https://www.npmjs.com/package/opencode-agora"><img src="https://img.shields.io/npm/v/opencode-agora" alt="npm"></a>
   <a href="https://github.com/IrgenSlj/agora/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/opencode-agora" alt="MIT"></a>
   <a href="https://github.com/IrgenSlj/agora/actions"><img src="https://img.shields.io/github/actions/workflow/status/IrgenSlj/agora/ci.yml?branch=main" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tests-805%20passing-success" alt="tests">
+  <img src="https://img.shields.io/badge/tests-1%2C400%2B%20passing-success" alt="tests">
 </p>
 
 <p align="center">
@@ -156,7 +156,7 @@ src/community/        backend client + types
 src/news/             scoring, cache, per-source adapters
 src/state.ts          local state, saves, auth (atomic 0o600 writes)
 backend/src/index.ts  Cloudflare Workers + D1 (Hono router)
-test/                 1155 tests, 51 files
+test/                 1,400+ tests
 ```
 
 `agora` is, at its core, a **marketplace + community** hub for agentic coding. On
@@ -170,7 +170,7 @@ See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the why-this-shape writ
 ## Development
 
 ```bash
-bun test            # 805 cases, ~3.5s
+bun test            # 1,400+ cases
 bun run typecheck   # CLI + backend (typecheck:cli / typecheck:backend run both)
 bun run build       # tsc + chmod +x dist/cli.js
 bun src/cli.ts <cmd>  # run from source without building

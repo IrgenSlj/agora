@@ -16,6 +16,37 @@ Three pillars are live end-to-end — a curated + live **marketplace**, a ranked
 
 ---
 
+## Current track — product first (2026-05)
+
+The near-term focus is **depth over breadth**: make `agora` genuinely good to *live in* before widening it. Three product phases, sequenced so each compounds on the last. Sustainability (sponsorship, then the deferred [commerce](#phase-3--commerce-deferred-until-trust-lands) work) stays in the background — we earn a daily audience with a great product first, and let revenue follow. Legend: ✓ done · ◑ partial · ☐ planned.
+
+### Phase 1 — The first 60 seconds *(in progress)*
+
+A newcomer's first minute is the strongest predictor of whether they return. Make it correct, safe, and inviting.
+
+- ✓ **First-touch safety** — `agora init --template` no longer overwrites existing files (refuses, with `--force` to opt in) and registers a **project-local** `opencode.json` instead of silently mutating the global config; `agora welcome` no longer points at a dead command or a fake backend URL. (PR #38)
+- ☐ **Welcome, reordered around what works offline** — lead with the zero-config, zero-account wins (browse · `today` · scaffold); frame sign-in as genuinely optional. *(design-gated — founder sets the shape)*
+- ☐ **A landing that delivers in one command** — bare `agora` / `agora today` should show something genuinely useful on first run, with an obvious next step. *(design-gated — founder)*
+- ☐ **One obvious "start here"** — clarify `npx opencode-agora` vs `agora init` so there's a single front door.
+
+### Phase 2 — Passive value: the daily digest *(next)*
+
+Turn `agora today` into something worth opening every day — the surface that later carries both reach (the Wave 3 bot) and sustainability.
+
+- ☐ **Digest as a first-class, shareable artifact** — a clean, opinionated daily digest (news + trending + new servers) rendered to terminal *and* markdown/email.
+- ☐ **Editorial quality** — a one-line "why it matters" per item and cross-source dedupe (builds on [Thread C](#thread-c--self-curation-flywheel-needs-wave-2-backend) news self-curation).
+- ☐ **Distribution groundwork** — a reusable digest formatter the Discord/Telegram bot ([Wave 3](#wave-3--reach-discord--telegram-needs-backend-live--bot-tokens)) and any future newsletter share.
+
+### Phase 3 — The daily habit: stack-manager depth
+
+Deepen the daily-driver loop so `agora` is what you reach for to manage your agent setup.
+
+- ✓ **`agora update`** — bump pinned MCP server versions across tools, dry-run by default. (PR #37)
+- ☐ **Drift & health nudges** — proactively surface stack drift and unhealthy servers (the home "opportunities" feed already seeds this).
+- ☐ **Stack-sharing polish** — make `freeze` / `sync --from` a frictionless "clone someone's setup."
+
+---
+
 ## The "Destination" waves
 
 Sequenced by dependency so each ships value on its own. **Wave 1 shipped in 0.4.3**, along with the [agent stack manager and local capability search](#the-next-era--agent-stack-manager-capability-search--self-curation) (Threads A & B below). Waves 2–4 are the next milestone, gated on the backend deploy. Legend: ✓ done · ◑ partial · ☐ planned.
@@ -117,4 +148,4 @@ Today the manifest is informational and Wave 4 adds a diff + health check. The e
 - **Report what `agora init` misses** — open an issue with your project's manifest files.
 - **Polish what's there** — there's always a rough edge worth grinding.
 
-_Last updated: 2026-05-23. See [CHANGELOG.md](./CHANGELOG.md) for the shipped history._
+_Last updated: 2026-05-26. See [CHANGELOG.md](./CHANGELOG.md) for the shipped history._

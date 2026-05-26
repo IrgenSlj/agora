@@ -57,6 +57,13 @@ When you run `bun run typecheck` or `bun test`, you're testing the JavaScript ex
 2. Read `src/commands.ts` — does the routing rule cover all cases?
 3. Trace through a typical query: user types `/agora search postgres` → model reads routing rule → model calls `agora_search({query:"postgres"})` → tool returns string → model summarizes for user. Each step should be obvious.
 
+## First-touch Safety & Test Isolation
+
+`agora`'s near-term focus is the newcomer's first 60 seconds (see [`ROADMAP.md`](./ROADMAP.md) → "Current track"). Two rules that protect it:
+
+- **A user-facing command must never silently destroy or surprise.** Don't overwrite a user's files — refuse on conflict and require an explicit `--force`. Don't mutate the user's **global** config for something that belongs to a project: scaffolding writes a **project-local** `opencode.json` beside its files, not `~/.config/opencode/opencode.json`. When in doubt, dry-run by default and gate writes (the `sync` / `update` `--write --yes` pattern).
+- **Tests must never touch the real user config.** Anything that resolves a config path can fall back to `$HOME`. In tests, pass an isolated env — `HOME`, `XDG_CONFIG_HOME`, and `OPENCODE_CONFIG` pointed into a `mkdtempSync` dir — so `bun test` is hermetic. A test that writes to `~/.config/opencode/opencode.json` is a bug, not a passing test.
+
 ## Pre-commit Checks
 
 Before any commit:
