@@ -29,6 +29,7 @@ import * as installedModule from './commands/installed.js';
 import * as doctorModule from './commands/doctor.js';
 import * as freezeModule from './commands/freeze.js';
 import * as syncModule from './commands/sync.js';
+import * as updateModule from './commands/update.js';
 import * as tryModule from './commands/try.js';
 import * as capabilitiesModule from './commands/capabilities.js';
 
@@ -183,6 +184,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       doctor: doctorModule.commandDoctor,
       freeze: freezeModule.commandFreeze,
       sync: syncModule.commandSync,
+      update: updateModule.commandUpdate,
       author: marketplace.commandAuthor,
       try: tryModule.commandTry,
       capabilities: capabilitiesModule.commandCapabilities,

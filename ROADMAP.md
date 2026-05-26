@@ -68,7 +68,7 @@ A **cross-tool package-manager for your agentic dev environment** — the daily-
 
 - ✓ **Phase 1 — read-only stack view**: the adapter layer + `agora installed` (a unified view of every configured MCP server across all detected tools, grouped by name) + `agora doctor` (health: config parses, command resolvable on `PATH`, conflicting definitions, `--probe` does a real MCP handshake). `doctor` is also the Wave 4 trust item — landed early.
 - ✓ **Phase 2 — `agora.toml` + `agora sync`**: `agora freeze` snapshots your stack into a declarative `agora.toml` (a self-contained, no-dep TOML reader/writer); `agora sync` reconciles each tool's real config to it — dry-run diff by default, writes gated behind `--write --yes`, every unrelated config key preserved. Shareable stacks = "clone someone's agent setup."
-- ◑ **Phase 3 — close the loop**: ✓ marketplace `install --save` writes the installed server into `agora.toml`; ✓ `agora try <id>` does an ephemeral MCP test-drive (real `initialize` + `tools/list` handshake, nothing persisted). ☐ `agora update` (extends `src/outdated.ts`) to bump installed servers remains.
+- ✓ **Phase 3 — close the loop**: ✓ marketplace `install --save` writes the installed server into `agora.toml`; ✓ `agora try <id>` does an ephemeral MCP test-drive (real `initialize` + `tools/list` handshake, nothing persisted); ✓ `agora update` (builds on `src/outdated.ts`) reads the pinned npm version of each configured MCP server across tools, compares it to the latest on npm, and bumps the pins behind `--write --yes` — dry-run by default, every unrelated config key preserved, mirroring `sync`'s write discipline.
 
 ### Thread B — Capability search *(local slice shipped; catalog-wide needs the backend)*
 

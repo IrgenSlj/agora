@@ -4,6 +4,9 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Added
+- **`agora update`** — closes the Phase 3 loop. Reads every configured MCP server across all detected tools (opencode / Claude Code / Cursor / Windsurf), parses the npm version pinned in each server's command, compares it to the latest on npm (reusing the `outdated` registry lookup), and reports what's bumpable: `updatable`, `up-to-date`, `tracks-latest` (unpinned / `@latest` — nothing to bump), or `unknown`. Dry-run by default; `--write --yes` rewrites the pins in place, preserving every unrelated config key and mirroring `agora sync`'s write discipline (per-tool `writeLocation`, `--scope project|user`, atomic writes). Supports an optional `[server]` filter, `--tool <id>`, and `--json`.
+
 ## [0.4.4] - 2026-05-25 — the living home & one cohesive look
 
 `agora` now greets you with a home page that knows your stack, ranks the *fastest-growing* servers rather than just the most-starred, and wears a single, coherent visual identity end to end — the Claude Design "Agora TUI System" now drives both the full-screen TUI and the one-shot CLI. No new backend dependency; everything here works offline. The marketplace, news, and community pillars remain the core.

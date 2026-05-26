@@ -55,7 +55,7 @@ export function parseOpenCodeConfig(content: string): OpenCodeConfig | null {
   }
 }
 
-const SKIP_EXECUTABLES = new Set(['npx', 'tsx', 'node', 'bun', 'deno']);
+export const SKIP_EXECUTABLES = new Set(['npx', 'tsx', 'node', 'bun', 'deno']);
 
 export function extractPackageFromConfig(config: OpenCodeConfig): string[] {
   const packages: string[] = [];

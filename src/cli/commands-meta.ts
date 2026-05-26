@@ -226,6 +226,46 @@ export const COMMANDS: CommandMeta[] = [
     ],
     examples: ['agora outdated', 'agora outdated --json']
   },
+  {
+    name: 'update',
+    group: 'Stack',
+    summary: 'Check and apply npm version bumps for installed MCP servers',
+    usage:
+      'agora update [server] [--tool <id>] [--scope project|user] [--write --yes] [--json]',
+    details:
+      'Reads all configured MCP servers across supported agent tools, resolves the npm package ' +
+      'pinned in each server command, and reports whether a newer version is available on npm. ' +
+      'Servers using a dist-tag (e.g. npx pkg@latest) are reported as "tracks-latest". ' +
+      'Servers without a pinned version or with an unresolvable package are reported as "unknown". ' +
+      'By default runs as a dry-run (no files written). Pass --write --yes to apply version bumps. ' +
+      '--scope controls whether project or user config files are targeted (default project).',
+    flags: [
+      {
+        flag: '--tool',
+        description: 'Filter to a single tool: opencode, claude-code, cursor, or windsurf'
+      },
+      {
+        flag: '--scope',
+        description: 'Config scope to write: project (default) or user'
+      },
+      {
+        flag: '--write',
+        description: 'Enable write mode (must be combined with --yes)'
+      },
+      {
+        flag: '--yes',
+        description: 'Confirm write (required when --write is set)'
+      },
+      { flag: '--json', description: 'Output { mode, entries, summary } as JSON' }
+    ],
+    examples: [
+      'agora update',
+      'agora update --json',
+      'agora update my-server',
+      'agora update --tool opencode',
+      'agora update --write --yes'
+    ]
+  },
 
   // Setup
   {
