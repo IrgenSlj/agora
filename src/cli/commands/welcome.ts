@@ -18,15 +18,15 @@ function buildSteps(signedIn: boolean, username: string): WelcomeStep[] {
       }
     : {
         title: 'Sign in (optional)',
-        commands: ['agora auth login --api-url https://api.agora.example'],
-        effect: 'unlocks community, reviews, and bookmarks across devices'
+        commands: ['agora auth login --api-url <your-agora-backend>'],
+        effect: 'optional — connect a self-hosted Agora backend for community, reviews, and cross-device bookmarks'
       };
 
   return [
     signInStep,
     {
       title: 'Browse the marketplace',
-      commands: ['agora marketplace', 'agora search <query>', 'agora today'],
+      commands: ['agora trending', 'agora search <query>', 'agora today'],
       effect: 'discover MCP servers, agents, and workflow templates'
     },
     {

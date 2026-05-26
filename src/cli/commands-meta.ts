@@ -232,7 +232,7 @@ export const COMMANDS: CommandMeta[] = [
     name: 'init',
     group: 'Setup',
     summary: 'Scaffold Agora into the current project, or generate MCP server templates',
-    usage: 'agora init [--dry-run] [--json] [--mcp]\n  agora init --template node-mcp|python-mcp',
+    usage: 'agora init [--dry-run] [--json] [--mcp]\n  agora init --template node-mcp|python-mcp [--force]',
     details:
       'Without --template, scans the current directory, generates an opencode.json with recommended MCP servers, ' +
       'and installs the /agora slash command. Use --dry-run to preview without writing.\n\n' +
@@ -241,14 +241,16 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--dry-run', description: 'Preview what would be written without applying changes' },
       { flag: '--json', description: 'Output the generated config as JSON' },
       { flag: '--mcp', description: 'Also register the Agora MCP server in the config' },
-      { flag: '--template', description: 'Scaffold a project: node-mcp or python-mcp' }
+      { flag: '--template', description: 'Scaffold a project: node-mcp or python-mcp' },
+      { flag: '--force', description: 'Overwrite existing files when scaffolding a --template project' }
     ],
     examples: [
       'agora init',
       'agora init --dry-run',
       'agora init --mcp',
       'agora init --template node-mcp',
-      'agora init --template python-mcp'
+      'agora init --template python-mcp',
+      'agora init --template node-mcp --force'
     ]
   },
   {

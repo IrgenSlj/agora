@@ -4,6 +4,11 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Fixed
+- **`agora init --template` no longer overwrites your files** — scaffolding into a directory that already contains a target file (e.g. `package.json`) now refuses with a clear message instead of silently clobbering it; pass `--force` to overwrite intentionally.
+- **Onboarding tour fixed** — `agora welcome` referenced a non-existent `agora marketplace` command and a placeholder backend URL that errored; it now points at `agora trending` and frames sign-in honestly as optional.
+- **`agora init --template` registers project-local** — the scaffolded server (whose `command` is a *relative* `node index.js` / `uv run server.py`) was being written into the user's **global** `~/.config/opencode/opencode.json`, where it's broken everywhere except that directory. It now writes a project-local `opencode.json` beside the generated files, leaving the global config untouched.
+
 ## [0.4.4] - 2026-05-25 — the living home & one cohesive look
 
 `agora` now greets you with a home page that knows your stack, ranks the *fastest-growing* servers rather than just the most-starred, and wears a single, coherent visual identity end to end — the Claude Design "Agora TUI System" now drives both the full-screen TUI and the one-shot CLI. No new backend dependency; everything here works offline. The marketplace, news, and community pillars remain the core.

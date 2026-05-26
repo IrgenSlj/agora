@@ -1,6 +1,6 @@
 import process from 'node:process';
 import { join } from 'node:path';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { scanProject, generateInitPlan, applyInitPlan, runCommands } from '../../init.js';
 import { installAgoraCommand } from '../../commands.js';
 import { formatConfigJson } from '../../config.js';
@@ -129,6 +129,15 @@ export const commandInit: CommandHandler = async (parsed, io, style) => {
       );
     }
 
+    const targetPaths = Object.keys(template.files).map((f) => ({ file: f, full: join(cwd, f) }));
+    const conflicts = targetPaths.filter(({ full }) => existsSync(full)).map(({ file }) => file);
+    if (conflicts.length > 0 && !parsed.flags.force) {
+      return usageError(
+        io,
+        `Refusing to overwrite existing file(s) in ${cwd}: ${conflicts.join(', ')}. Nothing was written. Run \`agora init --template ${templateName}\` in a new empty directory, or pass --force to overwrite. Tip: mkdir my-mcp-server && cd my-mcp-server && agora init --template ${templateName}`
+      );
+    }
+
     if (parsed.flags.json) {
       writeJson(io.stdout, {
         template: templateName,
@@ -147,13 +156,14 @@ export const commandInit: CommandHandler = async (parsed, io, style) => {
     }
 
     if (template.config) {
-      const loaded = loadOpenCodeConfig(configPath);
+      const projectConfigPath = join(cwd, 'opencode.json');
+      const loaded = loadOpenCodeConfig(projectConfigPath);
       const config = {
         ...loaded.config,
         mcp: { ...loaded.config.mcp, ...(template.config.mcp as Record<string, any>) }
       };
-      writeOpenCodeConfig(configPath, config);
-      writeLine(io.stdout, `  ${style.dim('✓')} Registered MCP server in ${configPath}`);
+      writeOpenCodeConfig(projectConfigPath, config);
+      writeLine(io.stdout, `  ${style.dim('✓')} Registered MCP server in ${projectConfigPath}`);
     }
 
     writeLine(io.stdout, `\nDone! cd ${cwd} and check the generated files.`);
