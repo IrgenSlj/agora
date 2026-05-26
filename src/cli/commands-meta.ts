@@ -773,10 +773,10 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Marketplace',
     summary: 'Export marketplace data in various formats',
     usage:
-      'agora export [query] [--category all|mcp|prompt|workflow] [--format json|csv|markdown|table] [--limit N] [--api]',
+      'agora export [format] [query] [--category all|mcp|prompt|workflow] [--format json|csv|markdown|table] [--limit N] [--api]',
     details:
       'Exports all marketplace items matching the optional query and category filters. ' +
-      'Use --format to choose the output format. ' +
+      'Pass the format as the first positional argument (json, csv, markdown, table) or use --format. ' +
       'Add --api to query the live Agora API instead of the bundled offline data.',
     flags: [
       { flag: '--format, -f', description: 'Output format: json (default), csv, markdown, table' },
@@ -787,6 +787,8 @@ export const COMMANDS: CommandMeta[] = [
     ],
     examples: [
       'agora export',
+      'agora export json',
+      'agora export csv mcp',
       'agora export --format csv',
       'agora export --format markdown',
       'agora export --category mcp --limit 20'

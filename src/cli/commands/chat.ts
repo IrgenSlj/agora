@@ -13,7 +13,7 @@ import type { CommandHandler } from './types.js';
 
 export const FREE_MODELS = ['deepseek-v4-flash-free', 'minimax-m2.5-free', 'nemotron-3-super-free'];
 
-export const commandChat: CommandHandler = async (parsed, io, _style) => {
+export const commandChat: CommandHandler = async (parsed, io, style) => {
   const message = parsed.args.join(' ');
   const model = stringFlag(parsed, 'model', 'm') || FREE_MODELS[0];
   const continueMode = parsed.flags.continue === true;
@@ -88,7 +88,7 @@ export const commandChat: CommandHandler = async (parsed, io, _style) => {
             const tokens = ev.part?.tokens;
             if (tokens && !rawJson) {
               const cost = typeof tokens.cost === 'number' ? ` · $${tokens.cost.toFixed(6)}` : '';
-              process.stdout.write(`\n\x1b[2m[${tokens.output} tokens${cost}]\x1b[0m\n`);
+              process.stdout.write(`\n${style.dim(`[${tokens.output} tokens${cost}]`)}\n`);
               wroteNewline = true;
             }
           }
@@ -116,8 +116,9 @@ export const commandChat: CommandHandler = async (parsed, io, _style) => {
       if (sessionId) {
         persistChatSession(dataDir, sessionId);
         if (!rawJson) {
-          process.stdout.write(`\x1b[2mSession: ${sessionId.slice(0, 24)}…  `);
-          process.stdout.write(`Continue: agora chat --session ${sessionId} "..."\x1b[0m\n`);
+          process.stdout.write(
+            style.dim(`Session: ${sessionId.slice(0, 24)}…  Continue: agora chat --session ${sessionId} "..."`) + '\n'
+          );
         }
       }
 

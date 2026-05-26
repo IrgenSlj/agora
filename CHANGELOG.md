@@ -4,6 +4,10 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Fixed
+- **`agora chat` no longer leaks ANSI codes** — the token-count and session-footer lines hardcoded dim escape sequences (`\x1b[2m…\x1b[0m`) that were emitted even when piped to a non-TTY or under `NO_COLOR`. They now route through the color-aware `Styler.dim()` like the rest of the chat renderer, honoring `NO_COLOR` and the no-ANSI-in-tool-output contract.
+- **`agora export <format>` works as a positional** — `agora export json` / `csv` / `markdown` / `table` previously treated the format word as a search query and silently printed "No items match." A bare format positional is now recognized as the output format (the `--format` flag still wins). The empty-result message also names the query and suggests how to broaden it.
+
 ## [0.4.4] - 2026-05-25 — the living home & one cohesive look
 
 `agora` now greets you with a home page that knows your stack, ranks the *fastest-growing* servers rather than just the most-starred, and wears a single, coherent visual identity end to end — the Claude Design "Agora TUI System" now drives both the full-screen TUI and the one-shot CLI. No new backend dependency; everything here works offline. The marketplace, news, and community pillars remain the core.
