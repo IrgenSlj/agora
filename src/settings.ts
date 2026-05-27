@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parse, stringify } from 'smol-toml';
 import { atomicWriteFile } from './atomic-write.js';
 
 export interface AgoraSettings {
@@ -35,7 +36,7 @@ export function loadSettings(dataDir: string): AgoraSettings {
   if (!existsSync(path)) return cloneSettings(DEFAULT_SETTINGS);
   try {
     const raw = readFileSync(path, 'utf8');
-    const parsed = parseToml(raw);
+    const parsed = parse(raw) as Record<string, any>;
     return mergeSettings(cloneSettings(DEFAULT_SETTINGS), parsed);
   } catch {
     return cloneSettings(DEFAULT_SETTINGS);
@@ -43,188 +44,8 @@ export function loadSettings(dataDir: string): AgoraSettings {
 }
 
 export function writeSettings(dataDir: string, settings: AgoraSettings): void {
-  atomicWriteFile(join(dataDir, SETTINGS_FILE), serializeToml(settings));
-}
-
-// ── Minimal TOML subset parser ──────────────────────────────────────────────
-// Handles: sections, key = value (strings, booleans, integers, inline tables),
-// comments (#), string arrays. No nested tables, no datetime, no dotted keys.
-
-function parseToml(raw: string): Record<string, any> {
-  const result: Record<string, any> = {};
-  let currentSection: string | null = null;
-
-  for (const line of raw.split('\n')) {
-    const trimmed = line.trim();
-
-    if (!trimmed || trimmed.startsWith('#')) continue;
-
-    const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
-    if (sectionMatch) {
-      currentSection = sectionMatch[1].trim();
-      if (!result[currentSection]) result[currentSection] = {};
-      continue;
-    }
-
-    const kvMatch = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*=\s*(.*)$/);
-    if (!kvMatch) continue;
-
-    const key = kvMatch[1];
-    const value = parseTomlValue(kvMatch[2]);
-    if (currentSection) {
-      result[currentSection][key] = value;
-    } else {
-      result[key] = value;
-    }
-  }
-
-  return result;
-}
-
-function parseTomlValue(raw: string): any {
-  const trimmed = raw.trim();
-
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed.slice(1, -1).replace(/\\"/g, '"').replace(/\\n/g, '\n');
-  }
-
-  if (trimmed === 'true') return true;
-  if (trimmed === 'false') return false;
-
-  const intMatch = trimmed.match(/^[-+]?\d+$/);
-  if (intMatch) return parseInt(trimmed, 10);
-
-  if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
-    return parseInlineTable(trimmed.slice(1, -1));
-  }
-
-  if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-    return parseTomlArray(trimmed.slice(1, -1));
-  }
-
-  return trimmed;
-}
-
-function parseInlineTable(raw: string): Record<string, any> {
-  const obj: Record<string, any> = {};
-  let depth = 0;
-  let current = '';
-  let currentKey: string | null = null;
-  let mode: 'key' | 'value' = 'key';
-
-  for (const ch of raw) {
-    if (ch === '{') {
-      depth++;
-      current += ch;
-      continue;
-    }
-    if (ch === '}') {
-      depth--;
-      current += ch;
-      continue;
-    }
-    if (depth > 0) {
-      current += ch;
-      continue;
-    }
-
-    if (mode === 'key') {
-      if (ch === '=') {
-        currentKey = current.trim();
-        current = '';
-        mode = 'value';
-      } else if (ch !== ' ' && ch !== ',') {
-        current += ch;
-      }
-    } else {
-      if (ch === ',' || ch === '}') {
-        if (currentKey) obj[currentKey] = parseTomlValue(current.trim());
-        currentKey = null;
-        current = '';
-        mode = 'key';
-      } else if (ch !== ' ' || current.length > 0) {
-        current += ch;
-      }
-    }
-  }
-  if (currentKey && mode === 'value') {
-    obj[currentKey] = parseTomlValue(current.trim());
-  }
-  return obj;
-}
-
-function parseTomlArray(raw: string): any[] {
-  const arr: any[] = [];
-  let depth = 0;
-  let current = '';
-
-  for (const ch of raw) {
-    if (ch === '[' || ch === '{') {
-      depth++;
-      current += ch;
-      continue;
-    }
-    if (ch === ']' || ch === '}') {
-      depth--;
-      current += ch;
-      continue;
-    }
-    if (depth > 0) {
-      current += ch;
-      continue;
-    }
-
-    if (ch === ',') {
-      const v = current.trim();
-      if (v) arr.push(parseTomlValue(v));
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  const v = current.trim();
-  if (v) arr.push(parseTomlValue(v));
-  return arr;
-}
-
-// ── Minimal TOML serializer ──────────────────────────────────────────────────
-
-function serializeToml(settings: AgoraSettings): string {
-  const lines: string[] = [
-    '# Agora settings',
-    `# Generated ${new Date().toISOString().slice(0, 10)}`,
-    ''
-  ];
-
-  lines.push('[account]');
-  lines.push(`username = ${JSON.stringify(settings.account.username)}`);
-  lines.push(`backend = ${JSON.stringify(settings.account.backend)}`);
-  lines.push(`declared_llm = ${JSON.stringify(settings.account.declared_llm)}`);
-  lines.push('');
-
-  lines.push('[display]');
-  lines.push(`color = ${JSON.stringify(settings.display.color)}`);
-  lines.push(`banner = ${String(settings.display.banner)}`);
-  lines.push('');
-
-  lines.push('[news]');
-  lines.push(`feeds = ${JSON.stringify(settings.news.feeds ?? [])}`);
-  lines.push('');
-
-  for (const [key, src] of Object.entries(settings.news.sources)) {
-    const cleanKey = key.replace(/[^a-zA-Z0-9_-]/g, '_');
-    lines.push(`[news.sources.${cleanKey}]`);
-    lines.push(`enabled = ${String(src.enabled)}`);
-    lines.push(`ttl_minutes = ${src.ttl_minutes}`);
-    lines.push('');
-  }
-
-  lines.push('[community]');
-  lines.push(`default_board = ${JSON.stringify(settings.community.default_board)}`);
-  lines.push(`collapse_flag_threshold = ${settings.community.collapse_flag_threshold}`);
-  lines.push('');
-
-  return lines.join('\n');
+  const output = stringify(settings as any);
+  atomicWriteFile(join(dataDir, SETTINGS_FILE), output);
 }
 
 function mergeSettings(defaults: AgoraSettings, parsed: Record<string, any>): AgoraSettings {

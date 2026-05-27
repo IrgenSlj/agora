@@ -105,8 +105,9 @@ describe('searchGithub()', () => {
       } as Response;
     };
     // Should not throw; returns items from second topic
+    // First topic fails, gets retried once (2 calls), second topic succeeds (1 call) = 3 total
     const items = await searchGithub({ fetcher, topics: ['mcp', 'opencode'], now: NOW });
-    expect(callCount).toBe(2);
+    expect(callCount).toBe(3);
     expect(items.length).toBeGreaterThanOrEqual(1);
   });
 

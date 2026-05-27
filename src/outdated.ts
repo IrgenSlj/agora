@@ -1,3 +1,4 @@
+import { fetchWithRetry } from './retry.js';
 import type { FetchLike } from './live.js';
 
 export type FreshnessStatus = 'fresh' | 'stale' | 'unknown';
@@ -40,7 +41,7 @@ async function checkPackage(pkg: string, opts: OutdatedOptions): Promise<Outdate
   const now = opts.now ? opts.now() : new Date();
 
   try {
-    const res = await fetcher(url, { signal: AbortSignal.timeout(8000) });
+    const res = await fetchWithRetry(url, { signal: AbortSignal.timeout(8000) }, { maxRetries: 2, fetcher });
 
     if (res.status === 404) {
       return {

@@ -1,3 +1,4 @@
+import { fetchWithRetry } from '../retry.js';
 import type { HubItem } from './types.js';
 
 export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
@@ -48,7 +49,7 @@ export async function searchHuggingFace(opts: HfSearchOptions = {}): Promise<Hub
   for (const query of HF_QUERIES) {
     const url = `https://huggingface.co/api/${query.endpoint}?filter=${query.filter}&sort=downloads&direction=-1&limit=${query.limit}`;
     try {
-      const res = await fetcher(url, { headers, signal: opts.signal });
+      const res = await fetchWithRetry(url, { headers, signal: opts.signal }, { maxRetries: 2, fetcher });
       if (!res.ok) continue;
       const json = (await res.json()) as RawHfItem[];
       for (const item of json ?? []) {

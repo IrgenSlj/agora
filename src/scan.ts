@@ -1,3 +1,4 @@
+import { fetchWithRetry } from './retry.js';
 import type { MarketplaceItem, PackageMarketplaceItem } from './marketplace.js';
 import { hasPermissions, getInstallKind } from './marketplace.js';
 import type { FetchLike } from './live.js';
@@ -75,7 +76,7 @@ async function checkRepo(item: PackageMarketplaceItem, opts: ScanOptions): Promi
 
   const fetcher = opts.fetcher ?? globalThis.fetch;
   try {
-    const res = await fetcher(apiUrl, { headers, signal: AbortSignal.timeout(8000) });
+    const res = await fetchWithRetry(apiUrl, { headers, signal: AbortSignal.timeout(8000) }, { maxRetries: 2, fetcher });
     if (res.status === 200) {
       const reachable: ScanCheck = { ...base, status: 'pass', message: `github.com/${path}` };
       let license: ScanCheck;
@@ -108,9 +109,9 @@ async function checkNpmExists(item: PackageMarketplaceItem, opts: ScanOptions): 
   const encoded = encodeURIComponent(item.npmPackage).replace('%40', '@').replace('%2F', '/');
   const fetcher = opts.fetcher ?? globalThis.fetch;
   try {
-    const res = await fetcher(`https://registry.npmjs.org/${encoded}/latest`, {
+    const res = await fetchWithRetry(`https://registry.npmjs.org/${encoded}/latest`, {
       signal: AbortSignal.timeout(8000)
-    });
+    }, { maxRetries: 2, fetcher });
     if (res.status === 200) {
       const json = (await res.json()) as { version?: string };
       return {

@@ -1,3 +1,4 @@
+import { fetchWithRetry } from '../../retry.js';
 import type { NewsItem, NewsSource } from '../types.js';
 import { agoraUserAgent } from '../types.js';
 
@@ -17,9 +18,11 @@ interface RedditResponse {
   data?: { children?: Array<{ data?: RedditPost }> };
 }
 
+export type Fetcher = (url: string | URL, init?: RequestInit) => Promise<Response>;
+
 export interface SourceAdapter {
   fetch(opts: {
-    fetcher?: (url: string, init?: RequestInit) => Promise<Response>;
+    fetcher?: Fetcher;
     signal?: AbortSignal;
   }): Promise<NewsItem[]>;
 }
@@ -35,10 +38,10 @@ export const redditSource: SourceAdapter = {
     for (const sub of SUBREDDITS) {
       try {
         const url = `https://www.reddit.com/r/${sub}/hot.json?limit=25`;
-        const res = await fetcher(url, {
+        const res = await fetchWithRetry(url, {
           signal: opts.signal,
           headers: { 'User-Agent': agoraUserAgent }
-        });
+        }, { maxRetries: 2, fetcher });
         if (!res.ok) continue;
         const data = (await res.json()) as RedditResponse;
         const children = data?.data?.children ?? [];

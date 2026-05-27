@@ -1,5 +1,5 @@
 import { join } from 'node:path';
-import type { Package, Permissions, Workflow, Discussion, Tutorial } from './types.js';
+import type { Discussion, Tutorial } from './types.js';
 import {
   samplePackages,
   sampleWorkflows,
@@ -15,6 +15,36 @@ import { readCuratedCache } from './curator/index.js';
 import { buildIndex, searchIndex } from './search/catalog-index.js';
 import type { CatalogIndex } from './search/catalog-index.js';
 
+import type {
+  MarketplaceCategory,
+  MarketplaceItemType,
+  PackageMarketplaceItem,
+  WorkflowMarketplaceItem,
+  MarketplaceItem,
+  SearchOptions,
+  TutorialSearchOptions,
+  FindOptions,
+  InstallPlan
+} from './marketplace/types.js';
+
+export type {
+  MarketplaceCategory,
+  MarketplaceItemType,
+  PackageMarketplaceItem,
+  WorkflowMarketplaceItem,
+  MarketplaceItem,
+  SearchOptions,
+  TutorialSearchOptions,
+  FindOptions,
+  InstallPlan
+} from './marketplace/types.js';
+
+export {
+  renderPermissionLines,
+  hasPermissions,
+  describePermissionGlob
+} from './marketplace/permissions.js';
+
 // ── trendScore tunable weights ────────────────────────────────────────────────
 // Growth + recency intentionally outweigh absolute stars so a young fast riser
 // beats an old mega-repo with stale activity.
@@ -23,78 +53,6 @@ const W_GROWTH = 1.0;
 const W_RECENCY = 1.0;
 // ~30-day half-life for recency decay (mirrors news/score.ts exponential style)
 const RECENCY_TAU_HOURS = 720;
-
-export type MarketplaceCategory = 'all' | 'package' | 'mcp' | 'prompt' | 'workflow' | 'skill';
-export type MarketplaceItemType = 'package' | 'workflow';
-
-export type PackageMarketplaceItem = Package & {
-  kind: 'package';
-};
-
-export type WorkflowMarketplaceItem = Workflow & {
-  kind: 'workflow';
-  category: 'workflow';
-  installs: number;
-  npmPackage?: never;
-  version?: never;
-};
-
-export type MarketplaceItem = PackageMarketplaceItem | WorkflowMarketplaceItem;
-
-export interface SearchOptions {
-  query?: string;
-  category?: string;
-  limit?: number;
-  sortBy?: 'relevance' | 'stars' | 'installs' | 'name' | 'updated';
-  sortOrder?: 'asc' | 'desc';
-  page?: number;
-  perPage?: number;
-}
-
-export interface TutorialSearchOptions {
-  query?: string;
-  level?: string;
-  limit?: number;
-}
-
-export interface FindOptions {
-  type?: string;
-}
-
-export interface InstallPlan {
-  item: MarketplaceItem;
-  kind: InstallKind | 'workflow' | 'unsupported';
-  installable: boolean;
-  reason?: string;
-  config: OpenCodeConfig;
-  commands: string[];
-  notes: string[];
-  cloneTarget?: string;
-  postInstallHint?: string;
-  permissions?: Permissions;
-}
-
-export function renderPermissionLines(perms: Permissions | undefined): string[] {
-  if (!perms) return ['Permissions  none declared'];
-  const rows: string[] = [];
-  if (perms.fs?.length) rows.push(`  fs    ${perms.fs.join(', ')}`);
-  if (perms.net?.length) rows.push(`  net   ${perms.net.join(', ')}`);
-  if (perms.exec?.length) rows.push(`  exec  ${perms.exec.join(', ')}`);
-  if (rows.length === 0) return ['Permissions  none declared'];
-  return ['Permissions', ...rows];
-}
-
-export function hasPermissions(perms: Permissions | undefined): boolean {
-  if (!perms) return false;
-  return Boolean(perms.fs?.length || perms.net?.length || perms.exec?.length);
-}
-
-export function describePermissionGlob(value: string): string {
-  if (value === '*') return 'unrestricted';
-  if (value === './**/*') return 'anywhere under the current working directory';
-  if (value.includes('~/.config/agora')) return 'agora config directory only';
-  return '';
-}
 
 const CONFIG_SCHEMA = 'https://opencode.ai/config.json';
 

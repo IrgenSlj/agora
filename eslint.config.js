@@ -12,10 +12,10 @@ export default tseslint.config(
       // Relax noisy rules that fire on legitimate existing patterns.
       // These are tracked issues to address in a separate workstream.
       '@typescript-eslint/no-explicit-any': 'off', // backend uses `any` for D1/Hono generics
-      '@typescript-eslint/no-unused-vars': 'off', // tsconfig noUnusedLocals covers src/; tests excluded
-      'no-unused-vars': 'off', // superseded by TS
       'no-useless-escape': 'off', // false positives on intentional regex escapes (backend/src)
-      '@typescript-eslint/no-empty-object-type': 'off' // AgoraPlugin marker interface in src/types.ts
+      '@typescript-eslint/no-empty-object-type': 'off', // AgoraPlugin marker interface in src/types.ts
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      'no-unused-vars': 'off' // superseded by TS
     }
   },
   {

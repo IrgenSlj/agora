@@ -1,12 +1,15 @@
 // News source: scrapes github.com/trending HTML for news-feed cards. Distinct
 // from src/hubs/github.ts, which uses the REST API to find installable repos
 // for the marketplace catalog.
+import { fetchWithRetry } from '../../retry.js';
 import type { NewsItem, NewsSource } from '../types.js';
 import { agoraUserAgent } from '../types.js';
 
+export type Fetcher = (url: string | URL, init?: RequestInit) => Promise<Response>;
+
 export interface SourceAdapter {
   fetch(opts: {
-    fetcher?: (url: string, init?: RequestInit) => Promise<Response>;
+    fetcher?: Fetcher;
     signal?: AbortSignal;
   }): Promise<NewsItem[]>;
 }
@@ -22,10 +25,10 @@ export const githubTrendingSource: SourceAdapter = {
     for (const lang of LANGUAGES) {
       try {
         const url = `https://github.com/trending/${lang}?since=daily`;
-        const res = await fetcher(url, {
+        const res = await fetchWithRetry(url, {
           signal: opts.signal,
           headers: { 'User-Agent': agoraUserAgent }
-        });
+        }, { maxRetries: 2, fetcher });
         if (!res.ok) continue;
         const html = await res.text();
         const items = parseTrendingHtml(html, lang, now);

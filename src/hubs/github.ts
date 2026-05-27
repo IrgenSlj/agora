@@ -1,6 +1,7 @@
 // Catalog source: GitHub Search REST API. Returns installable HubItems for the
 // marketplace. Distinct from src/news/sources/github-trending.ts, which scrapes
 // the human Trending page for news-feed cards.
+import { fetchWithRetry } from '../retry.js';
 import type { HubItem } from './types.js';
 import { passes, toHubItem, type RawGithubRepo } from './quality.js';
 
@@ -46,7 +47,7 @@ export async function searchGithub(opts: GithubSearchOptions = {}): Promise<HubI
     const q = `topic:${topic}+stars:>=10`;
     const url = `https://api.github.com/search/repositories?q=${q}&sort=stars&order=desc&per_page=${PER_TOPIC}`;
     try {
-      const res = await fetcher(url, { headers, signal: opts.signal });
+      const res = await fetchWithRetry(url, { headers, signal: opts.signal }, { maxRetries: 2, fetcher });
       if (!res.ok) continue;
       const json = (await res.json()) as { items?: RawGithubRepo[] };
       for (const repo of json.items ?? []) {
