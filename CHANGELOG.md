@@ -4,6 +4,22 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
+### Refactored
+- **`commands-meta.ts` split** — the 1,137-line command registry (`src/cli/commands-meta.ts`) split into nine files under `src/cli/commands-meta/`: `types.ts` (CommandGroup, CommandMeta, renderManual), six per-group command files (marketplace 18, setup 12, library 4, learn 2, community 14, stack 6), and `index.ts` as barrel. The original `commands-meta.ts` is now a 2-line re-export barrel, preserving all import paths.
+- **CVE overrides** — added `package.json` overrides for `qs` 6.15.2 and `uuid` 13.0.1; `bun audit` now shows 0 vulnerabilities.
+- **TOML parser replacement** — replaced custom inline TOML parser (~80 lines) with `smol-toml` 1.6.1 in `src/settings.ts`.
+- **`data.ts` → JSON lazy-load** — extracted the 700 KB bundled catalog into `src/catalog.json`; `src/data.ts` now loads it from disk via `readFileSync()` at first access.
+- **`marketplace.ts` split** — extracted types into `src/marketplace/types.ts`, permission helpers into `src/marketplace/permissions.ts`; `src/marketplace.ts` remains as a barrel.
+- **`live.ts` split** — 887-line file split into `src/live/types.ts`, `internal.ts`, `search.ts`, `community.ts`, `tutorials.ts`, `sources.ts`; barrel `src/live.ts` re-exports all public types and 13 domain functions.
+- **CLI arg parser** — `src/cli/flags.ts` rewired to use `yargs 18` internally while keeping the same `ParsedArgs` / `CliIo` / `normalizeFlag` exports.
+- **`shell.ts` split** — 1,327-line file split into `src/cli/shell/types.ts`, `input.ts`, `bash.ts`, `history.ts`, `main.ts`; barrel `src/cli/shell.ts` re-exports `runShell`, `classifyInput`, `looksLikeQuestion`.
+- **`src/retry.ts`** — new shared utility with `withRetry()` (exponential backoff + jitter + AbortSignal) and `fetchWithRetry()` (auto-retry on 5xx/429), applied to 8 network-facing modules.
+
+### Changed
+- **Source maps** — removed `declarationMap` from `tsconfig.json` (reduces npm publish size).
+- **Deps bumped** — `@opencode-ai/plugin` 1.15.9→1.15.11, `typescript-eslint` 8.59.4→8.60.0.
+- **Lint rules** — re-enabled `@typescript-eslint/no-unused-vars` as warning (24 pre-existing test file warnings, 0 errors).
+
 ## [0.4.4] - 2026-05-25 — the living home & one cohesive look
 
 `agora` now greets you with a home page that knows your stack, ranks the *fastest-growing* servers rather than just the most-starred, and wears a single, coherent visual identity end to end — the Claude Design "Agora TUI System" now drives both the full-screen TUI and the one-shot CLI. No new backend dependency; everything here works offline. The marketplace, news, and community pillars remain the core.

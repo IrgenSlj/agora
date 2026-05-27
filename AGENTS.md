@@ -57,6 +57,15 @@ When you run `bun run typecheck` or `bun test`, you're testing the JavaScript ex
 2. Read `src/commands.ts` — does the routing rule cover all cases?
 3. Trace through a typical query: user types `/agora search postgres` → model reads routing rule → model calls `agora_search({query:"postgres"})` → tool returns string → model summarizes for user. Each step should be obvious.
 
+## Module Splitting
+
+Large files (>500 lines) should be split into per-domain modules under a subdirectory, with a barrel file at the original path. Pattern used successfully for `marketplace`, `live`, `shell`, and `commands-meta`:
+
+1. Create `src/module/` directory with `types.ts`, domain files, and `index.ts` (barrel).
+2. Rewrite the original file as a thin re-export barrel: `export { X } from './module/index.js'`.
+3. Keep existing import paths working — never break `from './original.js'`.
+4. Run typecheck + tests before committing.
+
 ## Pre-commit Checks
 
 Before any commit:
