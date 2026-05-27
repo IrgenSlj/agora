@@ -1,3 +1,4 @@
+import yargs from 'yargs';
 import type { FetchLike } from '../live.js';
 
 export type OutputStream = {
@@ -19,103 +20,42 @@ export interface ParsedArgs {
 }
 
 const booleanFlags = new Set([
-  'api',
-  'clear',
-  'continue',
-  'down',
-  'dryRun',
-  'fix',
-  'force',
-  'help',
-  'json',
-  'live',
-  'mcp',
-  'offline',
-  'once',
-  'probe',
-  'prune',
-  'refresh',
-  'save',
-  'skipScan',
-  'sound',
-  'status',
-  'strict',
-  'table',
-  'up',
-  'version',
-  'verbose',
-  'write',
-  'yes'
+  'api', 'clear', 'continue', 'down', 'dryRun', 'dry-run', 'fix', 'force',
+  'help', 'json', 'live', 'mcp', 'offline', 'once', 'probe', 'prune',
+  'refresh', 'save', 'skipScan', 'skip-scan', 'sound', 'status', 'strict',
+  'table', 'up', 'version', 'verbose', 'write', 'yes'
 ]);
 
 export function normalizeFlag(flag: string): string {
   return flag.trim().replace(/-([a-z])/g, (_, char: string) => char.toUpperCase());
 }
 
-function shortFlag(arg: string): string {
-  const flag = arg.slice(1);
-  if (flag === 'h') return 'help';
-  if (flag === 'j') return 'json';
-  if (flag === 'm') return 'model';
-  if (flag === 'c') return 'c';
-  if (flag === 'n') return 'n';
-  if (flag === 't') return 't';
-  if (flag === 'y') return 'yes';
-  return flag;
-}
-
 export function parseArgs(argv: string[]): ParsedArgs {
-  const flags: Record<string, string | boolean> = {};
-  const positionals: string[] = [];
+  const parser = yargs(argv)
+    .strict(false)
+    .help(false)
+    .version(false)
+    .alias('h', 'help')
+    .alias('j', 'json')
+    .alias('m', 'model')
+    .alias('y', 'yes');
 
-  for (let index = 0; index < argv.length; index += 1) {
-    const arg = argv[index];
-
-    if (arg === '--') {
-      positionals.push(...argv.slice(index + 1));
-      break;
-    }
-
-    if (arg.startsWith('--')) {
-      const [rawKey, inlineValue] = arg.slice(2).split(/=(.*)/s, 2);
-      const key = normalizeFlag(rawKey);
-
-      if (inlineValue !== undefined) {
-        flags[key] = inlineValue;
-      } else if (
-        !booleanFlags.has(key) &&
-        argv[index + 1] &&
-        (!argv[index + 1].startsWith('-') || /^-\d/.test(argv[index + 1]))
-      ) {
-        flags[key] = argv[index + 1];
-        index += 1;
-      } else {
-        flags[key] = true;
-      }
-      continue;
-    }
-
-    if (arg.startsWith('-') && arg.length > 1) {
-      const key = shortFlag(arg);
-      if (
-        !booleanFlags.has(key) &&
-        argv[index + 1] &&
-        (!argv[index + 1].startsWith('-') || /^-\d/.test(argv[index + 1]))
-      ) {
-        flags[key] = argv[index + 1];
-        index += 1;
-      } else {
-        flags[key] = true;
-      }
-      continue;
-    }
-
-    positionals.push(arg);
+  for (const flag of booleanFlags) {
+    parser.boolean(flag);
   }
 
-  return {
-    command: positionals[0],
-    args: positionals.slice(1),
-    flags
-  };
+  const parsed = parser.parseSync();
+
+  const positionals = parsed._.map(String);
+  const command = positionals[0];
+  const args = positionals.slice(1);
+
+  const flags: Record<string, string | boolean> = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (key === '_' || key === '$0') continue;
+    if (key === 'h' || key === 'j' || key === 'm' || key === 'y') continue;
+    flags[key] = typeof value === 'number' ? String(value) : (value as string | boolean);
+  }
+
+  return { command, args, flags };
 }
