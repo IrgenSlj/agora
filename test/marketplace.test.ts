@@ -15,6 +15,7 @@ import {
   getHotItems,
   getMarketplaceItems,
   getTrendingItems,
+  hasSharedRepositoryStars,
   getTutorials,
   findTutorial,
   clearMarketplaceItemsCache,
@@ -23,6 +24,8 @@ import {
   renderPermissionLines,
   searchMarketplaceItems,
   similarItems,
+  sortMarketplaceItems,
+  starCountLabel,
   trendScore,
   type MarketplaceItem,
   type PackageMarketplaceItem
@@ -761,6 +764,72 @@ describe('sourceBadge', () => {
     expect(sourceBadge({ kind: 'package', source: 'github' } as any)).toHaveLength(5);
     expect(sourceBadge({ kind: 'package', source: 'hf' } as any)).toHaveLength(5);
     expect(sourceBadge({ kind: 'package' } as any)).toHaveLength(5);
+  });
+});
+
+// ── shared repo star labels/ranking ──────────────────────────────────────────
+
+function makeSharedRepoPkg(
+  id: string,
+  installs: number,
+  repository = 'https://github.com/acme/shared-tools'
+): PackageMarketplaceItem {
+  return {
+    kind: 'package',
+    id,
+    name: id,
+    description: 'test package',
+    author: 'acme',
+    version: '1.0.0',
+    category: 'mcp',
+    tags: [],
+    stars: 1000,
+    installs,
+    repository,
+    createdAt: '2026-01-01',
+    pricing: { kind: 'free' }
+  };
+}
+
+describe('shared repo stars', () => {
+  test('labels duplicate-repository stars as shared repo stars', () => {
+    const lowInstall = makeSharedRepoPkg('shared-low', 10);
+    const highInstall = makeSharedRepoPkg('shared-high', 1000);
+    const standalone = makeSharedRepoPkg('standalone', 500, 'https://github.com/acme/standalone');
+    const peers = [lowInstall, highInstall, standalone];
+
+    expect(hasSharedRepositoryStars(lowInstall, peers)).toBe(true);
+    expect(starCountLabel(lowInstall, peers)).toBe('shared repo ★');
+    expect(hasSharedRepositoryStars(standalone, peers)).toBe(false);
+    expect(starCountLabel(standalone, peers)).toBe('★');
+  });
+
+  test('labels known monorepo stars as shared repo stars', () => {
+    const item = makeSharedRepoPkg(
+      'mcp-filesystem',
+      1000,
+      'https://github.com/modelcontextprotocol/servers'
+    );
+
+    expect(starCountLabel(item, [item])).toBe('shared repo ★');
+  });
+
+  test('stars sort uses installs as the tie-break inside shared repositories', () => {
+    const lowInstall = makeSharedRepoPkg('shared-low', 10);
+    const highInstall = makeSharedRepoPkg('shared-high', 1000);
+
+    const sorted = [lowInstall, highInstall].sort(sortMarketplaceItems('stars', 'desc', ''));
+
+    expect(sorted.map((item) => item.id)).toEqual(['shared-high', 'shared-low']);
+  });
+
+  test('default sort prefers installs inside shared repositories', () => {
+    const lowInstall = makeSharedRepoPkg('shared-low', 10);
+    const highInstall = makeSharedRepoPkg('shared-high', 1000);
+
+    const sorted = [lowInstall, highInstall].sort(sortMarketplaceItems('relevance', 'desc', ''));
+
+    expect(sorted.map((item) => item.id)).toEqual(['shared-high', 'shared-low']);
   });
 });
 

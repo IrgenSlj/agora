@@ -1,5 +1,8 @@
 import type { HubItem } from './types.js';
 
+const SHARED_REPO_STAR_WEIGHT = 0.25;
+const KNOWN_SHARED_REPO_STAR_SOURCES = new Set(['modelcontextprotocol/servers']);
+
 export interface RawGithubRepo {
   id: number;
   full_name: string; // "owner/repo"
@@ -17,6 +20,13 @@ export interface RawGithubRepo {
   default_branch: string;
 }
 
+export function hasSharedRepoStars(repo: RawGithubRepo): boolean {
+  const fullName = repo.full_name.toLowerCase();
+  if (KNOWN_SHARED_REPO_STAR_SOURCES.has(fullName)) return true;
+  const topics = repo.topics.map((t) => t.toLowerCase());
+  return topics.includes('monorepo');
+}
+
 export function passes(repo: RawGithubRepo, now: Date): boolean {
   if (repo.archived) return false;
   if (repo.stargazers_count < 10) return false;
@@ -30,7 +40,8 @@ export function passes(repo: RawGithubRepo, now: Date): boolean {
 
 export function score(repo: RawGithubRepo, now: Date): number {
   // Stars (log-scaled) + recency boost. Used for sorting; not a hard gate.
-  const stars = Math.log10(Math.max(1, repo.stargazers_count));
+  const starWeight = hasSharedRepoStars(repo) ? SHARED_REPO_STAR_WEIGHT : 1;
+  const stars = Math.log10(Math.max(1, repo.stargazers_count)) * starWeight;
   const pushed = new Date(repo.pushed_at).getTime();
   const ageDays = Math.max(1, (now.getTime() - pushed) / (1000 * 60 * 60 * 24));
   const recency = 1 / Math.log10(ageDays + 10);

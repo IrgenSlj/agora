@@ -23,6 +23,7 @@ import * as todayModule from './commands/today.js';
 import * as welcomeModule from './commands/welcome.js';
 import * as pingModule from './commands/ping.js';
 import * as scanModule from './commands/scan.js';
+import * as acquireModule from './commands/acquire.js';
 import * as outdatedModule from './commands/outdated.js';
 import * as curateModule from './commands/curate.js';
 import * as installedModule from './commands/installed.js';
@@ -177,6 +178,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       share: browseModule.commandShare,
       ping: pingModule.commandPing,
       scan: scanModule.commandScan,
+      acquire: acquireModule.commandAcquire,
       outdated: outdatedModule.commandOutdated,
       curate: curateModule.commandCurate,
       installed: installedModule.commandInstalled,

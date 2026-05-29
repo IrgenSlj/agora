@@ -154,6 +154,36 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'acquire',
+    group: 'Marketplace',
+    summary: 'Scan-gated capability acquisition for MCP servers',
+    usage:
+      'agora acquire <id|query> [--tool opencode|claude-code|cursor|windsurf] [--accept-warnings] [--save] [--dry-run] [--json]',
+    details:
+      'Resolves an item id or capability query, creates an install plan, runs the pre-install scan, ' +
+      'and writes the MCP server to the target config only when the scan has no failures. ' +
+      'Warnings require --accept-warnings; --dry-run prints the plan and scan without writing.',
+    flags: [
+      {
+        flag: '--tool',
+        description: 'Target agent config to write (default: opencode)'
+      },
+      { flag: '--config', description: 'Explicit config path for the target tool' },
+      {
+        flag: '--accept-warnings',
+        description: 'Proceed when the scan has warnings but no failures'
+      },
+      { flag: '--save', description: 'Also record the server in agora.toml' },
+      { flag: '--dry-run', description: 'Plan and scan only; write nothing' },
+      { flag: '--json', description: 'Output result as JSON' }
+    ],
+    examples: [
+      'agora acquire mcp-postgres --dry-run',
+      'agora acquire "postgres database" --accept-warnings',
+      'agora acquire mcp-github --save --accept-warnings'
+    ]
+  },
+  {
     name: 'scan',
     group: 'Marketplace',
     summary: 'Pre-install safety scan for a catalog or live item.',
@@ -341,5 +371,5 @@ export const COMMANDS: CommandMeta[] = [
       'agora curate --status',
       'agora curate --status --json'
     ]
-  },
+  }
 ];

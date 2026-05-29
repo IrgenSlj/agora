@@ -4,6 +4,7 @@ import {
   getMarketplaceItems,
   searchMarketplaceItems,
   similarItems,
+  starCountLabel,
   createInstallPlan,
   renderPermissionLines,
   hasPermissions,
@@ -406,7 +407,9 @@ export const marketplacePage: Page = {
         statsParts.push(theme.accent(fmtCount(it.installs)) + theme.muted(' installs'));
       }
       if (it.stars !== undefined) {
-        statsParts.push(theme.accent(fmtCount(it.stars)) + theme.muted(' ★'));
+        statsParts.push(
+          theme.accent(fmtCount(it.stars)) + theme.muted(' ' + starCountLabel(it, allItems))
+        );
       }
       const pushedAt = itemPushedAt(it);
       if (pushedAt) {
@@ -498,7 +501,9 @@ export const marketplacePage: Page = {
         theme.accent(fmtCount(it.installs ?? 0).padStart(7)) +
         theme.muted(' installs') +
         (it.stars !== undefined
-          ? '  ' + theme.accent(fmtCount(it.stars).padStart(5)) + theme.muted(' ★')
+          ? '  ' +
+            theme.accent(fmtCount(it.stars).padStart(5)) +
+            theme.muted(' ' + starCountLabel(it, allItems))
           : '');
       const nameCell = selected ? theme.bold(it.name) : it.name;
       const perms = it.kind === 'package' ? it.permissions : undefined;

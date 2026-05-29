@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { atomicWriteFile } from '../atomic-write.js';
 import { join } from 'node:path';
-import { spawn } from 'node:child_process';
 import { fetchWithRetry } from '../retry.js';
 import { FREE_MODELS } from '../cli/commands/chat.js';
 import { extractPostInstallHint } from '../marketplace.js';
+import { buildOpencodeRunArgs, spawnOpencode } from '../opencode-exec.js';
 
 export interface EnrichmentEntry {
   repoId: string;
@@ -67,14 +67,22 @@ export async function fetchRepoMetadata(
 
   try {
     const commitsUrl = `https://api.github.com/repos/${repoId}/commits?per_page=1`;
-    const commitsRes = await fetchWithRetry(commitsUrl, { headers, signal: opts.signal }, { maxRetries: 2, fetcher });
+    const commitsRes = await fetchWithRetry(
+      commitsUrl,
+      { headers, signal: opts.signal },
+      { maxRetries: 2, fetcher }
+    );
     if (!commitsRes.ok) return null;
     const commitsJson = (await commitsRes.json()) as Array<{ sha: string }>;
     const commitSha = commitsJson[0]?.sha;
     if (!commitSha) return null;
 
     const readmeUrl = `https://api.github.com/repos/${repoId}/readme`;
-    const readmeRes = await fetchWithRetry(readmeUrl, { headers, signal: opts.signal }, { maxRetries: 2, fetcher });
+    const readmeRes = await fetchWithRetry(
+      readmeUrl,
+      { headers, signal: opts.signal },
+      { maxRetries: 2, fetcher }
+    );
     if (!readmeRes.ok) return null;
     const readmeJson = (await readmeRes.json()) as { content?: string; encoding?: string };
     if (!readmeJson.content) return null;
@@ -96,10 +104,14 @@ export async function fetchHfRepoMetadata(
     'User-Agent': 'agora-cli'
   };
 
-  const cardRes = await fetchWithRetry(`https://huggingface.co/api/models/${repoId}`, {
-    headers,
-    signal: opts.signal
-  }, { maxRetries: 2, fetcher });
+  const cardRes = await fetchWithRetry(
+    `https://huggingface.co/api/models/${repoId}`,
+    {
+      headers,
+      signal: opts.signal
+    },
+    { maxRetries: 2, fetcher }
+  );
   if (!cardRes.ok) return null;
   const card = (await cardRes.json()) as { lastModified?: string };
   const version = card.lastModified;
@@ -128,13 +140,17 @@ export async function fetchHfRepoMetadata(
 
 async function callOpencode(prompt: string): Promise<string | null> {
   const model = FREE_MODELS[0];
-  const modelArg = model.includes('/') ? model : `opencode/${model}`;
 
   return new Promise((resolve) => {
-    const child = spawn('opencode', ['run', '--format', 'json', '--model', modelArg, prompt], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      shell: false
-    });
+    let child: ReturnType<typeof spawnOpencode>;
+    try {
+      child = spawnOpencode(buildOpencodeRunArgs({ model, prompt }), {
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+    } catch {
+      resolve(null);
+      return;
+    }
 
     let response = '';
     const timer = setTimeout(() => {
@@ -142,7 +158,7 @@ async function callOpencode(prompt: string): Promise<string | null> {
       resolve(null);
     }, 30000);
 
-    child.stdout.on('data', (chunk: Buffer) => {
+    child.stdout?.on('data', (chunk: Buffer) => {
       for (const line of chunk.toString().split('\n').filter(Boolean)) {
         try {
           const ev = JSON.parse(line);

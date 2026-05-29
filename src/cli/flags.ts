@@ -20,10 +20,37 @@ export interface ParsedArgs {
 }
 
 const booleanFlags = new Set([
-  'api', 'clear', 'continue', 'down', 'dryRun', 'dry-run', 'fix', 'force',
-  'help', 'json', 'live', 'mcp', 'offline', 'once', 'probe', 'prune',
-  'refresh', 'save', 'skipScan', 'skip-scan', 'sound', 'status', 'strict',
-  'table', 'up', 'version', 'verbose', 'write', 'yes'
+  'acceptWarnings',
+  'accept-warnings',
+  'api',
+  'clear',
+  'continue',
+  'down',
+  'dryRun',
+  'dry-run',
+  'fix',
+  'force',
+  'help',
+  'json',
+  'live',
+  'mcp',
+  'offline',
+  'once',
+  'probe',
+  'prune',
+  'refresh',
+  'save',
+  'skipScan',
+  'skip-scan',
+  'sound',
+  'status',
+  'strict',
+  'table',
+  'up',
+  'version',
+  'verbose',
+  'write',
+  'yes'
 ]);
 
 export function normalizeFlag(flag: string): string {

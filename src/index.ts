@@ -317,24 +317,28 @@ Or run \`agora install ${item.id} --write\` in your terminal to do both automati
         async execute(args) {
           const message = args.message;
           const model = args.model || 'deepseek-v4-flash-free';
-          const modelArg = model.includes('/') ? model : `opencode/${model}`;
 
-          const { spawn } = await import('node:child_process');
+          const { buildOpencodeRunArgs, spawnOpencode } = await import('./opencode-exec.js');
           return new Promise<string>((resolve) => {
-            const child = spawn(
-              'opencode',
-              ['run', '--format', 'json', '--model', modelArg, message],
-              { stdio: ['ignore', 'pipe', 'pipe'], shell: false }
-            );
+            let child: ReturnType<typeof spawnOpencode>;
+            try {
+              child = spawnOpencode(buildOpencodeRunArgs({ model, prompt: message }), {
+                stdio: ['ignore', 'pipe', 'pipe']
+              });
+            } catch (err) {
+              const message = err instanceof Error ? err.message : String(err);
+              resolve(`Failed to run opencode: ${message}. Is opencode installed and in your PATH?`);
+              return;
+            }
 
             let stdout = '';
             let response = '';
 
-            child.stdout.on('data', (chunk: Buffer) => {
+            child.stdout?.on('data', (chunk: Buffer) => {
               stdout += chunk.toString();
             });
 
-            child.stderr.on('data', () => {});
+            child.stderr?.on('data', () => {});
 
             child.on('close', (code) => {
               if (code !== 0) {

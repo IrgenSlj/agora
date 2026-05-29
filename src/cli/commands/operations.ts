@@ -73,6 +73,7 @@ import {
 } from '../format.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
+import { isOpencodeAvailable } from '../../opencode-exec.js';
 
 export const commandInstall: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
@@ -921,10 +922,9 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
     const deepOk: string[] = [];
 
     // Check opencode on PATH
-    try {
-      execSync('which opencode', { stdio: 'pipe', timeout: 2000 });
+    if (isOpencodeAvailable(io.env)) {
       deepOk.push('opencode found on PATH');
-    } catch {
+    } else {
       deepIssues.push('opencode not found on PATH — chat unavailable');
     }
 

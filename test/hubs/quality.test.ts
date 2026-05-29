@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { passes, categorize, toHubItem, type RawGithubRepo } from '../../src/hubs/quality';
+import { passes, score, categorize, toHubItem, type RawGithubRepo } from '../../src/hubs/quality';
 
 const NOW = new Date('2026-05-17T00:00:00Z');
 
@@ -102,6 +102,19 @@ describe('categorize()', () => {
     expect(
       categorize(makeRepo({ topics: ['random-tool'], description: 'Some tool for developers' }))
     ).toBe('workflow');
+  });
+});
+
+describe('score()', () => {
+  test('dampens shared repo stars', () => {
+    const standalone = makeRepo({ full_name: 'owner/tool', name: 'tool', stargazers_count: 1000 });
+    const shared = makeRepo({
+      full_name: 'modelcontextprotocol/servers',
+      name: 'servers',
+      stargazers_count: 1000
+    });
+
+    expect(score(shared, NOW)).toBeLessThan(score(standalone, NOW));
   });
 });
 

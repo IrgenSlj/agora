@@ -12,6 +12,16 @@ function makeTmp(): string {
   return mkdtempSync(join(tmpdir(), 'agora-pathresolve-test-'));
 }
 
+function withPlatform<T>(platform: NodeJS.Platform, fn: () => T): T {
+  const original = process.platform;
+  Object.defineProperty(process, 'platform', { value: platform });
+  try {
+    return fn();
+  } finally {
+    Object.defineProperty(process, 'platform', { value: original });
+  }
+}
+
 describe('resolveOnPath', () => {
   test('finds a binary placed in a temp PATH dir', () => {
     const binDir = makeTmp();
@@ -75,6 +85,22 @@ describe('resolveOnPath', () => {
   test('absolute path that does not exist returns null', () => {
     const result = resolveOnPath('/nonexistent/path/to/tool', { PATH: '' });
     expect(result).toBeNull();
+  });
+
+  test('respects Windows PATH casing and PATHEXT', () => {
+    const binDir = makeTmp();
+    try {
+      const binaryPath = join(binDir, 'opencode.cmd');
+      writeFileSync(binaryPath, '@echo off\n');
+
+      const result = withPlatform('win32', () =>
+        resolveOnPath('opencode', { Path: binDir, PATHEXT: '.EXE;.CMD;.BAT' })
+      );
+
+      expect(result).toBe(binaryPath);
+    } finally {
+      rmSync(binDir, { recursive: true, force: true });
+    }
   });
 });
 

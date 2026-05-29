@@ -2,8 +2,17 @@ import { execSync } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, sep } from 'node:path';
+import { isOpencodeAvailable } from '../../opencode-exec.js';
 
-export const SHELL_BUILTINS = new Set(['cd', 'export', 'alias', 'source', 'unset', 'umask', 'exec']);
+export const SHELL_BUILTINS = new Set([
+  'cd',
+  'export',
+  'alias',
+  'source',
+  'unset',
+  'umask',
+  'exec'
+]);
 export const MAX_BASH_BUFFER = 16 * 1024;
 
 export function makeExecutableChecker(pathEnv: string | undefined): (name: string) => boolean {
@@ -55,13 +64,8 @@ export function shortCwd(p: string): string {
   return '…' + sep + parts.slice(-2).join(sep);
 }
 
-export function checkOpencodeAvailable(): boolean {
-  try {
-    execSync('which opencode', { stdio: 'pipe', timeout: 2000 });
-    return true;
-  } catch {
-    return false;
-  }
+export function checkOpencodeAvailable(env?: Record<string, string | undefined>): boolean {
+  return isOpencodeAvailable(env);
 }
 
 export function extractFirstBashBlock(text: string): string | null {

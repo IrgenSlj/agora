@@ -20,6 +20,7 @@ import { readCapabilityCache } from '../stack/capability-cache.js';
 import { buildIndex, searchIndex, type IndexableItem } from '../search/catalog-index.js';
 import { detectAgoraDataDir } from '../state.js';
 import type { StackEnv, AgentToolId } from '../stack/types.js';
+import { acquire, renderAcquireResult } from '../acquire.js';
 
 function backtick(s: string): string {
   return '`' + s + '`';
@@ -256,6 +257,61 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
           }
         ]
       };
+    }
+  );
+
+  server.registerTool(
+    'acquire',
+    {
+      description:
+        'Acquire a marketplace MCP server by id or capability query. Runs the scan gate first: failures block writes, warnings require acceptWarnings, and dry_run writes nothing.',
+      inputSchema: z.object({
+        id: z.string().optional().describe('Exact item ID to acquire, such as mcp-postgres'),
+        query: z
+          .string()
+          .optional()
+          .describe('Capability query to resolve to the top marketplace match'),
+        tool: z
+          .enum(AGENT_TOOL_IDS)
+          .optional()
+          .default('opencode')
+          .describe('Target agent config to write'),
+        configPath: z
+          .string()
+          .optional()
+          .describe('Explicit config path for the target agent tool'),
+        acceptWarnings: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Proceed when the scan has warnings but no failures'),
+        save: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Also record the acquired server in agora.toml'),
+        dry_run: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe('Plan and scan only; do not write config')
+      })
+    },
+    async ({ id, query, tool, configPath, acceptWarnings, save, dry_run }) => {
+      const result = await acquire({
+        id,
+        query,
+        tool,
+        configPath,
+        acceptWarnings,
+        save,
+        dryRun: dry_run,
+        cwd: opts.stack?.cwd,
+        env: opts.stack?.env,
+        dataDir: opts.stack?.dataDir ?? detectAgoraDataDir({ env: opts.stack?.env }),
+        scanOptions: opts.scan
+      });
+      return { content: [{ type: 'text', text: renderAcquireResult(result) }] };
     }
   );
 

@@ -8,11 +8,11 @@ import { hnSource } from '../../news/sources/hn.js';
 import { redditSource } from '../../news/sources/reddit.js';
 import { githubTrendingSource } from '../../news/sources/github-trending.js';
 import { arxivSource } from '../../news/sources/arxiv.js';
-import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { vlen, frame, scrollbar } from './helpers.js';
 import { FREE_MODELS } from '../commands/chat.js';
+import { buildOpencodeRunArgs, spawnOpencode } from '../../opencode-exec.js';
 import { liftStyler } from '../theme.js';
 import type { Tone } from '../theme.js';
 import { pageHeader, rule, pill, status, truncate, padRight, bp } from './components.js';
@@ -94,7 +94,7 @@ interface NewsState {
   previewLoading: boolean;
   previewPhase: string;
   previewAbort: AbortController | null;
-  previewChild: ReturnType<typeof spawn> | null;
+  previewChild: ReturnType<typeof spawnOpencode> | null;
   dataDir: string | null;
 }
 
@@ -277,16 +277,20 @@ function wordWrap(text: string, maxWidth: number): string[] {
 
 function trySummarize(text: string): Promise<string | null> {
   const model = FREE_MODELS[0];
-  const modelArg = model.includes('/') ? model : `opencode/${model}`;
   const maxChars = 12000;
   const trimmed = text.length > maxChars ? text.slice(0, maxChars) + '\n...(truncated)' : text;
   const prompt = `<system>\nYou are a news summarizer. Summarize the following article concisely in 2-4 paragraphs. Focus on key facts and conclusions. Be objective.\n<user>\n${trimmed}`;
 
   return new Promise((resolve) => {
-    const child = spawn('opencode', ['run', '--format', 'json', '--model', modelArg, prompt], {
-      stdio: ['ignore', 'pipe', 'pipe'],
-      shell: false
-    });
+    let child: ReturnType<typeof spawnOpencode>;
+    try {
+      child = spawnOpencode(buildOpencodeRunArgs({ model, prompt }), {
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+    } catch {
+      resolve(null);
+      return;
+    }
     state.previewChild = child;
 
     let response = '';

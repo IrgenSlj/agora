@@ -1,6 +1,5 @@
 import { existsSync, readFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { spawn, execSync } from 'node:child_process';
 import { atomicWriteFile } from '../atomic-write.js';
 import { searchGithub } from '../hubs/github.js';
 import { searchHuggingFace } from '../hubs/huggingface.js';
@@ -8,6 +7,11 @@ import { fetchRepoMetadata, fetchHfRepoMetadata } from '../hubs/enrichment.js';
 import type { HubItem } from '../hubs/types.js';
 import { FREE_MODELS } from '../cli/commands/chat.js';
 import { samplePackages } from '../data.js';
+import {
+  buildOpencodeRunArgs,
+  isOpencodeAvailable as isOpencodeBinaryAvailable,
+  spawnOpencode
+} from '../opencode-exec.js';
 
 const MAX_AI_ITEMS = 50;
 const MAX_RETRIES = 3;
@@ -206,12 +210,7 @@ export function curationStatus(dataDir: string): CurationStatus {
  * Returns true if the `opencode` binary is available on PATH.
  */
 export function isOpencodeAvailable(): boolean {
-  try {
-    execSync('which opencode', { stdio: 'pipe', timeout: 2000 });
-    return true;
-  } catch {
-    return false;
-  }
+  return isOpencodeBinaryAvailable();
 }
 
 interface VerifyResult {
@@ -225,21 +224,25 @@ interface VerifyResult {
 
 async function callOpencodeModel(prompt: string, retries = MAX_RETRIES): Promise<string | null> {
   const model = FREE_MODELS[0];
-  const modelArg = model.includes('/') ? model : `opencode/${model}`;
 
   for (let attempt = 0; attempt < retries; attempt++) {
     const result = await new Promise<string | null>((resolve) => {
-      const child = spawn('opencode', ['run', '--format', 'json', '--model', modelArg, prompt], {
-        stdio: ['ignore', 'pipe', 'pipe'],
-        shell: false
-      });
+      let child: ReturnType<typeof spawnOpencode>;
+      try {
+        child = spawnOpencode(buildOpencodeRunArgs({ model, prompt }), {
+          stdio: ['ignore', 'pipe', 'pipe']
+        });
+      } catch {
+        resolve(null);
+        return;
+      }
       let response = '';
       const timer = setTimeout(() => {
         child.kill();
         resolve(null);
       }, 45000);
 
-      child.stdout.on('data', (chunk: Buffer) => {
+      child.stdout?.on('data', (chunk: Buffer) => {
         for (const line of chunk.toString().split('\n').filter(Boolean)) {
           try {
             const ev = JSON.parse(line);

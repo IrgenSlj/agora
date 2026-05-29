@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createAgoraMcpServer } from '../src/cli/mcp-server';
@@ -25,11 +25,12 @@ async function createTestClient(opts?: Parameters<typeof createAgoraMcpServer>[0
 }
 
 describe('Agora MCP Server', () => {
-  test('lists all 11 tools', async () => {
+  test('lists all 12 tools', async () => {
     const { client } = await createTestClient();
     const result = await client.listTools();
     const toolNames = result.tools.map((t) => t.name).sort();
     expect(toolNames).toEqual([
+      'acquire',
       'browse',
       'install_plan',
       'outdated',
@@ -191,6 +192,33 @@ describe('Agora MCP Server', () => {
     });
     const text = extractText(result);
     expect(text).toContain('not found');
+  });
+
+  test('acquire dry_run returns plan and does not write config', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-mcp-acquire-'));
+    const configPath = join(temp, 'opencode.json');
+    const fakeFetcher = async () =>
+      ({
+        status: 200,
+        json: async () => ({ version: '1.0.0' })
+      }) as unknown as Response;
+    const { client } = await createTestClient({
+      scan: { fetcher: fakeFetcher },
+      stack: { cwd: temp, env: { HOME: temp } }
+    });
+
+    try {
+      const result = await client.callTool({
+        name: 'acquire',
+        arguments: { id: 'mcp-postgres', configPath, dry_run: true }
+      });
+      const text = extractText(result);
+      expect(text).toContain('Acquire dry run');
+      expect(text).toContain('Scan');
+      expect(existsSync(configPath)).toBe(false);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
   });
 
   test('outdated tool returns per-package freshness using injected fetcher', async () => {

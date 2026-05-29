@@ -55,6 +55,55 @@ const W_RECENCY = 1.0;
 const RECENCY_TAU_HOURS = 720;
 
 const CONFIG_SCHEMA = 'https://opencode.ai/config.json';
+const KNOWN_SHARED_REPO_STAR_KEYS = new Set(['github.com/modelcontextprotocol/servers']);
+
+function repositoryKey(item: MarketplaceItem): string | null {
+  if (item.kind !== 'package' || !item.repository) return null;
+  return normalizeRepositoryKey(item.repository);
+}
+
+function normalizeRepositoryKey(repository: string): string | null {
+  const trimmed = repository.trim();
+  if (!trimmed) return null;
+  const withoutSuffix = trimmed.replace(/\/+$/g, '').replace(/\.git$/i, '');
+
+  try {
+    const url = new URL(withoutSuffix);
+    return (url.hostname + url.pathname).toLowerCase().replace(/\/+$/g, '');
+  } catch {
+    const gitMatch = withoutSuffix.match(/^git@([^:]+):(.+)$/);
+    if (gitMatch) return `${gitMatch[1]}/${gitMatch[2]}`.toLowerCase().replace(/\.git$/i, '');
+    return withoutSuffix.toLowerCase();
+  }
+}
+
+function isKnownSharedRepository(item: MarketplaceItem): boolean {
+  const key = repositoryKey(item);
+  return key ? KNOWN_SHARED_REPO_STAR_KEYS.has(key) : false;
+}
+
+function sharesRepository(a: MarketplaceItem, b: MarketplaceItem): boolean {
+  const aKey = repositoryKey(a);
+  const bKey = repositoryKey(b);
+  return Boolean(aKey && bKey && aKey === bKey && a.id !== b.id);
+}
+
+export function hasSharedRepositoryStars(
+  item: MarketplaceItem,
+  peers: ReadonlyArray<MarketplaceItem> = getMarketplaceItems()
+): boolean {
+  if (isKnownSharedRepository(item)) return true;
+  const key = repositoryKey(item);
+  if (!key) return false;
+  return peers.some((peer) => peer.id !== item.id && repositoryKey(peer) === key);
+}
+
+export function starCountLabel(
+  item: MarketplaceItem,
+  peers?: ReadonlyArray<MarketplaceItem>
+): string {
+  return hasSharedRepositoryStars(item, peers) ? 'shared repo ★' : '★';
+}
 
 function hubItemToPackage(item: HubItem): PackageMarketplaceItem {
   return {
@@ -237,7 +286,7 @@ export function sortMarketplaceItems(
   return (a: MarketplaceItem, b: MarketplaceItem) => {
     let cmp: number;
 
-    if (sortBy === 'stars') cmp = a.stars - b.stars;
+    if (sortBy === 'stars') cmp = compareByStars(a, b);
     else if (sortBy === 'installs') cmp = a.installs - b.installs;
     else if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
     else if (sortBy === 'updated') cmp = (a.createdAt || '').localeCompare(b.createdAt || '');
@@ -259,6 +308,15 @@ function relevanceScore(a: MarketplaceItem, b: MarketplaceItem, query: string): 
   const bName = normalize(b.name).includes(query) ? 1 : 0;
   if (aName !== bName) return bName - aName;
   return compareByPopularity(a, b);
+}
+
+function compareByStars(a: MarketplaceItem, b: MarketplaceItem): number {
+  if (sharesRepository(a, b) && a.installs !== b.installs) {
+    return a.installs - b.installs;
+  }
+  if (a.stars !== b.stars) return a.stars - b.stars;
+  if (a.installs !== b.installs) return a.installs - b.installs;
+  return a.name.localeCompare(b.name);
 }
 
 export function findMarketplaceItem(id: string, options: FindOptions = {}): MarketplaceItem | null {
@@ -678,6 +736,7 @@ function matchesTutorialQuery(tutorial: Tutorial, query: string): boolean {
  * otherwise tie the entire official set.
  */
 function compareByPopularity(a: MarketplaceItem, b: MarketplaceItem): number {
+  if (sharesRepository(a, b) && a.installs !== b.installs) return a.installs - b.installs;
   if (a.installs !== b.installs) return a.installs - b.installs;
   if (a.stars !== b.stars) return a.stars - b.stars;
   return a.name.localeCompare(b.name);

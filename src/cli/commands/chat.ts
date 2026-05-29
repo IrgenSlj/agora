@@ -1,6 +1,10 @@
 import process from 'node:process';
-import { spawn } from 'node:child_process';
 import { appendHistory } from '../../history.js';
+import {
+  buildOpencodeRunArgs,
+  normalizeOpencodeModel,
+  spawnOpencode
+} from '../../opencode-exec.js';
 import {
   stringFlag,
   writeLine,
@@ -19,17 +23,23 @@ export const commandChat: CommandHandler = async (parsed, io, _style) => {
   const continueMode = parsed.flags.continue === true;
   const explicitSession = stringFlag(parsed, 'session', 's');
   const rawJson = parsed.flags.json === true;
-  const modelArg = model.includes('/') ? model : `opencode/${model}`;
 
   if (!message) {
     // TUI mode — hand off to opencode with inherit stdio
     process.stderr.write(`Agora Chat (${model}) — press Ctrl+C to exit.\n`);
 
-    const child = spawn('opencode', ['--model', modelArg], {
-      env: io.env as Record<string, string>,
-      stdio: 'inherit',
-      shell: false
-    });
+    let child: ReturnType<typeof spawnOpencode>;
+    try {
+      child = spawnOpencode(['--model', normalizeOpencodeModel(model)], {
+        env: io.env as Record<string, string>,
+        stdio: 'inherit'
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      writeLine(io.stderr, `Failed to run opencode: ${message}`);
+      writeLine(io.stderr, 'Is opencode installed and in your PATH?');
+      return 1;
+    }
     return new Promise((resolve) => {
       child.on('close', (code) => resolve(code ?? 0));
       child.on('error', (err) => {
@@ -41,32 +51,41 @@ export const commandChat: CommandHandler = async (parsed, io, _style) => {
 
   // One-shot mode — single message via opencode run
   return new Promise<number>((resolve) => {
-    const args = ['run', '--format', 'json'];
-    args.push('--model', modelArg);
-
-    if (explicitSession) {
-      args.push('--session', explicitSession);
-    } else if (continueMode) {
+    let sessionIdForRun: string | null = explicitSession ?? null;
+    let continueSession = false;
+    if (!sessionIdForRun && continueMode) {
       const dataDir = detectDataDir(parsed, io);
       const lastSession = loadLastChatSession(dataDir);
       if (lastSession) {
-        args.push('--session', lastSession);
+        sessionIdForRun = lastSession;
       } else {
-        args.push('--continue');
+        continueSession = true;
       }
     }
-
-    args.push(message);
+    const args = buildOpencodeRunArgs({
+      model,
+      prompt: message,
+      sessionId: sessionIdForRun,
+      continueSession
+    });
 
     const stderrChunks: string[] = [];
     let sessionId: string | null = null;
     let wroteNewline = false;
 
-    const child = spawn('opencode', args, {
-      env: io.env as Record<string, string>,
-      stdio: ['ignore', 'pipe', 'pipe'],
-      shell: false
-    });
+    let child: ReturnType<typeof spawnOpencode>;
+    try {
+      child = spawnOpencode(args, {
+        env: io.env as Record<string, string>,
+        stdio: ['ignore', 'pipe', 'pipe']
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      writeLine(io.stderr, `Failed to run opencode: ${message}`);
+      writeLine(io.stderr, 'Is opencode installed and in your PATH?');
+      resolve(1);
+      return;
+    }
 
     child.stdout?.on('data', (chunk: Buffer) => {
       const text = chunk.toString();

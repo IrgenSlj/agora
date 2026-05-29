@@ -20,6 +20,7 @@ import {
 } from '../../transcript.js';
 import { gradientText, renderBanner, supportsTrueColor, type Styler } from '../../ui.js';
 import { createChatRenderer, type Verbosity } from '../chat-renderer.js';
+import { buildOpencodeRunArgs, spawnOpencode } from '../../opencode-exec.js';
 import { readLine } from '../prompter.js';
 import { completeShellLine, ghostFromHistory } from '../completions.js';
 import { getMarketplaceItems } from '../../marketplace.js';
@@ -36,10 +37,7 @@ import {
   copyToClipboard,
   MAX_BASH_BUFFER
 } from './bash.js';
-import {
-  loadShellHistory,
-  appendShellHistory
-} from './history.js';
+import { loadShellHistory, appendShellHistory } from './history.js';
 
 export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const env = io.env ?? {};
@@ -59,7 +57,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
   printHome();
 
-  const opencodeAvailable = checkOpencodeAvailable();
+  const opencodeAvailable = checkOpencodeAvailable(env);
   if (!opencodeAvailable) {
     process.stdout.write(
       style.dim('Note: opencode not found on PATH. Chat will be unavailable until installed.') +
@@ -121,10 +119,32 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
   const agoraSlashCommands = COMMANDS.map((c) => '/' + c.name);
   const slashCommands = [
-    '/tui', '/home', '/marketplace', '/market', '/community', '/comm',
-    '/news', '/settings', '/abc', '/help', '/menu', '/transcript',
-    '/verbose', '/medium', '/quiet', '/clear', '/quit', '/exit',
-    '/last', '/again', '/env', '/jobs', '/fg', '/bg', '/sessions', '/recall',
+    '/tui',
+    '/home',
+    '/marketplace',
+    '/market',
+    '/community',
+    '/comm',
+    '/news',
+    '/settings',
+    '/abc',
+    '/help',
+    '/menu',
+    '/transcript',
+    '/verbose',
+    '/medium',
+    '/quiet',
+    '/clear',
+    '/quit',
+    '/exit',
+    '/last',
+    '/again',
+    '/env',
+    '/jobs',
+    '/fg',
+    '/bg',
+    '/sessions',
+    '/recall',
     ...agoraSlashCommands
   ];
 
@@ -407,7 +427,13 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
               const activity = s.lastActivity.slice(0, 19);
               const turns = s.turnCount + (s.turnCount === 1 ? ' turn' : ' turns');
               process.stdout.write(
-                '  ' + style.dim(activity) + '  ' + style.accent(shortCwd(s.cwd)) + '  ' + style.dim(turns) + '\n'
+                '  ' +
+                  style.dim(activity) +
+                  '  ' +
+                  style.accent(shortCwd(s.cwd)) +
+                  '  ' +
+                  style.dim(turns) +
+                  '\n'
               );
             }
           }
@@ -687,11 +713,11 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     if (bashCtx) fullPrompt += `\n${bashCtx}`;
     fullPrompt += `\n<user>\n${userMsg}`;
 
-    const modelArg = FREE_MODELS[0].includes('/') ? FREE_MODELS[0] : `opencode/${FREE_MODELS[0]}`;
-
-    const args = ['run', '--format', 'json', '--model', modelArg];
-    if (meta!.sessionId) args.push('--session', meta!.sessionId);
-    args.push(fullPrompt);
+    const args = buildOpencodeRunArgs({
+      model: FREE_MODELS[0],
+      prompt: fullPrompt,
+      sessionId: meta!.sessionId
+    });
 
     const renderer = createChatRenderer({
       verbosity,
@@ -712,11 +738,17 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     let spawnError: Error | null = null;
 
     await new Promise<void>((res) => {
-      const child = spawn('opencode', args, {
-        env: env as Record<string, string>,
-        stdio: ['ignore', 'pipe', 'pipe'],
-        shell: false
-      });
+      let child: ReturnType<typeof spawnOpencode>;
+      try {
+        child = spawnOpencode(args, {
+          env: env as Record<string, string>,
+          stdio: ['ignore', 'pipe', 'pipe']
+        });
+      } catch (err) {
+        spawnError = err instanceof Error ? err : new Error(String(err));
+        res();
+        return;
+      }
       chatChildRef = child;
 
       child.stdout?.on('data', (chunk: Buffer) => {
