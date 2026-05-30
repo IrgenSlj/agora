@@ -172,6 +172,14 @@ describe('repo_reachable', () => {
     expect(check.status).toBe('pass');
     expect(check.message).toContain('non-github');
   });
+
+  test('offline mode warns without fetching repository metadata', async () => {
+    const item = makePackage({ repository: 'https://github.com/owner/repo' });
+    const result = await scanItem(item, { offline: true });
+    const check = result.checks.find((c) => c.name === 'repo_reachable')!;
+    expect(check.status).toBe('warn');
+    expect(check.message).toContain('offline mode');
+  });
 });
 
 // ── license_present (derived from the same repo fetch) ─────────────────────
@@ -258,6 +266,14 @@ describe('npm_exists', () => {
     const check = result.checks.find((c) => c.name === 'npm_exists')!;
     expect(check.status).toBe('warn');
     expect(check.message).toContain('network');
+  });
+
+  test('offline mode warns without fetching npm metadata', async () => {
+    const item = makePackage({ npmPackage: 'some-pkg' });
+    const result = await scanItem(item, { offline: true });
+    const check = result.checks.find((c) => c.name === 'npm_exists')!;
+    expect(check.status).toBe('warn');
+    expect(check.message).toContain('offline mode');
   });
 });
 

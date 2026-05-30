@@ -236,10 +236,11 @@ describe('Edge Cases', () => {
 });
 
 describe('Plugin Tools', () => {
-  test('Agora plugin exports all 10 tools', async () => {
+  test('Agora plugin exports all 13 tools', async () => {
     const plugin = await import('../src/index');
     const tools = (await plugin.Agora({} as any)).tool!;
     expect(Object.keys(tools).sort()).toEqual([
+      'agora_acquire',
       'agora_browse',
       'agora_browse_category',
       'agora_chat',
@@ -247,7 +248,9 @@ describe('Plugin Tools', () => {
       'agora_info',
       'agora_install',
       'agora_news',
+      'agora_scan',
       'agora_search',
+      'agora_today',
       'agora_trending',
       'agora_tutorial'
     ]);
@@ -262,6 +265,34 @@ describe('Plugin Tools', () => {
     // verify it has description (schema is validated by the plugin SDK)
     expect(typeof tools.agora_chat.description).toBe('string');
     expect(tools.agora_chat.description.length).toBeGreaterThan(0);
+  });
+
+  test('agora_chat prefers the OpenCode client when provided', async () => {
+    const plugin = await import('../src/index');
+    const promptCalls: Array<{ body: { model?: unknown } }> = [];
+    const tools = (
+      await plugin.Agora({
+        client: {
+          session: {
+            prompt: async (input: { body: { model?: unknown } }) => {
+              promptCalls.push(input);
+              return { data: { parts: [{ type: 'text', text: 'sdk response' }] } };
+            }
+          }
+        }
+      } as any)
+    ).tool!;
+
+    const result = await tools.agora_chat.execute(
+      { message: 'hello', model: 'anthropic/claude-test' },
+      { sessionID: 'session-1', directory: '/tmp' } as any
+    );
+    expect(result).toBe('sdk response');
+    expect(promptCalls).toHaveLength(1);
+    expect(promptCalls[0].body.model).toEqual({
+      providerID: 'anthropic',
+      modelID: 'claude-test'
+    });
   });
 
   test('agora_chat returns error when opencode is not available', async () => {

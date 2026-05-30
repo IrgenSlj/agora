@@ -23,6 +23,7 @@ export interface ScanOptions {
   fetcher?: FetchLike;
   now?: () => Date;
   githubToken?: string;
+  offline?: boolean;
 }
 
 function tally(checks: ScanCheck[]): { pass: number; warn: number; fail: number } {
@@ -85,6 +86,9 @@ async function checkRepo(item: PackageMarketplaceItem, opts: ScanOptions): Promi
   if (!item.repository) {
     return [{ ...base, status: 'pass', message: 'no repository field, skipped' }];
   }
+  if (opts.offline) {
+    return [{ ...base, status: 'warn', message: 'offline mode, not verified' }];
+  }
 
   let url: URL;
   try {
@@ -142,6 +146,7 @@ async function checkNpmExists(item: PackageMarketplaceItem, opts: ScanOptions): 
     label: 'npm package exists'
   };
   if (!item.npmPackage) return { ...base, status: 'pass', message: 'no npm package, skipped' };
+  if (opts.offline) return { ...base, status: 'warn', message: 'offline mode, not verified' };
 
   const encoded = encodeURIComponent(item.npmPackage).replace('%40', '@').replace('%2F', '/');
   const fetcher = opts.fetcher ?? globalThis.fetch;

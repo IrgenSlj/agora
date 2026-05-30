@@ -10,7 +10,7 @@ import { join } from 'node:path';
  */
 export const AGORA_COMMAND_TEMPLATE = [
   '---',
-  'description: Search, browse, and install from the Agora marketplace',
+  'description: Search, browse, scan, and acquire from the Agora marketplace',
   '---',
   '',
   'Route `$ARGUMENTS`: first word → call `agora_<word>` with rest as args. Empty → `agora_info`.'
