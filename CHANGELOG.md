@@ -2,7 +2,30 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
-## [Unreleased]
+## [0.4.5] - 2026-05-30 — the safe capability-acquisition gateway & trust depth
+
+`agora` now closes the loop from discovery to installation via a single agent-callable `acquire` command, deepened OpenCode plugin integration, added description-drift detection for MCP servers, and flattened the monorepo-star-ranking problem. Windows users no longer hit "opencode binary not found." The marketplace, news, and community pillars remain the core.
+
+### Added — capability acquisition gateway
+- **`agora acquire <id|query>`** — resolve a marketplace item by id or capability query, create an install plan, run the scan gate, and write config in one action. Three gate outcomes: `fail` blocks (non-zero exit), `warn` requires `--accept-warnings`, clean proceeds. `--dry-run` previews everything. CLI: `agora acquire mcp-postgres --dry-run`. MCP tool: `acquire` with structured input/output for agent use. Plugin: `agora_acquire` (preview-only, dry-run).
+- **`src/acquire.ts`** — new module exporting `acquire(input): Promise<AcquireResult>` and `renderAcquireResult()`. Composes `findMarketplaceItem`/`searchMarketplaceItems`, `createInstallPlan`, `scanItem`, and the stack adapter's `writeServers` into one pipeline. Preserves unrelated config keys on write.
+
+### Added — OpenCode plugin depth
+- **Lifecycle hooks** — `tool.execute.before` (opt-in `suggestAcquire`) detects capability gaps when the agent runs a tool for a missing server and surfaces a non-intrusive `agora_acquire` suggestion via `client.app.log()` and `client.session.prompt()`. `experimental.session.compacting` (on by default `stackMemory`) injects the current MCP stack + discovered capabilities into the continuation context so the agent remembers its tools across compaction.
+- **SDK-preferring chat** — `agora_chat` uses `client.session.prompt()` when available (no per-message process spawn), falling back to the CLI `spawnOpencode` path. The TUI shell also routes through `spawnOpencode`.
+- **12 explicit named tools** — `agora_search`, `agora_today`, `agora_browse`, `agora_browse_category`, `agora_install`, `agora_scan`, `agora_acquire`, `agora_trending`, `agora_tutorial`, `agora_chat`, `agora_config`, `agora_news`, `agora_info` individually registered with clear descriptions. Fixes the brittle catch-all routing.
+
+### Added — trust depth
+- **Description-drift / rug-pull detection** — `agora doctor --probe` computes a canonical SHA-256 `descriptionDigest` over each server's tool names, descriptions, and input schemas (sorted keys, normalized whitespace). Re-probing detects DRIFT: added/removed/changed tools with per-tool diff. Approved digest persisted in `agora.toml` for cross-session comparison. Live digest recorded separately from baseline.
+- **Description-injection scan** — `scanItem` checks MCP server descriptions against heuristics for imperative markers (`IMPORTANT:`), secret exfiltration patterns (`~/.ssh`, `process.env`), instruction overrides (`ignore previous instructions`), and runtime command injection (`run cat`). Status `warn` (not auto-`fail`) to avoid false positives.
+- **`src/stack/capability-cache.ts`** — extended with `descriptionDigest`, `descriptionDigestAt`, `liveDescriptionDigest`, `liveTools`, `driftDetectedAt`, `diffToolDescriptions()`, `formatToolDrift()`, `canonicalJson()` for deterministic hashing.
+
+### Added — Windows compatibility
+- **`src/opencode-exec.ts`** — unified `resolveOpencode`/`spawnOpencode`/`isOpencodeAvailable` with proper `PATHEXT`-aware resolution via the existing `resolveOnPath`. `spawnOpencode` spawns `.cmd`/`.bat` through `cmd.exe` with `windowsVerbatimArguments`, per-arg quoting via `quoteWinArg` for shell metacharacters.
+- All four spawn sites (`bash.ts`, `shell/main.ts`, `hubs/enrichment.ts`, `plugin/runtime-tools.ts`) route through `spawnOpencode`. No `which` dependency.
+
+### Added — data-quality
+- **Monorepo star ranking** — `src/hubs/quality.ts`: `SHARED_REPO_STAR_WEIGHT = 0.25` dampens stars for repos detected as monorepo (`modelcontextprotocol/servers`, `monorepo` topic). `src/marketplace.ts`: `hasSharedRepositoryStars()`, `starCountLabel("shared repo ★")`, `compareByPopularity()` sorts by installs first, breaking ties with stars.
 
 ### Refactored
 - **`commands-meta.ts` split** — the 1,137-line command registry (`src/cli/commands-meta.ts`) split into nine files under `src/cli/commands-meta/`: `types.ts` (CommandGroup, CommandMeta, renderManual), six per-group command files (marketplace 18, setup 12, library 4, learn 2, community 14, stack 6), and `index.ts` as barrel. The original `commands-meta.ts` is now a 2-line re-export barrel, preserving all import paths.

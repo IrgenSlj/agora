@@ -202,6 +202,32 @@ None of this changes the thesis: the marketplace core works offline with zero AI
 trust is still the product, and the plugin stays thin. Reach, memory, and curation
 are amplifiers on a foundation that already stands on its own.
 
+## OpenCode plugin: hooks, SDK chat, and explicit tools
+
+The plugin (`src/plugin/`) uses the full OpenCode plugin API — not just tools but
+lifecycle hooks and the SDK `client` for zero-spawn chat:
+
+- **`tool.execute.before` (opt-in via `suggestAcquire`)** — detects capability gaps
+  when the agent runs a tool for a missing server, surfaces a non-intrusive
+  `agora_acquire` suggestion via `client.app.log()` and `client.session.prompt()`.
+  No auto-install — always opt-in, always preview-only.
+- **`experimental.session.compacting` (on by default via `stackMemory`)** — injects
+  the current MCP stack + discovered capabilities into the continuation context so
+  the agent remembers its tools across compaction.
+- **SDK-preferring chat** — `agora_chat` uses `client.session.prompt()` when
+  available (no per-message process spawn), falling back to the CLI `spawnOpencode`
+  path. The TUI shell (`agora shell`) also routes through `spawnOpencode` via
+  `src/opencode-exec.ts`.
+- **Explicit named tools** — `agora_search`, `agora_today`, `agora_scan`,
+  `agora_acquire`, `agora_browse`, `agora_install`, `agora_chat`, `agora_config`,
+  `agora_news`, `agora_info`, `agora_browse_category`, `agora_trending`,
+  `agora_tutorial` are individually registered with clear descriptions, fixing the
+  brittle catch-all routing. The `/agora` slash command (`src/commands.ts`) is a
+  thin router that maps the first word to `agora_<word>`.
+
+The plugin stays offline/safe-only: `acquire` is preview-only (dry-run); write-to-
+config requires the CLI or `agora mcp` `acquire` tool.
+
 ## The daily-driver layer: agent stack manager & capability acquisition
 
 The marketplace, news, and community remain the core — but discovery is an
@@ -227,14 +253,22 @@ This is the daily loop that ties the pillars together: discover in the
 marketplace → `install` → `sync`/`doctor` keep it healthy → publish back →
 discuss in the community.
 
-**Capability acquisition for autonomous agents.** `agora mcp` already makes the
-marketplace queryable by an agent mid-task. The end state: an autonomous agent
-hits a capability gap → calls `agora` for a *verified* server → the scan gate
-enforces "don't install unvetted code" → `install` writes the config → the agent
-proceeds. `agora` is the **safe capability-acquisition gateway** — the policy
-checkpoint between an autonomous agent and arbitrary executable code. The trust
-layer is what makes that defensible; nobody should let an agent `npm install`
-random MCP servers unmediated.
+**Capability acquisition for autonomous agents.** `agora acquire` (CLI, MCP tool,
+plugin preview) is the **safe capability-acquisition gateway** — the policy
+checkpoint between an autonomous agent and arbitrary executable code. The flow:
+
+    capability query → resolve to marketplace item →
+    create install plan → run scan gate → write config
+
+The scan gate enforces three outcomes:
+- `fail` (blocked, non-zero exit) — never write config
+- `warn` (—accept-warnings required) — agent must re-call with the flag
+- clean → write config to the target tool's MCP config (opencode, claude-code, etc.)
+
+`acquire` is the academically-correct RAG-MCP shape (arXiv 2505.03275): agents
+shouldn't load thousands of servers; they retrieve the relevant few and activate
+on demand, gated by trust. The trust layer is what makes that defensible; nobody
+should let an agent `npm install` random MCP servers unmediated.
 
 ## The algorithms (fast, offline, original)
 
@@ -249,8 +283,18 @@ random MCP servers unmediated.
   `version=commitSha`, so the weekly server-side cron re-verifies only what
   changed: curation cost scales with churn, not catalog size.
 - **Composed trust score** — a Bayesian blend of the LLM genuineness verdict,
-  mechanical quality signals (`src/hubs/quality.ts`), and opt-in install-retention
+  mechanical quality signals (`src/hubs/quality.ts` — monorepo shared-repo stars
+  dampened via `SHARED_REPO_STAR_WEIGHT = 0.25`), and opt-in install-retention
   telemetry. Earned reputation for catalog items, with no human curator.
+- **Description-drift detection** — `descriptionDigest` (canonical SHA-256 of
+  sorted tool names + descriptions + input schemas) computed per server on probe.
+  Re-probe detects DRIFT with per-tool diff; approved digest persisted in
+  `agora.toml` for cross-session comparison. Live digest recorded separately from
+  baseline.
+- **Description-injection heuristic scan** (`src/scan.ts`) — checks tool
+  descriptions against patterns for imperative markers, secret exfiltration,
+  instruction override, and runtime command injection. Status `warn` to avoid
+  false positives.
 - **News ranking** — `recencyW·e^(-h/12) + engagementW·log(eng+1) + topicW·topicMatch`,
   to be extended with LLM dedup/clustering and a topic-weight bandit.
 - **Offline-first, content-addressed caches** throughout (hub cache by
@@ -269,7 +313,8 @@ random MCP servers unmediated.
 - **Phase 1.5 + 1.6 ("Destination" pillars + polish)** — shipped end-to-end. News feed (5 sources + AI summarization), community hub (boards, threads, votes, flags, FTS5 search, kill-switch), live marketplace hubs (GitHub + HuggingFace), reputation calc + sort weighting, permission-manifest display + install acknowledgment.
 - **Phase 2 (backend & accounts)** — feature-complete; deploy blocked on rate-limit middleware + production wrangler config. See [`../ROADMAP.md`](../ROADMAP.md).
 - **Phase 3 (commerce)** — deferred behind Phase 4 trust work. `Pricing` type on `Package` is scaffolded; the paid branch is a typed no-op.
-- **Phase 4 (trust & self-regulation)** — in progress. Display + acknowledgment + earned reputation + flag/kill-switch + client/server scan shipped; declared-vs-observed permission diff and runtime sandbox enforcement remain (0.4.3 Wave 4).
-- **Phase 5 (reach)** — `agora mcp` and `agora chat` shipped in 0.4.0; Discord/Telegram bots are 0.4.3 Wave 3; public web hub and IDE surfaces are future work.
-- **0.4.3 "Destination" cut** — **shipped 2026-05-23.** Wave 1 (cross-session shell memory `/recall` · `/sessions`, never-dead daily surface, `build:binary` script, hardened AI curator, indexed BM25 catalog search) plus the agent stack manager and local capability search below. Backend deploy, multi-channel bots, and trust-depth enforcement are the next milestone. See [`../ROADMAP.md`](../ROADMAP.md).
-- **Agent stack manager** (`src/stack/`) — **shipped 0.4.3.** The cross-tool adapter layer (opencode / Claude Code / Cursor / Windsurf) behind `agora installed` · `doctor [--probe]` · `freeze` · `sync [--from]` · `install --save` · `try` · `capabilities`, a TUI Stack page, and read-only `agora mcp` introspection tools. Tool schemas discovered via a minimal MCP stdio client (`src/stack/mcp-probe.ts`) feed a local capability cache. The daily-driver layer on top of the marketplace; catalog-wide capability search follows once the backend lands. See [`../ROADMAP.md`](../ROADMAP.md).
+- **Phase 4 (trust & self-regulation)** — in progress. Display + acknowledgment + earned reputation + flag/kill-switch + client/server scan shipped; description-drift detection and description-injection scanning added in 0.4.5; declared-vs-observed permission diff and runtime sandbox enforcement remain.
+- **Phase 5 (reach)** — `agora mcp` and `agora chat` shipped in 0.4.0; Discord/Telegram bots are future; public web hub and IDE surfaces are future work.
+- **0.4.3 "Destination" cut** — **shipped 2026-05-23.** Wave 1 (cross-session shell memory `/recall` · `/sessions`, never-dead daily surface, `build:binary` script, hardened AI curator, indexed BM25 catalog search) plus the agent stack manager and local capability search. See [`../ROADMAP.md`](../ROADMAP.md).
+- **0.4.5 "Acquire & trust depth"** — **current.** `agora acquire` (capability-acquisition gateway), Windows binary resolution fix (`src/opencode-exec.ts`), OpenCode plugin lifecycle hooks + SDK chat, description-drift / rug-pull detector, description-injection scan, monorepo star ranking fix. See [`../ROADMAP.md`](../ROADMAP.md).
+- **Agent stack manager** (`src/stack/`) — **shipped 0.4.3.** The cross-tool adapter layer (opencode / Claude Code / Cursor / Windsurf) behind `agora installed` · `doctor [--probe]` · `freeze` · `sync [--from]` · `install --save` · `try` · `capabilities`, a TUI Stack page, and read-only `agora mcp` introspection tools. Tool schemas discovered via a minimal MCP stdio client (`src/stack/mcp-probe.ts`) feed a local capability cache. Description-drift detection added in 0.4.5. See [`../ROADMAP.md`](../ROADMAP.md).
