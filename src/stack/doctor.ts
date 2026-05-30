@@ -1,6 +1,14 @@
 import { KNOWN_RUNNERS, resolveOnPath } from './path-resolve.js';
 import { probeMcpServer, type McpProbeResult } from './mcp-probe.js';
-import { upsertCapabilities, capabilityKey } from './capability-cache.js';
+import {
+  descriptionDigest,
+  diffToolDescriptions,
+  formatToolDrift,
+  readCapabilityCache,
+  upsertCapabilities,
+  capabilityKey,
+  type ServerCapabilities
+} from './capability-cache.js';
 import type { ConfiguredServer, StackEnv } from './types.js';
 
 export type HealthStatus = 'ok' | 'warn' | 'error';
@@ -162,7 +170,12 @@ async function probeServer(
   inst: ConfiguredServer,
   opts: DoctorOptions,
   timeoutMs: number
-): Promise<{ check: HealthCheck; result: McpProbeResult }> {
+): Promise<{
+  check: HealthCheck;
+  result: McpProbeResult;
+  digest?: string;
+  previous?: ServerCapabilities;
+}> {
   if (inst.transport !== 'local' || !inst.command || inst.command.length === 0) {
     const check: HealthCheck = {
       name: 'probe',
@@ -197,7 +210,12 @@ async function probeServer(
   }
 
   const check: HealthCheck = { name: 'probe', ok: result.ok, level: 'error', detail };
-  return { check, result };
+  const key = capabilityKey(inst.name, inst.command);
+  const previous = opts.dataDir
+    ? readCapabilityCache(opts.dataDir).find((entry) => entry.key === key)
+    : undefined;
+  const digest = result.tools ? descriptionDigest(result.tools) : undefined;
+  return { check, result, digest, previous };
 }
 
 export function checkServer(
@@ -253,18 +271,53 @@ export async function checkStack(
     if (opts?.probe) {
       const localEnabled = instances.filter((s) => s.transport === 'local' && s.enabled !== false);
       for (const inst of localEnabled) {
-        const { check, result } = await probeServer(inst, opts ?? {}, probeTimeoutMs);
+        const { check, result, digest, previous } = await probeServer(
+          inst,
+          opts ?? {},
+          probeTimeoutMs
+        );
         health.checks.push(check);
+        const baselineDigest = previous?.descriptionDigest;
+        const hasDescriptionDrift =
+          result.ok && digest && baselineDigest && baselineDigest !== digest;
+        if (hasDescriptionDrift) {
+          health.checks.push({
+            name: 'description-drift',
+            ok: false,
+            level: 'warn',
+            detail: `DRIFT: ${formatToolDrift(diffToolDescriptions(previous.tools, result.tools ?? []))}`
+          });
+        }
         if (opts?.dataDir && inst.command && inst.command.length > 0) {
           try {
+            const probedAt = new Date().toISOString();
+            const approvedDigest =
+              baselineDigest && digest && baselineDigest !== digest
+                ? baselineDigest
+                : (digest ?? baselineDigest);
             upsertCapabilities(opts.dataDir, {
               key: capabilityKey(name, inst.command),
               name,
               command: inst.command,
               serverInfo: result.serverInfo,
-              tools: result.tools ?? [],
+              tools: hasDescriptionDrift
+                ? (previous?.tools ?? [])
+                : (result.tools ?? previous?.tools ?? []),
               ok: result.ok,
-              probedAt: new Date().toISOString()
+              probedAt,
+              ...(approvedDigest
+                ? {
+                    descriptionDigest: approvedDigest,
+                    descriptionDigestAt: previous?.descriptionDigestAt ?? probedAt
+                  }
+                : {}),
+              ...(hasDescriptionDrift
+                ? {
+                    liveDescriptionDigest: digest,
+                    liveTools: result.tools ?? [],
+                    driftDetectedAt: probedAt
+                  }
+                : {})
             });
           } catch {
             // best-effort

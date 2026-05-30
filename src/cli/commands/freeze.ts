@@ -9,8 +9,9 @@ import {
 } from '../../stack/manifest.js';
 import type { AgentToolId } from '../../stack/types.js';
 import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
+import { writeLine, writeJson, stringFlag, usageError, detectDataDir } from '../helpers.js';
 import { cliTheme } from '../theme.js';
+import { capabilityKey, readCapabilityCache } from '../../stack/capability-cache.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 
@@ -47,10 +48,18 @@ export const commandFreeze: CommandHandler = async (parsed, io, style) => {
   // Dedupe by name: keep first instance; warn on conflicts
   const grouped = groupServersByName(servers);
   const mcp: Record<string, ReturnType<typeof serverToEntry>> = {};
+  const dataDir = detectDataDir(parsed, io);
+  const cached = dataDir ? readCapabilityCache(dataDir) : [];
 
   for (const [name, instances] of grouped) {
     const winner = instances[0]!;
     mcp[name] = serverToEntry(winner);
+    if (winner.command) {
+      const digest = cached.find(
+        (entry) => entry.key === capabilityKey(name, winner.command!)
+      )?.descriptionDigest;
+      if (digest) mcp[name].descriptionDigest = digest;
+    }
 
     if (instances.length > 1) {
       const loserTools = instances

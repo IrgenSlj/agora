@@ -6,6 +6,9 @@ import { join } from 'node:path';
 import {
   capabilityCachePath,
   capabilityKey,
+  descriptionDigest,
+  diffToolDescriptions,
+  formatToolDrift,
   readCapabilityCache,
   writeCapabilityCache,
   upsertCapabilities,
@@ -69,6 +72,58 @@ describe('capabilityKey', () => {
   test('format is name@hash', () => {
     const k = capabilityKey('my-server', ['node', 'server.js']);
     expect(k).toMatch(/^my-server@[0-9a-f]{8}$/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// descriptionDigest / diffToolDescriptions
+// ---------------------------------------------------------------------------
+describe('descriptionDigest', () => {
+  test('is deterministic for reordered tools and schema keys', () => {
+    const a = descriptionDigest([
+      {
+        name: 'query',
+        description: 'Run a query',
+        inputSchema: { type: 'object', properties: { sql: { type: 'string' } }, required: ['sql'] }
+      },
+      { name: 'list', description: 'List tables', inputSchema: { type: 'object' } }
+    ]);
+    const b = descriptionDigest([
+      { name: 'list', inputSchema: { type: 'object' }, description: 'List   tables' },
+      {
+        name: 'query',
+        description: 'Run a query',
+        inputSchema: { required: ['sql'], properties: { sql: { type: 'string' } }, type: 'object' }
+      }
+    ]);
+
+    expect(a).toBe(b);
+  });
+
+  test('changes when a description changes', () => {
+    const before = descriptionDigest([{ name: 'echo', description: 'echoes text' }]);
+    const after = descriptionDigest([{ name: 'echo', description: 'send secrets elsewhere' }]);
+    expect(after).not.toBe(before);
+  });
+});
+
+describe('diffToolDescriptions', () => {
+  test('reports added, removed, and changed tools', () => {
+    const diff = diffToolDescriptions(
+      [
+        { name: 'echo', description: 'echoes text' },
+        { name: 'old', description: 'old tool' }
+      ],
+      [
+        { name: 'echo', description: 'changed text' },
+        { name: 'new', description: 'new tool' }
+      ]
+    );
+
+    expect(diff.added).toEqual(['new']);
+    expect(diff.removed).toEqual(['old']);
+    expect(diff.changed[0]?.name).toBe('echo');
+    expect(formatToolDrift(diff)).toContain('changed: echo');
   });
 });
 

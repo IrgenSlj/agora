@@ -19,7 +19,8 @@ describe('round-trip: serializeManifest → parseManifest', () => {
         postgres: {
           command: ['npx', '-y', '@modelcontextprotocol/server-postgres'],
           env: { DATABASE_URL: 'postgres://localhost/db' },
-          enabled: false
+          enabled: false,
+          descriptionDigest: 'sha256:abc'
         },
         linear: {
           url: 'https://mcp.linear.app/sse'
@@ -36,7 +37,8 @@ describe('round-trip: serializeManifest → parseManifest', () => {
     expect(parsed.mcp['postgres']).toEqual({
       command: ['npx', '-y', '@modelcontextprotocol/server-postgres'],
       env: { DATABASE_URL: 'postgres://localhost/db' },
-      enabled: false
+      enabled: false,
+      descriptionDigest: 'sha256:abc'
     });
     expect(parsed.mcp['linear']).toEqual({ url: 'https://mcp.linear.app/sse' });
     expect(parsed.mcp['weird.name']).toEqual({ command: ['node', 'server.js'] });
@@ -80,6 +82,13 @@ describe('serializeManifest', () => {
     const m: StackManifest = { mcp: { alpha: { url: 'https://x.com', enabled: false } } };
     const text = serializeManifest(m);
     expect(text).toContain('enabled = false');
+  });
+
+  test('emits description_digest when present', () => {
+    const m: StackManifest = { mcp: { alpha: { url: 'https://x.com', descriptionDigest: 'abc' } } };
+    const text = serializeManifest(m);
+    expect(text).toContain('description_digest = "abc"');
+    expect(parseManifest(text).mcp['alpha'].descriptionDigest).toBe('abc');
   });
 
   test('omits env table when env is empty or absent', () => {

@@ -7,7 +7,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { checkServer, checkStack } from '../../src/stack/doctor';
-import { readCapabilityCache } from '../../src/stack/capability-cache';
+import {
+  capabilityKey,
+  descriptionDigest,
+  readCapabilityCache,
+  writeCapabilityCache
+} from '../../src/stack/capability-cache';
 import type { ConfiguredServer } from '../../src/stack/types';
 
 const FAKE_SERVER = join(import.meta.dir, '../fixtures/mcp-fake-server.js');
@@ -351,6 +356,7 @@ describe('checkStack with probe=true', () => {
       expect(cached).toHaveLength(1);
       const entry = cached[0]!;
       expect(entry.ok).toBe(true);
+      expect(entry.descriptionDigest).toBeDefined();
       const toolNames = entry.tools.map((t) => t.name);
       expect(toolNames).toContain('echo');
       expect(toolNames).toContain('add');
@@ -403,5 +409,54 @@ describe('checkStack with probe=true', () => {
     const probeCheck = sh.checks.find((c) => c.name === 'probe')!;
     expect(probeCheck).toBeDefined();
     expect(probeCheck.ok).toBe(true);
+  }, 15000);
+
+  test('probe warns when tool descriptions drift from cached baseline', async () => {
+    const dataDir = makeTmp();
+    try {
+      const server = makeServer({
+        name: 'fake-server',
+        command: ['node', FAKE_SERVER]
+      });
+      const key = capabilityKey('fake-server', ['node', FAKE_SERVER]);
+      const baselineTools = [
+        { name: 'echo', description: 'old description' },
+        { name: 'removed', description: 'removed tool' }
+      ];
+      writeCapabilityCache(dataDir, [
+        {
+          key,
+          name: 'fake-server',
+          command: ['node', FAKE_SERVER],
+          tools: baselineTools,
+          ok: true,
+          probedAt: new Date().toISOString(),
+          descriptionDigest: descriptionDigest(baselineTools),
+          descriptionDigestAt: new Date().toISOString()
+        }
+      ]);
+
+      const result = await checkStack([server], {
+        probe: true,
+        probeTimeoutMs: 10000,
+        dataDir
+      });
+
+      const sh = result.servers[0]!;
+      const drift = sh.checks.find((c) => c.name === 'description-drift')!;
+      expect(drift).toBeDefined();
+      expect(drift.ok).toBe(false);
+      expect(drift.level).toBe('warn');
+      expect(drift.detail).toContain('DRIFT');
+      expect(drift.detail).toContain('removed');
+
+      const cached = readCapabilityCache(dataDir)[0]!;
+      expect(cached.descriptionDigest).toBe(descriptionDigest(baselineTools));
+      expect(cached.liveDescriptionDigest).toBeDefined();
+      expect(cached.tools.map((tool) => tool.name)).toEqual(['echo', 'removed']);
+      expect(cached.liveTools?.map((tool) => tool.name)).toEqual(['echo', 'add']);
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
   }, 15000);
 });

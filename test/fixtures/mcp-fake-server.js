@@ -38,7 +38,18 @@ process.stdin.on('data', (chunk) => {
         jsonrpc: '2.0',
         id: msg.id,
         result: {
-          tools: [{ name: 'echo', description: 'echoes' }, { name: 'add' }]
+          tools: [
+            {
+              name: 'echo',
+              description: 'echoes',
+              inputSchema: {
+                type: 'object',
+                properties: { text: { type: 'string' } },
+                required: ['text']
+              }
+            },
+            { name: 'add', inputSchema: { type: 'object' } }
+          ]
         }
       };
       process.stdout.write(JSON.stringify(response) + '\n');

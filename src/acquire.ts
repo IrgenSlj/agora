@@ -11,6 +11,7 @@ import { scanItem, type ScanOptions, type ScanResult } from './scan.js';
 import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js';
 import { getAdapter } from './stack/registry.js';
 import { manifestPath, readManifest, writeManifest, type StackManifest } from './stack/manifest.js';
+import { capabilityKey, readCapabilityCache } from './stack/capability-cache.js';
 import type { AgentToolId, DesiredServer, StackEnv, ToolConfigLocation } from './stack/types.js';
 
 export interface AcquireInput {
@@ -107,12 +108,16 @@ function writeLocationFor(input: AcquireInput, tool: AgentToolId): ToolConfigLoc
   );
 }
 
-function manifestEntryFor(desired: DesiredServer): StackManifest['mcp'][string] {
+function manifestEntryFor(
+  desired: DesiredServer,
+  descriptionDigest?: string
+): StackManifest['mcp'][string] {
   const entry: StackManifest['mcp'][string] = {};
   if (desired.url) entry.url = desired.url;
   if (desired.command) entry.command = desired.command;
   if (desired.env && Object.keys(desired.env).length > 0) entry.env = desired.env;
   if (desired.enabled === false) entry.enabled = false;
+  if (descriptionDigest) entry.descriptionDigest = descriptionDigest;
   return entry;
 }
 
@@ -249,7 +254,13 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
   if (input.save) {
     const mPath = manifestPath(stackEnv(input));
     const manifest: StackManifest = readManifest(mPath) ?? { mcp: {} };
-    manifest.mcp[desired.name] = manifestEntryFor(desired);
+    const cachedDigest =
+      input.dataDir && desired.command
+        ? readCapabilityCache(input.dataDir).find(
+            (entry) => entry.key === capabilityKey(desired.name, desired.command!)
+          )?.descriptionDigest
+        : undefined;
+    manifest.mcp[desired.name] = manifestEntryFor(desired, cachedDigest);
     writeManifest(mPath, manifest);
   }
 

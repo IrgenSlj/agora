@@ -41,6 +41,39 @@ function licenseCheck(status: CheckStatus, message: string): ScanCheck {
   return { name: 'license_present', label: 'License declared', status, message };
 }
 
+const DESCRIPTION_INJECTION_PATTERNS: Array<{ pattern: RegExp; label: string }> = [
+  { pattern: /\bIMPORTANT\s*:/i, label: 'imperative marker' },
+  { pattern: /\bbefore returning\b/i, label: 'response-control instruction' },
+  {
+    pattern: /\bignore (?:all )?(?:previous|prior) instructions\b/i,
+    label: 'instruction override'
+  },
+  { pattern: /\brun\s+(?:cat|curl|wget|python|node|bash|sh)\b/i, label: 'runtime command' },
+  { pattern: /\bsend\s+.*\b(?:secret|token|key|credential|env)\b/i, label: 'secret exfiltration' },
+  {
+    pattern: /~\/\.ssh|id_rsa|\.env\b|process\.env/i,
+    label: 'secret path or environment reference'
+  }
+];
+
+function checkDescriptionInjection(description: string): ScanCheck {
+  const hits = DESCRIPTION_INJECTION_PATTERNS.filter(({ pattern }) => pattern.test(description));
+  if (hits.length === 0) {
+    return {
+      name: 'description_injection',
+      label: 'Description injection',
+      status: 'pass',
+      message: 'no suspicious instruction patterns'
+    };
+  }
+  return {
+    name: 'description_injection',
+    label: 'Description injection',
+    status: 'warn',
+    message: `suspicious description pattern(s): ${hits.map((hit) => hit.label).join(', ')}`
+  };
+}
+
 // Returns repo_reachable plus (when the repo is reachable) license_present,
 // both derived from a single GitHub repos API call. A missing license is a
 // warning, never a hard fail — many legitimate repos lack a detected license.
@@ -76,7 +109,11 @@ async function checkRepo(item: PackageMarketplaceItem, opts: ScanOptions): Promi
 
   const fetcher = opts.fetcher ?? globalThis.fetch;
   try {
-    const res = await fetchWithRetry(apiUrl, { headers, signal: AbortSignal.timeout(8000) }, { maxRetries: 2, fetcher });
+    const res = await fetchWithRetry(
+      apiUrl,
+      { headers, signal: AbortSignal.timeout(8000) },
+      { maxRetries: 2, fetcher }
+    );
     if (res.status === 200) {
       const reachable: ScanCheck = { ...base, status: 'pass', message: `github.com/${path}` };
       let license: ScanCheck;
@@ -109,9 +146,13 @@ async function checkNpmExists(item: PackageMarketplaceItem, opts: ScanOptions): 
   const encoded = encodeURIComponent(item.npmPackage).replace('%40', '@').replace('%2F', '/');
   const fetcher = opts.fetcher ?? globalThis.fetch;
   try {
-    const res = await fetchWithRetry(`https://registry.npmjs.org/${encoded}/latest`, {
-      signal: AbortSignal.timeout(8000)
-    }, { maxRetries: 2, fetcher });
+    const res = await fetchWithRetry(
+      `https://registry.npmjs.org/${encoded}/latest`,
+      {
+        signal: AbortSignal.timeout(8000)
+      },
+      { maxRetries: 2, fetcher }
+    );
     if (res.status === 200) {
       const json = (await res.json()) as { version?: string };
       return {
@@ -258,10 +299,12 @@ export async function scanItem(item: MarketplaceItem, opts: ScanOptions = {}): P
             : n < 10
               ? `${n} flags — under review threshold`
               : `${n} flags — would auto-hide`
-      }
+      },
+      checkDescriptionInjection(item.description)
     ];
   } else {
     checks = await scanPackage(item, opts);
+    checks.push(checkDescriptionInjection(item.description));
   }
 
   return {

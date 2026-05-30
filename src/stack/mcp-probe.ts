@@ -18,6 +18,7 @@ function getPkgVersion(): string {
 export interface McpTool {
   name: string;
   description?: string;
+  inputSchema?: unknown;
 }
 
 export interface McpProbeResult {
@@ -252,10 +253,11 @@ export async function probeMcpServer(
       const toolsResult = (toolsResp.result ?? {}) as { tools?: unknown[] };
       const rawTools = Array.isArray(toolsResult.tools) ? toolsResult.tools : [];
       const tools: McpTool[] = rawTools.map((t) => {
-        const tool = t as { name?: string; description?: string };
+        const tool = t as { name?: string; description?: string; inputSchema?: unknown };
         return {
           name: typeof tool.name === 'string' ? tool.name : '(unknown)',
-          ...(typeof tool.description === 'string' ? { description: tool.description } : {})
+          ...(typeof tool.description === 'string' ? { description: tool.description } : {}),
+          ...(tool.inputSchema !== undefined ? { inputSchema: tool.inputSchema } : {})
         };
       });
 

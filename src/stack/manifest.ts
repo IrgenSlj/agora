@@ -11,6 +11,7 @@ export interface ManifestEntry {
   url?: string;
   env?: Record<string, string>;
   enabled?: boolean; // omit when true (default)
+  descriptionDigest?: string;
 }
 
 export interface StackManifest {
@@ -46,6 +47,9 @@ export function opencodeEntryToManifest(entry: OpencodeMcpEntry): ManifestEntry 
   }
   if (entry.enabled === false) {
     result.enabled = false;
+  }
+  if ('descriptionDigest' in entry) {
+    result.descriptionDigest = (entry as { descriptionDigest?: string }).descriptionDigest;
   }
   return result;
 }
@@ -108,6 +112,9 @@ function serializeSection(
     if (entry.enabled === false) {
       lines.push(`enabled = false`);
     }
+    if (entry.descriptionDigest !== undefined) {
+      lines.push(`description_digest = "${escapeString(entry.descriptionDigest)}"`);
+    }
     if (entry.env && Object.keys(entry.env).length > 0) {
       lines.push(`[${section}.${seg}.env]`);
       for (const key of Object.keys(entry.env).sort()) {
@@ -141,7 +148,7 @@ export function serializeManifest(m: StackManifest): string {
 // ── TOML parser ───────────────────────────────────────────────────────────────
 
 const KNOWN_SECTIONS = new Set(['mcp', 'skills', 'workflows']);
-const KNOWN_ENTRY_KEYS = new Set(['command', 'url', 'enabled']);
+const KNOWN_ENTRY_KEYS = new Set(['command', 'url', 'enabled', 'description_digest']);
 
 function parseTomlString(raw: string, lineNum: number): string {
   if (!raw.startsWith('"') || !raw.endsWith('"') || raw.length < 2) {
@@ -326,6 +333,8 @@ export function parseManifest(text: string): StackManifest {
         if (rawVal === 'true') entry.enabled = true;
         else if (rawVal === 'false') entry.enabled = false;
         else throw new Error(`Line ${lineNum}: enabled must be true or false, got: ${rawVal}`);
+      } else if (key === 'description_digest') {
+        entry.descriptionDigest = parseTomlString(rawVal, lineNum);
       }
     }
   }
