@@ -2,6 +2,27 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased] — the pivot: from terminal marketplace to agentic stack manager
+
+Repositioning per `AGORA_BRIEF.md` (direction LOCKED): Agora becomes **the system manager for your
+agentic stack** — a local-first package manager that *manages* (stack + instruction files), *watches*
+(a federated plaza feed), and *gates* (the trust/customs layer) your MCP ecosystem. It federates
+upstream registries rather than growing its own catalog; owns no inference; has no hosted backend.
+
+### P0 — rename, repackage, reposition
+- **Renamed npm package `opencode-agora` → `agora-hub`** (binary stays `agora`). One codebase, one
+  core package. Added subpath exports (`.` = library surface, `./opencode` = OpenCode plugin).
+- **New `packages/opencode-agora/`** — a thin plugin-only entry that re-exports `agora-hub/opencode`
+  and pins `agora-hub` to the exact version, so existing `"plugin": ["opencode-agora"]` configs keep
+  working unchanged (OpenCode auto-installs it and its `agora-hub` dependency at startup).
+- `src/index.ts` is now a clean library barrel (stack + gate types/functions) with **no plugin default
+  export** — plugin-loaders never scan non-plugin functions off the package root.
+- CI publishes both packages on release (core first, then the pinned plugin entry, both with `--provenance`).
+- README rewritten around the identity sentence and the three rings; honest gate-limits copy.
+- Logged load-bearing API corrections in `docs/OPEN_QUESTIONS.md`: Claude Agent SDK subscription auth
+  is not available to third parties (use `ANTHROPIC_API_KEY`); PulseMCP has no self-serve API; Glama
+  returns no tool schemas/annotation hints.
+
 ## [0.4.5] - 2026-05-30 — the safe capability-acquisition gateway & trust depth
 
 `agora` now closes the loop from discovery to installation via a single agent-callable `acquire` command, deepened OpenCode plugin integration, added description-drift detection for MCP servers, and flattened the monorepo-star-ranking problem. Windows users no longer hit "opencode binary not found." The marketplace, news, and community pillars remain the core.
