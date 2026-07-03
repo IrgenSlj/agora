@@ -14,10 +14,32 @@ export interface ManifestEntry {
   descriptionDigest?: string;
 }
 
+/**
+ * A managed instruction artifact in the profile (P3): CLAUDE.md, AGENTS.md,
+ * .cursor/rules/*, OpenCode instruction files — tracked by path + content hash,
+ * with `source` for shareable profiles. Content lives inline, in a file, or at
+ * a URL; a URL/file profile is resolved (and scan-gated) at sync time.
+ *
+ * NOTE: TOML parser/serializer support for this section lands in P3. Until then
+ * nothing populates `StackManifest.instructions`, so no round-trip drop occurs.
+ */
+export interface InstructionManifestEntry {
+  source?: 'inline' | 'file' | 'url';
+  /** For source==='inline'. */
+  content?: string;
+  /** For source==='file'|'url'. */
+  ref?: string;
+  /** sha256 of the resolved content — drift baseline. */
+  contentHash?: string;
+  enabled?: boolean;
+}
+
 export interface StackManifest {
   mcp: Record<string, ManifestEntry>;
   skills?: Record<string, ManifestEntry>;
   workflows?: Record<string, ManifestEntry>;
+  /** Managed instruction/memory artifacts (P3). */
+  instructions?: Record<string, InstructionManifestEntry>;
 }
 
 // ── Path helper ───────────────────────────────────────────────────────────────

@@ -38,6 +38,38 @@ export interface SyncChange {
   removed: string[];
 }
 
+// ── Instruction artifacts (P3) ─────────────────────────────────────────────────
+// Managed instruction/memory files: CLAUDE.md, AGENTS.md, .cursor/rules/*,
+// OpenCode instruction files. "Memory management" = versioned, diffable,
+// syncable instruction artifacts (brief D8). Semantic/embedding memory is out
+// of scope. These are additive to the adapter contract and OPTIONAL — an adapter
+// that does not manage instructions simply omits the two methods below.
+
+/** An instruction artifact discovered on disk for a given harness. */
+export interface ConfiguredInstruction {
+  /** Stable logical id across harnesses, e.g. a basename like "contributing". */
+  name: string;
+  tool: AgentToolId;
+  scope: 'project' | 'user';
+  /** Absolute path of the instruction file. */
+  path: string;
+  /** sha256 of the file's normalized content — the drift/diff baseline. */
+  contentHash: string;
+}
+
+/** A desired instruction artifact in a profile — content by value or by reference. */
+export interface DesiredInstruction {
+  name: string;
+  /** Where the content comes from: inline literal, a local file, or a URL. */
+  source: 'inline' | 'file' | 'url';
+  /** For `source: 'inline'` — the literal content. */
+  content?: string;
+  /** For `source: 'file' | 'url'` — the location to read from. */
+  ref?: string;
+  /** Target path relative to the harness's instruction root, when it matters. */
+  targetPath?: string;
+}
+
 export interface ToolAdapter {
   id: AgentToolId;
   displayName: string;
@@ -55,6 +87,19 @@ export interface ToolAdapter {
   writeServers(
     location: ToolConfigLocation,
     desired: DesiredServer[],
+    opts: { prune: boolean }
+  ): SyncChange;
+
+  /** Optional (P3): read managed instruction artifacts this harness supports. */
+  readInstructions?(opts: StackEnv): ConfiguredInstruction[];
+  /**
+   * Optional (P3): reconcile desired instruction artifacts into this harness.
+   * Same contract discipline as writeServers — preserve every unrelated file,
+   * atomic writes only, return the applied change set.
+   */
+  writeInstructions?(
+    location: ToolConfigLocation,
+    desired: DesiredInstruction[],
     opts: { prune: boolean }
   ): SyncChange;
 }
