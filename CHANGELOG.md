@@ -55,6 +55,24 @@ with.
 - **Fixed dangling references** to removed commands in onboarding (`agora welcome`) and the shell's
   slash/letter shortcuts, so nothing still points users at a command that no longer exists.
 
+### TUI redesign — foundations (theme tokens + trust grammar)
+
+Implements the Claude Design "Agora TUI — engineering handoff" §2–4, additively (existing tones,
+glyphs, and every current caller's output are byte-identical).
+
+- **New `drift` design token** in `cli/theme.ts` — a soft-orchid tone (`#A98BD0` / xterm 140) and a
+  `≠`/`~` glyph. Drift means "investigate," not "malicious"; orchid never collides with the terra
+  `error` hue under deuteran/protan simulation.
+- **Trust component grammar** in `cli/pages/components.ts` — six pure-string, ANSI-aware,
+  NO_COLOR-safe components reused identically everywhere a trust signal appears: `statusTriad`
+  (`✓ pass · [official] · no drift`), `verdictBanner` (the one weighty element — FAIL is the only place
+  the `═` double rule appears and is final, no re-run hint), `trustPanel` (scan · declared→observed
+  permissions · drift), `provenanceBadges`/`provenanceBadge`/`originChip` (official always first +
+  reverse-video), `planDiff` (Terraform-style, `apply? [y/N]` footer), and `driftChip`. Provenance is
+  typed to the federation `SourceId` so badges map to real sources, never invented ones.
+- Golden tests cover NO_COLOR legibility, verdict integrity (double-rule + no-hint-on-fail),
+  provenance ordering/dedup, and the plan-diff tally.
+
 ## [0.4.5] - 2026-05-30 — the safe capability-acquisition gateway & trust depth
 
 `agora` now closes the loop from discovery to installation via a single agent-callable `acquire` command, deepened OpenCode plugin integration, added description-drift detection for MCP servers, and flattened the monorepo-star-ranking problem. Windows users no longer hit "opencode binary not found." The marketplace, news, and community pillars remain the core.
