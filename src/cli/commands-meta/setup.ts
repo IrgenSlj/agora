@@ -46,15 +46,14 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'tui',
     group: 'Setup',
-    summary: 'Open the full-screen Agora TUI (Home · Market · Comm · News · Settings)',
+    summary: 'Open the full-screen Agora TUI (Home · Market · News · Settings)',
     usage: 'agora tui',
     details:
-      'Opens the keyboard-driven TUI with five pages, switched by 1-5 or Tab. ' +
+      'Opens the keyboard-driven TUI with four pages, switched by 1-4 or Tab. ' +
       'j/k navigates, Enter drills in, Esc backs out, ? toggles help, q quits. ' +
       'Pages: Home (recommendation engine), Marketplace (browse + install preview), ' +
-      'Community (boards/threads/reader against fixtures until backend lands), ' +
       'News (ranked feed against fixtures until news adapters land), ' +
-      'Settings (account, display, news sources, community defaults).',
+      'Settings (account, display, news sources).',
     examples: ['agora tui']
   },
   {
@@ -153,29 +152,14 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora shell']
   },
   {
-    name: 'ping',
-    group: 'Setup',
-    summary: 'Check the configured backend is reachable',
-    usage: 'agora ping [--api-url <url>] [--json]',
-    details:
-      'Sends a GET /api/community/boards to the configured backend and reports the HTTP ' +
-      'status, response time, and whether the request was authenticated. Picks the URL ' +
-      'from --api-url, AGORA_API_URL, or the persisted auth state in that order.',
-    flags: [
-      { flag: '--api-url <url>', description: 'Override the backend URL' },
-      { flag: '--json', description: 'Output { apiUrl, status, okBoards, durationMs } as JSON' }
-    ],
-    examples: ['agora ping', 'agora ping --api-url https://api.agora.example', 'agora ping --json']
-  },
-  {
     name: 'welcome',
     group: 'Setup',
     summary: 'Show a guided onboarding tour of the agora CLI',
     usage: 'agora welcome [--json]',
     details:
-      'Displays a six-section guide covering sign-in, the marketplace, news, community, ' +
+      'Displays a five-section guide covering sign-in, the marketplace, news, ' +
       'shell completions, and scaffolding an MCP project. ' +
-      'Step 1 adapts to show your profile commands when you are already signed in. ' +
+      'Step 1 adapts to show your saved-items commands when you are already signed in. ' +
       'Use --json to get a machine-readable list of steps.',
     flags: [{ flag: '--json', description: 'Output { signedIn, username?, steps } as JSON' }],
     examples: ['agora welcome', 'agora welcome --json']

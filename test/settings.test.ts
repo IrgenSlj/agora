@@ -36,7 +36,7 @@ describe('loadSettings', () => {
 // ── News source toggle fields ────────────────────────────────────────────────
 
 describe('news source toggle fields', () => {
-  const NEWS_SOURCE_IDS = ['hn', 'reddit', 'github-trending', 'arxiv', 'rss'] as const;
+  const NEWS_SOURCE_IDS = ['hn', 'github-trending', 'arxiv', 'rss'] as const;
 
   test('each source id generates a field with correct key', () => {
     for (const src of NEWS_SOURCE_IDS) {
@@ -114,7 +114,7 @@ describe('news source toggle fields', () => {
       }
     };
     const tSources = toggled.news.sources as Record<string, { enabled: boolean }>;
-    expect(tSources['reddit']?.enabled).toBe(sources['reddit']?.enabled);
+    expect(tSources['arxiv']?.enabled).toBe(sources['arxiv']?.enabled);
     expect(tSources['github-trending']?.enabled).toBe(sources['github-trending']?.enabled);
     rmSync(tmpDir, { recursive: true });
   });

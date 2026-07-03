@@ -14,7 +14,7 @@ interface Field {
   write(s: AgoraSettings, v: string): AgoraSettings;
 }
 
-const NEWS_SOURCE_IDS = ['hn', 'reddit', 'github-trending', 'arxiv', 'rss'] as const;
+const NEWS_SOURCE_IDS = ['hn', 'github-trending', 'arxiv', 'rss'] as const;
 type NewsSourceId = (typeof NEWS_SOURCE_IDS)[number];
 
 function makeNewsSourceField(src: NewsSourceId): Field {
@@ -42,14 +42,13 @@ function makeNewsSourceField(src: NewsSourceId): Field {
 
 const FIELD_HELP: Record<string, string> = {
   username: 'Public name shown on posts and reviews.',
-  backend: 'API backend URL (leave blank for default).',
+  backend: 'Backend URL override — reserved, not currently wired to any command.',
   declared_llm: 'LLM identity to disclose on posts (optional).',
   color: 'Terminal color mode: auto, truecolor, or none.',
   banner: 'Show/hide the ASCII banner on startup.',
   default_board: 'Community board opened by default.',
   collapse_flag_threshold: 'Posts flagged this many times are collapsed.',
   news_hn: 'Fetch stories from Hacker News.',
-  news_reddit: 'Fetch posts from relevant subreddits.',
   'news_github-trending': 'Fetch trending GitHub repositories.',
   news_arxiv: 'Fetch AI/ML papers from arXiv.',
   news_rss: 'Fetch items from configured RSS feeds.'

@@ -23,6 +23,38 @@ upstream registries rather than growing its own catalog; owns no inference; has 
   is not available to third parties (use `ANTHROPIC_API_KEY`); PulseMCP has no self-serve API; Glama
   returns no tool schemas/annotation hints.
 
+### P-freeze — execute the freeze
+
+Surgically removed the frozen surface named in `AGORA_BRIEF.md` D3/D4/D5/D6/D11: our own community
+boards, account-write commands, and Reddit as a news source. `backend/` and `hub/` stay in the repo
+(zero TypeScript importers already) but are now excluded from the default typecheck and documented as
+frozen. `news` survives as the Ring-3 "plaza" reader, decoupled from the boards it used to share a file
+with.
+
+- **Removed commands** — `community`, `thread`, `post`, `reply`, `vote`, `flag`, `admin`, `discussions`,
+  `discuss` (own community boards, brief D4), `publish`, `review`, `reviews`, `profile` (account writes,
+  brief D4/D6), and `ping` (backend health check, brief D3). Dropped from the runtime dispatch table,
+  the `commands-meta` help/manual registry, and shell completions/letter-shortcuts.
+- **Extracted `news`** — `src/cli/commands/news.ts` is a new module carrying `commandNews` (and its
+  news-source wiring) out of the now-deleted `src/cli/commands/community.ts`, so the plaza reader
+  survives the boards it used to live beside.
+- **Removed Reddit as a news source** — closed OAuth + killed endpoints (brief D5). Deleted
+  `src/news/sources/reddit.ts`; purged the `'reddit'` literal from `NewsSource`, `DEFAULT_NEWS_CONFIG`,
+  source labels, completions, settings, and the TUI news page/home strip.
+- **Removed the community TUI page** — deleted `src/cli/pages/community.ts`; `home`'s "Community" strip
+  and `today`'s Community section are gone (both only ever read `communityThreadsSource` + `Thread`).
+  The TUI is now four pages (Home · Marketplace · News · Settings) instead of five.
+- **Removed the live write/community sources** — deleted `src/live/sources.ts` (publish/review/profile/
+  flag writes) and `src/live/community.ts` (discussion read+write); `src/live.ts` no longer re-exports
+  either. `src/live/search.ts` and `src/live/tutorials.ts` are untouched — search still reads the API
+  when configured and degrades to offline.
+- **Documented the freeze** — `docs/frozen/README.md` records that `backend/` (Cloudflare Worker),
+  `hub/` (web app), and the community boards are frozen per D3/D4/D11: kept in the repo, excluded from
+  the default typecheck (`bun run typecheck:backend` still exists, just unreferenced) and builds, not
+  the pitch.
+- **Fixed dangling references** to removed commands in onboarding (`agora welcome`) and the shell's
+  slash/letter shortcuts, so nothing still points users at a command that no longer exists.
+
 ## [0.4.5] - 2026-05-30 — the safe capability-acquisition gateway & trust depth
 
 `agora` now closes the loop from discovery to installation via a single agent-callable `acquire` command, deepened OpenCode plugin integration, added description-drift detection for MCP servers, and flattened the monorepo-star-ranking problem. Windows users no longer hit "opencode binary not found." The marketplace, news, and community pillars remain the core.

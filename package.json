@@ -38,7 +38,7 @@
     "build:binary": "bun build src/cli.ts --compile --outfile dist/agora",
     "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
     "hub:dev": "bun hub/server.ts",
-    "typecheck": "bun run typecheck:cli && bun run typecheck:backend",
+    "typecheck": "bun run typecheck:cli",
     "typecheck:cli": "tsc -p tsconfig.check.json",
     "typecheck:backend": "cd backend && bun run typecheck",
     "test": "bun test",

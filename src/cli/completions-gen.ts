@@ -94,7 +94,7 @@ const SORT_BY = ['relevance', 'stars', 'installs', 'name', 'updated'];
 const TYPES = ['package', 'workflow'];
 const TYPES_EXT = ['discussion', 'reply', 'package', 'workflow'];
 const LEVELS = ['beginner', 'intermediate', 'advanced'];
-const NEWS_SOURCES = ['hn', 'reddit', 'gh', 'arxiv', 'rss'];
+const NEWS_SOURCES = ['hn', 'gh', 'arxiv', 'rss'];
 const BOARDS = ['mcp', 'agents', 'tools', 'workflows', 'show', 'ask', 'meta'];
 
 const COMMAND_NAMES = COMMANDS.map((c) => c.name).concat(['help', 'completions', 'shell']);

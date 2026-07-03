@@ -19,7 +19,6 @@ export const DEFAULT_SETTINGS: AgoraSettings = {
   news: {
     sources: {
       hn: { enabled: true, ttl_minutes: 10 },
-      reddit: { enabled: true, ttl_minutes: 15 },
       'github-trending': { enabled: true, ttl_minutes: 30 },
       arxiv: { enabled: false, ttl_minutes: 60 },
       rss: { enabled: false, ttl_minutes: 60 }

@@ -208,14 +208,14 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'news',
     group: 'Marketplace',
-    summary: 'Browse ranked tech news from HN, Reddit, GitHub, arXiv',
-    usage: 'agora news [query] [--source hn|reddit|gh|arxiv] [--limit 20] [--refresh] [--json]',
+    summary: 'Browse ranked tech news from HN, GitHub, arXiv',
+    usage: 'agora news [query] [--source hn|gh|arxiv] [--limit 20] [--refresh] [--json]',
     details:
       'Fetches and ranks news stories from multiple sources using a recency-engagement-topic scoring algorithm. ' +
       'Cached locally in ~/.config/agora/news-cache.jsonl. ' +
       'Use --refresh to force re-fetch; --source to filter by source; a positional query to search titles and tags.',
     flags: [
-      { flag: '--source, -s', description: 'Source filter: hn, reddit, gh, arxiv' },
+      { flag: '--source, -s', description: 'Source filter: hn, gh, arxiv' },
       { flag: '--limit, -n', description: 'Maximum number of results (default 20)' },
       { flag: '--refresh', description: 'Force re-fetch all enabled sources' },
       { flag: '--json', description: 'Output as JSON' }
@@ -230,14 +230,14 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'today',
     group: 'Marketplace',
-    summary: 'Daily digest: top news, community threads, and trending items from the last 24h',
-    usage: 'agora today [--section news|community|market|all] [--json]',
+    summary: 'Daily digest: top news and trending items from the last 24h',
+    usage: 'agora today [--section news|market|all] [--json]',
     flags: [
       {
         flag: '--section, -s',
-        description: 'Show only one section: news, community, market, or all (default all)'
+        description: 'Show only one section: news, market, or all (default all)'
       },
-      { flag: '--json', description: 'Output { at, news, threads, trending } as JSON' }
+      { flag: '--json', description: 'Output { at, news, trending } as JSON' }
     ],
     examples: ['agora today', 'agora today --section news', 'agora today --json']
   },

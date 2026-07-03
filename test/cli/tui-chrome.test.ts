@@ -92,7 +92,7 @@ describe('renderFooter content', () => {
     const plain = strip(footer);
     expect(plain).toContain('Esc');
     expect(plain).toContain('q');
-    expect(plain).toContain('1-6');
+    expect(plain).toContain('1-5');
     expect(plain).toContain('?');
   });
 

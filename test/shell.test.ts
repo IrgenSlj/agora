@@ -258,14 +258,6 @@ describe('classifyInput — TUI slash shortcuts', () => {
     });
   });
 
-  test('/comm and /community both → tui dispatch on community', () => {
-    expect(classifyInput('/comm', neverExecutable)).toEqual({ kind: 'tui', page: 'community' });
-    expect(classifyInput('/community', neverExecutable)).toEqual({
-      kind: 'tui',
-      page: 'community'
-    });
-  });
-
   test('/news → tui dispatch on news', () => {
     expect(classifyInput('/news', neverExecutable)).toEqual({ kind: 'tui', page: 'news' });
   });

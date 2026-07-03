@@ -17,14 +17,7 @@ import {
   type StackManifest
 } from '../../stack/manifest.js';
 import { scanItem, type ScanResult } from '../../scan.js';
-import {
-  findMarketplaceSource,
-  publishPackageSource,
-  publishWorkflowSource,
-  createReviewSource,
-  listReviewsSource,
-  profileSource
-} from '../../live.js';
+import { findMarketplaceSource } from '../../live.js';
 import {
   clearAuthState,
   decodeJwtExp,
@@ -42,15 +35,10 @@ import { loadPreferences, writePreferences, prefsPath } from '../../preferences.
 import { loadHistory, clearHistory } from '../../history.js';
 import {
   stringFlag,
-  requiredStringFlag,
   numberFlag,
   envString,
   authTokenInput,
   sourceOptions,
-  writeSourceOptions,
-  readSourceOptions,
-  sourceLabel,
-  sourcePayload,
   warnFallback,
   writeLine,
   writeJson,
@@ -59,18 +47,9 @@ import {
   authStatusPayload,
   maskToken,
   formatRelativeExp,
-  matchesSavedQuery,
-  tagsFlag,
-  promptInput,
-  itemTypeFlag
+  matchesSavedQuery
 } from '../helpers.js';
-import {
-  header,
-  formatSavedList,
-  formatReviewList,
-  formatProfileDetail,
-  formatDate
-} from '../format.js';
+import { header, formatSavedList, formatDate } from '../format.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 import { isOpencodeAvailable } from '../../opencode-exec.js';
@@ -487,155 +466,6 @@ export const commandRemove: CommandHandler = async (parsed, io, style) => {
   }
 
   writeLine(io.stdout, `Removed ${style.accent(targetId)}`);
-  return 0;
-};
-
-export const commandPublish: CommandHandler = async (parsed, io, style) => {
-  const kind = parsed.args[0];
-
-  if (kind !== 'package' && kind !== 'workflow') {
-    return usageError(io, 'publish requires "package" or "workflow"');
-  }
-
-  const source = await writeSourceOptions(parsed, io);
-  if (!source.ok) return usageError(io, source.error);
-
-  const name = requiredStringFlag(parsed, 'name');
-  const description = requiredStringFlag(parsed, 'description', 'd');
-  if (!name || !description) {
-    return usageError(io, 'publish requires --name and --description');
-  }
-
-  if (kind === 'package') {
-    const npmPackage = stringFlag(parsed, 'npm') || stringFlag(parsed, 'npmPackage');
-    const category = stringFlag(parsed, 'category', 'c') || 'mcp';
-
-    if (category === 'mcp' && !npmPackage) {
-      return usageError(io, 'publish package requires --npm for MCP packages');
-    }
-
-    const result = await publishPackageSource(source.options, {
-      id: stringFlag(parsed, 'id'),
-      name,
-      description,
-      version: stringFlag(parsed, 'version') || '1.0.0',
-      category,
-      tags: tagsFlag(parsed),
-      repository: stringFlag(parsed, 'repo') || stringFlag(parsed, 'repository'),
-      npmPackage
-    });
-
-    if (parsed.flags.json) {
-      writeJson(io.stdout, sourcePayload(result, { item: result.data }));
-      return 0;
-    }
-
-    writeLine(io.stdout, `Published package ${style.accent(result.data.id)}`);
-    writeLine(io.stdout, `${result.data.name} (${sourceLabel(result)})`);
-    return 0;
-  }
-
-  const prompt = promptInput(parsed, io);
-  if (prompt === undefined) {
-    return usageError(io, 'publish workflow requires --prompt or --prompt-file');
-  }
-
-  const result = await publishWorkflowSource(source.options, {
-    id: stringFlag(parsed, 'id'),
-    name,
-    description,
-    prompt,
-    model: stringFlag(parsed, 'model'),
-    tags: tagsFlag(parsed)
-  });
-
-  if (parsed.flags.json) {
-    writeJson(io.stdout, sourcePayload(result, { item: result.data }));
-    return 0;
-  }
-
-  writeLine(io.stdout, `Published workflow ${style.accent(result.data.id)}`);
-  writeLine(io.stdout, `${result.data.name} (${sourceLabel(result)})`);
-  return 0;
-};
-
-export const commandReview: CommandHandler = async (parsed, io, style) => {
-  const itemId = parsed.args[0];
-  if (!itemId) return usageError(io, 'review requires an item id');
-
-  const rating = numberFlag(parsed, 'rating', 'r');
-  const content = requiredStringFlag(parsed, 'content');
-  if (!rating || rating < 1 || rating > 5 || !content) {
-    return usageError(io, 'review requires --rating 1-5 and --content');
-  }
-
-  const source = await writeSourceOptions(parsed, io);
-  if (!source.ok) return usageError(io, source.error);
-
-  const result = await createReviewSource(source.options, {
-    itemId,
-    itemType: itemTypeFlag(parsed, itemId),
-    rating,
-    content
-  });
-
-  if (parsed.flags.json) {
-    writeJson(io.stdout, sourcePayload(result, { review: result.data }));
-    return 0;
-  }
-
-  writeLine(io.stdout, `Reviewed ${style.accent(result.data.itemId)}`);
-  writeLine(io.stdout, `${style.dim(result.data.rating + '/5 by ' + result.data.author)}`);
-  return 0;
-};
-
-export const commandReviews: CommandHandler = async (parsed, io, style) => {
-  const itemId = parsed.args[0];
-  const source = await readSourceOptions(parsed, io);
-  if (!source.ok) return usageError(io, source.error);
-
-  const result = await listReviewsSource(source.options, itemId, stringFlag(parsed, 'type', 't'));
-
-  if (parsed.flags.json) {
-    writeJson(
-      io.stdout,
-      sourcePayload(result, { count: result.data.length, reviews: result.data })
-    );
-    return 0;
-  }
-
-  if (result.data.length === 0) {
-    writeLine(io.stdout, itemId ? `No reviews found for ${itemId}.` : 'No reviews found.');
-    return 0;
-  }
-
-  const theme = cliTheme(style, io);
-  writeLine(
-    io.stdout,
-    header('agora reviews', [`${result.data.length} results`, sourceLabel(result)], theme)
-  );
-  writeLine(io.stdout, '');
-  writeLine(io.stdout, formatReviewList(result.data, theme));
-  return 0;
-};
-
-export const commandProfile: CommandHandler = async (parsed, io, style) => {
-  const username = parsed.args[0] || stringFlag(parsed, 'username');
-  if (!username) return usageError(io, 'profile requires a username');
-
-  const source = await readSourceOptions(parsed, io);
-  if (!source.ok) return usageError(io, source.error);
-
-  const result = await profileSource(source.options, username);
-  if (!result.data) return usageError(io, `Profile not found: ${username}`);
-
-  if (parsed.flags.json) {
-    writeJson(io.stdout, sourcePayload(result, { profile: result.data }));
-    return 0;
-  }
-
-  const theme = cliTheme(style, io);
-  writeLine(io.stdout, formatProfileDetail(result.data, theme));
   return 0;
 };
 

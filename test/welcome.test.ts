@@ -30,7 +30,7 @@ describe('agora welcome', () => {
       expect(payload.signedIn).toBe(false);
       expect(payload.username).toBeUndefined();
       expect(Array.isArray(payload.steps)).toBe(true);
-      expect(payload.steps.length).toBe(6);
+      expect(payload.steps.length).toBe(5);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -65,7 +65,7 @@ describe('agora welcome', () => {
     }
   });
 
-  test('default render contains all six section titles', async () => {
+  test('default render contains all five section titles', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-welcome-sections-'));
     const { io, stdout } = createIo(dir);
     try {
@@ -74,7 +74,6 @@ describe('agora welcome', () => {
       expect(out).toContain('Sign in');
       expect(out).toContain('Browse the marketplace');
       expect(out).toContain('Read the news');
-      expect(out).toContain('Join the community');
       expect(out).toContain('Set up shell completions');
       expect(out).toContain('Start an MCP project');
     } finally {
@@ -91,7 +90,6 @@ describe('agora welcome', () => {
       expect(out).toContain('agora auth login');
       expect(out).toContain('agora marketplace');
       expect(out).toContain('agora news');
-      expect(out).toContain('agora community');
       expect(out).toContain('agora completions');
       expect(out).toContain('agora init --template');
     } finally {
@@ -132,7 +130,9 @@ describe('agora welcome', () => {
       expect(payload.signedIn).toBe(true);
       expect(payload.username).toBe('alice');
       expect(payload.steps[0].title).toContain('alice');
-      expect(payload.steps[0].commands.some((c: string) => c.includes('agora profile'))).toBe(true);
+      expect(payload.steps[0].commands.some((c: string) => c.includes('agora bookmarks'))).toBe(
+        true
+      );
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -168,8 +168,8 @@ describe('agora welcome', () => {
       await runCli(['welcome'], io);
       const out = stdout.join('');
       expect(out).toContain('Signed in as bob');
-      expect(out).toContain('agora profile bob');
       expect(out).toContain('agora bookmarks');
+      expect(out).toContain('agora saved');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

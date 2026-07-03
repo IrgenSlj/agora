@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-export type NewsSource = 'hn' | 'reddit' | 'github-trending' | 'arxiv' | 'rss';
+export type NewsSource = 'hn' | 'github-trending' | 'arxiv' | 'rss';
 
 const { version: AGORA_VERSION } = JSON.parse(
   readFileSync(new URL('../../package.json', import.meta.url), 'utf8')
@@ -37,7 +37,6 @@ export interface NewsConfig {
 export const DEFAULT_NEWS_CONFIG: NewsConfig = {
   sources: {
     hn: { enabled: true, ttlMinutes: 10 },
-    reddit: { enabled: true, ttlMinutes: 15 },
     'github-trending': { enabled: true, ttlMinutes: 30 },
     arxiv: { enabled: false, ttlMinutes: 60 },
     rss: { enabled: false, ttlMinutes: 60 }
@@ -48,7 +47,6 @@ export const DEFAULT_NEWS_CONFIG: NewsConfig = {
 
 export const NEWS_SOURCE_LABELS: Record<NewsSource, string> = {
   hn: 'Hacker News',
-  reddit: 'Reddit',
   'github-trending': 'GitHub Trending',
   arxiv: 'arXiv',
   rss: 'RSS'
@@ -59,7 +57,6 @@ export function normalizeNewsSource(s: string): NewsSource | undefined {
     hn: 'hn',
     hackernews: 'hn',
     'hacker-news': 'hn',
-    reddit: 'reddit',
     gh: 'github-trending',
     github: 'github-trending',
     'github-trending': 'github-trending',

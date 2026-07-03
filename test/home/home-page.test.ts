@@ -1,7 +1,6 @@
 /**
  * Integration-level tests for the home page TUI (src/cli/pages/home.ts).
- * Kept fully offline — community will show its "sign in" hint (no network),
- * trending uses in-process sample data.
+ * Kept fully offline — trending uses in-process sample data.
  */
 import { describe, expect, test, beforeEach } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';

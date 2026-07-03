@@ -103,7 +103,6 @@ describe('settings render — section grouping', () => {
     const ctx = makeCtx({ tmp });
     const out = strip(settingsPage.render(ctx));
     expect(out).toContain('source.hn');
-    expect(out).toContain('source.reddit');
     expect(out).toContain('source.arxiv');
     expect(out).toContain('source.rss');
   });
@@ -240,9 +239,8 @@ describe('settings render — numeric affordance', () => {
     const ctx = makeCtx({ tmp });
     settingsPage.render(ctx);
     // collapse_flag_threshold is the last field — navigate to it
-    const numIdx = 12; // Account(3) + Display(2) + News(5) + Community(2) - 1 = 11... let's count
-    // Fields: username(0) backend(1) declared_llm(2) color(3) banner(4) hn(5) reddit(6) github-trending(7) arxiv(8) rss(9) default_board(10) collapse_flag_threshold(11)
-    for (let i = 0; i < 11; i++) settingsPage.handleKey(key('j'), ctx);
+    // Fields: username(0) backend(1) declared_llm(2) color(3) banner(4) hn(5) github-trending(6) arxiv(7) rss(8) default_board(9) collapse_flag_threshold(10)
+    for (let i = 0; i < 10; i++) settingsPage.handleKey(key('j'), ctx);
     const out = strip(settingsPage.render(ctx));
     expect(out).toContain('+/-');
   });
@@ -250,7 +248,7 @@ describe('settings render — numeric affordance', () => {
   test('+ increments numeric field', () => {
     const ctx = makeCtx({ tmp });
     settingsPage.render(ctx);
-    for (let i = 0; i < 11; i++) settingsPage.handleKey(key('j'), ctx);
+    for (let i = 0; i < 10; i++) settingsPage.handleKey(key('j'), ctx);
     // Capture the numeric value shown before incrementing
     const beforeOut = strip(settingsPage.render(ctx));
     // Extract the number shown next to the field label
@@ -265,7 +263,7 @@ describe('settings render — numeric affordance', () => {
   test('- decrements numeric field', () => {
     const ctx = makeCtx({ tmp });
     settingsPage.render(ctx);
-    for (let i = 0; i < 11; i++) settingsPage.handleKey(key('j'), ctx);
+    for (let i = 0; i < 10; i++) settingsPage.handleKey(key('j'), ctx);
     settingsPage.handleKey(key('+'), ctx);
     settingsPage.handleKey(key('+'), ctx);
     settingsPage.handleKey(key('-'), ctx);

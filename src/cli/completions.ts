@@ -25,7 +25,7 @@ const SAVED_COMMANDS = new Set(['remove']);
 const ID_ARG_COMMANDS = new Set(['similar', 'compare', 'flag', 'thread']);
 
 const BOARDS = ['mcp', 'agents', 'tools', 'workflows', 'show', 'ask', 'meta'];
-const NEWS_SOURCES = ['hn', 'reddit', 'gh', 'arxiv', 'rss'];
+const NEWS_SOURCES = ['hn', 'gh', 'arxiv', 'rss'];
 const NEWS_TOPICS = ['mcp', 'ai', 'agents', 'workflows', 'llm', 'tool-use', 'coding', 'security'];
 const SORT_ORDERS = ['top', 'new', 'active'];
 const TYPES = ['package', 'workflow'];

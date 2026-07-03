@@ -41,7 +41,7 @@ function makeNewsItem(overrides: Partial<NewsItem> = {}): NewsItem {
 }
 
 describe('agora today', () => {
-  test('--json returns object with at, news, threads, trending keys', async () => {
+  test('--json returns object with at, news, trending keys', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-today-'));
     const dataDir = join(temp, 'data');
     writeNewsCache(dataDir, [makeNewsItem()]);
@@ -54,7 +54,6 @@ describe('agora today', () => {
       expect(code).toBe(0);
       expect(typeof payload.at).toBe('string');
       expect(Array.isArray(payload.news)).toBe(true);
-      expect(Array.isArray(payload.threads)).toBe(true);
       expect(Array.isArray(payload.trending)).toBe(true);
     } finally {
       rmSync(temp, { recursive: true, force: true });
@@ -76,7 +75,6 @@ describe('agora today', () => {
 
       expect(code).toBe(0);
       expect(Array.isArray(payload.news)).toBe(true);
-      expect(payload.threads).toBeUndefined();
       expect(payload.trending).toBeUndefined();
     } finally {
       rmSync(temp, { recursive: true, force: true });
@@ -95,7 +93,6 @@ describe('agora today', () => {
 
       expect(code).toBe(0);
       expect(out).toContain('News');
-      expect(out).toContain('Community');
       expect(out).toContain('Trending');
     } finally {
       rmSync(temp, { recursive: true, force: true });
@@ -141,20 +138,4 @@ describe('agora today', () => {
     }
   });
 
-  test('no backend configured shows hint in community section', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-today-'));
-    const dataDir = join(temp, 'data');
-    mkdirSync(dataDir, { recursive: true });
-    const { io, stdout } = createIo(temp, { env: { AGORA_API_URL: '', AGORA_TOKEN: '' } });
-
-    try {
-      const code = await runCli(['today', '--section', 'community', '--data-dir', dataDir], io);
-      const out = stdout.join('');
-
-      expect(code).toBe(0);
-      expect(out).toContain('agora auth login');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
 });

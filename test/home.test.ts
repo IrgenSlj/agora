@@ -17,7 +17,6 @@ describe('home page', () => {
   test('exposes the expected hotkeys', () => {
     const keys = homePage.hotkeys?.map((h) => h.key);
     expect(keys).toContain('n');
-    expect(keys).toContain('c');
     expect(keys).toContain('m');
     expect(keys).toContain('r');
   });
@@ -27,13 +26,6 @@ describe('home page', () => {
     const evt = { key: 'n' } as any;
     const action = homePage.handleKey!(evt, ctx);
     expect(action).toEqual({ kind: 'switch', to: 'news' });
-  });
-
-  test('routes hotkey c → community', () => {
-    const ctx = {} as any;
-    const evt = { key: 'c' } as any;
-    const action = homePage.handleKey!(evt, ctx);
-    expect(action).toEqual({ kind: 'switch', to: 'community' });
   });
 
   test('routes hotkey m → marketplace', () => {

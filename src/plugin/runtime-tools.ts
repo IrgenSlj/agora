@@ -187,10 +187,10 @@ export function createAgoraRuntimeTools(input?: PluginInput): Record<string, Too
     }),
 
     agora_news: tool({
-      description: 'Get the latest tech news from HN, Reddit, GitHub, and arXiv',
+      description: 'Get the latest tech news from HN, GitHub, and arXiv',
       args: {
         query: tool.schema.string().optional().describe('Search query to filter news'),
-        source: tool.schema.string().optional().describe('Source filter: hn, reddit, gh, arxiv'),
+        source: tool.schema.string().optional().describe('Source filter: hn, gh, arxiv'),
         limit: tool.schema.number().optional().describe('Number of results (default 10)'),
         refresh: tool.schema.boolean().optional().describe('Force re-fetch all sources')
       },
@@ -233,7 +233,7 @@ Type \`/agora <request>\` in OpenCode and it routes to the right tool:
 - \`/agora tutorial <id> [step]\` - Interactive tutorials
 - \`/agora chat <message>\` - Free AI chat via opencode run
 - \`/agora config\` - Check OpenCode config health (with optional --fix)
-- \`/agora news\` - Latest tech news from HN, Reddit, GitHub, arXiv
+- \`/agora news\` - Latest tech news from HN, GitHub, arXiv
 - \`/agora info\` - This help
 
 The \`/agora\` slash command is installed by \`agora init\` (or copy
