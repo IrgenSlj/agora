@@ -1,10 +1,17 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { getAdapter } from './registry.js';
+import { hashContent, resolveInstructionContent } from './manifest.js';
+import { scanItem, type ScanOptions, type ScanResult } from '../scan.js';
+import type { MarketplaceItem } from '../marketplace/types.js';
+import type { FetchLike } from '../live.js';
 import type {
+  AdapterInstructionsLocation,
   AgentToolId,
+  DesiredInstruction,
   DesiredServer,
   StackEnv,
   SyncChange,
+  ToolAdapter,
   ToolConfigLocation
 } from './types.js';
 import type { ManifestEntry, StackManifest } from './manifest.js';
@@ -267,4 +274,309 @@ export function applySync(
   }
 
   return results;
+}
+
+// ── Instruction artifacts: plan/apply (P3) ─────────────────────────────────────
+
+type AdapterWithInstructions = ToolAdapter & Partial<AdapterInstructionsLocation>;
+
+export interface InstructionSyncExtra {
+  fetcher?: FetchLike;
+  /** Set when the manifest came from a remote `--from` source (a URL). */
+  baseSource?: string;
+}
+
+async function resolveDesiredInstructions(
+  manifest: StackManifest,
+  opts: StackEnv,
+  extra: InstructionSyncExtra
+): Promise<{ desired: DesiredInstruction[]; errors: { name: string; error: string }[] }> {
+  const desired: DesiredInstruction[] = [];
+  const errors: { name: string; error: string }[] = [];
+
+  for (const [name, entry] of Object.entries(manifest.instructions ?? {})) {
+    if (entry.enabled === false) continue;
+    try {
+      const content = await resolveInstructionContent(entry, {
+        cwd: opts.cwd,
+        fetcher: extra.fetcher,
+        baseSource: extra.baseSource
+      });
+      desired.push({ name, source: 'inline', content });
+    } catch (e) {
+      errors.push({ name, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+
+  return { desired, errors };
+}
+
+function diffInstructions(
+  configured: { name: string; contentHash: string }[],
+  desired: DesiredInstruction[],
+  prune: boolean
+): SyncChange {
+  const configuredMap = new Map(configured.map((c) => [c.name, c.contentHash]));
+  const desiredNames = new Set(desired.map((d) => d.name));
+
+  const added: string[] = [];
+  const updated: string[] = [];
+  const removed: string[] = [];
+
+  for (const d of desired) {
+    const existingHash = configuredMap.get(d.name);
+    const newHash = hashContent(d.content ?? '');
+    if (existingHash === undefined) {
+      added.push(d.name);
+    } else if (existingHash !== newHash) {
+      updated.push(d.name);
+    }
+  }
+
+  if (prune) {
+    for (const name of configuredMap.keys()) {
+      if (!desiredNames.has(name)) removed.push(name);
+    }
+  }
+
+  return { added, updated, removed };
+}
+
+function unresolvedSkips(errors: { name: string; error: string }[]): { name: string; reason: string }[] {
+  return errors.map((e) => ({ name: e.name, reason: `could not resolve content: ${e.error}` }));
+}
+
+/**
+ * PURE / read-only: compute what would change for each target tool's
+ * instruction artifacts, without writing anything. Mirrors planSync's shape
+ * (ToolSyncPlan) so CLI formatting/JSON output can treat servers and
+ * instructions uniformly.
+ */
+export async function planInstructionsSync(
+  manifest: StackManifest,
+  opts: StackEnv,
+  targets: AgentToolId[],
+  scope: 'project' | 'user',
+  prune: boolean,
+  extra: InstructionSyncExtra = {}
+): Promise<ToolSyncPlan[]> {
+  const { desired, errors } = await resolveDesiredInstructions(manifest, opts, extra);
+  const skipped = unresolvedSkips(errors);
+  const plans: ToolSyncPlan[] = [];
+
+  for (const toolId of targets) {
+    const adapter = getAdapter(toolId) as AdapterWithInstructions | undefined;
+    if (!adapter) continue;
+
+    if (!adapter.readInstructions || !adapter.writeInstructions || !adapter.instructionsLocation) {
+      plans.push({
+        tool: toolId,
+        location: null,
+        change: { added: [], updated: [], removed: [] },
+        skipped: [...skipped, { name: '*', reason: `${toolId} does not manage instruction artifacts` }]
+      });
+      continue;
+    }
+
+    const location = adapter.instructionsLocation(opts, scope);
+    if (location === null) {
+      plans.push({
+        tool: toolId,
+        location: null,
+        change: { added: [], updated: [], removed: [] },
+        skipped: [...skipped, { name: '*', reason: `${toolId} has no ${scope} instructions location` }]
+      });
+      continue;
+    }
+
+    const configured = adapter.readInstructions(opts).filter((c) => c.scope === scope);
+    const change = diffInstructions(configured, desired, prune);
+    plans.push({ tool: toolId, location, change, skipped });
+  }
+
+  return plans;
+}
+
+/**
+ * Apply the sync for instruction artifacts — calls each adapter's
+ * writeInstructions and returns actually-applied changes.
+ */
+export async function applyInstructionsSync(
+  manifest: StackManifest,
+  opts: StackEnv,
+  targets: AgentToolId[],
+  scope: 'project' | 'user',
+  prune: boolean,
+  extra: InstructionSyncExtra = {}
+): Promise<ToolSyncPlan[]> {
+  const { desired, errors } = await resolveDesiredInstructions(manifest, opts, extra);
+  const skipped = unresolvedSkips(errors);
+  const results: ToolSyncPlan[] = [];
+
+  for (const toolId of targets) {
+    const adapter = getAdapter(toolId) as AdapterWithInstructions | undefined;
+    if (!adapter) continue;
+
+    if (!adapter.writeInstructions || !adapter.instructionsLocation) {
+      results.push({
+        tool: toolId,
+        location: null,
+        change: { added: [], updated: [], removed: [] },
+        skipped: [...skipped, { name: '*', reason: `${toolId} does not manage instruction artifacts` }]
+      });
+      continue;
+    }
+
+    const location = adapter.instructionsLocation(opts, scope);
+    if (location === null) {
+      results.push({
+        tool: toolId,
+        location: null,
+        change: { added: [], updated: [], removed: [] },
+        skipped: [...skipped, { name: '*', reason: `${toolId} has no ${scope} instructions location` }]
+      });
+      continue;
+    }
+
+    const change = adapter.writeInstructions(location, desired, { prune });
+    results.push({ tool: toolId, location, change, skipped });
+  }
+
+  return results;
+}
+
+// ── sync --from: trust gate over every entry in a fetched profile (P3) ────────
+//
+// Reuses the EXISTING exported scan gate (scanItem, src/scan.ts) as-is — it is
+// not reimplemented or modified here. Each mcp/instruction entry in a `--from`
+// manifest is projected into a MarketplaceItem shape scanItem already knows
+// how to check (permission/repo/npm checks for mcp "packages"; description-
+// injection + flag-count checks for instruction "workflows", using the
+// resolved instruction text AS the scanned description — a poisoned
+// CLAUDE.md/AGENTS.md snippet is exactly what checkDescriptionInjection is
+// built to catch). Any `fail` blocks the whole sync before anything is
+// written (exit 3 at the CLI layer).
+
+export interface GateEntry {
+  name: string;
+  kind: 'mcp' | 'instruction';
+  scan: ScanResult;
+}
+
+export interface GateReport {
+  ok: boolean;
+  entries: GateEntry[];
+  blocked: GateEntry[];
+}
+
+export interface GateOptions {
+  fetcher?: FetchLike;
+  cwd?: string;
+  baseSource?: string;
+  scanOptions?: ScanOptions;
+  /** Test seam — override scanItem itself, mirroring AcquireDeps.scan. */
+  deps?: { scan?: typeof scanItem };
+}
+
+function extractNpmPackage(command?: string[]): string | undefined {
+  if (!command || command.length === 0) return undefined;
+  const [bin, ...rest] = command;
+  if (bin !== 'npx' && bin !== 'npm') return undefined;
+  return rest.find((arg) => !arg.startsWith('-'));
+}
+
+function mcpEntryToScanItem(name: string, entry: ManifestEntry): MarketplaceItem {
+  return {
+    id: name,
+    kind: 'package',
+    name,
+    description: entry.command ? entry.command.join(' ') : (entry.url ?? ''),
+    author: 'agora-sync-from',
+    version: '0.0.0',
+    category: 'mcp',
+    tags: [],
+    stars: 0,
+    installs: 0,
+    createdAt: new Date(0).toISOString(),
+    npmPackage: extractNpmPackage(entry.command)
+  } as MarketplaceItem;
+}
+
+function instructionToScanItem(name: string, content: string): MarketplaceItem {
+  return {
+    id: name,
+    kind: 'workflow',
+    name,
+    description: content,
+    author: 'agora-sync-from',
+    prompt: content,
+    tags: [],
+    stars: 0,
+    forks: 0,
+    createdAt: new Date(0).toISOString(),
+    category: 'workflow',
+    installs: 0
+  } as MarketplaceItem;
+}
+
+function failedResolveScan(name: string, message: string): ScanResult {
+  return {
+    id: name,
+    itemKind: 'workflow',
+    checks: [
+      {
+        name: 'content_resolvable',
+        label: 'Instruction content resolvable',
+        status: 'fail',
+        message
+      }
+    ],
+    summary: { pass: 0, warn: 0, fail: 1 }
+  };
+}
+
+/**
+ * Run the scan gate over every mcp server and instruction entry in `manifest`
+ * (skipping entries explicitly `enabled: false`). Nothing is written by this
+ * function — it is pure read/scan. Callers refuse to plan/apply when
+ * `report.ok` is false.
+ */
+export async function gateManifestForSync(
+  manifest: StackManifest,
+  opts: GateOptions = {}
+): Promise<GateReport> {
+  const scan = opts.deps?.scan ?? scanItem;
+  const entries: GateEntry[] = [];
+
+  for (const [name, entry] of Object.entries(manifest.mcp)) {
+    if (entry.enabled === false) continue;
+    const item = mcpEntryToScanItem(name, entry);
+    const result = await scan(item, { ...opts.scanOptions, fetcher: opts.fetcher });
+    entries.push({ name, kind: 'mcp', scan: result });
+  }
+
+  for (const [name, entry] of Object.entries(manifest.instructions ?? {})) {
+    if (entry.enabled === false) continue;
+    let content: string;
+    try {
+      content = await resolveInstructionContent(entry, {
+        cwd: opts.cwd,
+        fetcher: opts.fetcher,
+        baseSource: opts.baseSource
+      });
+    } catch (e) {
+      entries.push({
+        name,
+        kind: 'instruction',
+        scan: failedResolveScan(name, e instanceof Error ? e.message : String(e))
+      });
+      continue;
+    }
+    const item = instructionToScanItem(name, content);
+    const result = await scan(item, { ...opts.scanOptions, fetcher: opts.fetcher });
+    entries.push({ name, kind: 'instruction', scan: result });
+  }
+
+  const blocked = entries.filter((e) => e.scan.summary.fail > 0);
+  return { ok: blocked.length === 0, entries, blocked };
 }

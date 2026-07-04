@@ -103,3 +103,16 @@ export interface ToolAdapter {
     opts: { prune: boolean }
   ): SyncChange;
 }
+
+/**
+ * Not part of the locked ToolAdapter contract — a small additive extension
+ * (P3) so orchestration code (stack/sync.ts) can ask an adapter WHERE its
+ * instruction artifacts live for a given scope, the same way `writeLocation`
+ * answers that question for MCP servers. `writeInstructions`'s `location`
+ * param is deliberately generic (`ToolConfigLocation`) in the authored
+ * contract, so each adapter that implements instructions also exposes this
+ * resolver; callers narrow to it with an `as` when they know it's present.
+ */
+export interface AdapterInstructionsLocation {
+  instructionsLocation(opts: StackEnv, scope: 'project' | 'user'): ToolConfigLocation | null;
+}

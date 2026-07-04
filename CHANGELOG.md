@@ -189,6 +189,59 @@ they were — the TUI and agents keep working unmodified — the new signals are
   with zero false positives — both directions matter, or the gate stops being trusted. Hermetic via the
   existing `FetchLike`/`deps` DI seam, modeled on the real `FederatedItem`/official-registry wire shape.
 
+### P3 — stack manager expansion (instruction artifacts + plan/apply)
+
+"Memory management" (brief D8) becomes real: `CLAUDE.md`/`AGENTS.md`/`.cursor/rules`/OpenCode
+instructions are now versioned, diffable, syncable artifacts alongside MCP servers, and the write
+path splits into Terraform-style `plan`/`apply` behind the authored `ConfiguredInstruction`/
+`DesiredInstruction`/`ToolAdapter.readInstructions`/`writeInstructions` contracts.
+
+- **`src/stack/manifest.ts`** — implemented the `[instructions.*]` TOML table (`source: inline|file|
+  url`, `content`, `ref`, `content_hash`, `enabled`), registered in `KNOWN_SECTIONS`, round-trips
+  stably. Multi-line inline content survives a single TOML line via `\n`/`\r` escaping (extended
+  `escapeString`/`parseTomlString`, backwards compatible with every existing field). New
+  `hashContent()` (sha256, the drift baseline) and `resolveInstructionContent()` (inline/file/url →
+  literal text, DI `fetcher`, resolves a `file` ref relative to a remote `--from` source when the
+  manifest itself came from a URL).
+- **Adapters** — implemented `readInstructions`/`writeInstructions` for all four, each following the
+  same surgical-write discipline as `writeServers` (preserve everything unrelated, atomic writes,
+  return a `SyncChange`):
+  - **OpenCode** — manages files under `.agora/instructions/<name>.md` and registers each one's
+    relative path in opencode.json's native `instructions` array; any pre-existing entries
+    (`CONTRIBUTING.md`, glob patterns) are left completely untouched.
+  - **Claude Code** — a single `CLAUDE.md` per scope (project `<cwd>/CLAUDE.md`, user
+    `~/.claude/CLAUDE.md`); named entries live in delimited `<!-- agora:instructions:begin/end:name -->`
+    sections (new `src/stack/adapters/instruction-markers.ts`, shared with Windsurf) so hand-written
+    prose survives untouched.
+  - **Cursor** — one `<name>.md` file per entry under `.cursor/rules/` (project and user scope).
+  - **Windsurf** — a single rules file per scope (project `.windsurfrules`, user
+    `~/.codeium/windsurf/memories/global_rules.md`), same marker-section strategy as Claude Code —
+    a deliberate divergence from its MCP config (user-scope only) since Windsurf's project rules
+    file is independent of MCP config.
+  - A non-interface `AdapterInstructionsLocation.instructionsLocation()` (additive, doesn't touch the
+    locked `ToolAdapter` shape) lets orchestration code ask each adapter where its instructions live,
+    the same way `writeLocation` answers that for MCP servers.
+- **`src/stack/sync.ts`** — added `planInstructionsSync`/`applyInstructionsSync` (mirrors
+  `planSync`/`applySync`'s `ToolSyncPlan` shape) and `gateManifestForSync()`, which reuses the
+  existing exported `scanItem` gate as-is (never reimplemented) by projecting every mcp/instruction
+  entry into the `MarketplaceItem` shape it already knows how to check — an mcp entry's `npx`
+  command is resolved to an npm package for the `npm_exists`/`repo_reachable` checks, and an
+  instruction entry's resolved text becomes the scanned "description" for `checkDescriptionInjection`
+  (a poisoned CLAUDE.md/AGENTS.md snippet is exactly what that check is built to catch).
+- **New commands** — `agora plan` (pure read-only diff over servers + instructions; exit 0 no
+  changes / 2 changes pending / 1 error) and `agora apply` (executes the plan; exit 0 applied / 1
+  error). `agora sync` is now a continuity alias for `plan && apply` unchanged in its existing
+  `--write --yes` dry-run-by-default semantics.
+- **`agora sync --from <git-url|gist|path>`** now runs the trust gate on every mcp/instruction entry
+  before writing anything — the flagship P3 demo (brief §7 demo 2): a fail exits 3 with nothing
+  written; `plan --from`/`apply --from` run the same gate. Global exit codes across `plan`/`apply`/
+  `sync`: 0 ok, 1 error, 2 plan-has-changes, 3 scan-gate blocked.
+- Hermetic tests: instructions manifest round-trip (`test/stack/manifest-instructions.test.ts`),
+  per-adapter instruction read/write preserving unrelated keys/files
+  (`test/stack/adapters-instructions.test.ts`), and `plan`/`apply`/`sync --from` exit-code and
+  gate-blocking behavior with a DI fetcher — including a poisoned entry that 404s the npm registry
+  (`test/stack/plan-apply-cmd.test.ts`).
+
 ## [0.4.5] - 2026-05-30 — the safe capability-acquisition gateway & trust depth
 
 `agora` now closes the loop from discovery to installation via a single agent-callable `acquire` command, deepened OpenCode plugin integration, added description-drift detection for MCP servers, and flattened the monorepo-star-ranking problem. Windows users no longer hit "opencode binary not found." The marketplace, news, and community pillars remain the core.
