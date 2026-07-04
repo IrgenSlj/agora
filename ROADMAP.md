@@ -18,12 +18,13 @@ This file supersedes the pre-pivot roadmap. Verified external-API corrections li
 | **Repo cleanup** delete frozen dirs + stale docs | ✅ shipped |
 | **TUI-0** theme `drift` token + trust component grammar | ✅ shipped |
 | **P1** federated catalog (official + local sources) | ✅ shipped |
-| **P2** trust gate over federation | 🔄 in flight (Ring-1 wave) |
-| **P3** stack instructions + plan/apply | 🔄 in flight (Ring-1 wave) |
-| **P1+** follow-on sources (smithery/glama/github/hf) | ⏳ after Ring 1 |
-| **P4** inference providers (opencode/claude/ollama) | ⏳ Ring 2 (after Ring 1) |
-| **P5** plaza read/write sources | ⏳ Ring 3 (after Ring 1) |
-| **P6** harness integration matrix | ⏳ after P2 |
+| **P2** trust gate over federation | ✅ shipped |
+| **P3** stack instructions + plan/apply | ✅ shipped |
+| **🎉 RING 1 (manage · watch · gate)** | ✅ **complete** |
+| **P6** harness integration matrix | 🔜 next (needs P2 gate) |
+| **P1+** follow-on sources (smithery/glama/github/hf) | ⏳ breadth |
+| **P4** inference providers (opencode/claude/ollama) | ⏳ Ring 2 |
+| **P5** plaza read/write sources | ⏳ Ring 3 |
 | **TUI-1/2/3** Stack · Acquire · Search · Item · Plaza · Home · Settings | ⏳ tracks the pages onto the backends |
 
 ## The three rings (what gates a release)
