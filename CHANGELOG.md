@@ -141,6 +141,54 @@ huggingface are a clean `RegistrySource` seam away, not built here.
 - Hermetic tests under `test/federation/` with a DI fetcher and recorded/modeled registry fixtures in
   `test/fixtures/federation/` — no network in the suite.
 
+### P2 — trust gate over federation
+
+`agora acquire` now resolves against the federated catalog, not just the bundled one, and folds
+federation-sourced trust signals straight into the scan gate. `ScanResult`/`ScanCheck` stay exactly as
+they were — the TUI and agents keep working unmodified — the new signals are just more checks.
+
+- **`src/scan.ts` — four new gate checks, all optional/offline-safe** (skipped rather than fabricated
+  when the input data isn't available):
+  - `registry_status` — official MCP Registry lifecycle: `deleted` is a hard `fail` (spam/malware/policy
+    violation, per the registry's own semantics), `deprecated` is a `warn`, `active` passes.
+  - `annotation_hints` — MCP tool annotation hints (`destructiveHint`, `openWorldHint`, or a write-shaped
+    tool name/description without `readOnlyHint`) fold into the permission heuristics as a `warn`.
+  - `observed_permissions` — a heuristic capability set (`fs`/`net`/`exec`) derived from tool
+    name/description text, diffed against the declared permissions manifest; an undeclared capability
+    is a `warn`. Consumes live-probe tool schemas (`src/stack/mcp-probe.ts`'s `McpTool[]`) when available,
+    federation-sourced tool schemas otherwise.
+  - `description_drift` — brings the existing rug-pull digest check (`descriptionDigest`, previously
+    only surfaced by `doctor --probe` over time) into the gate itself: diffs current tool schemas against
+    an approved baseline when one is already on record, `warn`s on mismatch.
+  - `ScanOptions` gained `officialStatus`, `tools`, `observedTools`, `previousDigest` — all optional
+    additions; existing callers are unaffected.
+- **`src/acquire.ts` — resolves via `federatedFetchItem` first**, falling back to the bundled catalog
+  (`AcquireDeps.fetchFederatedItem` is the new DI seam, mirroring the existing `scan`/`findItem` seam).
+  The resolved item's `officialStatus`/`tools` feed the scan gate automatically. A fresh
+  `descriptionDigest` is computed from the federation-resolved tool schemas and recorded as the drift
+  baseline on every `--save`d acquire; `AcquireInput` gained an optional `source` to restrict federation
+  resolution to one upstream.
+- **`src/trust-store.ts` (new)** — Agora-generated trust data (scan verdict, summary, official status,
+  digest baseline) is recorded under a namespaced key, `"io.github.irgenslj.agora/trust"`, following the
+  same reverse-DNS `_meta` convention the official registry uses for its own extension data — a JSON
+  sidecar next to `agora.toml` (`agora.trust.json`) rather than a new `ManifestEntry` field, since
+  `src/stack/manifest.ts`'s hand-rolled TOML schema is owned by the parallel P3 stack-manager session
+  this cut. The shape is forward-compatible with folding into the manifest format later.
+- **Exit codes** — `agora acquire` and `agora scan` now share one agent-operable contract: `0` ok/pass,
+  `1` usage/error, `2` warn (gate warned, not accepted), `3` scan fail. Applies identically to `--json`
+  and human-readable output (`agora scan --json` previously always exited `0`, even on failures).
+- **`agora doctor`** — the human-readable table now shows an inline `DRIFT` chip next to a server's name
+  when `--probe` detects description drift, instead of only inside the per-check detail lines below it.
+- **Honest limits, restated precisely** in `agora acquire --help` / `agora scan --help` and README: the
+  gate is static heuristics plus live-probe diffing — pattern checks, manifest diffs, registry status,
+  tool-annotation-hint checks — never a sandbox, never executes or formally verifies server code. A
+  clean scan means "no known red flags," not "safe."
+- **Gate corpus tests** (`test/gate/`) — poisoned fixtures (official `deleted`/`deprecated` status,
+  destructive/open-world/missing-readOnlyHint tool annotations, undeclared observed permissions, drifted
+  tool schemas vs. an approved baseline) produce `fail`/`warn` exactly; clean fixtures produce `pass`
+  with zero false positives — both directions matter, or the gate stops being trusted. Hermetic via the
+  existing `FetchLike`/`deps` DI seam, modeled on the real `FederatedItem`/official-registry wire shape.
+
 ## [0.4.5] - 2026-05-30 — the safe capability-acquisition gateway & trust depth
 
 `agora` now closes the loop from discovery to installation via a single agent-callable `acquire` command, deepened OpenCode plugin integration, added description-drift detection for MCP servers, and flattened the monorepo-star-ranking problem. Windows users no longer hit "opencode binary not found." The marketplace, news, and community pillars remain the core.

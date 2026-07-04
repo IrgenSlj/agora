@@ -76,9 +76,10 @@ resolve → install plan → scan gate (pass / warn / fail) → config write
 - `--dry-run` previews the whole flow without writing.
 
 The gate composes static heuristics (injection-pattern checks, permission-manifest diffs, registry
-status) with live-probe diffing (tool-schema drift, observed-vs-declared permissions). **It is not a
-sandbox and does not execute or formally verify server code.** "Passed the gate" means *no known red
-flags* — not "safe." That distinction is deliberate and appears everywhere the verdict is shown.
+status, tool-annotation-hint checks) with live-probe diffing (tool-schema drift, observed-vs-declared
+permissions). **It is not a sandbox and does not execute or formally verify server code.** "Passed the
+gate" means *no known red flags* — not "safe." That distinction is deliberate and appears everywhere
+the verdict is shown, including `agora acquire --help` and `agora scan --help`.
 
 ## Positioning
 

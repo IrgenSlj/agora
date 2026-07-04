@@ -77,13 +77,21 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
 
     let serverLine = `${glyph}  ${theme.bold(server.name)}`;
 
-    if (probe && server.status === 'ok') {
-      const probeCheck = server.checks.find((c) => c.name === 'probe');
-      if (probeCheck?.ok && probeCheck.detail) {
-        const toolMatch = probeCheck.detail.match(/(\d+) tool\(s\)/);
-        if (toolMatch) {
-          serverLine += theme.dim(` (${toolMatch[1]} tools)`);
+    if (probe) {
+      if (server.status === 'ok') {
+        const probeCheck = server.checks.find((c) => c.name === 'probe');
+        if (probeCheck?.ok && probeCheck.detail) {
+          const toolMatch = probeCheck.detail.match(/(\d+) tool\(s\)/);
+          if (toolMatch) {
+            serverLine += theme.dim(` (${toolMatch[1]} tools)`);
+          }
         }
+      }
+      // Additive DRIFT chip (P2): checkStack already computes description-drift
+      // on --probe; surface it inline next to the server name rather than
+      // only inside the detail lines below.
+      if (server.checks.some((c) => c.name === 'description-drift')) {
+        serverLine += `  ${theme.warning('DRIFT')}`;
       }
     }
 

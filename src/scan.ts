@@ -2,6 +2,10 @@ import { fetchWithRetry } from './retry.js';
 import type { MarketplaceItem, PackageMarketplaceItem } from './marketplace.js';
 import { hasPermissions, getInstallKind } from './marketplace.js';
 import type { FetchLike } from './live.js';
+import type { Permissions } from './types.js';
+import type { FederatedTool, OfficialStatus } from './federation/types.js';
+import { descriptionDigest } from './stack/capability-cache.js';
+import type { McpTool } from './stack/mcp-probe.js';
 
 export type CheckStatus = 'pass' | 'warn' | 'fail';
 
@@ -24,6 +28,27 @@ export interface ScanOptions {
   now?: () => Date;
   githubToken?: string;
   offline?: boolean;
+  /**
+   * Federation trust inputs (P2 — brief "Trust gate over federation"). All
+   * optional and offline-safe: when a field is absent, its corresponding
+   * check is skipped entirely rather than fabricating a verdict from data
+   * Agora doesn't have.
+   */
+  /** Official-registry lifecycle status, when the item resolved there. */
+  officialStatus?: OfficialStatus;
+  /** Tool schemas + MCP annotation hints from federation (e.g. Smithery) or a live probe. */
+  tools?: FederatedTool[];
+  /**
+   * Observed tool schemas from a live MCP probe (src/stack/mcp-probe.ts).
+   * Preferred over `tools` for the observed-permissions diff when present;
+   * falls back to `tools` (pre-install, nothing to probe yet).
+   */
+  observedTools?: McpTool[];
+  /**
+   * Approved descriptionDigest baseline (rug-pull / description-drift
+   * signal). Skipped when no baseline is on record yet.
+   */
+  previousDigest?: string;
 }
 
 function tally(checks: ScanCheck[]): { pass: number; warn: number; fail: number } {
@@ -72,6 +97,177 @@ function checkDescriptionInjection(description: string): ScanCheck {
     label: 'Description injection',
     status: 'warn',
     message: `suspicious description pattern(s): ${hits.map((hit) => hit.label).join(', ')}`
+  };
+}
+
+// ── registry_status (P2: official MCP Registry lifecycle) ──────────────────
+// Optional/offline-safe: only emitted when the caller supplies a federation
+// status (acquire.ts wires this from federatedFetchItem's officialStatus).
+// Absent status means "we don't know" — say nothing rather than fabricate a
+// pass. `deleted` (spam/malware/policy violation per the registry's own
+// semantics — docs/OPEN_QUESTIONS.md OQ-3) is a hard block; `deprecated` is a
+// warning; `active` passes.
+function checkRegistryStatus(officialStatus: OfficialStatus): ScanCheck {
+  if (officialStatus === 'deleted') {
+    return {
+      name: 'registry_status',
+      label: 'Registry status',
+      status: 'fail',
+      message: 'official MCP Registry marked this server deleted (spam/malware/policy violation)'
+    };
+  }
+  if (officialStatus === 'deprecated') {
+    return {
+      name: 'registry_status',
+      label: 'Registry status',
+      status: 'warn',
+      message: 'official MCP Registry marked this server deprecated'
+    };
+  }
+  return {
+    name: 'registry_status',
+    label: 'Registry status',
+    status: 'pass',
+    message: 'active in the official MCP Registry'
+  };
+}
+
+// MCP tool `name` fields are conventionally snake_case (`delete_file`,
+// `run_shell_command`) or camelCase — and `_` counts as a `\w` character, so a
+// plain `\bword\b` regex never matches inside `delete_file` (no boundary
+// either side of "delete"). Split snake_case/kebab-case/camelCase into
+// space-separated words first so every heuristic below actually sees them.
+function tokenizeToolText(text: string): string {
+  return text
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+}
+
+// ── annotation_hints (P2: MCP tool annotation hints) ────────────────────────
+// Optional/offline-safe: skipped when no tool schemas are available, or when
+// none of them carry an `annotations` object at all (e.g. the official
+// registry alone never supplies hints — only Smithery/a live probe do, see
+// OQ-3). Flags destructive/open-world tools and write-shaped tools that don't
+// declare readOnlyHint — folded into the permission heuristics as a warning,
+// same spirit as description_injection: flag, don't auto-fail.
+const WRITE_SHAPED_TOOL_PATTERN =
+  /\b(write|create|delete|remove|update|modify|patch|insert|drop|exec|execute|run|set|send|publish|push|deploy|install|uninstall)\b/i;
+
+function isWriteShapedTool(tool: FederatedTool): boolean {
+  const haystack = tokenizeToolText(`${tool.name} ${tool.description ?? ''}`);
+  return WRITE_SHAPED_TOOL_PATTERN.test(haystack);
+}
+
+function checkAnnotationHints(tools: FederatedTool[] | undefined): ScanCheck | null {
+  if (!tools || tools.length === 0) return null;
+  const withAnnotations = tools.filter((t) => t.annotations);
+  if (withAnnotations.length === 0) return null;
+
+  const hits: string[] = [];
+  for (const tool of withAnnotations) {
+    const a = tool.annotations!;
+    if (a.destructiveHint) hits.push(`${tool.name}: destructiveHint`);
+    if (a.openWorldHint) hits.push(`${tool.name}: openWorldHint`);
+    if (!a.readOnlyHint && isWriteShapedTool(tool)) {
+      hits.push(`${tool.name}: write-shaped tool without readOnlyHint`);
+    }
+  }
+
+  if (hits.length === 0) {
+    return {
+      name: 'annotation_hints',
+      label: 'Tool annotation hints',
+      status: 'pass',
+      message: 'no destructive/open-world hints, no unmarked write-shaped tools'
+    };
+  }
+  return {
+    name: 'annotation_hints',
+    label: 'Tool annotation hints',
+    status: 'warn',
+    message: `flagged: ${hits.join('; ')}`
+  };
+}
+
+// ── observed_permissions (P2: declared-vs-observed capability diff) ────────
+// Optional/offline-safe: skipped without tool schemas to observe (nothing to
+// diff pre-probe). Heuristic only — tool names/descriptions are text, not
+// executed code; a name-based signal is honest about what it is (a red-flag
+// detector, not a sandbox — see the gate's honest-limits copy).
+const OBSERVED_CAPABILITY_PATTERNS: Record<'fs' | 'net' | 'exec', RegExp> = {
+  fs: /\b(file|files|directory|dir|filesystem|path)\b/i,
+  net: /\b(http|https|fetch|request|url|api|download|upload|webhook)\b/i,
+  exec: /\b(exec|execute|shell|command|spawn|subprocess|bash|script)\b/i
+};
+
+function observedCapabilities(
+  tools: ReadonlyArray<{ name: string; description?: string }>
+): Set<'fs' | 'net' | 'exec'> {
+  const observed = new Set<'fs' | 'net' | 'exec'>();
+  for (const tool of tools) {
+    const haystack = tokenizeToolText(`${tool.name} ${tool.description ?? ''}`);
+    for (const [cap, pattern] of Object.entries(OBSERVED_CAPABILITY_PATTERNS) as Array<
+      ['fs' | 'net' | 'exec', RegExp]
+    >) {
+      if (pattern.test(haystack)) observed.add(cap);
+    }
+  }
+  return observed;
+}
+
+function checkObservedPermissions(
+  declared: Permissions | undefined,
+  tools: ReadonlyArray<{ name: string; description?: string }> | undefined
+): ScanCheck | null {
+  if (!tools || tools.length === 0) return null;
+  const observed = observedCapabilities(tools);
+  const base = { name: 'observed_permissions', label: 'Observed vs declared permissions' } as const;
+
+  if (observed.size === 0) {
+    return { ...base, status: 'pass', message: 'no fs/net/exec signal observed in tool schemas' };
+  }
+
+  const declaredSet = new Set<'fs' | 'net' | 'exec'>();
+  if (declared?.fs?.length) declaredSet.add('fs');
+  if (declared?.net?.length) declaredSet.add('net');
+  if (declared?.exec?.length) declaredSet.add('exec');
+
+  const undeclared = [...observed].filter((cap) => !declaredSet.has(cap)).sort();
+  if (undeclared.length === 0) {
+    return {
+      ...base,
+      status: 'pass',
+      message: `observed capabilities (${[...observed].sort().join(', ')}) match declared permissions`
+    };
+  }
+  return {
+    ...base,
+    status: 'warn',
+    message: `tool schemas suggest ${undeclared.join(', ')} not declared in the permissions manifest`
+  };
+}
+
+// ── description_drift (P2: rug-pull baseline diff, inside the gate) ────────
+// Optional/offline-safe: skipped without both a previous baseline and current
+// tool schemas to diff. `agora doctor --probe` already surfaces drift for
+// *installed* servers over time; this brings the same signal into the
+// pre-install/pre-write gate itself when a baseline already exists (e.g. a
+// cloned `agora.toml` profile ships one — see `sync --from`'s flagship demo).
+function checkDescriptionDrift(
+  previousDigest: string | undefined,
+  tools: ReadonlyArray<McpTool> | undefined
+): ScanCheck | null {
+  if (!previousDigest || !tools || tools.length === 0) return null;
+  const currentDigest = descriptionDigest(tools);
+  const base = { name: 'description_drift', label: 'Description drift' } as const;
+  if (currentDigest === previousDigest) {
+    return { ...base, status: 'pass', message: 'tool schemas match the approved baseline' };
+  }
+  return {
+    ...base,
+    status: 'warn',
+    message:
+      'tool descriptions/schemas changed since the approved baseline (possible rug-pull) — review before proceeding'
   };
 }
 
@@ -278,6 +474,23 @@ async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Pro
       message: `${flags} flags — would auto-hide`
     });
   }
+
+  // 7. registry_status (P2, optional/offline-safe)
+  if (opts.officialStatus !== undefined) {
+    checks.push(checkRegistryStatus(opts.officialStatus));
+  }
+
+  // 8. annotation_hints (P2, optional/offline-safe)
+  const annotationCheck = checkAnnotationHints(opts.tools);
+  if (annotationCheck) checks.push(annotationCheck);
+
+  // 9. observed_permissions (P2, optional/offline-safe)
+  const observedCheck = checkObservedPermissions(item.permissions, opts.observedTools ?? opts.tools);
+  if (observedCheck) checks.push(observedCheck);
+
+  // 10. description_drift (P2, optional/offline-safe)
+  const driftCheck = checkDescriptionDrift(opts.previousDigest, opts.observedTools ?? opts.tools);
+  if (driftCheck) checks.push(driftCheck);
 
   return checks;
 }

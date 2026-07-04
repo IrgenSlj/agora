@@ -163,11 +163,18 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Marketplace',
     summary: 'Scan-gated capability acquisition for MCP servers',
     usage:
-      'agora acquire <id|query> [--tool opencode|claude-code|cursor|windsurf] [--accept-warnings] [--save] [--dry-run] [--json]',
+      'agora acquire <id|query> [--tool opencode|claude-code|cursor|windsurf] [--source official|smithery|glama|github|huggingface|local] [--accept-warnings] [--save] [--dry-run] [--json]',
     details:
-      'Resolves an item id or capability query, creates an install plan, runs the pre-install scan, ' +
-      'and writes the MCP server to the target config only when the scan has no failures. ' +
-      'Warnings require --accept-warnings; --dry-run prints the plan and scan without writing.',
+      'Resolves an item id or capability query — against the federated catalog (official MCP Registry ' +
+      'first, then the bundled offline catalog) as well as the bundled catalog directly — creates an ' +
+      'install plan, runs the pre-install scan gate, and writes the MCP server to the target config only ' +
+      'when the scan has no failures. Warnings require --accept-warnings; --dry-run prints the plan and ' +
+      'scan without writing. With --save, the scan verdict and description-drift baseline are recorded ' +
+      'alongside agora.toml under a namespaced trust key so a later re-acquire or a cloned profile can ' +
+      'detect drift. Exit codes: 0 ok, 1 usage/error, 2 warn (not accepted), 3 scan fail. ' +
+      'Honest limits: the gate is static heuristics plus live-probe diffing — pattern checks, manifest ' +
+      'diffs, registry status, tool-annotation-hint checks. It is not a sandbox and does not execute or ' +
+      'formally verify server code. A clean scan means "no known red flags," not "safe."',
     flags: [
       {
         flag: '--tool',
@@ -175,17 +182,22 @@ export const COMMANDS: CommandMeta[] = [
       },
       { flag: '--config', description: 'Explicit config path for the target tool' },
       {
+        flag: '--source',
+        description: 'Restrict federation resolution to one upstream source'
+      },
+      {
         flag: '--accept-warnings',
         description: 'Proceed when the scan has warnings but no failures'
       },
-      { flag: '--save', description: 'Also record the server in agora.toml' },
+      { flag: '--save', description: 'Also record the server (and its trust data) in agora.toml' },
       { flag: '--dry-run', description: 'Plan and scan only; write nothing' },
       { flag: '--json', description: 'Output result as JSON' }
     ],
     examples: [
       'agora acquire mcp-postgres --dry-run',
       'agora acquire "postgres database" --accept-warnings',
-      'agora acquire mcp-github --save --accept-warnings'
+      'agora acquire mcp-github --save --accept-warnings',
+      'agora acquire io.github.acme/postgres-mcp --source official --json'
     ]
   },
   {
@@ -193,6 +205,12 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Marketplace',
     summary: 'Pre-install safety scan for a catalog or live item.',
     usage: 'agora scan <id> [--type package|workflow] [--json]',
+    details:
+      'Runs the same trust gate `agora acquire` enforces before writing config, against the bundled ' +
+      'catalog. Exit codes: 0 pass, 1 usage/error, 2 warn, 3 fail — both --json and the table honor them. ' +
+      'Honest limits: this is static heuristics plus live-probe diffing (injection-pattern checks, ' +
+      'permission-manifest diffs, registry status, tool-annotation-hint checks) — never a sandbox. It ' +
+      'does not execute or formally verify server code. "pass" means no known red flags, not "safe."',
     flags: [
       { flag: '--type, -t', description: 'Item kind: package or workflow' },
       { flag: '--json', description: 'Output result as JSON' }

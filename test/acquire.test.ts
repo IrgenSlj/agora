@@ -78,7 +78,7 @@ describe('acquire core', () => {
         configPath,
         dryRun: true,
         cwd: dir,
-        deps: { scan: async (item) => scanResult(item) }
+        deps: { scan: async (item) => scanResult(item), fetchFederatedItem: async () => null }
       });
 
       expect(result.status).toBe('dry_run');
@@ -114,7 +114,7 @@ describe('acquire core', () => {
         query: 'mcp-postgres',
         configPath,
         cwd: dir,
-        deps: { scan: async (item) => scanResult(item) }
+        deps: { scan: async (item) => scanResult(item), fetchFederatedItem: async () => null }
       });
 
       expect(result.status).toBe('installed');
@@ -139,7 +139,7 @@ describe('acquire core', () => {
         query: 'mcp-postgres',
         configPath,
         cwd: dir,
-        deps: { scan: async (item) => scanResult(item, 0, 1) }
+        deps: { scan: async (item) => scanResult(item, 0, 1), fetchFederatedItem: async () => null }
       });
 
       expect(result.status).toBe('blocked');
@@ -157,7 +157,7 @@ describe('acquire core', () => {
         query: 'mcp-postgres',
         configPath,
         cwd: dir,
-        deps: { scan: async (item) => scanResult(item, 1, 0) }
+        deps: { scan: async (item) => scanResult(item, 1, 0), fetchFederatedItem: async () => null }
       });
 
       expect(blocked.status).toBe('needs_confirmation');
@@ -168,7 +168,7 @@ describe('acquire core', () => {
         configPath,
         cwd: dir,
         acceptWarnings: true,
-        deps: { scan: async (item) => scanResult(item, 1, 0) }
+        deps: { scan: async (item) => scanResult(item, 1, 0), fetchFederatedItem: async () => null }
       });
 
       expect(accepted.status).toBe('installed');
@@ -187,7 +187,7 @@ describe('acquire core', () => {
         configPath,
         cwd: dir,
         save: true,
-        deps: { scan: async (item) => scanResult(item) }
+        deps: { scan: async (item) => scanResult(item), fetchFederatedItem: async () => null }
       });
 
       expect(result.status).toBe('installed');
