@@ -45,8 +45,18 @@ describe('Agora MCP Server', () => {
     ]);
   });
 
+  // The `search` tool federates the official MCP registry with the local
+  // catalog, so it needs a DI fetcher to stay hermetic — an empty official
+  // response leaves the assertions resting entirely on the bundled catalog.
+  const emptyOfficialFetcher = async () =>
+    ({
+      ok: true,
+      status: 200,
+      json: async () => ({ servers: [], metadata: { count: 0 } })
+    }) as unknown as Response;
+
   test('search tool finds postgres MCP server', async () => {
-    const { client } = await createTestClient();
+    const { client } = await createTestClient({ federation: { fetcher: emptyOfficialFetcher } });
     const result = await client.callTool({
       name: 'search',
       arguments: { query: 'postgres' }
@@ -56,7 +66,7 @@ describe('Agora MCP Server', () => {
   });
 
   test('search tool returns empty message for no matches', async () => {
-    const { client } = await createTestClient();
+    const { client } = await createTestClient({ federation: { fetcher: emptyOfficialFetcher } });
     const result = await client.callTool({
       name: 'search',
       arguments: { query: 'zzzznonexistent' }

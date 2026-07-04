@@ -2,7 +2,6 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import {
-  searchMarketplaceItems,
   findMarketplaceItem,
   getTrendingItems,
   getTrendingTags,
@@ -14,6 +13,8 @@ import type { MarketplaceItem } from '../marketplace.js';
 import { scanItem, type ScanResult, type ScanOptions } from '../scan.js';
 import { checkOutdated, type OutdatedOptions } from '../outdated.js';
 import { AGORA_VERSION } from './app.js';
+import { federatedSearch } from '../federation/index.js';
+import type { FederationEnv } from '../federation/types.js';
 import { readAllServers, groupServersByName } from '../stack/registry.js';
 import { checkStack } from '../stack/doctor.js';
 import { readCapabilityCache } from '../stack/capability-cache.js';
@@ -52,6 +53,8 @@ function formatItemList(items: MarketplaceItem[]): string {
 export interface AgoraMcpServerOptions {
   scan?: ScanOptions;
   outdated?: OutdatedOptions;
+  /** Federation env for the `search` tool (DI fetcher/cache dir keeps tests hermetic). */
+  federation?: FederationEnv;
   stack?: {
     env?: Record<string, string | undefined>;
     cwd?: string;
@@ -75,7 +78,9 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
   server.registerTool(
     'search',
     {
-      description: 'Search the Agora marketplace for MCP servers, prompts, and workflows',
+      description:
+        'Search the federated MCP catalog (official MCP Registry + local bundled catalog) for ' +
+        'MCP servers, prompts, and workflows',
       inputSchema: z.object({
         query: z.string().describe('Search keywords'),
         category: z
@@ -84,18 +89,31 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
           .default('all')
           .describe('Category to search in'),
         limit: z.number().optional().default(10).describe('Maximum number of results')
-      })
+      }),
+      annotations: { readOnlyHint: true }
     },
     async ({ query, category, limit }) => {
-      const results = searchMarketplaceItems({ query, category, limit });
+      const { items, statuses } = await federatedSearch(
+        query,
+        { limit },
+        opts.federation ?? {}
+      );
+      const results = items
+        .filter((item) => category === 'all' || item.category === category)
+        .slice(0, limit);
+
+      const unreachable = statuses.filter((s) => s.state === 'unreachable').map((s) => s.source);
+      const note = unreachable.length > 0 ? `\n\n_(${unreachable.join(', ')} unreachable — results may be incomplete)_` : '';
+
       return {
         content: [
           {
             type: 'text',
             text:
-              results.length === 0
+              (results.length === 0
                 ? `No results found for "${query}".`
-                : `**Search results for "${query}"** (${results.length} found)\n\n${formatItemList(results)}`
+                : `**Search results for "${query}"** (${results.length} found)\n\n${formatItemList(results)}`) +
+              note
           }
         ]
       };

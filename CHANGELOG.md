@@ -104,6 +104,43 @@ completions code, and stale docs on disk. This pass deletes what's actually dead
   `CONTRIBUTING.md`, and `docs/frozen/README.md` now describe the three-ring system-manager
   architecture instead of the old open-marketplace/hosted-backend/community-hub framing.
 
+### P1 — federated catalog (core)
+
+The flip from "own catalog" to "federated crossroads" (`src/federation/types.ts` is the load-bearing
+contract): Agora's catalog is now the deduped union of upstream registries, not a bundled dataset.
+Ships the `official` (required) + `local` (offline fallback) sources; smithery/glama/github/
+huggingface are a clean `RegistrySource` seam away, not built here.
+
+- **`src/federation/sources/official.ts`** — client for the official MCP Registry
+  (`registry.modelcontextprotocol.io`, no auth for reads). Maps `GET /v0.1/servers` entries to
+  `FederatedItem`s (reverse-DNS id, namespace-derived author, `official` provenance with a
+  `/versions` detail URL, lifecycle `officialStatus` from `_meta`, a projected `serverJson`).
+  `search()` never throws — resolves to `[]` on any HTTP/network failure. `isEnabled()` honors an
+  `AGORA_OFFLINE=1` opt-out.
+- **`src/federation/sources/local.ts`** — wraps the bundled/offline catalog
+  (`searchMarketplaceItems`/`findMarketplaceItem`) as a `RegistrySource`; always enabled, never
+  touches the network — the source every other source degrades to.
+- **`src/federation/index.ts`** — `federatedSearch()` fans out to every enabled source in parallel
+  under a per-source timeout (default 5000ms), dedupes/merges results by reverse-DNS name |
+  normalized repo URL | npm package (a merged item keeps every provenance, official metadata wins),
+  and reports an honest per-source `SourceStatus` (`ok` / `unreachable` / `offline` — never a
+  fabricated count). A source's own on-disk cache backstops a live failure before falling through to
+  `local`. `SOURCES = [official, local]` is the registered seam for follow-on sources.
+  `federatedFetchItem()` resolves a single ref the same way.
+- **`src/federation/cache.ts`** — content-addressed JSONL cache per source under
+  `${AGORA_HOME}/federation/` (mirrors `src/hubs/cache.ts`). `refreshOfficialCache()` does a bounded
+  bootstrap crawl on first run, then incremental `updated_since` syncs that upsert changes and prune
+  registry-tombstoned `deleted` entries.
+- **`agora search`** now federates by default — merged results with provenance, honest per-source
+  status chrome, `--source official|local|all` to restrict. The legacy `--api`/self-hosted-backend
+  path is untouched (orthogonal to federation). **`agora refresh`** runs the official incremental
+  sync (`--json` for counts); wired into both the runtime dispatch table and the command-meta/help
+  registry.
+- **`src/cli/mcp-server.ts`** — the `search` tool now returns federated results (`readOnlyHint: true`)
+  and notes when a source was unreachable.
+- Hermetic tests under `test/federation/` with a DI fetcher and recorded/modeled registry fixtures in
+  `test/fixtures/federation/` — no network in the suite.
+
 ## [0.4.5] - 2026-05-30 — the safe capability-acquisition gateway & trust depth
 
 `agora` now closes the loop from discovery to installation via a single agent-callable `acquire` command, deepened OpenCode plugin integration, added description-drift detection for MCP servers, and flattened the monorepo-star-ranking problem. Windows users no longer hit "opencode binary not found." The marketplace, news, and community pillars remain the core.

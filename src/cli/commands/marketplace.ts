@@ -1,7 +1,9 @@
+import { join } from 'node:path';
 import {
   getMarketplaceItems,
   getTrendingTags,
   similarItems,
+  sortMarketplaceItems,
   type MarketplaceItem
 } from '../../marketplace.js';
 import { formatNumber } from '../../format.js';
@@ -11,6 +13,8 @@ import {
   findMarketplaceSource,
   trendingMarketplaceSource
 } from '../../live.js';
+import { federatedSearch } from '../../federation/index.js';
+import type { FederatedItem, FederationEnv, SourceId, SourceStatus } from '../../federation/types.js';
 import {
   stringFlag,
   numberFlag,
@@ -27,6 +31,38 @@ import { header, formatItemList, formatItemTable, formatItemDetail } from '../fo
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
+const SEARCHABLE_SOURCE_IDS: SourceId[] = ['official', 'local'];
+
+function isSourceId(value: string): value is SourceId {
+  return (SEARCHABLE_SOURCE_IDS as string[]).includes(value);
+}
+
+function matchesFederatedCategory(item: FederatedItem, category: string): boolean {
+  if (category === 'all') return true;
+  if (item.category === category) return true;
+  return category === 'package' && item.kind === 'package';
+}
+
+function federationEnvFor(parsed: Parameters<CommandHandler>[0], io: Parameters<CommandHandler>[1]): FederationEnv {
+  return {
+    fetcher: io.fetcher,
+    env: io.env,
+    home: io.env?.HOME,
+    cacheDir: join(detectDataDir(parsed, io), 'federation')
+  };
+}
+
+function statusSummary(statuses: SourceStatus[]): string {
+  return statuses
+    .map((s) => {
+      if (s.state === 'ok') return `${s.source}: ${s.count} results`;
+      if (s.state === 'unreachable') return `${s.source}: unreachable`;
+      if (s.state === 'offline') return `${s.source}: offline`;
+      return `${s.source}: searching`;
+    })
+    .join(' · ');
+}
+
 export const commandSearch: CommandHandler = async (parsed, io, style) => {
   const query = parsed.args.join(' ');
   const category = stringFlag(parsed, 'category', 'c') || 'all';
@@ -37,36 +73,136 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
   const perPage = numberFlag(parsed, 'perPage', 'pp') || 0;
   const limit = perPage > 0 ? perPage : numberFlag(parsed, 'limit', 'n') || 10;
 
-  const result = await searchMarketplaceSource({
-    ...(await sourceOptions(parsed, io)),
-    query,
-    category,
-    limit,
-    sortBy: sortBy as 'relevance' | 'stars' | 'installs' | 'name' | 'updated',
-    sortOrder,
-    page,
-    perPage
-  });
-  const results = result.data;
-  warnFallback(result, io);
+  const opts = await sourceOptions(parsed, io);
 
-  if (parsed.flags.json) {
-    writeJson(
+  // The legacy hosted-API path (`--api`/`--live`/a configured API URL) is
+  // orthogonal to federation — a self-hosted Agora API, not an upstream MCP
+  // registry — and stays exactly as it was.
+  if (opts.useApi) {
+    const result = await searchMarketplaceSource({
+      ...opts,
+      query,
+      category,
+      limit,
+      sortBy: sortBy as 'relevance' | 'stars' | 'installs' | 'name' | 'updated',
+      sortOrder,
+      page,
+      perPage
+    });
+    const results = result.data;
+    warnFallback(result, io);
+
+    if (parsed.flags.json) {
+      writeJson(
+        io.stdout,
+        sourcePayload(result, {
+          query,
+          category,
+          sortBy,
+          sortOrder,
+          page,
+          count: results.length,
+          items: results
+        })
+      );
+      return 0;
+    }
+
+    if (results.length === 0) {
+      writeLine(io.stdout, `No results found for "${query}".`);
+      return 0;
+    }
+
+    const theme = cliTheme(style, io);
+    writeLine(
       io.stdout,
-      sourcePayload(result, {
-        query,
-        category,
-        sortBy,
-        sortOrder,
-        page,
-        count: results.length,
-        items: results
-      })
+      header(
+        'agora search',
+        [`"${query || 'all'}"`, `${results.length} results`, sourceLabel(result)],
+        theme
+      )
     );
+    writeLine(io.stdout, '');
+
+    if (table) {
+      writeLine(io.stdout, formatItemTable(results, theme));
+    } else {
+      writeLine(io.stdout, formatItemList(results, theme));
+    }
+
+    if (perPage > 0) {
+      writeLine(io.stdout, '');
+      writeLine(
+        io.stdout,
+        style.dim(`Page ${page} · ${perPage} per page. Use --page N to navigate.`)
+      );
+    }
+
+    appendHistory(detectDataDir(parsed, io), {
+      type: 'search',
+      query,
+      timestamp: new Date().toISOString(),
+      results: results.length
+    });
     return 0;
   }
 
-  if (results.length === 0) {
+  // Federated path (default): official MCP registry + the bundled local
+  // catalog, deduped and merged, with an honest per-source status.
+  const sourceFlag = stringFlag(parsed, 'source');
+  if (sourceFlag && sourceFlag !== 'all' && !isSourceId(sourceFlag)) {
+    return usageError(io, `Unknown --source "${sourceFlag}". Use official, local, or all.`);
+  }
+  const source = sourceFlag && sourceFlag !== 'all' ? (sourceFlag as SourceId) : undefined;
+
+  const { items, statuses } = await federatedSearch(
+    query,
+    { source, limit },
+    federationEnvFor(parsed, io)
+  );
+
+  for (const status of statuses) {
+    if (status.state === 'unreachable') {
+      writeLine(io.stderr, `Warning: ${status.source} unreachable — ${status.reason}`);
+    }
+  }
+
+  let results: FederatedItem[] = items.filter((item) => matchesFederatedCategory(item, category));
+  // Each source has already ranked its own results by relevance (local via its
+  // BM25 index, official via the registry's own `search=` ranking) — there's
+  // no cross-source score to re-derive that from, so leave the merge order
+  // alone for the default 'relevance' mode rather than falling back to a
+  // crude name-substring heuristic that would bury exact matches. Explicit
+  // sort modes (stars/installs/name/updated) are plain comparisons and sort
+  // correctly without a BM25 score.
+  if (sortBy !== 'relevance') {
+    results.sort(sortMarketplaceItems(sortBy, sortOrder, query));
+  }
+
+  const totalMatches = results.length;
+  if (perPage > 0) {
+    const start = (page - 1) * perPage;
+    results = results.slice(start, start + perPage);
+  } else {
+    results = results.slice(0, limit);
+  }
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, {
+      query,
+      category,
+      sortBy,
+      sortOrder,
+      page,
+      source: sourceFlag || 'all',
+      statuses,
+      count: results.length,
+      items: results
+    });
+    return 0;
+  }
+
+  if (totalMatches === 0) {
     writeLine(io.stdout, `No results found for "${query}".`);
     return 0;
   }
@@ -74,11 +210,7 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
   const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
-    header(
-      'agora search',
-      [`"${query || 'all'}"`, `${results.length} results`, sourceLabel(result)],
-      theme
-    )
+    header('agora search', [`"${query || 'all'}"`, `${totalMatches} results`, statusSummary(statuses)], theme)
   );
   writeLine(io.stdout, '');
 
@@ -100,7 +232,7 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
     type: 'search',
     query,
     timestamp: new Date().toISOString(),
-    results: results.length
+    results: totalMatches
   });
   return 0;
 };

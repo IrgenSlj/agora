@@ -1,0 +1,39 @@
+{
+  "servers": [
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "io.github.modelcontextprotocol/server-github",
+        "description": "Full GitHub API integration — issues, PRs, repos, search, file contents, and releases",
+        "repository": {
+          "url": "https://github.com/modelcontextprotocol/servers",
+          "source": "github"
+        },
+        "version": "2025.4.8",
+        "packages": [
+          {
+            "registryType": "npm",
+            "registryBaseUrl": "https://registry.npmjs.org",
+            "identifier": "@modelcontextprotocol/server-github",
+            "version": "2025.4.8",
+            "transport": {
+              "type": "stdio"
+            }
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2025-11-21T00:00:00.000000Z",
+          "publishedAt": "2025-11-21T00:00:00.000000Z",
+          "updatedAt": "2025-11-21T00:00:00.000000Z",
+          "isLatest": true
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "count": 1
+  }
+}

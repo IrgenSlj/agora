@@ -1,0 +1,170 @@
+{
+  "servers": [
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+        "name": "ai.waystation/postgres",
+        "description": "Connect to your PostgreSQL database to query data and schemas.",
+        "repository": {
+          "url": "https://github.com/waystation-ai/mcp",
+          "source": "github"
+        },
+        "version": "0.3.1",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://waystation.ai/postgres/mcp"
+          },
+          {
+            "type": "sse",
+            "url": "https://waystation.ai/postgres/mcp/sse"
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2025-09-09T14:46:09.489652Z",
+          "publishedAt": "2025-09-09T14:46:09.489652Z",
+          "updatedAt": "2025-09-09T14:46:09.489652Z",
+          "isLatest": true
+        }
+      }
+    },
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "capital.hove/read-only-local-postgres-mcp-server",
+        "description": "MCP server for read-only PostgreSQL database queries in Claude Desktop",
+        "repository": {
+          "url": "https://github.com/hovecapital/read-only-local-postgres-mcp-server",
+          "source": "github"
+        },
+        "version": "0.1.0",
+        "websiteUrl": "https://hove.capital",
+        "packages": [
+          {
+            "registryType": "npm",
+            "registryBaseUrl": "https://registry.npmjs.org",
+            "identifier": "@hovecapital/read-only-postgres-mcp-server",
+            "version": "0.1.0",
+            "transport": {
+              "type": "stdio"
+            }
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2026-01-29T08:50:16.035232Z",
+          "publishedAt": "2026-01-29T08:50:16.035232Z",
+          "updatedAt": "2026-01-29T08:50:16.035232Z",
+          "isLatest": true
+        }
+      }
+    },
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "io.github.Yash-0620/postgres-mcp-secured",
+        "description": "Enterprise PostgreSQL MCP secured by Aegis Zero-Trust to block unauthorized SQL injections.",
+        "title": "Postgres Secured (Aegis Zero-Trust)",
+        "repository": {
+          "url": "https://github.com/Yash-0620/postgres-mcp",
+          "source": "github"
+        },
+        "version": "1.0.2",
+        "websiteUrl": "https://aegis-cloud-console.vercel.app/"
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2026-05-31T09:24:07.844286Z",
+          "publishedAt": "2026-05-31T09:24:07.844286Z",
+          "updatedAt": "2026-05-31T09:24:07.844286Z",
+          "isLatest": true
+        }
+      }
+    },
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "io.github.YawLabs/postgres-mcp",
+        "description": "PostgreSQL MCP server - query, schema introspection, explain, and health checks for AI assistants",
+        "version": "0.6.20",
+        "packages": [
+          {
+            "registryType": "npm",
+            "identifier": "@yawlabs/postgres-mcp",
+            "version": "0.6.20",
+            "transport": {
+              "type": "stdio"
+            }
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2026-06-04T13:17:59.592538Z",
+          "publishedAt": "2026-06-04T13:17:59.592538Z",
+          "updatedAt": "2026-06-04T13:17:59.592538Z",
+          "isLatest": true
+        }
+      }
+    },
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-16/server.schema.json",
+        "name": "io.github.bluwork/postgres-scout-mcp",
+        "description": "Scout your PostgreSQL databases with AI - safety features, monitoring, and data quality",
+        "repository": {
+          "url": "https://github.com/bluwork/postgres-scout-mcp",
+          "source": "github"
+        },
+        "version": "1.0.3",
+        "packages": [
+          {
+            "registryType": "npm",
+            "registryBaseUrl": "https://registry.npmjs.org",
+            "identifier": "postgres-scout-mcp",
+            "version": "1.0.3",
+            "transport": {
+              "type": "stdio"
+            },
+            "packageArguments": [
+              {
+                "description": "Server mode: read-only (default) or read-write",
+                "format": "string",
+                "value": "read-only",
+                "type": "",
+                "name": "--mode"
+              },
+              {
+                "description": "PostgreSQL connection URI",
+                "format": "string",
+                "value": "postgresql://localhost:5432/postgres",
+                "type": "",
+                "valueHint": "postgresql-uri"
+              }
+            ]
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2026-03-07T12:33:52.786638Z",
+          "publishedAt": "2026-03-07T12:33:52.786638Z",
+          "updatedAt": "2026-03-07T12:33:52.786638Z",
+          "isLatest": true
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "nextCursor": "io.github.bluwork/postgres-scout-mcp:1.0.3",
+    "count": 5
+  }
+}

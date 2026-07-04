@@ -31,6 +31,7 @@ import * as freezeModule from './commands/freeze.js';
 import * as syncModule from './commands/sync.js';
 import * as tryModule from './commands/try.js';
 import * as capabilitiesModule from './commands/capabilities.js';
+import * as refreshModule from './commands/refresh.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -165,6 +166,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       scan: scanModule.commandScan,
       acquire: acquireModule.commandAcquire,
       outdated: outdatedModule.commandOutdated,
+      refresh: refreshModule.commandRefresh,
       curate: curateModule.commandCurate,
       installed: installedModule.commandInstalled,
       doctor: doctorModule.commandDoctor,

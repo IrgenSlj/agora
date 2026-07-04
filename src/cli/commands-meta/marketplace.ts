@@ -4,20 +4,25 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'search',
     group: 'Marketplace',
-    summary: 'Search the marketplace for packages and workflows',
-    usage: 'agora search <query> [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
+    summary: 'Search the federated catalog for MCP servers, packages, and workflows',
+    usage:
+      'agora search <query> [--source official|local|all] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
     details:
-      'Searches all marketplace items by keyword. Use --category to filter by kind. ' +
-      'Add --api to query the live Agora API; without it, the bundled offline data is used.',
+      'Federates the official MCP Registry with the bundled local catalog, deduping matches ' +
+      'found in both (each result keeps its provenance). An unreachable source degrades honestly ' +
+      'instead of failing the whole search — local always works offline. ' +
+      'Use --category to filter by kind, --source to restrict to one upstream. ' +
+      'Add --api to query a self-hosted Agora API instead (unrelated to federation).',
     flags: [
+      { flag: '--source', description: 'Restrict to one upstream: official, local, or all (default all)' },
       { flag: '--category, -c', description: 'Filter by category: mcp, prompt, workflow, skill' },
       { flag: '--limit, -n', description: 'Maximum number of results (default 10)' },
-      { flag: '--json', description: 'Output results as JSON' }
+      { flag: '--json', description: 'Output results as JSON, including per-item provenance' }
     ],
     examples: [
-      'agora search filesystem',
-      'agora search filesystem --api',
-      'agora search github --category mcp --limit 5'
+      'agora search postgres',
+      'agora search postgres --source official',
+      'agora search github --category mcp --limit 5 --json'
     ]
   },
   {
@@ -204,6 +209,24 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--json', description: 'Output as JSON' }
     ],
     examples: ['agora outdated', 'agora outdated --json']
+  },
+  {
+    name: 'refresh',
+    group: 'Marketplace',
+    summary: 'Incrementally sync the official MCP registry into the local federation cache.',
+    usage: 'agora refresh [--source official] [--json]',
+    details:
+      'Fetches servers added/changed since the last sync via the official registry\'s ' +
+      '`updated_since` filter, and prunes any it has tombstoned as deleted. Powers `agora search`\'s ' +
+      'offline fallback when the live registry is unreachable.',
+    flags: [
+      {
+        flag: '--source',
+        description: 'Source to refresh (default: official; the only supported value today)'
+      },
+      { flag: '--json', description: 'Output result as JSON' }
+    ],
+    examples: ['agora refresh', 'agora refresh --json']
   },
   {
     name: 'news',

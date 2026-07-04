@@ -57,9 +57,14 @@ describe('CLI argument parsing', () => {
 });
 
 describe('CLI commands', () => {
+  // These exercise the bundled offline catalog specifically, so they pin
+  // --source local — federatedSearch's default ("all enabled") also queries
+  // the live official MCP registry, which would make an unmocked test both
+  // network-dependent and non-hermetic (see test/federation/*.test.ts for the
+  // federation-specific coverage with a DI fetcher).
   test('search prints matching marketplace results', async () => {
     const { io, stdout, stderr } = createIo();
-    const code = await runCli(['search', 'filesystem'], io);
+    const code = await runCli(['search', 'filesystem', '--source', 'local'], io);
 
     expect(code).toBe(0);
     expect(stderr.join('')).toBe('');
@@ -68,7 +73,7 @@ describe('CLI commands', () => {
 
   test('search supports JSON output', async () => {
     const { io, stdout } = createIo();
-    const code = await runCli(['search', 'github', '--json'], io);
+    const code = await runCli(['search', 'github', '--source', 'local', '--json'], io);
     const payload = JSON.parse(stdout.join(''));
 
     expect(code).toBe(0);
@@ -78,7 +83,10 @@ describe('CLI commands', () => {
 
   test('search --sort stars returns items sorted by stars descending', async () => {
     const { io, stdout } = createIo();
-    const code = await runCli(['search', 'mcp', '--sort', 'stars', '--limit', '5'], io);
+    const code = await runCli(
+      ['search', 'mcp', '--sort', 'stars', '--limit', '5', '--source', 'local'],
+      io
+    );
     const out = stdout.join('');
 
     expect(code).toBe(0);
@@ -89,7 +97,10 @@ describe('CLI commands', () => {
 
   test('search --table renders box-drawn table', async () => {
     const { io, stdout } = createIo();
-    const code = await runCli(['search', 'mcp-github', '--table', '--limit', '3'], io);
+    const code = await runCli(
+      ['search', 'mcp-github', '--table', '--limit', '3', '--source', 'local'],
+      io
+    );
     const out = stdout.join('');
 
     expect(code).toBe(0);
