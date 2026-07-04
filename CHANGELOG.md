@@ -4,8 +4,35 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
-_Next (see [`ROADMAP.md`](./ROADMAP.md)): TUI-1 Acquire flow · marketplace→search vocab rename ·
-TUI-2/3 · P4 inference providers · P5 federated plaza._
+_Next (see [`ROADMAP.md`](./ROADMAP.md)): marketplace→search vocab rename · TUI-2/3 · P4 inference
+providers · P5 federated plaza._
+
+### TUI-1 — Acquire flow
+- **New `src/cli/pages/acquire.ts`** — the Acquire flow (RESOLVE → PLAN → GATE → APPLY) wired to the
+  real `acquire()` gateway. A single dry-run `acquire()` call resolves the item over federation, builds
+  the install plan, and runs the trust gate scan in one round-trip; a second, explicit `acquire()` call
+  is the only one that ever writes (on confirm, and `--accept-warnings`-equivalent confirm on `warn`).
+  `fail` never reaches an apply prompt. Reuses the TUI-0 trust component grammar as-is
+  (`provenanceBadges`, `planDiff`, `verdictBanner`, `trustPanel`) plus `pageHeader`/`rule`/`kvRow`/
+  `spinnerFrame`/`bp` from the Stack-page vocabulary; no trust component was modified.
+- **Satellite page, not a tab** — added `'acquire'` to `PageId` and registered it in `tui.ts`'s
+  `getPage()`, but deliberately left it out of `PAGE_ORDER`: it's reached via a new `a` hotkey from
+  Stack/Marketplace (pre-seeded with the selected item's id via a small `seedAcquire()` module seed,
+  since page switches carry no payload), not a primary 1-5 tab — so the existing five-tab header, `1-5`
+  shortcut, and Tab-cycle order are unchanged.
+- Added `PageAction` kinds `plan` (a PLAN-stage note, e.g. "not installable") and `gate` (a GATE-stage
+  verdict summary) for the status bar; `tui.ts`'s `applyAction` routes both into the existing status
+  line. Additive — no existing `PageAction` kind changed shape.
+- Exported two small existing internals for reuse by the page: `writeLocationFor` (`src/acquire.ts` —
+  read-only "where would this write" resolution, needed to show the PLAN stage's target file before any
+  write happens) and `observedCapabilities` (`src/scan.ts` — the declared-vs-observed permission
+  heuristic already computed for the `observed_permissions` scan check, reused directly for the trust
+  panel's per-category rows instead of re-parsing that check's message text).
+- Golden/interaction tests (`test/cli/acquire-page.test.ts`, hermetic — one DI'd `fetcher` stubs the
+  full 6-source federation fan-out and the scan gate's repo/npm checks, so nothing hits the network):
+  render at 60/90/130 cols in color and NO_COLOR; FAIL shows the `═` double rule and never offers apply
+  (`y` is a no-op, no write); WARN/PASS renders the apply hint and a real (tmp-dir-isolated) `acquire()`
+  write on `y`; not-found renders cleanly; `Esc` returns to the launching page.
 
 ## [0.6.0] - 2026-07-04 — the pivot: from terminal marketplace to agentic stack manager
 

@@ -19,6 +19,7 @@ import { detectAgoraDataDir } from '../../state.js';
 import type { StackHealth } from '../../stack/doctor.js';
 import type { ServerCapabilities } from '../../stack/capability-cache.js';
 import type { ConfiguredServer, StackEnv } from '../../stack/types.js';
+import { seedAcquire } from './acquire.js';
 
 // suppress unused-import warning for pill (used below)
 void pill;
@@ -113,6 +114,7 @@ export const stackPage: Page = {
     { key: 'Enter', label: 'details' },
     { key: 'p', label: 'probe' },
     { key: 'r', label: 'refresh' },
+    { key: 'a', label: 'acquire' },
     { key: 'Esc', label: 'back' }
   ],
 
@@ -414,6 +416,12 @@ export const stackPage: Page = {
           ctx.repaint();
           return { kind: 'status', message: 'Probed ' + state.servers[state.selected]?.name };
         }
+        case 'a': {
+          const entry = state.servers[state.selected];
+          if (!entry) return { kind: 'none' };
+          seedAcquire({ id: entry.name, returnTo: 'stack' });
+          return { kind: 'switch', to: 'acquire' };
+        }
         default:
           return { kind: 'none' };
       }
@@ -479,6 +487,12 @@ export const stackPage: Page = {
         state.probing = false;
         ctx.repaint();
         return { kind: 'status', message: 'Probed ' + (state.servers[state.selected]?.name ?? '') };
+      }
+      case 'a': {
+        const entry = state.servers[state.selected];
+        if (!entry) return { kind: 'none' };
+        seedAcquire({ id: entry.name, returnTo: 'stack' });
+        return { kind: 'switch', to: 'acquire' };
       }
       default:
         return { kind: 'none' };

@@ -18,6 +18,7 @@ import { marketplacePage } from './pages/marketplace.js';
 import { stackPage } from './pages/stack.js';
 import { newsPage } from './pages/news.js';
 import { settingsPage } from './pages/settings.js';
+import { acquirePage } from './pages/acquire.js';
 import { vlen, padRight, truncate } from './pages/helpers.js';
 import { keyHintBar, statusLine as statusLineComponent } from './pages/components.js';
 
@@ -28,6 +29,10 @@ const CUR_SHOW = '\x1b[?25h';
 const CLEAR = '\x1b[2J\x1b[H';
 const HOME_CUR = '\x1b[H';
 
+// `acquire` is deliberately NOT in PAGE_ORDER: it's a satellite page reached
+// via the `a` launch affordance from Stack/Marketplace (pre-seeded), not a
+// primary tab — so it never consumes a 1-5 shortcut or a tab slot (see
+// test/cli/tui-chrome.test.ts's "1-5" / five-tab assertions).
 const PAGE_ORDER: ReadonlyArray<PageId> = ['home', 'marketplace', 'stack', 'news', 'settings'];
 
 function getPage(id: PageId): Page {
@@ -42,6 +47,8 @@ function getPage(id: PageId): Page {
       return newsPage;
     case 'settings':
       return settingsPage;
+    case 'acquire':
+      return acquirePage;
   }
 }
 
@@ -328,6 +335,12 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
         return;
       case 'status':
         setStatus(a.message, a.tone);
+        return;
+      case 'plan':
+        setStatus(a.summary, 'info');
+        return;
+      case 'gate':
+        setStatus(a.summary, a.verdict === 'fail' ? 'error' : a.verdict === 'warn' ? 'warn' : 'info');
         return;
     }
   }

@@ -200,7 +200,13 @@ const OBSERVED_CAPABILITY_PATTERNS: Record<'fs' | 'net' | 'exec', RegExp> = {
   exec: /\b(exec|execute|shell|command|spawn|subprocess|bash|script)\b/i
 };
 
-function observedCapabilities(
+/**
+ * Exported for the TUI Acquire page's declared-vs-observed permission rows
+ * (trustPanel) — the same heuristic `checkObservedPermissions` already runs
+ * for the `observed_permissions` scan check, reused directly instead of
+ * re-parsing that check's free-text message.
+ */
+export function observedCapabilities(
   tools: ReadonlyArray<{ name: string; description?: string }>
 ): Set<'fs' | 'net' | 'exec'> {
   const observed = new Set<'fs' | 'net' | 'exec'>();

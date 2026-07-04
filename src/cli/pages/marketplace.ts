@@ -15,6 +15,7 @@ import {
 import { fmtCount, frame, scrollbar } from './helpers.js';
 import { enrichItem, enrichHfItem, type EnrichmentEntry } from '../../hubs/enrichment.js';
 import { scanItem, type ScanResult } from '../../scan.js';
+import { seedAcquire } from './acquire.js';
 import {
   detectAgoraDataDir,
   loadAgoraState,
@@ -133,6 +134,7 @@ export const marketplacePage: Page = {
     { key: 'j/k', label: 'nav' },
     { key: 'Enter', label: 'details' },
     { key: 'i', label: 'install' },
+    { key: 'a', label: 'acquire' },
     { key: 'S', label: 'scan' },
     { key: 's', label: 'save' },
     { key: 'o', label: 'sort/open' },
@@ -686,6 +688,12 @@ export const marketplacePage: Page = {
         state.installStatus = null;
         state.view = 'install-preview';
         return { kind: 'none' };
+      }
+      case 'a': {
+        const it = items[state.cursor];
+        if (!it) return { kind: 'status', message: 'nothing selected' };
+        seedAcquire({ id: it.id, returnTo: 'marketplace' });
+        return { kind: 'switch', to: 'acquire' };
       }
       case 'S': {
         const it = items[state.cursor];

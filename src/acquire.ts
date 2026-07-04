@@ -137,7 +137,13 @@ function resolveConfigPath(path: string, cwd?: string): string {
   return resolve(cwd ?? process.cwd(), path);
 }
 
-function writeLocationFor(input: AcquireInput, tool: AgentToolId): ToolConfigLocation | null {
+/**
+ * Where `acquire()` would write for this input/tool — exported so the TUI
+ * Acquire page (src/cli/pages/acquire.ts) can show the PLAN stage's "where"
+ * before any write happens (a dry run never reaches the code path that
+ * computes this). Read-only: only detects/resolves a path, never touches disk.
+ */
+export function writeLocationFor(input: AcquireInput, tool: AgentToolId): ToolConfigLocation | null {
   if (input.configPath) {
     return { path: resolveConfigPath(input.configPath, input.cwd), scope: 'project' };
   }

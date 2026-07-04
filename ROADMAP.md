@@ -24,7 +24,7 @@ work is in [`CHANGELOG.md`](./CHANGELOG.md).
 | **P6** harness integration matrix (+ ≤8 MCP tools) | ✅ shipped |
 | **P1+** follow-on sources (smithery/glama/github/hf) | ✅ shipped |
 | **TUI Stack page** (flagship, wired to real data) | ✅ shipped |
-| **TUI-1** Acquire flow | 🔜 next (started; not yet built) |
+| **TUI-1** Acquire flow | ✅ shipped |
 | **Vocab rename** marketplace → search/catalog | 🔜 next (design brief bans "marketplace" in UI) |
 | **TUI-2** Search + Item detail | ⏳ |
 | **TUI-3** Plaza + Home + Settings + Learn | ⏳ |
@@ -58,44 +58,39 @@ The full agentic-stack-manager core is live on `main`:
 - **TUI foundations + Stack page** — theme `drift` token, trust component grammar, and a fully-wired
   flagship Stack page (`src/cli/pages/stack.ts`: real servers via `checkStack`, live probe, capability
   cache, drift).
+- **TUI-1 Acquire flow** (`src/cli/pages/acquire.ts`) — RESOLVE → PLAN → GATE → APPLY over the real
+  `acquire()` gateway; a satellite page reached via the `a` hotkey from Stack/Marketplace (pre-seeded),
+  not a primary tab. `fail` never offers apply.
 
 All five acceptance demos (`doctor`, `sync --from`, agent self-provision via `agora_acquire`,
 `search --json`, `integrate --all`) are backed by real code.
 
 ## Future development (prioritized — start here next session)
 
-### 1. TUI-1 — Acquire flow *(next; Ring 2)*
-The Stack page is done; the **Acquire flow does not exist yet**. Build `src/cli/pages/acquire.ts`:
-RESOLVE (federated resolve + `provenanceBadges`) → PLAN (`planDiff`) → GATE (`verdictBanner` +
-`trustPanel`, honest-limits) → APPLY (`acquire()` with confirm; `fail` never applies). Reuse the TUI-0
-trust components (already built for exactly this). Decide page-vs-overlay from the Claude Design handoff
-(project `019e273b-e896-7655-9603-ad11c0227d48`: `Agora TUI - Foundations & Flagship.html`,
-`screenshots/flag-acquire.png` — pull via the DesignSync MCP). Add `PageAction` `plan`/`gate` kinds and
-a launch affordance (`a`) from Stack/Marketplace. Golden tests: FAIL shows the double-rule + no apply;
-PASS offers apply. *(An agent was mid-task on this when the session limit hit — nothing landed.)*
-
-### 2. Vocabulary rename: marketplace → search/catalog *(couples with TUI-2)*
+### 1. Vocabulary rename: marketplace → search/catalog *(next; couples with TUI-2)*
 The design brief bans "marketplace" in the UI. Typed refactor behind `typecheck`: `PageId`
 `'marketplace'`→`'search'`; `CommandGroup` `'Marketplace'`→`'Catalog'`; the `groups` array in
 `src/cli/format.ts`; command summaries/help in `src/cli/commands-meta/marketplace.ts`; the `browse`
 detail copy. Also **refresh onboarding copy** in `format.ts` `welcome()` to lead with the pivot value
-(doctor · sync · acquire · integrate) instead of search/install/learn.
+(doctor · sync · acquire · integrate) instead of search/install/learn. Note: the Acquire flow
+(`src/cli/pages/acquire.ts`, shipped) launches from Marketplace/Stack via `seedAcquire()` + `returnTo` —
+keep that wiring intact through the rename (it only needs the `PageId` literal updated).
 
-### 3. TUI-2 — Search + Item pages *(Ring 2)*
+### 2. TUI-2 — Search + Item pages *(Ring 2)*
 Rename the marketplace page → **Search** (progressive per-source results + `provenanceBadges`) and build
 the **Item** detail page with the `trustPanel` as centerpiece. Wires onto P1/P2.
 
-### 4. TUI-3 — Plaza + Home + Settings + Learn *(Ring 3 surface)*
+### 3. TUI-3 — Plaza + Home + Settings + Learn *(Ring 3 surface)*
 `news` page → **Plaza** (origin chips + composer); **Home** four modules; **Settings** (tiers / sources /
 integrations); **Learn** restyle.
 
-### 5. P4 — Inference providers *(Ring 2)*
+### 4. P4 — Inference providers *(Ring 2)*
 `src/inference/` implementing the authored `Provider` interface: `opencode` (wrap `src/opencode-exec.ts`),
 `claude` (Agent SDK via **`ANTHROPIC_API_KEY`** — subscription auth unavailable, OQ-1), `ollama`
 (OpenAI-compatible). `agora connect claude|ollama|status` in settings (never `agora.toml`). Route
 acquire-suggestions, feed summarization, `agora ask` through it.
 
-### 6. P5 — Federated plaza *(Ring 3)*
+### 5. P5 — Federated plaza *(Ring 3)*
 Read adapters (Lobsters, Bluesky, Mastodon, GitHub Discussions, Discourse) reusing the ranking + cache;
 write adapters where protocols are open (Bluesky, Mastodon, Discourse, GitHub Discussions) with
 `canWrite`; `agora post`/`reply`. Honest-output: label unverifiable posts.

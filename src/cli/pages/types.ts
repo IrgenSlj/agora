@@ -1,7 +1,7 @@
 import type { Styler } from '../../ui.js';
 import type { CliIo } from '../flags.js';
 
-export type PageId = 'home' | 'marketplace' | 'stack' | 'news' | 'settings';
+export type PageId = 'home' | 'marketplace' | 'stack' | 'news' | 'settings' | 'acquire';
 
 export interface KeyEvent {
   raw: string;
@@ -37,7 +37,11 @@ export type PageAction =
   | { kind: 'switch'; to: PageId }
   | { kind: 'open-url'; url: string }
   | { kind: 'run-shell'; cmd: string }
-  | { kind: 'status'; message: string; tone?: 'info' | 'warn' | 'error' };
+  | { kind: 'status'; message: string; tone?: 'info' | 'warn' | 'error' }
+  /** A PLAN-stage result worth a status-bar note (e.g. Acquire: not installable). */
+  | { kind: 'plan'; summary: string }
+  /** A GATE-stage verdict worth a status-bar note (e.g. Acquire: resolve/re-resolve). */
+  | { kind: 'gate'; verdict: 'pass' | 'warn' | 'fail'; summary: string };
 
 export interface AppState {
   user: { username?: string; isLLM?: boolean };
