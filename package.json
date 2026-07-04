@@ -1,6 +1,6 @@
 {
   "name": "agora-hub",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "The system manager for your agentic stack — a local-first terminal app that manages, watches, and gates your MCP servers, skills, and instruction files.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
