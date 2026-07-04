@@ -45,7 +45,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
   function printHome(): void {
     const banner = renderBanner({ color: true, trueColor });
-    const motto = "Developers' CLI marketplace - type a command, bash or chat:";
+    const motto = 'The system manager for your agentic stack - type a command, bash or chat:';
     const mottoLine = gradientText(motto, { trueColor });
     const model = FREE_MODELS[0];
     const infoLine = style.dim(

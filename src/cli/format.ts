@@ -224,7 +224,7 @@ export function welcome(color: boolean, trueColor: boolean, theme: Theme, versio
   if (!color) {
     return [
       '',
-      `agora · Developers' CLI marketplace · v${version}`,
+      `agora · the system manager for your agentic stack · v${version}`,
       '',
       '  Search    agora search <query>',
       '  Browse    agora trending · agora browse <id>',
@@ -239,7 +239,7 @@ export function welcome(color: boolean, trueColor: boolean, theme: Theme, versio
   const box = renderBox(
     'Welcome to Agora',
     [
-      "Developers' CLI marketplace - type a command, bash or chat:",
+      "the system manager for your agentic stack - type a command, bash or chat:",
       `v${version} · run \`agora help\` to get started`
     ],
     { color, trueColor }
@@ -264,7 +264,7 @@ export function usage(theme: Theme, version: string): string {
   const groups = ['Marketplace', 'Setup', 'Stack', 'Library', 'Learn'] as const;
 
   const lines: string[] = [
-    `${theme.accent('agora')}${theme.dim(` · Developers' CLI marketplace · v${version}`)}`,
+    `${theme.accent('agora')}${theme.dim(` · the system manager for your agentic stack · v${version}`)}`,
     ''
   ];
 

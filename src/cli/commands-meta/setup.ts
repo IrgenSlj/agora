@@ -74,14 +74,14 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'tui',
     group: 'Setup',
-    summary: 'Open the full-screen Agora TUI (Home · Market · News · Settings)',
+    summary: 'Open the full-screen Agora TUI (Home · Stack · Market · News · Settings)',
     usage: 'agora tui',
     details:
-      'Opens the keyboard-driven TUI with four pages, switched by 1-4 or Tab. ' +
+      'Opens the keyboard-driven TUI with five pages, switched by 1-5 or Tab. ' +
       'j/k navigates, Enter drills in, Esc backs out, ? toggles help, q quits. ' +
-      'Pages: Home (recommendation engine), Marketplace (browse + install preview), ' +
-      'News (ranked feed against fixtures until news adapters land), ' +
-      'Settings (account, display, news sources).',
+      'Pages: Home (recommendation engine), Stack (your MCP servers across every ' +
+      'harness — health, drift, probe), Marketplace (federated catalog + gated ' +
+      'acquire), News (ranked feed), Settings (account, display, sources).',
     examples: ['agora tui']
   },
   {
