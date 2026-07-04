@@ -152,10 +152,16 @@ describe('huggingfaceSource.fetchItem()', () => {
     expect(item).toBeNull();
   });
 
-  test('never throws — returns null when the fetcher throws', async () => {
-    const item = await huggingfaceSource.fetchItem('meta-llama/Llama-3.1-8B', {
-      fetcher: throwingFetcher()
-    });
-    expect(item).toBeNull();
-  });
+  test(
+    'never throws — returns null when the fetcher throws',
+    async () => {
+      const item = await huggingfaceSource.fetchItem('meta-llama/Llama-3.1-8B', {
+        fetcher: throwingFetcher()
+      });
+      expect(item).toBeNull();
+    },
+    // Real jittered retry backoff — generous budget so it never brushes the
+    // default 5s timeout under full-suite load (matches the search sibling).
+    15000
+  );
 });

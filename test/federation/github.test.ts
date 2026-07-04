@@ -151,8 +151,15 @@ describe('githubSource.fetchItem()', () => {
     expect(item).toBeNull();
   });
 
-  test('never throws — returns null when the fetcher throws', async () => {
-    const item = await githubSource.fetchItem('gh:acme/postgres-mcp', { fetcher: throwingFetcher() });
-    expect(item).toBeNull();
-  });
+  test(
+    'never throws — returns null when the fetcher throws',
+    async () => {
+      const item = await githubSource.fetchItem('gh:acme/postgres-mcp', { fetcher: throwingFetcher() });
+      expect(item).toBeNull();
+    },
+    // fetchWithRetry does real (jittered) backoff sleeps between retries; give
+    // this the same generous budget as the search sibling so it never brushes
+    // the default 5s timeout under full-suite load (was an intermittent flake).
+    15000
+  );
 });
