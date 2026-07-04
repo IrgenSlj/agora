@@ -2,14 +2,11 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { Page, PageAction, PageContext } from './types.js';
 import type { ScoredNewsItem } from '../../news/types.js';
-import type { Thread } from '../../community/types.js';
-import type { SourceOptions } from '../../live.js';
 import { getHotItems, getTrendingItems, type MarketplaceItem } from '../../marketplace.js';
 import { readCache } from '../../news/cache.js';
 import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
 import { rankItems } from '../../news/score.js';
-import { communityThreadsSource } from '../../community/client.js';
-import { vlen, fmtCount, frame, pageSourceOptions, truncate } from './helpers.js';
+import { vlen, fmtCount, frame, truncate } from './helpers.js';
 import { formatNumber } from '../../format.js';
 import { buildHomeFeed, getHotRepos, computeSinceLastSeen } from '../../home/feed.js';
 import type { StackSummary, Opportunity, HotRepo, SinceDelta } from '../../home/feed.js';
@@ -20,17 +17,13 @@ import { rule, status, pageHeader, bp } from './components.js';
 
 const SOURCE_LABELS: Record<string, string> = {
   hn: 'HN',
-  reddit: 'R ',
   'github-trending': 'GH',
   arxiv: 'XR',
   rss: 'RS'
 };
 
 interface HomeState {
-  cursor: number; // 0 = news, 1 = community, 2 = trending
-  threads: Thread[];
-  threadsLoading: boolean;
-  threadsHint: string;
+  cursor: number; // 0 = news, 1 = trending
   summary: StackSummary | null;
   opportunities: Opportunity[];
   feedLoading: boolean;
@@ -39,17 +32,12 @@ interface HomeState {
 }
 const state: HomeState = {
   cursor: 0,
-  threads: [],
-  threadsLoading: false,
-  threadsHint: '',
   summary: null,
   opportunities: [],
   feedLoading: false,
   trendLens: 'hot',
   since: null
 };
-
-let lastCommunityFetchAt = 0;
 
 function detectDataDir(ctx: PageContext): string {
   const env = ctx.io.env ?? {};
@@ -65,10 +53,6 @@ function buildStackEnv(ctx: PageContext): StackEnv {
     home: ctx.io.env?.HOME,
     env: ctx.io.env
   };
-}
-
-function buildSourceOptions(ctx: PageContext): SourceOptions | null {
-  return pageSourceOptions(ctx, { requireAuth: true });
 }
 
 function fmtAge(iso: string): string {
@@ -96,30 +80,6 @@ function loadNews(ctx: PageContext, max: number): { items: ScoredNewsItem[]; isF
     items: rankItems(cached, DEFAULT_NEWS_CONFIG, new Date()).slice(0, max),
     isFallback: true
   };
-}
-
-async function refreshCommunity(ctx: PageContext): Promise<void> {
-  const opts = buildSourceOptions(ctx);
-  if (!opts) {
-    state.threads = [];
-    state.threadsHint = 'Sign in with `agora auth login` to see live community activity.';
-    state.threadsLoading = false;
-    ctx.repaint();
-    return;
-  }
-  if (Date.now() - lastCommunityFetchAt < 5000) return;
-  lastCommunityFetchAt = Date.now();
-  state.threadsLoading = true;
-  try {
-    const result = await communityThreadsSource(opts, 'mcp', 'active', 1);
-    state.threads = result.data.threads.slice(0, 5);
-    state.threadsHint = '';
-  } catch {
-    state.threadsHint = 'Community fetch failed; try again with `r`.';
-  } finally {
-    state.threadsLoading = false;
-    ctx.repaint();
-  }
 }
 
 async function refreshFeed(ctx: PageContext): Promise<void> {
@@ -192,27 +152,6 @@ function renderNewsColumn(
     lines.push('         ' + theme.muted(hostFromUrl(item.url)));
   }
   return { title, lines };
-}
-
-function renderCommunityColumn(
-  threads: Thread[],
-  hint: string,
-  loading: boolean,
-  ctx: PageContext
-): RenderColumn {
-  const theme = liftStyler(ctx.style, { trueColor: ctx.trueColor });
-  if (loading) return { title: 'Community', lines: [theme.dim('Loading…')] };
-  if (threads.length === 0) {
-    return { title: 'Community', lines: [theme.dim(hint || 'No threads yet.')] };
-  }
-  const lines: string[] = [];
-  for (const t of threads) {
-    const board = theme.accent('/' + t.board);
-    const meta = theme.dim(' · ' + fmtAge(t.createdAt) + ' · ' + t.replyCount + ' replies');
-    lines.push(board + '  ' + t.title);
-    lines.push('       ' + theme.muted(t.author) + meta);
-  }
-  return { title: 'Community', lines };
 }
 
 function renderTrendingColumn(
@@ -341,8 +280,7 @@ function composeStacked(
 function composeTwoColumn(
   width: number,
   left: RenderColumn,
-  rightTop: RenderColumn,
-  rightBottom: RenderColumn,
+  right: RenderColumn,
   focusedIdx: number,
   ctx: PageContext
 ): string[] {
@@ -353,15 +291,10 @@ function composeTwoColumn(
     ' ' + rule(leftWidth - 1, focusedTitle(left.title, focusedIdx === 0, ctx), theme),
     ...left.lines.map((l) => ' ' + l)
   ];
-  const rightTopLines = [
-    rule(rightWidth - 1, focusedTitle(rightTop.title, focusedIdx === 1, ctx), theme),
-    ...rightTop.lines.map((l) => ' ' + l)
+  const rightLines = [
+    rule(rightWidth - 1, focusedTitle(right.title, focusedIdx === 1, ctx), theme),
+    ...right.lines.map((l) => ' ' + l)
   ];
-  const rightBottomLines = [
-    rule(rightWidth - 1, focusedTitle(rightBottom.title, focusedIdx === 2, ctx), theme),
-    ...rightBottom.lines.map((l) => ' ' + l)
-  ];
-  const rightLines = [...rightTopLines, '', ...rightBottomLines];
   const rows = Math.max(leftLines.length, rightLines.length);
   const out: string[] = [];
   for (let i = 0; i < rows; i++) {
@@ -380,14 +313,12 @@ export const homePage: Page = {
   navIcon: 'H',
   hotkeys: [
     { key: 'n', label: 'news' },
-    { key: 'c', label: 'community' },
     { key: 'm', label: 'market' },
     { key: 't', label: 'hot/top/repos' },
     { key: 'r', label: 'refresh' },
     { key: 'Enter', label: 'open' }
   ],
   mount(ctx: PageContext): void {
-    refreshCommunity(ctx);
     refreshFeed(ctx);
   },
   render(ctx: PageContext): string {
@@ -396,12 +327,6 @@ export const homePage: Page = {
     const { items: news, isFallback: newsFallback } = loadNews(ctx, 5);
 
     const newsCol = renderNewsColumn(news, newsFallback, ctx);
-    const commCol = renderCommunityColumn(
-      state.threads,
-      state.threadsHint,
-      state.threadsLoading,
-      ctx
-    );
 
     let trendCol: RenderColumn;
     if (state.trendLens === 'repos') {
@@ -413,7 +338,7 @@ export const homePage: Page = {
       trendCol = renderTrendingColumn(trendItems, state.trendLens, ctx);
     }
 
-    const headerRight = theme.dim('press ') + theme.accent('n c m') + theme.dim(' for sections');
+    const headerRight = theme.dim('press ') + theme.accent('n m') + theme.dim(' for sections');
     const lines: string[] = [];
     lines.push(pageHeader({ title: 'HOME', right: headerRight, width, theme }));
     lines.push('');
@@ -426,8 +351,8 @@ export const homePage: Page = {
     // Bottom columns — two-column layout at ≥100 wide, stacked below
     const body =
       bp(width) !== 'xs' && width >= 100
-        ? composeTwoColumn(width, newsCol, commCol, trendCol, state.cursor, ctx)
-        : composeStacked(width, [newsCol, commCol, trendCol], state.cursor, ctx);
+        ? composeTwoColumn(width, newsCol, trendCol, state.cursor, ctx)
+        : composeStacked(width, [newsCol, trendCol], state.cursor, ctx);
     lines.push(...body);
 
     return frame(lines, width, height);
@@ -436,8 +361,6 @@ export const homePage: Page = {
     switch (event.key) {
       case 'n':
         return { kind: 'switch', to: 'news' };
-      case 'c':
-        return { kind: 'switch', to: 'community' };
       case 'm':
       case '/':
         return { kind: 'switch', to: 'marketplace' };
@@ -452,18 +375,15 @@ export const homePage: Page = {
         return { kind: 'status', message: 'trending: ' + state.trendLens };
       }
       case 'r':
-        lastCommunityFetchAt = 0;
-        refreshCommunity(_ctx);
         refreshFeed(_ctx);
         return { kind: 'status', message: 'refreshing' };
       case 'enter': {
         if (state.cursor === 0) return { kind: 'switch', to: 'news' };
-        if (state.cursor === 1) return { kind: 'switch', to: 'community' };
         return { kind: 'switch', to: 'marketplace' };
       }
       case 'j':
       case 'down':
-        state.cursor = Math.min(2, state.cursor + 1);
+        state.cursor = Math.min(1, state.cursor + 1);
         return { kind: 'none' };
       case 'k':
       case 'up':

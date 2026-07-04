@@ -5,6 +5,18 @@ import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import { status } from '../pages/components.js';
 
+/**
+ * Exit codes (brief P2, agent-operable contract): 0 pass · 1 usage/error ·
+ * 2 warn (gate warned) · 3 scan fail (hard block). Applies identically to
+ * `--json` and the human-readable render — the gate must be machine-readable
+ * either way.
+ */
+function scanExitCode(summary: { pass: number; warn: number; fail: number }): number {
+  if (summary.fail > 0) return 3;
+  if (summary.warn > 0) return 2;
+  return 0;
+}
+
 export const commandScan: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
   if (!id) {
@@ -21,10 +33,11 @@ export const commandScan: CommandHandler = async (parsed, io, style) => {
 
   const githubToken = io.env?.AGORA_GITHUB_TOKEN;
   const result = await scanItem(item, { fetcher: io.fetcher, githubToken });
+  const exitCode = scanExitCode(result.summary);
 
   if (parsed.flags.json) {
     writeJson(io.stdout, result);
-    return 0;
+    return exitCode;
   }
 
   const theme = cliTheme(style, io);
@@ -47,5 +60,5 @@ export const commandScan: CommandHandler = async (parsed, io, style) => {
   const { pass, warn, fail } = result.summary;
   writeLine(io.stdout, `${pass} pass · ${warn} warning(s) · ${fail} failure(s)`);
 
-  return fail > 0 ? 1 : 0;
+  return exitCode;
 };

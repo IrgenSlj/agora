@@ -1,4 +1,4 @@
-export type TuiPageId = 'home' | 'marketplace' | 'community' | 'news' | 'settings';
+export type TuiPageId = 'home' | 'marketplace' | 'news' | 'settings';
 
 export type Dispatch =
   | { kind: 'noop' }

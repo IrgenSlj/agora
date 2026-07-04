@@ -1,0 +1,34 @@
+{
+  "name": "opencode-agora",
+  "version": "0.5.0",
+  "description": "OpenCode plugin entry for Agora — the system manager for your agentic stack. Re-exports agora-hub/opencode. CLI users: npm i -g agora-hub.",
+  "type": "module",
+  "main": "index.mjs",
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "dependencies": {
+    "agora-hub": "0.5.0"
+  },
+  "files": [
+    "index.mjs",
+    "README.md"
+  ],
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "mcp",
+    "agora",
+    "agora-hub"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IrgenSlj/agora.git"
+  },
+  "homepage": "https://github.com/IrgenSlj/agora#readme",
+  "license": "MIT",
+  "author": "IrgenSlj",
+  "publishConfig": {
+    "access": "public"
+  }
+}

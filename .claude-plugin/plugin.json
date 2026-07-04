@@ -1,0 +1,20 @@
+{
+  "name": "agora",
+  "description": "The system manager for your agentic stack. Search and browse a federated MCP catalog, inspect and plan your MCP stack across harnesses, and acquire new capabilities through a trust gate — all via the bundled agora MCP server, no separate install required.",
+  "version": "0.5.0",
+  "author": {
+    "name": "IrgenSlj",
+    "url": "https://github.com/IrgenSlj"
+  },
+  "homepage": "https://github.com/IrgenSlj/agora",
+  "repository": "https://github.com/IrgenSlj/agora",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "package-manager",
+    "stack-manager",
+    "trust",
+    "federation"
+  ]
+}

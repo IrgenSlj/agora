@@ -4,29 +4,26 @@ import { parse, stringify } from 'smol-toml';
 import { atomicWriteFile } from './atomic-write.js';
 
 export interface AgoraSettings {
-  account: { username: string; backend: string; declared_llm: string };
+  account: { username: string; declared_llm: string };
   display: { color: 'auto' | 'truecolor' | 'none'; banner: boolean };
   news: {
     sources: Record<string, { enabled: boolean; ttl_minutes: number }>;
     feeds?: string[];
   };
-  community: { default_board: string; collapse_flag_threshold: number };
 }
 
 export const DEFAULT_SETTINGS: AgoraSettings = {
-  account: { username: '', backend: '', declared_llm: '' },
+  account: { username: '', declared_llm: '' },
   display: { color: 'auto', banner: true },
   news: {
     sources: {
       hn: { enabled: true, ttl_minutes: 10 },
-      reddit: { enabled: true, ttl_minutes: 15 },
       'github-trending': { enabled: true, ttl_minutes: 30 },
       arxiv: { enabled: false, ttl_minutes: 60 },
       rss: { enabled: false, ttl_minutes: 60 }
     },
     feeds: []
-  },
-  community: { default_board: 'mcp', collapse_flag_threshold: 3 }
+  }
 };
 
 const SETTINGS_FILE = 'settings.toml';
@@ -52,8 +49,6 @@ function mergeSettings(defaults: AgoraSettings, parsed: Record<string, any>): Ag
   if (parsed.account) {
     if (typeof parsed.account.username === 'string')
       defaults.account.username = parsed.account.username;
-    if (typeof parsed.account.backend === 'string')
-      defaults.account.backend = parsed.account.backend;
     if (typeof parsed.account.declared_llm === 'string')
       defaults.account.declared_llm = parsed.account.declared_llm;
   }
@@ -76,12 +71,6 @@ function mergeSettings(defaults: AgoraSettings, parsed: Record<string, any>): Ag
       }
     }
   }
-  if (parsed.community) {
-    if (typeof parsed.community.default_board === 'string')
-      defaults.community.default_board = parsed.community.default_board;
-    if (typeof parsed.community.collapse_flag_threshold === 'number')
-      defaults.community.collapse_flag_threshold = parsed.community.collapse_flag_threshold;
-  }
   return defaults;
 }
 
@@ -92,7 +81,6 @@ function cloneSettings(s: AgoraSettings): AgoraSettings {
     news: {
       sources: Object.fromEntries(Object.entries(s.news.sources).map(([k, v]) => [k, { ...v }])),
       feeds: [...(s.news.feeds ?? [])]
-    },
-    community: { ...s.community }
+    }
   };
 }

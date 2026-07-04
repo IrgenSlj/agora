@@ -5,7 +5,6 @@ import { rankItems } from '../../news/score.js';
 import { readCache, writeCache, isStale, readNewsMeta, writeNewsMeta } from '../../news/cache.js';
 import { formatNumber } from '../../format.js';
 import { hnSource } from '../../news/sources/hn.js';
-import { redditSource } from '../../news/sources/reddit.js';
 import { githubTrendingSource } from '../../news/sources/github-trending.js';
 import { arxivSource } from '../../news/sources/arxiv.js';
 import { join } from 'node:path';
@@ -19,25 +18,16 @@ import { pageHeader, rule, pill, status, truncate, padRight, bp } from './compon
 
 const SOURCE_LABELS: Record<string, string> = {
   hn: 'HN',
-  reddit: 'R ',
   'github-trending': 'GH',
   arxiv: 'XR',
   rss: 'RS'
 };
 
-const SOURCE_CYCLE: Array<NewsSource | 'all'> = [
-  'all',
-  'hn',
-  'reddit',
-  'github-trending',
-  'arxiv',
-  'rss'
-];
+const SOURCE_CYCLE: Array<NewsSource | 'all'> = ['all', 'hn', 'github-trending', 'arxiv', 'rss'];
 
 // Per-source tone for colored source labels (matches home news column style).
 const SOURCE_TONES: Record<string, Tone> = {
   hn: 'accent',
-  reddit: 'warning',
   'github-trending': 'success',
   arxiv: 'info',
   rss: 'muted'
@@ -178,7 +168,6 @@ async function refreshNews(ctx: PageContext): Promise<void> {
 
   const adapters: [NewsSource, { fetch(opts: { signal?: AbortSignal }): Promise<NewsItem[]> }][] = [
     ['hn', hnSource],
-    ['reddit', redditSource],
     ['github-trending', githubTrendingSource],
     ['arxiv', arxivSource]
   ];

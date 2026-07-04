@@ -27,7 +27,8 @@ export type Tone =
   | 'muted'
   | 'dim'
   | 'fg'
-  | 'orange';
+  | 'orange'
+  | 'drift'; // "investigate", not "malicious" — orchid, distinct from terra error
 
 export type GlyphName =
   | 'ok'
@@ -38,7 +39,8 @@ export type GlyphName =
   | 'arrow'
   | 'pip'
   | 'rail'
-  | 'spinner';
+  | 'spinner'
+  | 'drift'; // ≠ (ascii ~)
 
 export interface Theme extends Styler {
   // semantic tones (additive)
@@ -72,7 +74,8 @@ const HEX: Record<Tone, { r: number; g: number; b: number }> = {
   muted: { r: 0x8a, g: 0x82, b: 0x75 },
   dim: { r: 0x5a, g: 0x52, b: 0x47 },
   fg: { r: 0xe8, g: 0xe2, b: 0xd6 },
-  orange: { r: 0xff, g: 0x8c, b: 0x00 } // legacy
+  orange: { r: 0xff, g: 0x8c, b: 0x00 }, // legacy
+  drift: { r: 0xa9, g: 0x8b, b: 0xd0 } // soft orchid — never collides with terra error under deuteran/protan sim
 };
 
 // xterm-256 fallback — hand-picked.
@@ -85,7 +88,8 @@ const X256: Record<Tone, number> = {
   muted: 245,
   dim: 240,
   fg: 230,
-  orange: 208
+  orange: 208,
+  drift: 140 // xterm medium-orchid
 };
 
 const RESET = '\x1b[0m';
@@ -154,6 +158,8 @@ export function createTheme(opts: CreateThemeOpts): Theme {
             return '▌'; // ▌
           case 'spinner':
             return '⠋'; // ⠋
+          case 'drift':
+            return '≠'; // ≠
         }
       }
       switch (name) {
@@ -175,6 +181,8 @@ export function createTheme(opts: CreateThemeOpts): Theme {
           return '>';
         case 'spinner':
           return '|';
+        case 'drift':
+          return '~';
       }
     },
     useColor,

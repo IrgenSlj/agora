@@ -11,12 +11,27 @@ import { scanItem, type ScanOptions, type ScanResult } from './scan.js';
 import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js';
 import { getAdapter } from './stack/registry.js';
 import { manifestPath, readManifest, writeManifest, type StackManifest } from './stack/manifest.js';
-import { capabilityKey, readCapabilityCache } from './stack/capability-cache.js';
+import {
+  capabilityKey,
+  descriptionDigest,
+  readCapabilityCache
+} from './stack/capability-cache.js';
 import type { AgentToolId, DesiredServer, StackEnv, ToolConfigLocation } from './stack/types.js';
+import { federatedFetchItem } from './federation/index.js';
+import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
+import {
+  buildTrustMeta,
+  readTrustStore,
+  recordTrust,
+  trustStorePath,
+  TRUST_META_KEY
+} from './trust-store.js';
 
 export interface AcquireInput {
   id?: string;
   query?: string;
+  /** Restrict federation resolution to a single upstream source (P2). */
+  source?: SourceId;
   tool?: AgentToolId;
   configPath?: string;
   acceptWarnings?: boolean;
@@ -37,6 +52,11 @@ export interface AcquireDeps {
   searchItems?: typeof searchMarketplaceItems;
   createPlan?: typeof createInstallPlan;
   scan?: typeof scanItem;
+  /**
+   * Federation resolution seam (P2). Override in tests to avoid a real
+   * network call — mirrors the existing `scan`/`findItem` DI pattern.
+   */
+  fetchFederatedItem?: typeof federatedFetchItem;
 }
 
 export interface AcquireResult {
@@ -51,18 +71,49 @@ export interface AcquireResult {
 
 const DEFAULT_TOOL: AgentToolId = 'opencode';
 
-function findRequestedItem(input: AcquireInput): MarketplaceItem | null {
+function federationEnvFrom(input: AcquireInput): FederationEnv {
+  return {
+    fetcher: input.fetcher,
+    home: input.home,
+    env: input.env
+  };
+}
+
+interface ResolvedItem {
+  item: MarketplaceItem;
+  /** Set when the item resolved through federation — carries officialStatus/tools for the gate. */
+  federated?: FederatedItem;
+}
+
+async function findRequestedItem(input: AcquireInput): Promise<ResolvedItem | null> {
   const find = input.deps?.findItem ?? findMarketplaceItem;
   const search = input.deps?.searchItems ?? searchMarketplaceItems;
+  const fetchFederated = input.deps?.fetchFederatedItem ?? federatedFetchItem;
   const target = input.id ?? input.query;
 
   if (target) {
+    // Resolve against federation first (brief P2: "acquire resolves against
+    // federation, not just the bundled catalog") so the gate gets
+    // officialStatus/tools when the registry has them. federatedFetchItem's
+    // own `local` source already covers the bundled catalog and never throws
+    // by contract; the direct bundled lookup below is kept as a defensive
+    // fallback so a stubbed-out or offline federation dependency never
+    // regresses plain id resolution.
+    let federated: FederatedItem | null = null;
+    try {
+      federated = await fetchFederated(target, federationEnvFrom(input), { source: input.source });
+    } catch {
+      federated = null;
+    }
+    if (federated) return { item: federated, federated };
+
     const exact = find(target);
-    if (exact) return exact;
+    if (exact) return { item: exact };
   }
 
   if (!input.query) return null;
-  return search({ query: input.query, limit: 1 })[0] ?? null;
+  const hit = search({ query: input.query, limit: 1 })[0];
+  return hit ? { item: hit } : null;
 }
 
 function desiredServerFromItem(item: MarketplaceItem): DesiredServer | null {
@@ -130,8 +181,8 @@ function buildNextSteps(plan: InstallPlan): string[] {
 }
 
 export async function acquire(input: AcquireInput): Promise<AcquireResult> {
-  const item = findRequestedItem(input);
-  if (!item) {
+  const resolved = await findRequestedItem(input);
+  if (!resolved) {
     const target = input.id ?? input.query ?? '';
     return {
       status: 'not_found',
@@ -140,6 +191,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
         : 'Provide an item id or capability query.'
     };
   }
+  const { item, federated } = resolved;
 
   const tool = input.tool ?? DEFAULT_TOOL;
   const adapter = getAdapter(tool);
@@ -170,10 +222,28 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     };
   }
 
+  // Baseline digest lookup (P2 description-drift check): prefer a baseline
+  // already recorded in the trust store (a previous acquire, or one shipped
+  // with a cloned profile for `sync --from`'s gate-every-entry demo), fall
+  // back to the local capability cache keyed by the command signature.
+  const desiredForDigest = desiredServerFromItem(item);
+  const trustPath = trustStorePath(stackEnv(input));
+  const existingTrust = readTrustStore(trustPath)[item.id]?.[TRUST_META_KEY];
+  const cachedDigest =
+    input.dataDir && desiredForDigest?.command
+      ? readCapabilityCache(input.dataDir).find(
+          (entry) => entry.key === capabilityKey(desiredForDigest.name, desiredForDigest.command!)
+        )?.descriptionDigest
+      : undefined;
+  const previousDigest = existingTrust?.descriptionDigestBaseline ?? cachedDigest;
+
   const scan = await (input.deps?.scan ?? scanItem)(item, {
     ...input.scanOptions,
     fetcher: input.fetcher ?? input.scanOptions?.fetcher,
-    githubToken: input.githubToken ?? input.scanOptions?.githubToken
+    githubToken: input.githubToken ?? input.scanOptions?.githubToken,
+    officialStatus: federated?.officialStatus ?? input.scanOptions?.officialStatus,
+    tools: federated?.tools ?? input.scanOptions?.tools,
+    previousDigest: previousDigest ?? input.scanOptions?.previousDigest
   });
 
   if (input.dryRun) {
@@ -217,7 +287,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     };
   }
 
-  const desired = desiredServerFromItem(item);
+  const desired = desiredForDigest;
   if (!desired) {
     return {
       status: 'blocked',
@@ -254,14 +324,23 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
   if (input.save) {
     const mPath = manifestPath(stackEnv(input));
     const manifest: StackManifest = readManifest(mPath) ?? { mcp: {} };
-    const cachedDigest =
-      input.dataDir && desired.command
-        ? readCapabilityCache(input.dataDir).find(
-            (entry) => entry.key === capabilityKey(desired.name, desired.command!)
-          )?.descriptionDigest
-        : undefined;
-    manifest.mcp[desired.name] = manifestEntryFor(desired, cachedDigest);
+    // Prefer a digest computed fresh from the federation-resolved tool
+    // schemas (the freshest baseline for exactly what's being installed)
+    // over whatever was previously cached/recorded.
+    const federatedDigest =
+      federated?.tools && federated.tools.length > 0 ? descriptionDigest(federated.tools) : undefined;
+    const digestBaseline = federatedDigest ?? previousDigest;
+    manifest.mcp[desired.name] = manifestEntryFor(desired, digestBaseline);
     writeManifest(mPath, manifest);
+
+    // Trust gate data (scan verdict + drift baseline) travels alongside the
+    // profile under a namespaced `_meta` key (brief P2) — see src/trust-store.ts
+    // for why this is a JSON sidecar rather than a new ManifestEntry field.
+    const meta = buildTrustMeta(scan, {
+      officialStatus: federated?.officialStatus,
+      descriptionDigestBaseline: digestBaseline
+    });
+    recordTrust(trustPath, desired.name, meta);
   }
 
   return {

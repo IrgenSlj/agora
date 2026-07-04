@@ -11,7 +11,7 @@ import { writeLine, isInteractive } from './helpers.js';
 import type { CommandMap } from './commands/types.js';
 import * as marketplace from './commands/marketplace.js';
 import * as browseModule from './commands/browse.js';
-import * as community from './commands/community.js';
+import * as newsModule from './commands/news.js';
 import * as learn from './commands/learn.js';
 import * as chatModule from './commands/chat.js';
 import * as initModule from './commands/init.js';
@@ -21,7 +21,6 @@ import * as watchModule from './commands/watch.js';
 import * as notifyModule from './commands/notify.js';
 import * as todayModule from './commands/today.js';
 import * as welcomeModule from './commands/welcome.js';
-import * as pingModule from './commands/ping.js';
 import * as scanModule from './commands/scan.js';
 import * as acquireModule from './commands/acquire.js';
 import * as outdatedModule from './commands/outdated.js';
@@ -30,8 +29,12 @@ import * as installedModule from './commands/installed.js';
 import * as doctorModule from './commands/doctor.js';
 import * as freezeModule from './commands/freeze.js';
 import * as syncModule from './commands/sync.js';
+import * as planModule from './commands/plan.js';
+import * as applyModule from './commands/apply.js';
 import * as tryModule from './commands/try.js';
 import * as capabilitiesModule from './commands/capabilities.js';
+import * as refreshModule from './commands/refresh.js';
+import * as integrateModule from './commands/integrate.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -125,16 +128,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       workflows: marketplace.commandWorkflows,
       similar: marketplace.commandSimilar,
       compare: marketplace.commandCompare,
-      news: community.commandNews,
-      community: community.commandCommunity,
-      thread: community.commandThread,
-      post: community.commandPost,
-      reply: community.commandReply,
-      vote: community.commandVote,
-      flag: community.commandFlag,
-      admin: community.commandAdmin,
-      discussions: community.commandDiscussions,
-      discuss: community.commandDiscuss,
+      news: newsModule.commandNews,
       tutorials: learn.commandTutorials,
       tutorial: learn.commandTutorial,
       chat: chatModule.commandChat,
@@ -145,10 +139,6 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       save: operations.commandSave,
       saved: operations.commandSaved,
       remove: operations.commandRemove,
-      publish: operations.commandPublish,
-      review: operations.commandReview,
-      reviews: operations.commandReviews,
-      profile: operations.commandProfile,
       preferences: operations.commandPreferences,
       history: operations.commandHistory,
       config: operations.commandConfig,
@@ -176,18 +166,21 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       today: todayModule.commandToday,
       open: browseModule.commandOpen,
       share: browseModule.commandShare,
-      ping: pingModule.commandPing,
       scan: scanModule.commandScan,
       acquire: acquireModule.commandAcquire,
       outdated: outdatedModule.commandOutdated,
+      refresh: refreshModule.commandRefresh,
       curate: curateModule.commandCurate,
       installed: installedModule.commandInstalled,
       doctor: doctorModule.commandDoctor,
       freeze: freezeModule.commandFreeze,
       sync: syncModule.commandSync,
+      plan: planModule.commandPlan,
+      apply: applyModule.commandApply,
       author: marketplace.commandAuthor,
       try: tryModule.commandTry,
       capabilities: capabilitiesModule.commandCapabilities,
+      integrate: integrateModule.commandIntegrate,
       bookmarks: operations.commandBookmarks,
       welcome: welcomeModule.commandWelcome,
       auth: operations.commandAuth,

@@ -1,0 +1,11 @@
+{
+  "name": "agora",
+  "version": "0.5.0",
+  "description": "The system manager for your agentic stack — federated MCP catalog search, stack introspection, plan/apply, and gated capability acquisition, via the agora MCP server (zero-install: npx -y agora-hub mcp).",
+  "mcpServers": {
+    "agora": {
+      "command": "npx",
+      "args": ["-y", "agora-hub", "mcp"]
+    }
+  }
+}

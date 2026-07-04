@@ -1164,6 +1164,13 @@ describe('no-op update with extra keys present (Fix 1)', () => {
 describe('agora sync --from', () => {
   const sharedToml = '[mcp.shared-server]\ncommand = ["npx", "@mcp/shared"]\n';
 
+  // --from now runs the scan gate (P3) on every mcp/instruction entry before
+  // writing anything. The gate's npm_exists check hits the real npm registry
+  // unless a fetcher is injected — this hermetic stub keeps these tests
+  // offline by answering that check with a clean "pass" for any package.
+  const okNpmFetcher = async (_url: string) =>
+    ({ ok: true, status: 200, text: async () => '{}', json: async () => ({ version: '1.0.0' }) }) as Response;
+
   test('--from <file path>: dry-run uses shared manifest, ignores missing local agora.toml', async () => {
     const cwd = makeTmp('agora-sync-from-file-');
     const home = makeTmp('agora-sync-from-file-home-');
@@ -1176,6 +1183,7 @@ describe('agora sync --from', () => {
       writeFileSync(sharedPath, sharedToml);
 
       const { io, out } = createIo(cwd, home);
+      (io as any).fetcher = okNpmFetcher;
       const code = await runCli(['sync', '--from', sharedPath, '--tool', 'opencode'], io);
       expect(code).toBe(0);
       expect(out()).toContain('+ shared-server');
@@ -1198,6 +1206,7 @@ describe('agora sync --from', () => {
       writeFileSync(sharedPath, sharedToml);
 
       const { io } = createIo(cwd, home);
+      (io as any).fetcher = okNpmFetcher;
       const code = await runCli(
         ['sync', '--from', sharedPath, '--tool', 'opencode', '--write', '--yes'],
         io
@@ -1350,6 +1359,7 @@ describe('agora sync --from', () => {
       writeFileSync(sharedPath, sharedToml);
 
       const { io, out } = createIo(cwd, home);
+      (io as any).fetcher = okNpmFetcher;
       const code = await runCli(['sync', '--from', sharedPath, '--tool', 'opencode'], io);
       expect(code).toBe(0);
       expect(out()).not.toContain('remote source');

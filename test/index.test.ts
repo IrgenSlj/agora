@@ -237,7 +237,7 @@ describe('Edge Cases', () => {
 
 describe('Plugin Tools', () => {
   test('Agora plugin exports all 13 tools', async () => {
-    const plugin = await import('../src/index');
+    const plugin = await import('../src/plugin/index');
     const tools = (await plugin.Agora({} as any)).tool!;
     expect(Object.keys(tools).sort()).toEqual([
       'agora_acquire',
@@ -257,7 +257,7 @@ describe('Plugin Tools', () => {
   });
 
   test('agora_chat accepts message and optional model args', async () => {
-    const plugin = await import('../src/index');
+    const plugin = await import('../src/plugin/index');
     const tools = (await plugin.Agora({} as any)).tool!;
     expect(tools.agora_chat).toBeDefined();
     // execute is a function — we verify the signature works
@@ -268,7 +268,7 @@ describe('Plugin Tools', () => {
   });
 
   test('agora_chat prefers the OpenCode client when provided', async () => {
-    const plugin = await import('../src/index');
+    const plugin = await import('../src/plugin/index');
     const promptCalls: Array<{ body: { model?: unknown } }> = [];
     const tools = (
       await plugin.Agora({
@@ -296,7 +296,7 @@ describe('Plugin Tools', () => {
   });
 
   test('agora_chat returns error when opencode is not available', async () => {
-    const plugin = await import('../src/index');
+    const plugin = await import('../src/plugin/index');
     const tools = (await plugin.Agora({} as any)).tool!;
 
     const origPath = process.env.PATH;

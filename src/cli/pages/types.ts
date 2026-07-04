@@ -1,7 +1,7 @@
 import type { Styler } from '../../ui.js';
 import type { CliIo } from '../flags.js';
 
-export type PageId = 'home' | 'marketplace' | 'stack' | 'community' | 'news' | 'settings';
+export type PageId = 'home' | 'marketplace' | 'stack' | 'news' | 'settings';
 
 export interface KeyEvent {
   raw: string;
@@ -42,7 +42,7 @@ export type PageAction =
 export interface AppState {
   user: { username?: string; isLLM?: boolean };
   cwd: string;
-  unread: { news: number; community: number };
+  unread: { news: number };
   lastPage?: PageId;
 }
 

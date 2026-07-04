@@ -57,9 +57,14 @@ describe('CLI argument parsing', () => {
 });
 
 describe('CLI commands', () => {
+  // These exercise the bundled offline catalog specifically, so they pin
+  // --source local — federatedSearch's default ("all enabled") also queries
+  // the live official MCP registry, which would make an unmocked test both
+  // network-dependent and non-hermetic (see test/federation/*.test.ts for the
+  // federation-specific coverage with a DI fetcher).
   test('search prints matching marketplace results', async () => {
     const { io, stdout, stderr } = createIo();
-    const code = await runCli(['search', 'filesystem'], io);
+    const code = await runCli(['search', 'filesystem', '--source', 'local'], io);
 
     expect(code).toBe(0);
     expect(stderr.join('')).toBe('');
@@ -68,7 +73,7 @@ describe('CLI commands', () => {
 
   test('search supports JSON output', async () => {
     const { io, stdout } = createIo();
-    const code = await runCli(['search', 'github', '--json'], io);
+    const code = await runCli(['search', 'github', '--source', 'local', '--json'], io);
     const payload = JSON.parse(stdout.join(''));
 
     expect(code).toBe(0);
@@ -78,7 +83,10 @@ describe('CLI commands', () => {
 
   test('search --sort stars returns items sorted by stars descending', async () => {
     const { io, stdout } = createIo();
-    const code = await runCli(['search', 'mcp', '--sort', 'stars', '--limit', '5'], io);
+    const code = await runCli(
+      ['search', 'mcp', '--sort', 'stars', '--limit', '5', '--source', 'local'],
+      io
+    );
     const out = stdout.join('');
 
     expect(code).toBe(0);
@@ -89,7 +97,10 @@ describe('CLI commands', () => {
 
   test('search --table renders box-drawn table', async () => {
     const { io, stdout } = createIo();
-    const code = await runCli(['search', 'mcp-github', '--table', '--limit', '3'], io);
+    const code = await runCli(
+      ['search', 'mcp-github', '--table', '--limit', '3', '--source', 'local'],
+      io
+    );
     const out = stdout.join('');
 
     expect(code).toBe(0);
@@ -737,457 +748,6 @@ describe('CLI commands', () => {
     }
   });
 
-  test('discuss posts authenticated community discussions', async () => {
-    const requests: { url: string; body: any; auth: string | null }[] = [];
-    const fetcher = async (input: string | URL, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body || '{}'));
-      requests.push({
-        url: String(input),
-        body,
-        auth: new Headers(init?.headers).get('authorization')
-      });
-      return jsonResponse({
-        discussion: {
-          id: 'disc-remote',
-          title: body.title,
-          content: body.content,
-          author: 'tester',
-          category: body.category,
-          stars: 0,
-          reply_count: 0,
-          created_at: '2026-01-01'
-        }
-      });
-    };
-    const { io, stdout } = createIo(process.cwd(), { fetcher });
-
-    const code = await runCli(
-      [
-        'discuss',
-        '--title',
-        'MCP composition',
-        '--content',
-        'How are you composing servers?',
-        '--category',
-        'question',
-        '--api-url',
-        'https://api.example.test',
-        '--token',
-        'test-token',
-        '--json'
-      ],
-      io
-    );
-    const payload = JSON.parse(stdout.join(''));
-
-    expect(code).toBe(0);
-    expect(payload.discussion.id).toBe('disc-remote');
-    expect(payload.discussion.category).toBe('question');
-    expect(requests[0].url).toBe('https://api.example.test/api/discussions');
-    expect(requests[0].auth).toBe('Bearer test-token');
-    expect(requests[0].body.author).toBeUndefined();
-  });
-
-  test('discuss uses stored auth credentials and content files', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const contentPath = join(temp, 'discussion.md');
-    await Bun.write(contentPath, 'What review workflows are working well?');
-    const setup = createIo(temp);
-    const requests: { body: any; auth: string | null }[] = [];
-    const fetcher = async (_input: string | URL, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body || '{}'));
-      requests.push({
-        body,
-        auth: new Headers(init?.headers).get('authorization')
-      });
-      return jsonResponse({
-        discussion: {
-          id: 'disc-file',
-          title: body.title,
-          content: body.content,
-          author: 'tester',
-          category: body.category,
-          stars: 0,
-          reply_count: 0,
-          created_at: '2026-01-01'
-        }
-      });
-    };
-
-    try {
-      await runCli(
-        [
-          'auth',
-          'login',
-          '--token',
-          'stored-token',
-          '--api-url',
-          'https://api.example.test',
-          '--data-dir',
-          dataDir
-        ],
-        setup.io
-      );
-
-      const { io, stdout } = createIo(temp, { fetcher });
-      const code = await runCli(
-        [
-          'discuss',
-          '--title',
-          'Workflow review patterns',
-          '--content-file',
-          contentPath,
-          '--category',
-          'idea',
-          '--data-dir',
-          dataDir
-        ],
-        io
-      );
-
-      expect(code).toBe(0);
-      expect(stdout.join('')).toContain('Created discussion disc-file');
-      expect(requests[0].auth).toBe('Bearer stored-token');
-      expect(requests[0].body.content).toBe('What review workflows are working well?');
-      expect(requests[0].body.category).toBe('idea');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('publish package posts authenticated metadata', async () => {
-    const requests: { url: string; body: any; auth: string | null }[] = [];
-    const fetcher = async (input: string | URL, init?: RequestInit) => {
-      requests.push({
-        url: String(input),
-        body: JSON.parse(String(init?.body || '{}')),
-        auth: new Headers(init?.headers).get('authorization')
-      });
-      return jsonResponse({
-        package: {
-          id: 'remote-mcp',
-          name: '@remote/server',
-          description: 'Remote MCP server',
-          author: 'remote-dev',
-          version: '1.2.3',
-          category: 'mcp',
-          tags: ['remote'],
-          stars: 0,
-          installs: 0,
-          npm_package: '@remote/server',
-          created_at: '2026-01-01'
-        }
-      });
-    };
-    const { io, stdout } = createIo(process.cwd(), { fetcher });
-
-    const code = await runCli(
-      [
-        'publish',
-        'package',
-        '--name',
-        '@remote/server',
-        '--description',
-        'Remote MCP server',
-        '--npm',
-        '@remote/server',
-        '--api-url',
-        'https://api.example.test',
-        '--token',
-        'test-token'
-      ],
-      io
-    );
-
-    expect(code).toBe(0);
-    expect(stdout.join('')).toContain('Published package remote-mcp');
-    expect(requests[0].url).toBe('https://api.example.test/api/packages');
-    expect(requests[0].auth).toBe('Bearer test-token');
-    expect(requests[0].body.npm_package).toBe('@remote/server');
-  });
-
-  test('publish package uses stored auth credentials', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const setup = createIo(temp);
-    const requests: { url: string; auth: string | null }[] = [];
-    const fetcher = async (input: string | URL, init?: RequestInit) => {
-      requests.push({
-        url: String(input),
-        auth: new Headers(init?.headers).get('authorization')
-      });
-      return jsonResponse({
-        package: {
-          id: 'remote-mcp',
-          name: '@remote/server',
-          description: 'Remote MCP server',
-          author: 'remote-dev',
-          version: '1.2.3',
-          category: 'mcp',
-          tags: ['remote'],
-          stars: 0,
-          installs: 0,
-          npm_package: '@remote/server',
-          created_at: '2026-01-01'
-        }
-      });
-    };
-
-    try {
-      await runCli(
-        [
-          'auth',
-          'login',
-          '--token',
-          'stored-token',
-          '--api-url',
-          'https://api.example.test',
-          '--data-dir',
-          dataDir
-        ],
-        setup.io
-      );
-
-      const { io, stdout } = createIo(temp, { fetcher });
-      const code = await runCli(
-        [
-          'publish',
-          'package',
-          '--name',
-          '@remote/server',
-          '--description',
-          'Remote MCP server',
-          '--npm',
-          '@remote/server',
-          '--data-dir',
-          dataDir
-        ],
-        io
-      );
-
-      expect(code).toBe(0);
-      expect(stdout.join('')).toContain('Published package remote-mcp');
-      expect(requests[0].url).toBe('https://api.example.test/api/packages');
-      expect(requests[0].auth).toBe('Bearer stored-token');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('publish workflow reads prompt files', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const promptPath = join(temp, 'prompt.md');
-    await Bun.write(promptPath, 'Review this code carefully.');
-
-    const requests: { body: any }[] = [];
-    const fetcher = async (_input: string | URL, init?: RequestInit) => {
-      requests.push({ body: JSON.parse(String(init?.body || '{}')) });
-      return jsonResponse({
-        workflow: {
-          id: 'wf-remote-review',
-          name: 'Remote Review',
-          description: 'Review workflow',
-          author: 'remote-dev',
-          prompt: 'Review this code carefully.',
-          tags: ['review'],
-          stars: 0,
-          forks: 0,
-          created_at: '2026-01-01'
-        }
-      });
-    };
-    const { io, stdout } = createIo(temp, { fetcher });
-
-    try {
-      const code = await runCli(
-        [
-          'publish',
-          'workflow',
-          '--name',
-          'Remote Review',
-          '--description',
-          'Review workflow',
-          '--prompt-file',
-          promptPath,
-          '--api-url',
-          'https://api.example.test',
-          '--token',
-          'test-token'
-        ],
-        io
-      );
-
-      expect(code).toBe(0);
-      expect(stdout.join('')).toContain('Published workflow wf-remote-review');
-      expect(requests[0].body.prompt).toBe('Review this code carefully.');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('review posts authenticated ratings', async () => {
-    const requests: { body: any; auth: string | null }[] = [];
-    const fetcher = async (_input: string | URL, init?: RequestInit) => {
-      requests.push({
-        body: JSON.parse(String(init?.body || '{}')),
-        auth: new Headers(init?.headers).get('authorization')
-      });
-      return jsonResponse({
-        review: {
-          id: 'review-1',
-          item_id: 'mcp-github',
-          item_type: 'package',
-          author: 'tester',
-          rating: 5,
-          content: 'Works well',
-          created_at: '2026-01-01'
-        }
-      });
-    };
-    const { io, stdout } = createIo(process.cwd(), { fetcher });
-
-    const code = await runCli(
-      [
-        'review',
-        'mcp-github',
-        '--rating',
-        '5',
-        '--content',
-        'Works well',
-        '--api-url',
-        'https://api.example.test',
-        '--token',
-        'test-token'
-      ],
-      io
-    );
-
-    expect(code).toBe(0);
-    expect(stdout.join('')).toContain('Reviewed mcp-github');
-    expect(requests[0].auth).toBe('Bearer test-token');
-    expect(requests[0].body.rating).toBe(5);
-  });
-
-  test('reviews lists live API reviews', async () => {
-    const fetcher = async (input: string | URL) => {
-      const url = new URL(String(input));
-      expect(url.pathname).toBe('/api/reviews');
-      expect(url.searchParams.get('item_id')).toBe('mcp-github');
-      return jsonResponse({
-        reviews: [
-          {
-            id: 'review-1',
-            item_id: 'mcp-github',
-            item_type: 'package',
-            author: 'tester',
-            rating: 5,
-            content: 'Works well',
-            created_at: '2026-01-01'
-          }
-        ]
-      });
-    };
-    const { io, stdout } = createIo(process.cwd(), { fetcher });
-
-    const code = await runCli(
-      ['reviews', 'mcp-github', '--api-url', 'https://api.example.test'],
-      io
-    );
-
-    expect(code).toBe(0);
-    expect(stdout.join('')).toContain('agora reviews');
-    expect(stdout.join('')).toContain('rating 5/5');
-  });
-
-  test('profile displays live API user profiles', async () => {
-    const fetcher = async (input: string | URL) => {
-      const url = new URL(String(input));
-      expect(url.pathname).toBe('/api/users/alice');
-      return jsonResponse({
-        user: {
-          id: 'user-1',
-          username: 'alice',
-          display_name: 'Alice Doe',
-          bio: 'Builds MCP tools',
-          avatar_url: 'https://example.test/alice.png',
-          github_access_token: 'should-not-render',
-          package_count: 2,
-          workflow_count: 3,
-          discussion_count: 4,
-          created_at: '2026-01-01'
-        }
-      });
-    };
-    const { io, stdout } = createIo(process.cwd(), { fetcher });
-
-    const code = await runCli(['profile', 'alice', '--api-url', 'https://api.example.test'], io);
-
-    expect(code).toBe(0);
-    expect(stdout.join('')).toContain('Alice Doe');
-    expect(stdout.join('')).toContain('packages 2');
-    expect(stdout.join('')).toContain('discussions 4');
-    expect(stdout.join('')).not.toContain('should-not-render');
-  });
-
-  test('profile uses stored API URL and auth token', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const setup = createIo(temp);
-    const requests: { auth: string | null }[] = [];
-    const fetcher = async (_input: string | URL, init?: RequestInit) => {
-      requests.push({ auth: new Headers(init?.headers).get('authorization') });
-      return jsonResponse({
-        user: {
-          id: 'user-2',
-          username: 'bob',
-          display_name: 'Bob Smith',
-          package_count: 1,
-          workflow_count: 0,
-          discussion_count: 2,
-          created_at: '2026-02-01'
-        }
-      });
-    };
-
-    try {
-      await runCli(
-        [
-          'auth',
-          'login',
-          '--token',
-          'stored-token',
-          '--api-url',
-          'https://api.example.test',
-          '--data-dir',
-          dataDir
-        ],
-        setup.io
-      );
-
-      const { io, stdout } = createIo(temp, { fetcher });
-      const code = await runCli(['profile', 'bob', '--data-dir', dataDir, '--json'], io);
-      const payload = JSON.parse(stdout.join(''));
-
-      expect(code).toBe(0);
-      expect(payload.profile.username).toBe('bob');
-      expect(payload.profile.discussions).toBe(2);
-      expect(requests[0].auth).toBe('Bearer stored-token');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('profile reports missing API users', async () => {
-    const fetcher = async () => jsonResponse({ error: 'User not found' }, 404);
-    const { io, stderr } = createIo(process.cwd(), { fetcher });
-
-    const code = await runCli(['profile', 'missing', '--api-url', 'https://api.example.test'], io);
-
-    expect(code).toBe(1);
-    expect(stderr.join('')).toContain('Profile not found: missing');
-  });
-
   test('agora use without id lists available workflows', async () => {
     const { io, stdout } = createIo();
     const code = await runCli(['use'], io);
@@ -1210,44 +770,6 @@ describe('CLI commands', () => {
     expect(out).toContain('tut-mcp-basics');
     expect(out).toContain('available tutorials');
     expect(out).toContain('agora tutorial <id>');
-  });
-
-  test('publish requires an auth token', async () => {
-    const { io, stderr } = createIo();
-
-    const code = await runCli(
-      [
-        'publish',
-        'package',
-        '--name',
-        '@remote/server',
-        '--description',
-        'Remote MCP server',
-        '--npm',
-        '@remote/server',
-        '--api-url',
-        'https://api.example.test'
-      ],
-      io
-    );
-
-    expect(code).toBe(1);
-    expect(stderr.join('')).toContain('requires --token');
-  });
-
-  test('reviews reports API failures without throwing', async () => {
-    const fetcher = async () => {
-      throw new Error('reviews unavailable');
-    };
-    const { io, stderr } = createIo(process.cwd(), { fetcher });
-
-    const code = await runCli(
-      ['reviews', 'mcp-github', '--api-url', 'https://api.example.test'],
-      io
-    );
-
-    expect(code).toBe(1);
-    expect(stderr.join('')).toContain('reviews unavailable');
   });
 
   test('login is an alias for auth login', async () => {
@@ -1308,7 +830,7 @@ describe('TTY gate — no-command path', () => {
     const out = stdout.join('');
 
     expect(code).toBe(0);
-    expect(out).toContain("agora · Developers' CLI marketplace and community hub");
+    expect(out).toContain('agora · the system manager for your agentic stack');
   });
 });
 
@@ -1323,7 +845,6 @@ describe('help system', () => {
     expect(out).toContain('Setup');
     expect(out).toContain('Library');
     expect(out).toContain('Learn');
-    expect(out).toContain('Community');
     expect(out).toContain('search');
     expect(out).toContain('install');
     expect(out).toContain('init');
@@ -1349,33 +870,6 @@ describe('help system', () => {
 
     expect(code).toBe(1);
     expect(stderr.join('')).toContain('Unknown command: bogus');
-  });
-
-  test('agora ping --api-url with no fetcher errors out gracefully', async () => {
-    const fetcher: FetchLike = async () => {
-      throw new Error('connection refused');
-    };
-    const { io, stderr } = createIo(process.cwd(), { fetcher });
-    const code = await runCli(['ping', '--api-url', 'https://example.invalid'], io);
-    expect(code).toBe(1);
-    expect(stderr.join('')).toContain('unreachable');
-  });
-
-  test('agora ping --json on success returns status 200', async () => {
-    const fetcher: FetchLike = async () => jsonResponse({ boards: [] }, 200);
-    const { io, stdout } = createIo(process.cwd(), { fetcher });
-    const code = await runCli(['ping', '--api-url', 'https://example.invalid', '--json'], io);
-    expect(code).toBe(0);
-    const payload = JSON.parse(stdout.join(''));
-    expect(payload.status).toBe(200);
-    expect(payload.okBoards).toBe(true);
-  });
-
-  test('agora ping without backend configured errors with usage', async () => {
-    const { io, stderr } = createIo();
-    const code = await runCli(['ping'], io);
-    expect(code).toBe(1);
-    expect(stderr.join('')).toContain('No backend configured');
   });
 
   test('agora share emits a markdown snippet', async () => {

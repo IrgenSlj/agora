@@ -25,20 +25,6 @@ export {
 } from './live/search.js';
 
 export {
-  discussionsSource,
-  createDiscussionSource
-} from './live/community.js';
-
-export {
   tutorialsSource,
   findTutorialSource
 } from './live/tutorials.js';
-
-export {
-  publishPackageSource,
-  publishWorkflowSource,
-  createReviewSource,
-  listReviewsSource,
-  profileSource,
-  flagMarketplaceSource
-} from './live/sources.js';

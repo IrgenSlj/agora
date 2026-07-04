@@ -13,13 +13,13 @@ function buildSteps(signedIn: boolean, username: string): WelcomeStep[] {
   const signInStep: WelcomeStep = signedIn
     ? {
         title: `Signed in as ${username}`,
-        commands: [`agora profile ${username}`, 'agora bookmarks'],
-        effect: 'view your profile and saved items'
+        commands: ['agora bookmarks', 'agora saved'],
+        effect: 'view your saved items and bookmarks'
       }
     : {
         title: 'Sign in (optional)',
         commands: ['agora auth login --api-url https://api.agora.example'],
-        effect: 'unlocks community, reviews, and bookmarks across devices'
+        effect: 'unlocks bookmarks across devices'
       };
 
   return [
@@ -32,12 +32,7 @@ function buildSteps(signedIn: boolean, username: string): WelcomeStep[] {
     {
       title: 'Read the news',
       commands: ['agora news', 'agora news --source hn --limit 10'],
-      effect: 'ranked feed from HN, Reddit, GitHub, and arXiv'
-    },
-    {
-      title: 'Join the community',
-      commands: ['agora community', 'agora discussions', 'agora thread <id>'],
-      effect: 'browse boards, read threads, and post replies'
+      effect: 'ranked feed from HN, GitHub, and arXiv'
     },
     {
       title: 'Set up shell completions',
@@ -73,7 +68,7 @@ export const commandWelcome: CommandHandler = async (parsed, io, style) => {
   writeLine(io.stdout, style.bold('Welcome to agora'));
   writeLine(io.stdout, style.dim('────────────────'));
   writeLine(io.stdout, 'agora is a terminal-native marketplace for MCP servers, agents,');
-  writeLine(io.stdout, 'workflows, and a community hub around the agentic ecosystem.');
+  writeLine(io.stdout, 'and workflows.');
   writeLine(io.stdout, '');
 
   steps.forEach((step, i) => {

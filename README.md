@@ -1,207 +1,137 @@
 # agora
 
-> A terminal hub for developers and the agentic AI ecosystem — discover MCP servers and AI tools, skills and harnesses, follow the news, join the conversation, access the latest tech.
+> **The system manager for your agentic stack** — one local-first terminal app that *manages* what your agents can do (MCP servers, skills, instruction files), *watches* what the ecosystem is doing (a federated crossroads feed), and *gates* what gets in (the trust/customs layer).
 
 <p>
-  <a href="https://www.npmjs.com/package/opencode-agora"><img src="https://img.shields.io/npm/v/opencode-agora" alt="npm"></a>
-  <a href="https://github.com/IrgenSlj/agora/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/opencode-agora" alt="MIT"></a>
+  <a href="https://www.npmjs.com/package/agora-hub"><img src="https://img.shields.io/npm/v/agora-hub" alt="npm"></a>
+  <a href="https://github.com/IrgenSlj/agora/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/agora-hub" alt="MIT"></a>
   <a href="https://github.com/IrgenSlj/agora/actions"><img src="https://img.shields.io/github/actions/workflow/status/IrgenSlj/agora/ci.yml?branch=main" alt="CI"></a>
-  <img src="https://img.shields.io/badge/tests-805%20passing-success" alt="tests">
 </p>
 
-<p align="center">
-  <img src="./docs/demo.gif" alt="Agora demo" width="720">
-</p>
-
-`agora` is a standalone CLI that puts everything a developer building for the future  cares about in one terminal: a **curated + live marketplace** of MCP servers and agent tooling, a **threaded community** with reputation-weighted sort, a **ranked news feed** with on-cache AI summarization, and **first-class install consent** for declared permissions. Works offline by default; opt into the backend with `agora auth login`.
+`agora` is a package manager for the MCP ecosystem — think **apt / Homebrew / Terraform for your
+agent stack**. It manages the MCP servers, skills, and instruction files across **OpenCode, Claude
+Code, Cursor, and Windsurf** from one place; it federates every upstream registry (the official MCP
+Registry, Smithery, Glama, GitHub, …) so its effective catalog is the union of all of them; and it
+runs a **customs gate** on everything before it enters a config. Local-first, no hosted backend, and
+operable *by* agents as a first-class citizen (`--json` on every command, plan/apply separation).
 
 ## Install
 
 ```bash
-# fastest path — runs in your current project
-npx opencode-agora init
+# fastest path — no install, runs from npx
+npx -y agora-hub doctor
 
 # or install once, use anywhere
-npm i -g opencode-agora
-agora welcome
+npm i -g agora-hub
+agora
 ```
 
-From source (requires [bun](https://bun.sh)):
+**OpenCode plugin** — add the entry package to your `opencode.json` (`plugin` loads npm package
+names and auto-installs them):
+
+```jsonc
+{ "plugin": ["opencode-agora"] }
+```
+
+**Any MCP client** (Claude Code, Cursor, Windsurf, Gemini/Codex CLI, Zed, …) — register `agora mcp`
+as an MCP server; the zero-install command is `npx -y agora-hub mcp`.
+
+From source (requires [bun](https://bun.sh)): `git clone` · `bun install` · `bun run build` · `bun link`.
+
+## What it does — the three rings
+
+**Ring 1 — Manage & Gate** (the core):
 
 ```bash
-git clone https://github.com/IrgenSlj/agora.git
-cd agora && bun install && bun run build && bun link
+agora doctor                     # one table of every MCP server across all your harnesses + health
+agora doctor --probe             # + live tool-schema probe and description-drift ("rug-pull") detection
+agora search postgres            # federated catalog search across upstream registries
+agora acquire mcp-postgres       # resolve → scan-gate → write config (the customs office)
+agora acquire "query a database" --dry-run   # resolve by capability query, preview only
+agora plan                       # Terraform-style diff of your stack vs. agora.toml (no writes)
+agora apply                      # reconcile config to match the profile
+agora sync --from <git-url>      # clone someone's whole agent setup — every entry runs the gate
 ```
 
-You can also compile a self-contained standalone binary (no Node or bun runtime required at run-time):
+`agora.toml` is a portable, declarative **profile** of your whole installation — commit it to a repo
+and anyone reproduces your setup with `agora sync --from <url>`. Writes are **surgical**: adapters
+preserve every unrelated key and write atomically. No credentials ever live in `agora.toml`.
 
-```bash
-bun run build:binary   # produces dist/agora
+**Ring 2 — Surfaces:** the CLI/TUI, `agora mcp` (Agora operable by agents), thin plugins for OpenCode
+and Claude Code, and a provider abstraction over inference (OpenCode default · Claude · Ollama).
+
+**Ring 3 — Plaza:** a federated feed reader across HN, Lobsters, arXiv, GitHub, Bluesky, Mastodon,
+Discourse — each item labelled by origin — plus a composer for the write-capable protocols.
+
+## The customs gate (and its honest limits)
+
+`agora acquire` never writes anything to a config without passing the gate first:
+
+```
+resolve → install plan → scan gate (pass / warn / fail) → config write
 ```
 
-> **Experimental.** The compile works, but distributing the binary needs code
-> signing (unsigned arm64 macOS binaries are killed on launch) and, for wider
-> reach, notarization + a Homebrew tap. That packaging is tracked for an
-> upcoming distribution cut; for now `npm`/`npx` remains the supported path.
+- `fail` blocks the write and exits non-zero — nothing is written.
+- `warn` requires an explicit `--accept-warnings` to proceed.
+- `--dry-run` previews the whole flow without writing.
 
-The binary is published as both `agora` and `opencode-agora`.
+The gate composes static heuristics (injection-pattern checks, permission-manifest diffs, registry
+status, tool-annotation-hint checks) with live-probe diffing (tool-schema drift, observed-vs-declared
+permissions). **It is not a sandbox and does not execute or formally verify server code.** "Passed the
+gate" means *no known red flags* — not "safe." That distinction is deliberate and appears everywhere
+the verdict is shown, including `agora acquire --help` and `agora scan --help`.
 
-## Try it
+## Positioning
 
-```bash
-agora welcome                          # guided tour, adapts when signed in
-agora today                            # last 24h: news + community + trending
-agora search mcp                       # 67 curated + live GitHub/HF results
-agora install mcp-github --write --yes # install + write opencode.json
-agora acquire mcp-postgres --dry-run   # preview scan-gated acquisition
-agora doctor --probe                   # health check + description-drift detection
-agora tui                              # 5-page full-screen interface
-```
+- **A package manager, not a registry.** Agora never competes on catalog size; it federates existing
+  registries, so its effective catalog is everyone's combined.
+- **Local-first, no hosted backend.** Every core feature works offline against an on-disk cache —
+  degraded, never broken. If a source is unreachable, it says so; it never fabricates counts.
+- **Owns no inference.** It routes to OpenCode (default, free, zero login), a connected Claude API
+  key (advanced), or a local Ollama endpoint (experimental).
+- **Agent-operable.** `--json` on every command, idempotent semantics, plan/apply separation, and
+  stable exit codes (`0` ok · `1` error · `2` plan-has-changes · `3` scan-fail).
 
-The default `agora` in a TTY drops you into a **persistent shell** that mixes bash dispatch (`ls`, `git status`) with free LLM chat (`why is this slow?`). It remembers you across sessions: `/recall <query>` searches your past conversations and `/sessions` lists them. `/help` lists the slash commands; `/abc` shows the single-letter shortcuts.
+## Harness integration
 
-## Commands
-
-Run `agora help` for the grouped list, or `agora help <command>` for any of these:
-
-| Group | Commands |
+| Harness | Mechanism |
 |---|---|
-| **Daily** | `welcome` · `today` · `bookmarks` · `share` · `open` · `author` |
-| **Marketplace** | `search` · `browse` · `trending` · `similar` · `compare` · `install` · `scan` · `acquire` · `outdated` · `workflows` |
-| **Stack** | `installed` · `doctor` · `freeze` · `sync` · `try` · `capabilities` |
-| **News** | `news` (CLI) · TUI reader with AI summarization |
-| **Community** | `community` · `thread` · `post` · `reply` · `vote` · `flag` · `discuss` |
-| **Account** | `auth login` · `auth status` · `profile` · `review` · `reviews` · `publish` |
-| **Moderation** | `admin hide` · `admin log` · `admin recompute` _(operator-only)_ |
-| **Setup** | `init` · `use` · `config show/edit/doctor` · `notify` · `completions` · `ping` |
-| **Utility** | `export` · `watch` · `chat` · `mcp` · `tui` · `menu` · `preferences` · `history` |
+| Any MCP client (Claude Code, Cursor, Windsurf, Gemini/Codex CLI, Zed) | Register `agora mcp` — `npx -y agora-hub mcp` |
+| OpenCode | Native plugin: `"plugin": ["opencode-agora"]` (tools **+ hooks**) |
+| Claude Code | `/plugin marketplace add IrgenSlj/agora` → `/plugin install agora` (tools + `/agora` + skill) |
 
-Every command supports `--json` for scripting and `--help` for inline manual.
-
-## Install consent & safe capability acquisition
-
-`agora install <id>` is preview-only by default. With `--write`, items that declare a permissions manifest require an explicit `--yes`:
-
-```
-$ agora install mcp-filesystem --write
-Permissions
-  fs    ./**/*
-
-This package declares permissions. Re-run with --yes to grant and install.
-$ echo $?
-1
-```
-
-The TUI install preview flips its footer to `g grant + install   d details   n cancel` when permissions are present. The list shows a dim `[fs net exec]` badge on any item with a non-empty manifest.
-
-`--write` also runs a **pre-install scan** first — repo reachability, npm existence, recency, declared-permission consistency, description-injection patterns, and community flag count — and refuses to apply if any check fails (e.g. an item flagged enough times to auto-hide, or a package that 404s on npm). Run the scan standalone with `agora scan <id>`, or bypass the install gate with `--skip-scan`.
-
-**`agora acquire <id|query>`** composes the full pipeline — resolve by id or capability query, create an install plan, run the scan gate, and write config — into one agent-callable action. The scan gate enforces three outcomes:
-
-- `fail` blocks the write (non-zero exit). Run `agora scan <id>` for details.
-- `warn` without `--accept-warnings` does not write. Re-run with `--accept-warnings` to proceed.
-- `dry-run` previews everything without writing.
-
-For agents: the `acquire` MCP tool (via `agora mcp`) provides structured output the model can act on. The `agora_acquire` plugin tool is preview-only (dry-run); write-to-config requires the CLI or MCP tool.
-
-The plugin also offers opt-in **capability-gap detection** (`suggestAcquire`): when the agent reaches for a tool the user lacks, it surfaces a non-intrusive `agora_acquire` suggestion. **Stack memory** (`stackMemory`, on by default) injects the current MCP stack + capabilities into compaction context so the agent remembers its tools across sessions.
-
-## Agent stack manager & capability acquisition
-
-Beyond discovery, `agora` manages the MCP servers your agent actually uses — across **opencode, Claude Code, Cursor, and Windsurf** — from one place. Think `package.json` / Brewfile for your agent stack.
-
-```bash
-agora installed                 # every configured MCP server across all your tools, grouped
-agora doctor                    # health: command resolvable? conflicting definitions?
-agora doctor --probe            # probe + description-drift detection (canonical tool-schema hashing)
-agora install mcp-github --write --save   # install AND record it in agora.toml
-agora acquire mcp-postgres      # resolve → scan-gate → write config (safe agent-callable gateway)
-agora acquire "postgres database" --dry-run   # resolve by capability query, preview only
-agora acquire mcp-github --save --accept-warnings  # accept scan warnings and record in agora.toml
-agora freeze --write            # snapshot your whole stack into agora.toml
-agora sync                      # dry-run: what would change to match agora.toml
-agora sync --write --yes        # apply it (preserves every unrelated config key)
-agora sync --from <url|path>    # apply a shared manifest — clone someone's setup
-agora try mcp-filesystem        # ephemeral test-drive: handshake, list tools, discard
-agora capabilities "query a database"   # which of my servers can do X?
-```
-
-`agora.toml` is a portable, declarative manifest — commit it to a repo so anyone can reproduce your agent setup with `agora sync --from <url>`. `sync` is dry-run by default and never touches config keys it doesn't own. `doctor --probe`, `try`, and `capabilities` share a local cache of each server's discovered tool schemas — the local foundation for capability search. `doctor --probe` also computes a canonical `descriptionDigest` (SHA-256 of tool names + descriptions + input schemas) and detects DRIFT when re-probing shows a different digest.
-
-## Configuration
-
-| Env | Meaning |
-|---|---|
-| `AGORA_HOME` | Override the data dir (default `~/.config/agora`) |
-| `AGORA_API_URL` | Backend URL for `--api` reads, all writes, and `agora ping` |
-| `AGORA_TOKEN` | Bearer token (alternatively persisted by `agora auth login`) |
-| `AGORA_LIVE_HUBS` | `1` to merge live GitHub + HuggingFace into the marketplace |
-| `AGORA_GITHUB_TOKEN` | Raises the unauth 60 req/hr GitHub limit to 5000 |
-| `AGORA_ADMIN_USER_IDS` | Comma-separated user ids granted moderator commands |
-| `EDITOR` / `VISUAL` | Used by `agora config edit` |
-| `NO_COLOR` | Respect standard no-color convention |
-
-Per-user state lives under `~/.config/agora/` — `state.json` (saves + auth), `settings.toml` (preferences), `news-cache.jsonl`, `news-meta.json` (bookmarks), `hubs-cache.jsonl`. All files holding user data are written `0o600` and atomically (`.tmp` + rename) so a crash mid-flush leaves the previous version intact.
-
-## OpenCode plugin
-
-`agora init` registers the package as an OpenCode plugin, drops a `.opencode/command/agora.md` slash command, and enables:
-
-- **12 explicit named tools**: `agora_search`, `agora_today`, `agora_browse`, `agora_browse_category`, `agora_install`, `agora_scan`, `agora_acquire`, `agora_trending`, `agora_tutorial`, `agora_chat`, `agora_config`, `agora_news`, `agora_info`
-- **Lifecycle hooks**: opt-in capability-gap detection (`tool.execute.before`) and stack memory injection on compaction (`experimental.session.compacting`)
-- **SDK-preferring chat**: uses `client.session.prompt()` when available, falls back to CLI spawn
-- **Windows-compatible binary resolution**: proper `PATHEXT`-aware lookup and `.cmd`/`.bat` spawning
-
-`agora_*` tools are also reachable from any MCP client via `agora mcp` — add `{"mcp": {"agora": {"command": ["agora", "mcp"]}}}` to your `opencode.json`.
+`agora integrate [harness|--all]` installs Agora into each harness using its own stack-manager
+machinery — the first thing the stack manager manages is Agora itself.
 
 ## Architecture
 
 ```
-src/cli/              command handlers, dispatch, shell, prompter, TUI
-src/cli/pages/        five full-screen TUI pages (home, marketplace,
-                      community, news, settings) + shared helpers
-src/marketplace.ts    curated catalog + live hub merge + install planner
-src/search/           offline BM25 catalog-search index
-src/acquire.ts        capability-acquisition gateway (match → scan-gate → write)
-src/opencode-exec.ts  unified opencode binary resolver (win32-safe) + spawn helper
-src/curator/          AI curator (GitHub/HF discovery + verify, scheduled-safe)
-src/stack/            cross-tool agent stack manager (opencode/claude/cursor/…)
-src/stack/capability-cache.ts  tool-schema cache + description-drift detection
-src/plugin/           OpenCode plugin (tools, hooks, SDK chat transport)
-src/hubs/             GitHub + HuggingFace connectors + AI enrichment
-src/community/        backend client + types
-src/news/             scoring, cache, per-source adapters
-src/state.ts          local state, saves, auth (atomic 0o600 writes)
-src/scan.ts           pre-install safety scan (repo, npm, description-injection)
-backend/src/index.ts  Cloudflare Workers + D1 (Hono router)
-test/                 1155 tests, 51 files
+src/stack/            cross-harness stack manager — adapters, manifest, plan/apply, doctor, probe
+src/federation/       federated catalog clients (official registry, Smithery, Glama, GitHub, …)
+src/acquire.ts        capability-acquisition gateway (resolve → scan-gate → write)
+src/scan.ts           the trust gate — injection/permission/drift heuristics
+src/search/           offline BM25 catalog index over federated results
+src/inference/        provider abstraction (OpenCode · Claude · Ollama)
+src/news/             the plaza — federated feed sources + ranking
+src/cli/              command handlers, dispatch, shell, prompter, TUI pages
+src/plugin/           OpenCode plugin (tools, hooks, SDK-preferring chat)
+packages/opencode-agora/  thin npm entry re-exporting agora-hub/opencode
 ```
 
-`agora` is, at its core, a **marketplace + community** hub for agentic coding. On
-top of that it's grown a daily-driver layer — a cross-tool **agent stack
-manager** (`agora installed` / `doctor`, then `agora.toml` + `sync`) and a
-**safe capability-acquisition gateway** (`agora acquire` — resolve by id/query →
-scan gate → write config). The OpenCode plugin deepens integration with
-lifecycle hooks, SDK-preferring chat, and 12 explicit marketplace tools. See the
-[roadmap](./ROADMAP.md) for the plan.
-
-See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the why-this-shape writeup and [`ROADMAP.md`](./ROADMAP.md) for what's next.
+> This repository is mid-pivot from "terminal marketplace" to "agentic stack manager." See
+> [`AGORA_BRIEF.md` direction](./ROADMAP.md) and [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md)
+> for what's landing when. `backend/`, `hub/`, and the community boards are frozen.
 
 ## Development
 
 ```bash
-bun test            # 805 cases, ~3.5s
-bun run typecheck   # CLI + backend (typecheck:cli / typecheck:backend run both)
-bun run build       # tsc + chmod +x dist/cli.js
+bun test            # hermetic, no network
+bun run typecheck   # tsc
+bun run build       # tsc + copy catalog + chmod +x dist/cli.js
 bun src/cli.ts <cmd>  # run from source without building
-
-cd backend && bun run dev          # local backend on wrangler
-cd backend && bun run typecheck    # backend has its own tsconfig
 ```
 
-PRs welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`COMMUNITY_GUIDELINES.md`](./COMMUNITY_GUIDELINES.md). The catalog accepts entries via PR; see `src/data.ts` for the shape.
-
-A [`scripts/demo.tape`](./scripts/demo.tape) is included for regenerating the README hero gif with [VHS](https://github.com/charmbracelet/vhs) (`brew install vhs && vhs scripts/demo.tape` → `docs/demo.gif`).
+PRs welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## License
 

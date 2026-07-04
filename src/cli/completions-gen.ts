@@ -92,10 +92,8 @@ const CATEGORIES = ['mcp', 'prompt', 'workflow', 'skill', 'all'];
 const SORT_ORDERS = ['asc', 'desc'];
 const SORT_BY = ['relevance', 'stars', 'installs', 'name', 'updated'];
 const TYPES = ['package', 'workflow'];
-const TYPES_EXT = ['discussion', 'reply', 'package', 'workflow'];
 const LEVELS = ['beginner', 'intermediate', 'advanced'];
-const NEWS_SOURCES = ['hn', 'reddit', 'gh', 'arxiv', 'rss'];
-const BOARDS = ['mcp', 'agents', 'tools', 'workflows', 'show', 'ask', 'meta'];
+const NEWS_SOURCES = ['hn', 'gh', 'arxiv', 'rss'];
 
 const COMMAND_NAMES = COMMANDS.map((c) => c.name).concat(['help', 'completions', 'shell']);
 
@@ -116,26 +114,23 @@ function bash(): string {
     '    --category|-c) COMPREPLY=($(compgen -W "' +
       CATEGORIES.join(' ') +
       ' packages" -- "$cur")) ;;',
-    '    --sort)       COMPREPLY=($(compgen -W "top new active" -- "$cur")) ;;',
     '    --order)      COMPREPLY=($(compgen -W "' + SORT_ORDERS.join(' ') + '" -- "$cur")) ;;',
     '    --sort-by)    COMPREPLY=($(compgen -W "' + SORT_BY.join(' ') + '" -- "$cur")) ;;',
     '    --source|-s)  COMPREPLY=($(compgen -W "' + NEWS_SOURCES.join(' ') + '" -- "$cur")) ;;',
-    '    --board|-b)   COMPREPLY=($(compgen -W "' + BOARDS.join(' ') + '" -- "$cur")) ;;',
-    '    --type|-t)    COMPREPLY=($(compgen -W "' + TYPES_EXT.join(' ') + '" -- "$cur")) ;;',
+    '    --type|-t)    COMPREPLY=($(compgen -W "' + TYPES.join(' ') + '" -- "$cur")) ;;',
     '    --level)      COMPREPLY=($(compgen -W "' + LEVELS.join(' ') + '" -- "$cur")) ;;',
-    '    --reason)     COMPREPLY=($(compgen -W "spam harassment undisclosed-llm malicious other" -- "$cur")) ;;',
     '    --model|-m)   COMPREPLY=($(compgen -W "deepseek-v4-flash-free nemotron-3-super-free gemini-2-flash-free" -- "$cur")) ;;',
     '    --limit|-n|--page|--per-page) COMPREPLY=($(compgen -W "5 10 20 50 100" -- "$cur")) ;;',
     '    --token|--api-url|--config|--data-dir) COMPREPLY=($(compgen -A file -- "$cur")) ;;',
     '  esac',
     '',
     '  case $1 in',
-    '    browse|install|save|remove|similar|flag)',
+    '    browse|install|save|remove|similar)',
     '      COMPREPLY+=($(compgen -W "' + IDS.join(' ') + '" -- "$cur"))',
     '      ;;',
     '  esac',
     '',
-    '  if [[ $prev == --content-file || $prev == --prompt-file || $prev == --config ]]; then',
+    '  if [[ $prev == --config ]]; then',
     '    COMPREPLY=($(compgen -A file -- "$cur"))',
     '  fi',
     '}',
@@ -266,7 +261,6 @@ function fish(): string {
     'complete -c agora -n "__fish_seen_subcommand_from trending" -l category -d "Category" -xa "packages workflows all"',
     'complete -c agora -n "__fish_seen_subcommand_from init" -l dry-run -d "Preview only"',
     'complete -c agora -n "__fish_seen_subcommand_from init" -l mcp -d "Register MCP server"',
-    'complete -c agora -n "__fish_seen_subcommand_from community" -l sort -d "Sort order" -xa "top new active"',
     'complete -c agora -n "__fish_seen_subcommand_from news" -l source -d "Source" -xa "' +
       NEWS_SOURCES.join(' ') +
       '"',

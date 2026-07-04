@@ -13,7 +13,6 @@ describe('loadSettings', () => {
     expect(settings.account.username).toBe('');
     expect(settings.display.color).toBe('auto');
     expect(settings.news.sources.hn.enabled).toBe(true);
-    expect(settings.community.default_board).toBe('mcp');
   });
 
   test('round-trips through writeSettings and loadSettings', () => {
@@ -21,7 +20,6 @@ describe('loadSettings', () => {
     modified.account.username = 'testuser';
     modified.display.color = 'none';
     modified.news.sources.hn.enabled = false;
-    modified.community.collapse_flag_threshold = 5;
 
     writeSettings(TEST_DIR, modified);
     const loaded = loadSettings(TEST_DIR);
@@ -29,14 +27,13 @@ describe('loadSettings', () => {
     expect(loaded.account.username).toBe('testuser');
     expect(loaded.display.color).toBe('none');
     expect(loaded.news.sources.hn.enabled).toBe(false);
-    expect(loaded.community.collapse_flag_threshold).toBe(5);
   });
 });
 
 // ── News source toggle fields ────────────────────────────────────────────────
 
 describe('news source toggle fields', () => {
-  const NEWS_SOURCE_IDS = ['hn', 'reddit', 'github-trending', 'arxiv', 'rss'] as const;
+  const NEWS_SOURCE_IDS = ['hn', 'github-trending', 'arxiv', 'rss'] as const;
 
   test('each source id generates a field with correct key', () => {
     for (const src of NEWS_SOURCE_IDS) {
@@ -48,15 +45,14 @@ describe('news source toggle fields', () => {
   test('toggle write function: enabled=true -> toggled state has enabled=false', () => {
     // Test the pure toggle write function, not round-trip through TOML
     const base = {
-      account: { username: '', backend: '', declared_llm: '' },
+      account: { username: '', declared_llm: '' },
       display: { color: 'auto' as const, banner: true },
       news: {
         sources: {
           hn: { enabled: true, ttl_minutes: 10 } as { enabled: boolean; ttl_minutes: number }
         },
         feeds: [] as string[]
-      },
-      community: { default_board: 'mcp', collapse_flag_threshold: 3 }
+      }
     };
     const sources = base.news.sources as Record<string, { enabled: boolean; ttl_minutes: number }>;
     const toggled = {
@@ -73,15 +69,14 @@ describe('news source toggle fields', () => {
 
   test('toggle write function: enabled=false -> toggled state has enabled=true', () => {
     const base = {
-      account: { username: '', backend: '', declared_llm: '' },
+      account: { username: '', declared_llm: '' },
       display: { color: 'auto' as const, banner: true },
       news: {
         sources: {
           arxiv: { enabled: false, ttl_minutes: 60 } as { enabled: boolean; ttl_minutes: number }
         },
         feeds: [] as string[]
-      },
-      community: { default_board: 'mcp', collapse_flag_threshold: 3 }
+      }
     };
     const sources = base.news.sources as Record<string, { enabled: boolean; ttl_minutes: number }>;
     const toggled = {
@@ -114,7 +109,7 @@ describe('news source toggle fields', () => {
       }
     };
     const tSources = toggled.news.sources as Record<string, { enabled: boolean }>;
-    expect(tSources['reddit']?.enabled).toBe(sources['reddit']?.enabled);
+    expect(tSources['arxiv']?.enabled).toBe(sources['arxiv']?.enabled);
     expect(tSources['github-trending']?.enabled).toBe(sources['github-trending']?.enabled);
     rmSync(tmpDir, { recursive: true });
   });

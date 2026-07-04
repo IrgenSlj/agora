@@ -5,7 +5,7 @@ import { liftStyler } from '../theme.js';
 import { vlen, frame, rule, rail, kvRow, pill, status, pageHeader } from './components.js';
 
 interface Field {
-  section: 'Account' | 'Display' | 'News' | 'Community';
+  section: 'Account' | 'Display' | 'News';
   key: string;
   label: string;
   kind: 'text' | 'toggle' | 'select' | 'number';
@@ -14,7 +14,7 @@ interface Field {
   write(s: AgoraSettings, v: string): AgoraSettings;
 }
 
-const NEWS_SOURCE_IDS = ['hn', 'reddit', 'github-trending', 'arxiv', 'rss'] as const;
+const NEWS_SOURCE_IDS = ['hn', 'github-trending', 'arxiv', 'rss'] as const;
 type NewsSourceId = (typeof NEWS_SOURCE_IDS)[number];
 
 function makeNewsSourceField(src: NewsSourceId): Field {
@@ -42,14 +42,10 @@ function makeNewsSourceField(src: NewsSourceId): Field {
 
 const FIELD_HELP: Record<string, string> = {
   username: 'Public name shown on posts and reviews.',
-  backend: 'API backend URL (leave blank for default).',
   declared_llm: 'LLM identity to disclose on posts (optional).',
   color: 'Terminal color mode: auto, truecolor, or none.',
   banner: 'Show/hide the ASCII banner on startup.',
-  default_board: 'Community board opened by default.',
-  collapse_flag_threshold: 'Posts flagged this many times are collapsed.',
   news_hn: 'Fetch stories from Hacker News.',
-  news_reddit: 'Fetch posts from relevant subreddits.',
   'news_github-trending': 'Fetch trending GitHub repositories.',
   news_arxiv: 'Fetch AI/ML papers from arXiv.',
   news_rss: 'Fetch items from configured RSS feeds.'
@@ -63,14 +59,6 @@ const FIELDS: ReadonlyArray<Field> = [
     kind: 'text',
     read: (s) => s.account.username,
     write: (s, v) => ({ ...s, account: { ...s.account, username: v } })
-  },
-  {
-    section: 'Account',
-    key: 'backend',
-    label: 'backend',
-    kind: 'text',
-    read: (s) => s.account.backend,
-    write: (s, v) => ({ ...s, account: { ...s.account, backend: v } })
   },
   {
     section: 'Account',
@@ -100,26 +88,7 @@ const FIELDS: ReadonlyArray<Field> = [
     read: (s) => (s.display.banner ? 'on' : 'off'),
     write: (s, _v) => ({ ...s, display: { ...s.display, banner: !s.display.banner } })
   },
-  ...NEWS_SOURCE_IDS.map(makeNewsSourceField),
-  {
-    section: 'Community',
-    key: 'default_board',
-    label: 'default_board',
-    kind: 'text',
-    read: (s) => s.community.default_board,
-    write: (s, v) => ({ ...s, community: { ...s.community, default_board: v } })
-  },
-  {
-    section: 'Community',
-    key: 'collapse_flag_threshold',
-    label: 'collapse_flag_threshold',
-    kind: 'number',
-    read: (s) => String(s.community.collapse_flag_threshold),
-    write: (s, v) => ({
-      ...s,
-      community: { ...s.community, collapse_flag_threshold: Number(v) || 0 }
-    })
-  }
+  ...NEWS_SOURCE_IDS.map(makeNewsSourceField)
 ];
 
 // Key column width — wide enough for the longest label

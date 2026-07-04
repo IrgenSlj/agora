@@ -1,9 +1,13 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, basename } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
+import { hashContent } from '../manifest.js';
 import type {
+  AdapterInstructionsLocation,
+  ConfiguredInstruction,
   ConfiguredServer,
+  DesiredInstruction,
   DesiredServer,
   StackEnv,
   SyncChange,
@@ -150,6 +154,115 @@ function entriesEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+// ── Instruction artifacts (P3) ──────────────────────────────────────────────
+// Cursor reads a DIRECTORY of rule files rather than one shared file. Each
+// named instruction entry becomes its own `<name>.md` file under
+// `.cursor/rules/` (project: <cwd>/.cursor/rules, user: <home>/.cursor/rules
+// — mirroring Cursor's MCP config, which is also present at both scopes).
+// Only files agora itself writes (`.md` under this directory) are managed;
+// prune only ever removes `.md` files, never other file types someone else
+// placed in the same directory.
+// NOTE (judgment call): real Cursor rule files commonly use a `.mdc`
+// extension with YAML frontmatter; `.md` is used here since no strict format
+// is specified by the manifest contract and keeping it plain markdown keeps
+// the artifact readable/portable across harnesses.
+
+const MANAGED_EXT = '.md';
+
+function cursorInstructionsLocation(
+  opts: StackEnv,
+  scope: 'project' | 'user'
+): ToolConfigLocation | null {
+  const cwd = resolveCwd(opts);
+  const home = resolveHome(opts);
+  if (scope === 'project') {
+    return { path: join(cwd, '.cursor', 'rules'), scope: 'project' };
+  }
+  return { path: join(home, '.cursor', 'rules'), scope: 'user' };
+}
+
+function readCursorInstructions(dirPath: string, scope: 'project' | 'user'): ConfiguredInstruction[] {
+  if (!existsSync(dirPath)) return [];
+  let names: string[];
+  try {
+    names = readdirSync(dirPath);
+  } catch {
+    return [];
+  }
+  const results: ConfiguredInstruction[] = [];
+  for (const fileName of names) {
+    if (!fileName.endsWith(MANAGED_EXT)) continue;
+    const filePath = join(dirPath, fileName);
+    let content: string;
+    try {
+      content = readFileSync(filePath, 'utf8');
+    } catch {
+      continue;
+    }
+    results.push({
+      name: basename(fileName, MANAGED_EXT),
+      tool: 'cursor',
+      scope,
+      path: filePath,
+      contentHash: hashContent(content)
+    });
+  }
+  return results;
+}
+
+function writeCursorInstructions(
+  dirPath: string,
+  desired: DesiredInstruction[],
+  opts: { prune: boolean }
+): SyncChange {
+  const added: string[] = [];
+  const updated: string[] = [];
+  const removed: string[] = [];
+
+  const existingNames = new Set<string>();
+  if (existsSync(dirPath)) {
+    try {
+      for (const fileName of readdirSync(dirPath)) {
+        if (fileName.endsWith(MANAGED_EXT)) existingNames.add(basename(fileName, MANAGED_EXT));
+      }
+    } catch {
+      /* directory unreadable — treat as empty, same as existsSync guard elsewhere */
+    }
+  }
+
+  const desiredNames = new Set(desired.map((d) => d.name));
+
+  for (const d of desired) {
+    const filePath = join(dirPath, `${d.name}${MANAGED_EXT}`);
+    const newContent = d.content ?? '';
+    if (!existingNames.has(d.name)) {
+      added.push(d.name);
+      atomicWriteFile(filePath, newContent, 0o644);
+    } else {
+      const existingContent = existsSync(filePath) ? readFileSync(filePath, 'utf8') : undefined;
+      if (existingContent !== newContent) {
+        updated.push(d.name);
+        atomicWriteFile(filePath, newContent, 0o644);
+      }
+    }
+  }
+
+  if (opts.prune) {
+    for (const name of existingNames) {
+      if (!desiredNames.has(name)) {
+        removed.push(name);
+        try {
+          unlinkSync(join(dirPath, `${name}${MANAGED_EXT}`));
+        } catch {
+          /* best-effort */
+        }
+      }
+    }
+  }
+
+  return { added, updated, removed };
+}
+
 function writeServersToFile(
   filePath: string,
   desired: DesiredServer[],
@@ -226,7 +339,7 @@ function writeServersToFile(
   return { added, updated, removed };
 }
 
-export const cursorAdapter: ToolAdapter = {
+export const cursorAdapter: ToolAdapter & AdapterInstructionsLocation = {
   id: 'cursor',
   displayName: 'Cursor',
 
@@ -263,5 +376,24 @@ export const cursorAdapter: ToolAdapter = {
       ...readServersFromFile(join(cwd, '.cursor', 'mcp.json'), 'project'),
       ...readServersFromFile(join(home, '.cursor', 'mcp.json'), 'user')
     ];
+  },
+
+  instructionsLocation: cursorInstructionsLocation,
+
+  readInstructions(opts: StackEnv): ConfiguredInstruction[] {
+    const project = cursorInstructionsLocation(opts, 'project')!;
+    const user = cursorInstructionsLocation(opts, 'user')!;
+    return [
+      ...readCursorInstructions(project.path, 'project'),
+      ...readCursorInstructions(user.path, 'user')
+    ];
+  },
+
+  writeInstructions(
+    location: ToolConfigLocation,
+    desired: DesiredInstruction[],
+    opts: { prune: boolean }
+  ): SyncChange {
+    return writeCursorInstructions(location.path, desired, opts);
   }
 };

@@ -1,4 +1,5 @@
 import { readFileSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
 import type { FetchLike } from '../live.js';
@@ -14,10 +15,32 @@ export interface ManifestEntry {
   descriptionDigest?: string;
 }
 
+/**
+ * A managed instruction artifact in the profile (P3): CLAUDE.md, AGENTS.md,
+ * .cursor/rules/*, OpenCode instruction files — tracked by path + content hash,
+ * with `source` for shareable profiles. Content lives inline, in a file, or at
+ * a URL; a URL/file profile is resolved (and scan-gated) at sync time.
+ *
+ * NOTE: TOML parser/serializer support for this section lands in P3. Until then
+ * nothing populates `StackManifest.instructions`, so no round-trip drop occurs.
+ */
+export interface InstructionManifestEntry {
+  source?: 'inline' | 'file' | 'url';
+  /** For source==='inline'. */
+  content?: string;
+  /** For source==='file'|'url'. */
+  ref?: string;
+  /** sha256 of the resolved content — drift baseline. */
+  contentHash?: string;
+  enabled?: boolean;
+}
+
 export interface StackManifest {
   mcp: Record<string, ManifestEntry>;
   skills?: Record<string, ManifestEntry>;
   workflows?: Record<string, ManifestEntry>;
+  /** Managed instruction/memory artifacts (P3). */
+  instructions?: Record<string, InstructionManifestEntry>;
 }
 
 // ── Path helper ───────────────────────────────────────────────────────────────
@@ -72,6 +95,13 @@ export function serverToEntry(server: ConfiguredServer): ManifestEntry {
   return entry;
 }
 
+// ── Content hashing (P3 instructions) ──────────────────────────────────────────
+
+/** sha256 of resolved instruction content — the drift/diff baseline (D8, P3). */
+export function hashContent(content: string): string {
+  return `sha256:${createHash('sha256').update(content, 'utf8').digest('hex')}`;
+}
+
 // ── TOML serializer ───────────────────────────────────────────────────────────
 
 function needsQuoting(seg: string): boolean {
@@ -85,8 +115,15 @@ function tomlSegment(seg: string): string {
   return seg;
 }
 
+// Escapes backslash, double-quote, and newline/carriage-return so multi-line
+// instruction content (P3 `content` field) round-trips through a single
+// TOML line without breaking the line-based parser below.
 function escapeString(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r');
 }
 
 function serializeStringArray(arr: string[]): string {
@@ -125,6 +162,37 @@ function serializeSection(
   }
 }
 
+// P3: instructions entries have a different field set than ManifestEntry
+// (source/content/ref/content_hash instead of command/url/env), so they get
+// their own serializer following the exact same style as serializeSection.
+function serializeInstructionsSection(
+  entries: Record<string, InstructionManifestEntry>,
+  lines: string[]
+): void {
+  const names = Object.keys(entries).sort();
+  for (const name of names) {
+    const entry = entries[name];
+    const seg = tomlSegment(name);
+    lines.push(`[instructions.${seg}]`);
+    if (entry.source !== undefined) {
+      lines.push(`source = "${escapeString(entry.source)}"`);
+    }
+    if (entry.content !== undefined) {
+      lines.push(`content = "${escapeString(entry.content)}"`);
+    }
+    if (entry.ref !== undefined) {
+      lines.push(`ref = "${escapeString(entry.ref)}"`);
+    }
+    if (entry.contentHash !== undefined) {
+      lines.push(`content_hash = "${escapeString(entry.contentHash)}"`);
+    }
+    if (entry.enabled === false) {
+      lines.push(`enabled = false`);
+    }
+    lines.push('');
+  }
+}
+
 export function serializeManifest(m: StackManifest): string {
   const lines: string[] = ['# agora stack manifest', ''];
 
@@ -137,6 +205,9 @@ export function serializeManifest(m: StackManifest): string {
   if (m.workflows && Object.keys(m.workflows).length > 0) {
     serializeSection('workflows', m.workflows, lines);
   }
+  if (m.instructions && Object.keys(m.instructions).length > 0) {
+    serializeInstructionsSection(m.instructions, lines);
+  }
 
   // Remove trailing blank line to get a clean file
   while (lines.length > 0 && lines[lines.length - 1] === '') {
@@ -147,21 +218,24 @@ export function serializeManifest(m: StackManifest): string {
 
 // ── TOML parser ───────────────────────────────────────────────────────────────
 
-const KNOWN_SECTIONS = new Set(['mcp', 'skills', 'workflows']);
+const KNOWN_SECTIONS = new Set(['mcp', 'skills', 'workflows', 'instructions']);
 const KNOWN_ENTRY_KEYS = new Set(['command', 'url', 'enabled', 'description_digest']);
+const KNOWN_INSTRUCTION_KEYS = new Set(['source', 'content', 'ref', 'content_hash', 'enabled']);
 
 function parseTomlString(raw: string, lineNum: number): string {
   if (!raw.startsWith('"') || !raw.endsWith('"') || raw.length < 2) {
     throw new Error(`Line ${lineNum}: expected a double-quoted string, got: ${raw}`);
   }
   const inner = raw.slice(1, -1);
-  // Unescape \" and \\ (minimal)
+  // Unescape \" \\ \n \r (minimal)
   let result = '';
   for (let i = 0; i < inner.length; i++) {
     if (inner[i] === '\\') {
       i++;
       if (inner[i] === '"') result += '"';
       else if (inner[i] === '\\') result += '\\';
+      else if (inner[i] === 'n') result += '\n';
+      else if (inner[i] === 'r') result += '\r';
       else throw new Error(`Line ${lineNum}: unknown escape \\${inner[i]}`);
     } else {
       result += inner[i];
@@ -276,6 +350,9 @@ export function parseManifest(text: string): StackManifest {
         throw new Error(`Line ${lineNum}: malformed table header: ${line}`);
       }
       const { section, name, isEnv } = parseTableHeader(line, lineNum);
+      if (isEnv && section === 'instructions') {
+        throw new Error(`Line ${lineNum}: instructions entries do not support .env sub-tables`);
+      }
       currentSection = section;
       currentName = name;
       inEnv = isEnv;
@@ -290,6 +367,9 @@ export function parseManifest(text: string): StackManifest {
       } else if (section === 'workflows') {
         manifest.workflows = manifest.workflows ?? {};
         if (!manifest.workflows[name]) manifest.workflows[name] = {};
+      } else if (section === 'instructions') {
+        manifest.instructions = manifest.instructions ?? {};
+        if (!manifest.instructions[name]) manifest.instructions[name] = {};
       }
       continue;
     }
@@ -304,6 +384,35 @@ export function parseManifest(text: string): StackManifest {
 
     if (currentSection === null || currentName === null) {
       throw new Error(`Line ${lineNum}: key/value before any table header: ${line}`);
+    }
+
+    // Instructions entries have their own field set (source/content/ref/content_hash)
+    // — handled separately from the mcp/skills/workflows ManifestEntry shape.
+    if (currentSection === 'instructions') {
+      const instructions = (manifest.instructions ??= {});
+      const entry = (instructions[currentName] ??= {});
+
+      if (!KNOWN_INSTRUCTION_KEYS.has(key)) {
+        throw new Error(`Line ${lineNum}: unknown key "${key}" in entry table`);
+      }
+      if (key === 'source') {
+        const val = parseTomlString(rawVal, lineNum);
+        if (val !== 'inline' && val !== 'file' && val !== 'url') {
+          throw new Error(`Line ${lineNum}: source must be inline, file, or url, got: ${val}`);
+        }
+        entry.source = val;
+      } else if (key === 'content') {
+        entry.content = parseTomlString(rawVal, lineNum);
+      } else if (key === 'ref') {
+        entry.ref = parseTomlString(rawVal, lineNum);
+      } else if (key === 'content_hash') {
+        entry.contentHash = parseTomlString(rawVal, lineNum);
+      } else if (key === 'enabled') {
+        if (rawVal === 'true') entry.enabled = true;
+        else if (rawVal === 'false') entry.enabled = false;
+        else throw new Error(`Line ${lineNum}: enabled must be true or false, got: ${rawVal}`);
+      }
+      continue;
     }
 
     // Get current entry
@@ -400,4 +509,74 @@ export async function loadManifestFromSource(
       { cause: e }
     );
   }
+}
+
+// ── Instruction content resolution (P3) ────────────────────────────────────────
+
+export interface ResolveInstructionOptions {
+  cwd?: string;
+  fetcher?: FetchLike;
+  /**
+   * The manifest's own source (a git/http URL or a file path), when this
+   * instruction entry was loaded as part of a `--from` profile. Used to
+   * resolve a `file`-sourced `ref` relative to a REMOTE manifest (fetch
+   * alongside it) instead of the local filesystem.
+   */
+  baseSource?: string;
+}
+
+/**
+ * Resolve an InstructionManifestEntry down to its literal text content,
+ * regardless of `source` (inline | file | url). Throws a descriptive Error
+ * on read/fetch failure — mirrors loadManifestFromSource's error contract so
+ * callers can map it straight to usageError output.
+ */
+export async function resolveInstructionContent(
+  entry: InstructionManifestEntry,
+  opts: ResolveInstructionOptions
+): Promise<string> {
+  const source = entry.source ?? 'inline';
+
+  if (source === 'inline') {
+    return entry.content ?? '';
+  }
+
+  if (!entry.ref) {
+    throw new Error(`instruction entry has source "${source}" but no ref`);
+  }
+
+  const fetchUrl = async (url: string, label: string): Promise<string> => {
+    const fetcher = opts.fetcher ?? globalThis.fetch;
+    let res: Response;
+    try {
+      res = await fetcher(url);
+    } catch (e) {
+      throw new Error(
+        `Could not fetch ${label}: ${e instanceof Error ? e.message : String(e)}`,
+        { cause: e }
+      );
+    }
+    if (!res.ok) {
+      throw new Error(`Could not fetch ${label}: HTTP ${res.status}`);
+    }
+    return res.text();
+  };
+
+  if (source === 'url') {
+    return fetchUrl(entry.ref, `instruction content from ${entry.ref}`);
+  }
+
+  // source === 'file'
+  if (opts.baseSource && /^https?:\/\//i.test(opts.baseSource)) {
+    // The manifest itself came from a URL — resolve the file ref relative to
+    // it and fetch, rather than looking on the local disk.
+    const resolvedUrl = new URL(entry.ref, opts.baseSource).toString();
+    return fetchUrl(resolvedUrl, `instruction file ${entry.ref} (resolved ${resolvedUrl})`);
+  }
+
+  const absPath = resolve(opts.cwd ?? process.cwd(), entry.ref);
+  if (!existsSync(absPath)) {
+    throw new Error(`Could not read instruction file: ${entry.ref} (resolved ${absPath}) not found`);
+  }
+  return readFileSync(absPath, 'utf8');
 }

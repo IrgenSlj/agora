@@ -2,6 +2,360 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased] — the pivot: from terminal marketplace to agentic stack manager
+
+Repositioning per `AGORA_BRIEF.md` (direction LOCKED): Agora becomes **the system manager for your
+agentic stack** — a local-first package manager that *manages* (stack + instruction files), *watches*
+(a federated plaza feed), and *gates* (the trust/customs layer) your MCP ecosystem. It federates
+upstream registries rather than growing its own catalog; owns no inference; has no hosted backend.
+
+### P0 — rename, repackage, reposition
+- **Renamed npm package `opencode-agora` → `agora-hub`** (binary stays `agora`). One codebase, one
+  core package. Added subpath exports (`.` = library surface, `./opencode` = OpenCode plugin).
+- **New `packages/opencode-agora/`** — a thin plugin-only entry that re-exports `agora-hub/opencode`
+  and pins `agora-hub` to the exact version, so existing `"plugin": ["opencode-agora"]` configs keep
+  working unchanged (OpenCode auto-installs it and its `agora-hub` dependency at startup).
+- `src/index.ts` is now a clean library barrel (stack + gate types/functions) with **no plugin default
+  export** — plugin-loaders never scan non-plugin functions off the package root.
+- CI publishes both packages on release (core first, then the pinned plugin entry, both with `--provenance`).
+- README rewritten around the identity sentence and the three rings; honest gate-limits copy.
+- Logged load-bearing API corrections in `docs/OPEN_QUESTIONS.md`: Claude Agent SDK subscription auth
+  is not available to third parties (use `ANTHROPIC_API_KEY`); PulseMCP has no self-serve API; Glama
+  returns no tool schemas/annotation hints.
+
+### P-freeze — execute the freeze
+
+Surgically removed the frozen surface named in `AGORA_BRIEF.md` D3/D4/D5/D6/D11: our own community
+boards, account-write commands, and Reddit as a news source. `backend/` and `hub/` stay in the repo
+(zero TypeScript importers already) but are now excluded from the default typecheck and documented as
+frozen. `news` survives as the Ring-3 "plaza" reader, decoupled from the boards it used to share a file
+with.
+
+- **Removed commands** — `community`, `thread`, `post`, `reply`, `vote`, `flag`, `admin`, `discussions`,
+  `discuss` (own community boards, brief D4), `publish`, `review`, `reviews`, `profile` (account writes,
+  brief D4/D6), and `ping` (backend health check, brief D3). Dropped from the runtime dispatch table,
+  the `commands-meta` help/manual registry, and shell completions/letter-shortcuts.
+- **Extracted `news`** — `src/cli/commands/news.ts` is a new module carrying `commandNews` (and its
+  news-source wiring) out of the now-deleted `src/cli/commands/community.ts`, so the plaza reader
+  survives the boards it used to live beside.
+- **Removed Reddit as a news source** — closed OAuth + killed endpoints (brief D5). Deleted
+  `src/news/sources/reddit.ts`; purged the `'reddit'` literal from `NewsSource`, `DEFAULT_NEWS_CONFIG`,
+  source labels, completions, settings, and the TUI news page/home strip.
+- **Removed the community TUI page** — deleted `src/cli/pages/community.ts`; `home`'s "Community" strip
+  and `today`'s Community section are gone (both only ever read `communityThreadsSource` + `Thread`).
+  The TUI is now four pages (Home · Marketplace · News · Settings) instead of five.
+- **Removed the live write/community sources** — deleted `src/live/sources.ts` (publish/review/profile/
+  flag writes) and `src/live/community.ts` (discussion read+write); `src/live.ts` no longer re-exports
+  either. `src/live/search.ts` and `src/live/tutorials.ts` are untouched — search still reads the API
+  when configured and degrades to offline.
+- **Documented the freeze** — `docs/frozen/README.md` records that `backend/` (Cloudflare Worker),
+  `hub/` (web app), and the community boards are frozen per D3/D4/D11: kept in the repo, excluded from
+  the default typecheck (`bun run typecheck:backend` still exists, just unreferenced) and builds, not
+  the pitch.
+- **Fixed dangling references** to removed commands in onboarding (`agora welcome`) and the shell's
+  slash/letter shortcuts, so nothing still points users at a command that no longer exists.
+
+### TUI redesign — foundations (theme tokens + trust grammar)
+
+Implements the Claude Design "Agora TUI — engineering handoff" §2–4, additively (existing tones,
+glyphs, and every current caller's output are byte-identical).
+
+- **New `drift` design token** in `cli/theme.ts` — a soft-orchid tone (`#A98BD0` / xterm 140) and a
+  `≠`/`~` glyph. Drift means "investigate," not "malicious"; orchid never collides with the terra
+  `error` hue under deuteran/protan simulation.
+- **Trust component grammar** in `cli/pages/components.ts` — six pure-string, ANSI-aware,
+  NO_COLOR-safe components reused identically everywhere a trust signal appears: `statusTriad`
+  (`✓ pass · [official] · no drift`), `verdictBanner` (the one weighty element — FAIL is the only place
+  the `═` double rule appears and is final, no re-run hint), `trustPanel` (scan · declared→observed
+  permissions · drift), `provenanceBadges`/`provenanceBadge`/`originChip` (official always first +
+  reverse-video), `planDiff` (Terraform-style, `apply? [y/N]` footer), and `driftChip`. Provenance is
+  typed to the federation `SourceId` so badges map to real sources, never invented ones.
+- Golden tests cover NO_COLOR legibility, verdict integrity (double-rule + no-hint-on-fail),
+  provenance ordering/dedup, and the plan-diff tally.
+
+### Repo cleanup — delete the frozen dirs and stale docs
+
+Follow-on to P-freeze: the previous pass excluded `backend/`/`hub/` from the build and removed the
+community commands from the dispatch table, but left the frozen directories, dead settings/
+completions code, and stale docs on disk. This pass deletes what's actually dead.
+
+- **Deleted `backend/`** (Cloudflare Worker, ~207MB incl. `node_modules`/`dist`) and **`hub/`**
+  (web app) — both frozen per brief D3/D11, zero remaining TypeScript importers. Recoverable from
+  git history.
+- **Deleted `docker-compose.yml`** — only orchestrated the now-removed backend+hub.
+- **Deleted `src/community/`** (`client.ts`, `search.ts`, `types.ts`) — dead once the community
+  commands were removed; confirmed zero remaining `.ts` importers before deleting.
+- **Deleted stale docs** — `COMMUNITY_GUIDELINES.md`, `docs/TUI_DESIGN.md` (superseded by the
+  Claude Design engineering handoff), `docs/demo.gif` (old "bazaar" demo, unreferenced),
+  `docs/archive/` (superseded design briefs + the old Phase 1.5 plan).
+- **`package.json`** — removed the dangling `typecheck:backend` and `hub:dev` scripts.
+- **Dead-code sweep** — deleted `commands-meta/community.ts`, moving its still-live `auth` entry
+  into `commands-meta/setup.ts`; `CommandGroup` no longer has a `'Community'` member.
+  `AppState.unread` dropped the dead `community` counter (news-only now). Removed the inert
+  `community` settings section (`default_board`, `collapse_flag_threshold`) and the never-wired
+  `account.backend` field from `src/settings.ts` and the settings TUI page. Shell completions
+  (`src/cli/completions.ts`, `completions-gen.ts`) no longer offer board-name/flag/reason/
+  community completers or flags for the removed `post`/`reply`/`vote`/`publish`/`discuss`/`review`
+  commands. Cleaned stale "community hub" tagline copy and dead command mentions out of
+  `format.ts`, `shell/main.ts`, `welcome.ts`, and the OpenCode plugin's `agora_info` tool text.
+- **CI/lint** — removed the `backend` typecheck job from `.github/workflows/ci.yml`;
+  `eslint.config.js` no longer globs `backend/`/`hub/`.
+- **Rewrote for the current direction** — `AGENTS.md`, `docs/ARCHITECTURE.md`,
+  `CONTRIBUTING.md`, and `docs/frozen/README.md` now describe the three-ring system-manager
+  architecture instead of the old open-marketplace/hosted-backend/community-hub framing.
+
+### P1 — federated catalog (core)
+
+The flip from "own catalog" to "federated crossroads" (`src/federation/types.ts` is the load-bearing
+contract): Agora's catalog is now the deduped union of upstream registries, not a bundled dataset.
+Ships the `official` (required) + `local` (offline fallback) sources; smithery/glama/github/
+huggingface are a clean `RegistrySource` seam away, not built here.
+
+- **`src/federation/sources/official.ts`** — client for the official MCP Registry
+  (`registry.modelcontextprotocol.io`, no auth for reads). Maps `GET /v0.1/servers` entries to
+  `FederatedItem`s (reverse-DNS id, namespace-derived author, `official` provenance with a
+  `/versions` detail URL, lifecycle `officialStatus` from `_meta`, a projected `serverJson`).
+  `search()` never throws — resolves to `[]` on any HTTP/network failure. `isEnabled()` honors an
+  `AGORA_OFFLINE=1` opt-out.
+- **`src/federation/sources/local.ts`** — wraps the bundled/offline catalog
+  (`searchMarketplaceItems`/`findMarketplaceItem`) as a `RegistrySource`; always enabled, never
+  touches the network — the source every other source degrades to.
+- **`src/federation/index.ts`** — `federatedSearch()` fans out to every enabled source in parallel
+  under a per-source timeout (default 5000ms), dedupes/merges results by reverse-DNS name |
+  normalized repo URL | npm package (a merged item keeps every provenance, official metadata wins),
+  and reports an honest per-source `SourceStatus` (`ok` / `unreachable` / `offline` — never a
+  fabricated count). A source's own on-disk cache backstops a live failure before falling through to
+  `local`. `SOURCES = [official, local]` is the registered seam for follow-on sources.
+  `federatedFetchItem()` resolves a single ref the same way.
+- **`src/federation/cache.ts`** — content-addressed JSONL cache per source under
+  `${AGORA_HOME}/federation/` (mirrors `src/hubs/cache.ts`). `refreshOfficialCache()` does a bounded
+  bootstrap crawl on first run, then incremental `updated_since` syncs that upsert changes and prune
+  registry-tombstoned `deleted` entries.
+- **`agora search`** now federates by default — merged results with provenance, honest per-source
+  status chrome, `--source official|local|all` to restrict. The legacy `--api`/self-hosted-backend
+  path is untouched (orthogonal to federation). **`agora refresh`** runs the official incremental
+  sync (`--json` for counts); wired into both the runtime dispatch table and the command-meta/help
+  registry.
+- **`src/cli/mcp-server.ts`** — the `search` tool now returns federated results (`readOnlyHint: true`)
+  and notes when a source was unreachable.
+- Hermetic tests under `test/federation/` with a DI fetcher and recorded/modeled registry fixtures in
+  `test/fixtures/federation/` — no network in the suite.
+
+### P1+ — federation follow-on sources
+
+Fills the `RegistrySource` seam P1 left open: all four follow-on sources named in
+`docs/OPEN_QUESTIONS.md` OQ-3 landed, none skipped. `agora search`/`acquire`/`agora_search` (MCP) now
+federate a real multi-source catalog, and `--source official|smithery|glama|github|huggingface|local`
+(already accepted by `acquire`) is fully real for `search` too. Most importantly: Smithery's per-server
+`tools[]` now flows into `FederatedItem.tools`, which `src/acquire.ts` already threaded into the P2
+gate's `ScanOptions` — the `annotation_hints`/`observed_permissions` checks have a live input source for
+the first time.
+
+- **`src/federation/sources/smithery.ts`** — client for Smithery (`registry.smithery.ai`, keyless reads).
+  `search()` maps the list endpoint and enriches each result (capped at 15 per query) with its own
+  detail-endpoint `tools[]` in parallel, so `search --source smithery` — not just `acquire` — carries
+  tool schemas. `fetchItem()` resolves a `qualifiedName` (which may itself contain a `/`) to its full
+  detail incl. `tools[]`/`resources[]`/`prompts[]`. Live-verified 2026-07-04: `security` and
+  `tools[].annotations` exist in the schema but were `null`/absent on every sampled server — mapped
+  defensively (annotations pass through when present) rather than depended on.
+- **`src/federation/sources/glama.ts`** — client for Glama (`glama.ai/api/mcp/v1`, no auth). Re-confirmed
+  live: `tools[]` is empty on every sampled server, so `FederatedItem.tools` is never set here (never
+  fabricated). Folds the real `attributes[]=author:official` filter into `Provenance.verified` and
+  `hosting:*` attributes into `tags` — the only structural homes that fit either signal.
+- **`src/federation/sources/github.ts`** / **`huggingface.ts`** — thin wrappers over the existing
+  `src/hubs/github.ts` (`searchGithub`) and `src/hubs/huggingface.ts` (`searchHuggingFace`), mapping
+  `HubItem` → `FederatedItem` 1:1 (`kind: 'package'`, `github`/`huggingface` provenance). Neither
+  underlying function takes a free-text query (both always crawl a fixed topic/category list) — the
+  wrapper applies the query as a client-side name/description/tag filter. `fetchItem()` does one
+  dedicated single-item GET each (`GET /repos/{owner}/{repo}`; HF tries `models`/`datasets`/`spaces` in
+  order) rather than reusing the crawl.
+- **`src/federation/index.ts`** — `SOURCES` grows to
+  `[official, smithery, glama, github, huggingface, local]` (preference order unchanged: official still
+  wins merges, local still the offline floor). The engine itself (`federatedSearch`/`canonicalize`/
+  `mergeGroup`) is untouched — this was purely "implement `RegistrySource`, push it into the array."
+  `src/cli/commands/marketplace.ts`'s `--source` allow-list for `search` grew to match (it only listed
+  `official`/`local`; `acquire`'s already covered all six).
+- `docs/OPEN_QUESTIONS.md` OQ-3 updated with the endpoint shapes verified live 2026-07-04, including two
+  corrections to the 2026-07-03 note: Smithery's `security`/`tools[].annotations` exist in the schema but
+  weren't populated in any sampled server, and Glama's `author:official` attribute filter needs the
+  array-bracket param form (`attributes[]=`, not `attributes=`).
+- Hermetic tests: `test/federation/{smithery,glama,github,huggingface}.test.ts`, with fixtures under
+  `test/fixtures/federation/` — the Smithery/Glama list+detail fixtures are genuine live captures
+  (trimmed for size where the real detail payload ran to tens of KB); one Smithery detail fixture
+  (`smithery-detail-hand-modeled-annotations.json`) is explicitly hand-modeled and labeled as such, since
+  no live server carrying `tools[].annotations` was found to capture. GitHub/Hugging Face tests use
+  hand-modeled `RawGithubRepo`/`RawHfItem` fixtures, matching the existing `test/hubs/*.test.ts`
+  convention.
+
+### P2 — trust gate over federation
+
+`agora acquire` now resolves against the federated catalog, not just the bundled one, and folds
+federation-sourced trust signals straight into the scan gate. `ScanResult`/`ScanCheck` stay exactly as
+they were — the TUI and agents keep working unmodified — the new signals are just more checks.
+
+- **`src/scan.ts` — four new gate checks, all optional/offline-safe** (skipped rather than fabricated
+  when the input data isn't available):
+  - `registry_status` — official MCP Registry lifecycle: `deleted` is a hard `fail` (spam/malware/policy
+    violation, per the registry's own semantics), `deprecated` is a `warn`, `active` passes.
+  - `annotation_hints` — MCP tool annotation hints (`destructiveHint`, `openWorldHint`, or a write-shaped
+    tool name/description without `readOnlyHint`) fold into the permission heuristics as a `warn`.
+  - `observed_permissions` — a heuristic capability set (`fs`/`net`/`exec`) derived from tool
+    name/description text, diffed against the declared permissions manifest; an undeclared capability
+    is a `warn`. Consumes live-probe tool schemas (`src/stack/mcp-probe.ts`'s `McpTool[]`) when available,
+    federation-sourced tool schemas otherwise.
+  - `description_drift` — brings the existing rug-pull digest check (`descriptionDigest`, previously
+    only surfaced by `doctor --probe` over time) into the gate itself: diffs current tool schemas against
+    an approved baseline when one is already on record, `warn`s on mismatch.
+  - `ScanOptions` gained `officialStatus`, `tools`, `observedTools`, `previousDigest` — all optional
+    additions; existing callers are unaffected.
+- **`src/acquire.ts` — resolves via `federatedFetchItem` first**, falling back to the bundled catalog
+  (`AcquireDeps.fetchFederatedItem` is the new DI seam, mirroring the existing `scan`/`findItem` seam).
+  The resolved item's `officialStatus`/`tools` feed the scan gate automatically. A fresh
+  `descriptionDigest` is computed from the federation-resolved tool schemas and recorded as the drift
+  baseline on every `--save`d acquire; `AcquireInput` gained an optional `source` to restrict federation
+  resolution to one upstream.
+- **`src/trust-store.ts` (new)** — Agora-generated trust data (scan verdict, summary, official status,
+  digest baseline) is recorded under a namespaced key, `"io.github.irgenslj.agora/trust"`, following the
+  same reverse-DNS `_meta` convention the official registry uses for its own extension data — a JSON
+  sidecar next to `agora.toml` (`agora.trust.json`) rather than a new `ManifestEntry` field, since
+  `src/stack/manifest.ts`'s hand-rolled TOML schema is owned by the parallel P3 stack-manager session
+  this cut. The shape is forward-compatible with folding into the manifest format later.
+- **Exit codes** — `agora acquire` and `agora scan` now share one agent-operable contract: `0` ok/pass,
+  `1` usage/error, `2` warn (gate warned, not accepted), `3` scan fail. Applies identically to `--json`
+  and human-readable output (`agora scan --json` previously always exited `0`, even on failures).
+- **`agora doctor`** — the human-readable table now shows an inline `DRIFT` chip next to a server's name
+  when `--probe` detects description drift, instead of only inside the per-check detail lines below it.
+- **Honest limits, restated precisely** in `agora acquire --help` / `agora scan --help` and README: the
+  gate is static heuristics plus live-probe diffing — pattern checks, manifest diffs, registry status,
+  tool-annotation-hint checks — never a sandbox, never executes or formally verifies server code. A
+  clean scan means "no known red flags," not "safe."
+- **Gate corpus tests** (`test/gate/`) — poisoned fixtures (official `deleted`/`deprecated` status,
+  destructive/open-world/missing-readOnlyHint tool annotations, undeclared observed permissions, drifted
+  tool schemas vs. an approved baseline) produce `fail`/`warn` exactly; clean fixtures produce `pass`
+  with zero false positives — both directions matter, or the gate stops being trusted. Hermetic via the
+  existing `FetchLike`/`deps` DI seam, modeled on the real `FederatedItem`/official-registry wire shape.
+
+### P3 — stack manager expansion (instruction artifacts + plan/apply)
+
+"Memory management" (brief D8) becomes real: `CLAUDE.md`/`AGENTS.md`/`.cursor/rules`/OpenCode
+instructions are now versioned, diffable, syncable artifacts alongside MCP servers, and the write
+path splits into Terraform-style `plan`/`apply` behind the authored `ConfiguredInstruction`/
+`DesiredInstruction`/`ToolAdapter.readInstructions`/`writeInstructions` contracts.
+
+- **`src/stack/manifest.ts`** — implemented the `[instructions.*]` TOML table (`source: inline|file|
+  url`, `content`, `ref`, `content_hash`, `enabled`), registered in `KNOWN_SECTIONS`, round-trips
+  stably. Multi-line inline content survives a single TOML line via `\n`/`\r` escaping (extended
+  `escapeString`/`parseTomlString`, backwards compatible with every existing field). New
+  `hashContent()` (sha256, the drift baseline) and `resolveInstructionContent()` (inline/file/url →
+  literal text, DI `fetcher`, resolves a `file` ref relative to a remote `--from` source when the
+  manifest itself came from a URL).
+- **Adapters** — implemented `readInstructions`/`writeInstructions` for all four, each following the
+  same surgical-write discipline as `writeServers` (preserve everything unrelated, atomic writes,
+  return a `SyncChange`):
+  - **OpenCode** — manages files under `.agora/instructions/<name>.md` and registers each one's
+    relative path in opencode.json's native `instructions` array; any pre-existing entries
+    (`CONTRIBUTING.md`, glob patterns) are left completely untouched.
+  - **Claude Code** — a single `CLAUDE.md` per scope (project `<cwd>/CLAUDE.md`, user
+    `~/.claude/CLAUDE.md`); named entries live in delimited `<!-- agora:instructions:begin/end:name -->`
+    sections (new `src/stack/adapters/instruction-markers.ts`, shared with Windsurf) so hand-written
+    prose survives untouched.
+  - **Cursor** — one `<name>.md` file per entry under `.cursor/rules/` (project and user scope).
+  - **Windsurf** — a single rules file per scope (project `.windsurfrules`, user
+    `~/.codeium/windsurf/memories/global_rules.md`), same marker-section strategy as Claude Code —
+    a deliberate divergence from its MCP config (user-scope only) since Windsurf's project rules
+    file is independent of MCP config.
+  - A non-interface `AdapterInstructionsLocation.instructionsLocation()` (additive, doesn't touch the
+    locked `ToolAdapter` shape) lets orchestration code ask each adapter where its instructions live,
+    the same way `writeLocation` answers that for MCP servers.
+- **`src/stack/sync.ts`** — added `planInstructionsSync`/`applyInstructionsSync` (mirrors
+  `planSync`/`applySync`'s `ToolSyncPlan` shape) and `gateManifestForSync()`, which reuses the
+  existing exported `scanItem` gate as-is (never reimplemented) by projecting every mcp/instruction
+  entry into the `MarketplaceItem` shape it already knows how to check — an mcp entry's `npx`
+  command is resolved to an npm package for the `npm_exists`/`repo_reachable` checks, and an
+  instruction entry's resolved text becomes the scanned "description" for `checkDescriptionInjection`
+  (a poisoned CLAUDE.md/AGENTS.md snippet is exactly what that check is built to catch).
+- **New commands** — `agora plan` (pure read-only diff over servers + instructions; exit 0 no
+  changes / 2 changes pending / 1 error) and `agora apply` (executes the plan; exit 0 applied / 1
+  error). `agora sync` is now a continuity alias for `plan && apply` unchanged in its existing
+  `--write --yes` dry-run-by-default semantics.
+- **`agora sync --from <git-url|gist|path>`** now runs the trust gate on every mcp/instruction entry
+  before writing anything — the flagship P3 demo (brief §7 demo 2): a fail exits 3 with nothing
+  written; `plan --from`/`apply --from` run the same gate. Global exit codes across `plan`/`apply`/
+  `sync`: 0 ok, 1 error, 2 plan-has-changes, 3 scan-gate blocked.
+- Hermetic tests: instructions manifest round-trip (`test/stack/manifest-instructions.test.ts`),
+  per-adapter instruction read/write preserving unrelated keys/files
+  (`test/stack/adapters-instructions.test.ts`), and `plan`/`apply`/`sync --from` exit-code and
+  gate-blocking behavior with a DI fetcher — including a poisoned entry that 404s the npm registry
+  (`test/stack/plan-apply-cmd.test.ts`).
+
+### P6 — harness integration matrix
+
+`agora mcp` becomes a small, honest, universal plugin; `agora integrate` dogfoods the stack
+manager to install Agora into every harness with one command; and the standard plugin/skill/extension
+artifacts (Claude Code, Gemini CLI) make Agora agent-operable even in harnesses this repo has never
+heard of. This closes Ring 1 → Ring 2 reachability (brief §5b/§5 P6) and is acceptance demo 5.
+
+- **Consolidated the `agora mcp` tool surface from 12 tools to 5** (`src/cli/mcp-server.ts`),
+  matching the brief's canonical table exactly: `agora_search`, `agora_browse`,
+  `agora_stack_status`, `agora_plan`, `agora_acquire`. Dropped `trending`, `install_plan` (folded
+  into `agora_acquire`'s dry-run plan), `outdated`, `tutorials`/`tutorial` (not agent-facing), and
+  `scan` (the gate lives inside `agora_acquire`); `stack_installed`/`stack_doctor`/
+  `stack_capabilities` collapsed into one `agora_stack_status` that enriches `checkStack`'s health
+  summary with each server's cached tool list. Every tool's result is now literal JSON (not
+  prose) sourced directly from `src/federation`/`src/stack`/`src/acquire.ts` — no re-derived logic
+  — so it mirrors the matching CLI `--json` shape one-to-one. Renamed the server identity
+  `agora-marketplace` → `agora` ("marketplace" is banned vocabulary). Annotation hints are honest
+  and dogfood the same hints the P2 gate inspects: `readOnlyHint` on `search`/`browse`/
+  `stack_status`, `readOnlyHint` + `idempotentHint` on `plan`, `destructiveHint` on `acquire`.
+  `agora_acquire`'s `confirm` parameter is a second call mirroring plan/apply — without it the call
+  is always a dry run; the underlying gate in `src/acquire.ts` still decides whether a confirming
+  call is allowed to write (a `fail` verdict is never bypassable; a `warn` verdict additionally
+  needs `acceptWarnings: true`). Fixed a latent bug found while smoke-testing this cut: `agora mcp`
+  launched via the built CLI exited within ~250ms of startup instead of servicing requests —
+  `server.connect(transport)` only finishes the stdio handshake and resolves immediately, but every
+  CLI command follows "resolve once, then `src/cli.ts` calls `process.exit()`"; `runMcpServer()` now
+  awaits the transport's `onclose` so the process stays alive for the life of the session.
+- **`agora integrate [harness|--all]`** (new `src/cli/commands/integrate.ts`) — dogfoods the stack
+  manager on itself: writes one `agora` MCP server entry (the zero-install launcher
+  `npx -y agora-hub mcp`) into a harness's own config via that harness's `ToolAdapter.writeServers`
+  — the identical surgical/atomic write path `agora sync` already uses, so every unrelated key is
+  preserved exactly. Defaults to **user** scope (unlike `sync`/`plan`/`apply`, which default to
+  project) since the point is for Agora's tools to be available to a harness everywhere, not just
+  the current project. `--all` integrates every detected harness, falling back to every supported
+  harness on a fresh machine with nothing detected yet (brief §7 demo 5: "on a fresh machine");
+  a bare harness id integrates just that one. `--dry-run` previews without writing; `--json` reports
+  `{ mode, scope, command, targets }` with an honest per-harness `written`/`planned`/`skipped`/
+  `error` status. Exit codes: 0 ok, 1 error. Wired into `app.ts`'s `CommandMap` and given a `Stack`
+  group `CommandMeta` entry.
+- **In-repo Claude Code plugin** — `.claude-plugin/plugin.json` (the `agora` plugin manifest) +
+  `.claude-plugin/marketplace.json` (lists the one `agora` plugin with `source: "./"`, marketplace
+  = plugin root) + root `.mcp.json` (the npx launcher, tools only — no hooks, keeping the Claude
+  Code trust ask minimal per brief §5) + `commands/agora.md` (a `/agora` slash command routing
+  `$ARGUMENTS` to the matching `agora_*` MCP tool, mirroring the OpenCode router idea in
+  `src/commands.ts`, and calling out the acquire dry-run-then-confirm discipline explicitly).
+  **Judgment call:** verified live against current Claude Code plugin docs that `.mcp.json` and
+  `commands/` live at the plugin ROOT as siblings of `.claude-plugin/`, not nested inside it —
+  `.claude-plugin/` holds only `plugin.json` (and `marketplace.json` when the marketplace is the
+  plugin's own repo). Logged as the OQ-2 pattern (verified reality over a literal reading) rather
+  than re-litigated.
+- **`skills/agora/SKILL.md`** — the Agora Agent Skill (agentskills.io standard: `name` must match
+  the parent directory, here `agora`). Teaches any agent operating the `agora` CLI directly: the
+  `--json` flag discipline, the shared exit-code contract (`0` ok, `1` error, `2` plan-has-changes
+  or gate-warned, `3` gate hard-failed), the plan-before-apply rule for `sync`/`plan`/`apply`, and
+  the gap → `acquire --dry-run` → read the verdict → `--accept-warnings` (only if warranted) loop —
+  including that the MCP `agora_acquire` tool's `confirm` flag encodes the identical two-step shape.
+- **`gemini-extension.json`** (repo root) — Gemini CLI extension manifest registering the same
+  `npx -y agora-hub mcp` launcher under `mcpServers.agora`, verified against the current extension
+  manifest format (`name`, `version`, `description`, `mcpServers`).
+- **`test/mcp-server.test.ts`** rewritten for the 5-tool surface: exact tool-name/annotation
+  assertions, federated search/browse (hermetic via the existing DI fetcher seam), the
+  `agora_stack_status` consolidation (grouped health + folded-in cached tool list), `agora_plan`
+  (no-manifest error path + a real diff against an empty adapter config), and three `agora_acquire`
+  cases proving the gate can't be bypassed by `confirm` alone (dry run by default; `confirm` alone
+  still blocks on a warn verdict; `confirm` + `acceptWarnings` writes). New
+  `test/stack/integrate-cmd.test.ts` covers a single harness, `--all` on a fresh machine, surgical
+  preservation of unrelated config, `--dry-run`, idempotent re-runs, and the usage-error paths.
+
 ## [0.4.5] - 2026-05-30 — the safe capability-acquisition gateway & trust depth
 
 `agora` now closes the loop from discovery to installation via a single agent-callable `acquire` command, deepened OpenCode plugin integration, added description-drift detection for MCP servers, and flattened the monorepo-star-ranking problem. Windows users no longer hit "opencode binary not found." The marketplace, news, and community pillars remain the core.

@@ -34,7 +34,17 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Publish to npm
+      - name: Publish agora-hub to npm
+        run: |
+          npm config set //registry.npmjs.org/:_authToken=${NPM_TOKEN}
+          npm publish --tag ${{ github.event.inputs.tag || 'latest' }} --provenance
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # The OpenCode plugin entry is a thin re-export that pins agora-hub to the
+      # exact version above — publish it second so the pair stays atomic.
+      - name: Publish opencode-agora (plugin entry) to npm
+        working-directory: packages/opencode-agora
         run: |
           npm config set //registry.npmjs.org/:_authToken=${NPM_TOKEN}
           npm publish --tag ${{ github.event.inputs.tag || 'latest' }} --provenance

@@ -5,8 +5,6 @@ export const TUI_SLASH_ALIASES: Record<string, TuiPageId | 'default'> = {
   '/home': 'home',
   '/market': 'marketplace',
   '/marketplace': 'marketplace',
-  '/comm': 'community',
-  '/community': 'community',
   '/news': 'news',
   '/settings': 'settings'
 };
@@ -14,7 +12,6 @@ export const TUI_SLASH_ALIASES: Record<string, TuiPageId | 'default'> = {
 export const LETTER_SHORTCUTS: Record<string, LetterDispatch> = {
   '/a': { kind: 'meta', sub: 'again' },
   '/b': { kind: 'bash', cmd: 'agora browse' },
-  '/c': { kind: 'tui', page: 'community' },
   '/d': { kind: 'bash', cmd: 'agora config doctor' },
   '/e': { kind: 'meta', sub: 'env' },
   '/f': { kind: 'meta', sub: 'fg' },
@@ -29,7 +26,6 @@ export const LETTER_SHORTCUTS: Record<string, LetterDispatch> = {
   '/o': { kind: 'bash', cmd: 'agora browse' },
   '/p': { kind: 'bash', cmd: 'agora preferences' },
   '/q': { kind: 'meta', sub: 'quit' },
-  '/r': { kind: 'bash', cmd: 'agora reviews' },
   '/s': { kind: 'tui', page: 'settings' },
   '/t': { kind: 'meta', sub: 'terminal' },
   '/u': { kind: 'bash', cmd: 'agora use' },

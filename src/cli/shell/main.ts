@@ -45,13 +45,13 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
   function printHome(): void {
     const banner = renderBanner({ color: true, trueColor });
-    const motto = "Developers' CLI marketplace and community hub - type a command, bash or chat:";
+    const motto = 'The system manager for your agentic stack - type a command, bash or chat:';
     const mottoLine = gradientText(motto, { trueColor });
     const model = FREE_MODELS[0];
     const infoLine = style.dim(
       `v${AGORA_VERSION} · ${model} · /abc · /help · /menu · /search · /quit`
     );
-    const slashLine = style.orange('/home · /marketplace · /community · /news · /settings');
+    const slashLine = style.orange('/home · /marketplace · /news · /settings');
     process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${infoLine}\n${slashLine}\n\n`);
   }
 
@@ -123,8 +123,6 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     '/home',
     '/marketplace',
     '/market',
-    '/community',
-    '/comm',
     '/news',
     '/settings',
     '/abc',
@@ -202,7 +200,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     'type /settings to open the TUI Settings page',
     'run `agora save <id>` to bookmark a package',
     'run `agora saved` to see your saved items',
-    'run `agora auth login --api-url <url>` to connect the community',
+    'run `agora auth login --api-url <url>` to enable live marketplace search',
     'run `agora config doctor` to check your OpenCode config',
     'type VAR=val command to set env vars in bash',
     'pipe output with | or redirect with > as normal in bash',
@@ -888,10 +886,10 @@ function printLetterHelp(style: Styler): void {
   const lines: string[] = [
     style.accent('Agora Shell — letter shortcuts'),
     '',
-    '  /a  again     /b  browse    /c  community  /d  doctor   /e  env',
+    '  /a  again     /b  browse    /d  doctor    /e  env',
     '  /f  fg        /g  search    /h  home       /i  init     /j  jobs',
     '  /k  search    /l  last      /m  marketplace /n  news     /o  browse',
-    '  /p  preferences /q  quit   /r  reviews   /s  settings /t  terminal',
+    '  /p  preferences /q  quit   /s  settings /t  terminal',
     '  /u  use       /v  verbose   /w  watch     /x  export   /y  history',
     '  /z  doctor --fix',
     '',

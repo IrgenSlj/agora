@@ -13,7 +13,6 @@ import type { PageContext, AppState } from '../src/cli/pages/types.js';
 const BASE_CONFIG: NewsConfig = {
   sources: {
     hn: { enabled: true, ttlMinutes: 10 },
-    reddit: { enabled: true, ttlMinutes: 15 },
     'github-trending': { enabled: true, ttlMinutes: 30 },
     arxiv: { enabled: false, ttlMinutes: 60 },
     rss: { enabled: false, ttlMinutes: 60 }
@@ -267,16 +266,16 @@ function makeState(
 
 describe('visible() — boolean filters', () => {
   const hnItem = makeScoredItem({ id: 'hn:1', source: 'hn', title: 'HN Story' });
-  const redditItem = makeScoredItem({ id: 'reddit:1', source: 'reddit', title: 'Reddit Story' });
+  const ghItem = makeScoredItem({ id: 'gh:1', source: 'github-trending', title: 'GH Story' });
 
   test('savedOnly=false shows all items', () => {
-    const st = makeState({ items: [hnItem, redditItem] });
+    const st = makeState({ items: [hnItem, ghItem] });
     expect(visible(st)).toHaveLength(2);
   });
 
   test('savedOnly=true shows only saved items', () => {
     const st = makeState({
-      items: [hnItem, redditItem],
+      items: [hnItem, ghItem],
       savedOnly: true,
       saved: new Set(['hn:1'])
     });
@@ -286,24 +285,24 @@ describe('visible() — boolean filters', () => {
   });
 
   test('savedOnly=true with no saved items returns empty', () => {
-    const st = makeState({ items: [hnItem, redditItem], savedOnly: true });
+    const st = makeState({ items: [hnItem, ghItem], savedOnly: true });
     expect(visible(st)).toHaveLength(0);
   });
 
   test('unreadOnly=false shows all items', () => {
-    const st = makeState({ items: [hnItem, redditItem] });
+    const st = makeState({ items: [hnItem, ghItem] });
     expect(visible(st)).toHaveLength(2);
   });
 
   test('unreadOnly=true hides read items', () => {
     const st = makeState({
-      items: [hnItem, redditItem],
+      items: [hnItem, ghItem],
       unreadOnly: true,
       read: new Set(['hn:1'])
     });
     const result = visible(st);
     expect(result).toHaveLength(1);
-    expect(result[0].id).toBe('reddit:1');
+    expect(result[0].id).toBe('gh:1');
   });
 
   test('savedOnly + unreadOnly AND together', () => {
@@ -323,10 +322,10 @@ describe('visible() — boolean filters', () => {
 
   test('source filter still works alongside savedOnly', () => {
     const st = makeState({
-      items: [hnItem, redditItem],
+      items: [hnItem, ghItem],
       source: 'hn',
       savedOnly: true,
-      saved: new Set(['reddit:1'])
+      saved: new Set(['gh:1'])
     });
     expect(visible(st)).toHaveLength(0);
   });
@@ -366,7 +365,7 @@ function makeRenderCtx(opts: {
     width,
     height,
     trueColor: false,
-    app: { user: {}, cwd: tmp, unread: { news: 0, community: 0 } } as AppState,
+    app: { user: {}, cwd: tmp, unread: { news: 0 } } as AppState,
     repaint() {}
   } as PageContext;
 }
@@ -391,10 +390,10 @@ describe('news render — list view', () => {
         url: 'https://news.ycombinator.com/item?id=1'
       }),
       makeNewsItem({
-        id: 'reddit:1',
-        source: 'reddit',
+        id: 'gh:1',
+        source: 'github-trending',
         title: 'Claude tricks',
-        url: 'https://reddit.com/r/x/comments/1'
+        url: 'https://github.com/x/claude-tricks'
       })
     ];
     writeCache(tmp, items);

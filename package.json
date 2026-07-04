@@ -1,13 +1,17 @@
 {
-  "name": "opencode-agora",
-  "version": "0.4.5",
-  "description": "Agora - The Developer's Terminal Marketplace & Community Hub for OpenCode",
+  "name": "agora-hub",
+  "version": "0.5.0",
+  "description": "The system manager for your agentic stack — a local-first terminal app that manages, watches, and gates your MCP servers, skills, and instruction files.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
   "bin": {
-    "agora": "dist/cli.js",
-    "opencode-agora": "dist/cli.js"
+    "agora": "dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./opencode": "./dist/plugin/index.js",
+    "./package.json": "./package.json"
   },
   "repository": {
     "type": "git",
@@ -33,10 +37,8 @@
     "build": "rm -rf dist && tsc && cp src/catalog.json dist/catalog.json && chmod +x dist/cli.js",
     "build:binary": "bun build src/cli.ts --compile --outfile dist/agora",
     "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
-    "hub:dev": "bun hub/server.ts",
-    "typecheck": "bun run typecheck:cli && bun run typecheck:backend",
+    "typecheck": "bun run typecheck:cli",
     "typecheck:cli": "tsc -p tsconfig.check.json",
-    "typecheck:backend": "cd backend && bun run typecheck",
     "test": "bun test",
     "prepublishOnly": "bun run build",
     "refresh:data": "bun scripts/refresh-data.ts",
@@ -46,12 +48,18 @@
     "format:check": "prettier --check ."
   },
   "keywords": [
-    "opencode",
-    "opencode-plugin",
     "mcp",
-    "marketplace",
-    "community",
-    "developer-tools"
+    "model-context-protocol",
+    "package-manager",
+    "stack-manager",
+    "agent",
+    "cli",
+    "opencode",
+    "claude-code",
+    "cursor",
+    "windsurf",
+    "trust",
+    "federation"
   ],
   "author": "IrgenSlj",
   "license": "MIT",

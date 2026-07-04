@@ -1,0 +1,94 @@
+{
+  "servers": [
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "capital.hove/read-only-local-postgres-mcp-server",
+        "description": "MCP server for read-only PostgreSQL database queries in Claude Desktop",
+        "repository": {
+          "url": "https://github.com/hovecapital/read-only-local-postgres-mcp-server",
+          "source": "github"
+        },
+        "version": "0.1.0",
+        "websiteUrl": "https://hove.capital",
+        "packages": [
+          {
+            "registryType": "npm",
+            "registryBaseUrl": "https://registry.npmjs.org",
+            "identifier": "@hovecapital/read-only-postgres-mcp-server",
+            "version": "0.1.0",
+            "transport": {
+              "type": "stdio"
+            }
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "active",
+          "statusChangedAt": "2026-01-29T08:50:16.035232Z",
+          "publishedAt": "2026-01-29T08:50:16.035232Z",
+          "updatedAt": "2026-01-29T08:50:16.035232Z",
+          "isLatest": true
+        }
+      }
+    },
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "ai.agenticshelf/graffeo",
+        "description": "Live MCP catalog for Graffeo Coffee Roasting — North Beach SF specialty coffee since 1935.",
+        "title": "Graffeo Coffee Roasting",
+        "version": "1.0.0",
+        "websiteUrl": "https://www.graffeo.com",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://api.agenticshelf.ai/m/graffeo/mcp"
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "deprecated",
+          "statusChangedAt": "2026-05-07T16:29:51.153646Z",
+          "statusMessage": "Pilot integration in progress; will re-activate when /m/graffeo/mcp is wired up.",
+          "publishedAt": "2026-05-06T16:11:54.5608Z",
+          "updatedAt": "2026-05-07T16:29:51.153646Z",
+          "isLatest": false
+        }
+      }
+    },
+    {
+      "server": {
+        "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+        "name": "ac.inference.sh/inference",
+        "description": "Run 150+ AI apps — image, video, audio, LLMs, 3D and more. Browse, execute, stream results.",
+        "title": "inference.sh",
+        "version": "1.0.0",
+        "remotes": [
+          {
+            "type": "streamable-http",
+            "url": "https://sh.inference.ac"
+          },
+          {
+            "type": "streamable-http",
+            "url": "https://api.inference.sh/mcp"
+          }
+        ]
+      },
+      "_meta": {
+        "io.modelcontextprotocol.registry/official": {
+          "status": "deleted",
+          "statusChangedAt": "2026-04-13T17:32:11.793006Z",
+          "publishedAt": "2026-04-13T17:17:43.522108Z",
+          "updatedAt": "2026-04-13T17:32:11.793006Z",
+          "isLatest": true
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "count": 3
+  }
+}

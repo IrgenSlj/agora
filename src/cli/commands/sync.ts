@@ -1,6 +1,13 @@
 import { ALL_ADAPTERS, detectTools } from '../../stack/registry.js';
 import { manifestPath, readManifest, loadManifestFromSource } from '../../stack/manifest.js';
-import { planSync, applySync, type ToolSyncPlan } from '../../stack/sync.js';
+import {
+  planSync,
+  applySync,
+  planInstructionsSync,
+  applyInstructionsSync,
+  gateManifestForSync,
+  type ToolSyncPlan
+} from '../../stack/sync.js';
 import type { AgentToolId, StackEnv } from '../../stack/types.js';
 import type { CommandHandler } from './types.js';
 import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
@@ -127,6 +134,35 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
   }
 
   const mcpCount = Object.keys(manifest.mcp).length;
+  const instructionsCount = Object.keys(manifest.instructions ?? {}).length;
+
+  // --from: run the trust gate (the SAME exported scanItem gate from src/scan.ts —
+  // never reimplemented here) over every mcp/instruction entry before anything
+  // is written. A hard fail blocks the whole sync — the flagship demo.
+  if (fromFlag !== undefined) {
+    const gate = await gateManifestForSync(manifest, {
+      fetcher: io.fetcher,
+      cwd: io.cwd,
+      baseSource: isRemoteSource ? fromFlag : undefined
+    });
+    if (!gate.ok) {
+      if (parsed.flags.json) {
+        writeJson(io.stdout, { mode: 'gate-blocked', blocked: gate.blocked });
+        return 3;
+      }
+      writeLine(io.stdout, theme.accent('agora sync — scan gate blocked'));
+      writeLine(io.stdout);
+      for (const entry of gate.blocked) {
+        writeLine(io.stdout, `  ${entry.kind} "${entry.name}":`);
+        for (const check of entry.scan.checks.filter((c) => c.status === 'fail')) {
+          writeLine(io.stdout, `    ✗ ${check.label} — ${check.message}`);
+        }
+      }
+      writeLine(io.stdout);
+      writeLine(io.stdout, theme.muted('Nothing written. Fix the flagged entries and re-run.'));
+      return 3;
+    }
+  }
 
   // Determine target tools
   let targets: AgentToolId[];
@@ -143,12 +179,12 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
   }
 
   // Nothing to sync
-  if (mcpCount === 0) {
+  if (mcpCount === 0 && instructionsCount === 0) {
     if (parsed.flags.json) {
-      writeJson(io.stdout, { mode: doWrite ? 'applied' : 'plan', tools: [] });
+      writeJson(io.stdout, { mode: doWrite ? 'applied' : 'plan', tools: [], instructions: [] });
       return 0;
     }
-    writeLine(io.stdout, theme.muted('Nothing to sync: manifest has no MCP servers.'));
+    writeLine(io.stdout, theme.muted('Nothing to sync: manifest has no MCP servers or instructions.'));
     writeLine(io.stdout, theme.muted('Run `agora freeze --write` to populate the manifest first.'));
     return 0;
   }
@@ -156,14 +192,19 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
   if (doWrite && doYes) {
     // Apply mode
     let results: ToolSyncPlan[];
+    let instructionResults: ToolSyncPlan[];
     try {
       results = applySync(manifest, env, targets, scope, prune);
+      instructionResults = await applyInstructionsSync(manifest, env, targets, scope, prune, {
+        fetcher: io.fetcher,
+        baseSource: isRemoteSource ? fromFlag : undefined
+      });
     } catch (e) {
       return usageError(io, `Sync failed: ${e instanceof Error ? e.message : String(e)}`);
     }
 
     if (parsed.flags.json) {
-      writeJson(io.stdout, { mode: 'applied', tools: results });
+      writeJson(io.stdout, { mode: 'applied', tools: results, instructions: instructionResults });
       return 0;
     }
 
@@ -171,8 +212,11 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
     writeLine(io.stdout);
     writeLine(io.stdout, formatPlan(results, theme));
     writeLine(io.stdout);
+    writeLine(io.stdout, theme.accent('Instructions:'));
+    writeLine(io.stdout, formatPlan(instructionResults, theme));
+    writeLine(io.stdout);
 
-    const filesWritten = results
+    const filesWritten = [...results, ...instructionResults]
       .filter((p) => p.location !== null)
       .filter(
         (p) =>
@@ -191,9 +235,13 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
   } else {
     // Dry-run mode (default)
     const plans = planSync(manifest, env, targets, scope, prune);
+    const instructionPlans = await planInstructionsSync(manifest, env, targets, scope, prune, {
+      fetcher: io.fetcher,
+      baseSource: isRemoteSource ? fromFlag : undefined
+    });
 
     if (parsed.flags.json) {
-      writeJson(io.stdout, { mode: 'plan', tools: plans });
+      writeJson(io.stdout, { mode: 'plan', tools: plans, instructions: instructionPlans });
       return 0;
     }
 
@@ -209,6 +257,9 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
       writeLine(io.stdout);
     }
     writeLine(io.stdout, formatPlan(plans, theme));
+    writeLine(io.stdout);
+    writeLine(io.stdout, theme.accent('Instructions:'));
+    writeLine(io.stdout, formatPlan(instructionPlans, theme));
     writeLine(io.stdout);
     writeLine(
       io.stdout,

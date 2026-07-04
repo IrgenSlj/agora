@@ -4,20 +4,30 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'search',
     group: 'Marketplace',
-    summary: 'Search the marketplace for packages and workflows',
-    usage: 'agora search <query> [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
+    summary: 'Search the federated catalog for MCP servers, packages, and workflows',
+    usage:
+      'agora search <query> [--source official|smithery|glama|github|huggingface|local|all] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
     details:
-      'Searches all marketplace items by keyword. Use --category to filter by kind. ' +
-      'Add --api to query the live Agora API; without it, the bundled offline data is used.',
+      'Federates the official MCP Registry, Smithery, Glama, GitHub, and Hugging Face with the ' +
+      'bundled local catalog, deduping matches found across sources (each result keeps its ' +
+      'provenance). An unreachable source degrades honestly instead of failing the whole search — ' +
+      'local always works offline. ' +
+      'Use --category to filter by kind, --source to restrict to one upstream. ' +
+      'Add --api to query a self-hosted Agora API instead (unrelated to federation).',
     flags: [
+      {
+        flag: '--source',
+        description:
+          'Restrict to one upstream: official, smithery, glama, github, huggingface, local, or all (default all)'
+      },
       { flag: '--category, -c', description: 'Filter by category: mcp, prompt, workflow, skill' },
       { flag: '--limit, -n', description: 'Maximum number of results (default 10)' },
-      { flag: '--json', description: 'Output results as JSON' }
+      { flag: '--json', description: 'Output results as JSON, including per-item provenance' }
     ],
     examples: [
-      'agora search filesystem',
-      'agora search filesystem --api',
-      'agora search github --category mcp --limit 5'
+      'agora search postgres',
+      'agora search postgres --source official',
+      'agora search github --category mcp --limit 5 --json'
     ]
   },
   {
@@ -158,11 +168,18 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Marketplace',
     summary: 'Scan-gated capability acquisition for MCP servers',
     usage:
-      'agora acquire <id|query> [--tool opencode|claude-code|cursor|windsurf] [--accept-warnings] [--save] [--dry-run] [--json]',
+      'agora acquire <id|query> [--tool opencode|claude-code|cursor|windsurf] [--source official|smithery|glama|github|huggingface|local] [--accept-warnings] [--save] [--dry-run] [--json]',
     details:
-      'Resolves an item id or capability query, creates an install plan, runs the pre-install scan, ' +
-      'and writes the MCP server to the target config only when the scan has no failures. ' +
-      'Warnings require --accept-warnings; --dry-run prints the plan and scan without writing.',
+      'Resolves an item id or capability query — against the federated catalog (official MCP Registry ' +
+      'first, then the bundled offline catalog) as well as the bundled catalog directly — creates an ' +
+      'install plan, runs the pre-install scan gate, and writes the MCP server to the target config only ' +
+      'when the scan has no failures. Warnings require --accept-warnings; --dry-run prints the plan and ' +
+      'scan without writing. With --save, the scan verdict and description-drift baseline are recorded ' +
+      'alongside agora.toml under a namespaced trust key so a later re-acquire or a cloned profile can ' +
+      'detect drift. Exit codes: 0 ok, 1 usage/error, 2 warn (not accepted), 3 scan fail. ' +
+      'Honest limits: the gate is static heuristics plus live-probe diffing — pattern checks, manifest ' +
+      'diffs, registry status, tool-annotation-hint checks. It is not a sandbox and does not execute or ' +
+      'formally verify server code. A clean scan means "no known red flags," not "safe."',
     flags: [
       {
         flag: '--tool',
@@ -170,17 +187,22 @@ export const COMMANDS: CommandMeta[] = [
       },
       { flag: '--config', description: 'Explicit config path for the target tool' },
       {
+        flag: '--source',
+        description: 'Restrict federation resolution to one upstream source'
+      },
+      {
         flag: '--accept-warnings',
         description: 'Proceed when the scan has warnings but no failures'
       },
-      { flag: '--save', description: 'Also record the server in agora.toml' },
+      { flag: '--save', description: 'Also record the server (and its trust data) in agora.toml' },
       { flag: '--dry-run', description: 'Plan and scan only; write nothing' },
       { flag: '--json', description: 'Output result as JSON' }
     ],
     examples: [
       'agora acquire mcp-postgres --dry-run',
       'agora acquire "postgres database" --accept-warnings',
-      'agora acquire mcp-github --save --accept-warnings'
+      'agora acquire mcp-github --save --accept-warnings',
+      'agora acquire io.github.acme/postgres-mcp --source official --json'
     ]
   },
   {
@@ -188,6 +210,12 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Marketplace',
     summary: 'Pre-install safety scan for a catalog or live item.',
     usage: 'agora scan <id> [--type package|workflow] [--json]',
+    details:
+      'Runs the same trust gate `agora acquire` enforces before writing config, against the bundled ' +
+      'catalog. Exit codes: 0 pass, 1 usage/error, 2 warn, 3 fail — both --json and the table honor them. ' +
+      'Honest limits: this is static heuristics plus live-probe diffing (injection-pattern checks, ' +
+      'permission-manifest diffs, registry status, tool-annotation-hint checks) — never a sandbox. It ' +
+      'does not execute or formally verify server code. "pass" means no known red flags, not "safe."',
     flags: [
       { flag: '--type, -t', description: 'Item kind: package or workflow' },
       { flag: '--json', description: 'Output result as JSON' }
@@ -206,16 +234,34 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora outdated', 'agora outdated --json']
   },
   {
+    name: 'refresh',
+    group: 'Marketplace',
+    summary: 'Incrementally sync the official MCP registry into the local federation cache.',
+    usage: 'agora refresh [--source official] [--json]',
+    details:
+      'Fetches servers added/changed since the last sync via the official registry\'s ' +
+      '`updated_since` filter, and prunes any it has tombstoned as deleted. Powers `agora search`\'s ' +
+      'offline fallback when the live registry is unreachable.',
+    flags: [
+      {
+        flag: '--source',
+        description: 'Source to refresh (default: official; the only supported value today)'
+      },
+      { flag: '--json', description: 'Output result as JSON' }
+    ],
+    examples: ['agora refresh', 'agora refresh --json']
+  },
+  {
     name: 'news',
     group: 'Marketplace',
-    summary: 'Browse ranked tech news from HN, Reddit, GitHub, arXiv',
-    usage: 'agora news [query] [--source hn|reddit|gh|arxiv] [--limit 20] [--refresh] [--json]',
+    summary: 'Browse ranked tech news from HN, GitHub, arXiv',
+    usage: 'agora news [query] [--source hn|gh|arxiv] [--limit 20] [--refresh] [--json]',
     details:
       'Fetches and ranks news stories from multiple sources using a recency-engagement-topic scoring algorithm. ' +
       'Cached locally in ~/.config/agora/news-cache.jsonl. ' +
       'Use --refresh to force re-fetch; --source to filter by source; a positional query to search titles and tags.',
     flags: [
-      { flag: '--source, -s', description: 'Source filter: hn, reddit, gh, arxiv' },
+      { flag: '--source, -s', description: 'Source filter: hn, gh, arxiv' },
       { flag: '--limit, -n', description: 'Maximum number of results (default 20)' },
       { flag: '--refresh', description: 'Force re-fetch all enabled sources' },
       { flag: '--json', description: 'Output as JSON' }
@@ -230,14 +276,14 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'today',
     group: 'Marketplace',
-    summary: 'Daily digest: top news, community threads, and trending items from the last 24h',
-    usage: 'agora today [--section news|community|market|all] [--json]',
+    summary: 'Daily digest: top news and trending items from the last 24h',
+    usage: 'agora today [--section news|market|all] [--json]',
     flags: [
       {
         flag: '--section, -s',
-        description: 'Show only one section: news, community, market, or all (default all)'
+        description: 'Show only one section: news, market, or all (default all)'
       },
-      { flag: '--json', description: 'Output { at, news, threads, trending } as JSON' }
+      { flag: '--json', description: 'Output { at, news, trending } as JSON' }
     ],
     examples: ['agora today', 'agora today --section news', 'agora today --json']
   },

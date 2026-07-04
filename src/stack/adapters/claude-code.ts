@@ -2,8 +2,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
+import { hashContent } from '../manifest.js';
+import { extractMarkerSections, mergeMarkerSections } from './instruction-markers.js';
 import type {
+  AdapterInstructionsLocation,
+  ConfiguredInstruction,
   ConfiguredServer,
+  DesiredInstruction,
   DesiredServer,
   StackEnv,
   SyncChange,
@@ -149,7 +154,45 @@ function entriesEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-export const claudeCodeAdapter: ToolAdapter = {
+// ── Instruction artifacts (P3) ──────────────────────────────────────────────
+// Claude Code reads a single CLAUDE.md per scope (project: <cwd>/CLAUDE.md,
+// user: ~/.claude/CLAUDE.md). Multiple named instruction entries are managed
+// as delimited sections inside that one file (see instruction-markers.ts) so
+// any hand-authored prose in CLAUDE.md survives untouched.
+
+function claudeCodeInstructionsLocation(
+  opts: StackEnv,
+  scope: 'project' | 'user'
+): ToolConfigLocation | null {
+  const cwd = resolveCwd(opts);
+  const home = resolveHome(opts);
+  if (scope === 'project') {
+    return { path: join(cwd, 'CLAUDE.md'), scope: 'project' };
+  }
+  return { path: join(home, '.claude', 'CLAUDE.md'), scope: 'user' };
+}
+
+function readClaudeMdInstructions(
+  filePath: string,
+  scope: 'project' | 'user'
+): ConfiguredInstruction[] {
+  if (!existsSync(filePath)) return [];
+  let text: string;
+  try {
+    text = readFileSync(filePath, 'utf8');
+  } catch {
+    return [];
+  }
+  return extractMarkerSections(text).map((section) => ({
+    name: section.name,
+    tool: 'claude-code',
+    scope,
+    path: filePath,
+    contentHash: hashContent(section.content)
+  }));
+}
+
+export const claudeCodeAdapter: ToolAdapter & AdapterInstructionsLocation = {
   id: 'claude-code',
   displayName: 'Claude Code',
 
@@ -323,5 +366,31 @@ export const claudeCodeAdapter: ToolAdapter = {
     }
 
     return servers;
+  },
+
+  /** See instructionsLocation below; exposed as a bound method for callers. */
+  instructionsLocation: claudeCodeInstructionsLocation,
+
+  readInstructions(opts: StackEnv): ConfiguredInstruction[] {
+    const project = claudeCodeInstructionsLocation(opts, 'project')!;
+    const user = claudeCodeInstructionsLocation(opts, 'user')!;
+    return [
+      ...readClaudeMdInstructions(project.path, 'project'),
+      ...readClaudeMdInstructions(user.path, 'user')
+    ];
+  },
+
+  writeInstructions(
+    location: ToolConfigLocation,
+    desired: DesiredInstruction[],
+    opts: { prune: boolean }
+  ): SyncChange {
+    const filePath = location.path;
+    const existingText = existsSync(filePath) ? readFileSync(filePath, 'utf8') : '';
+    const { text, change } = mergeMarkerSections(existingText, desired, opts);
+    if (text !== existingText) {
+      atomicWriteFile(filePath, text, 0o644);
+    }
+    return change;
   }
 };

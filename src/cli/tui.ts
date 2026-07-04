@@ -16,7 +16,6 @@ import type {
 import { homePage } from './pages/home.js';
 import { marketplacePage } from './pages/marketplace.js';
 import { stackPage } from './pages/stack.js';
-import { communityPage } from './pages/community.js';
 import { newsPage } from './pages/news.js';
 import { settingsPage } from './pages/settings.js';
 import { vlen, padRight, truncate } from './pages/helpers.js';
@@ -29,14 +28,7 @@ const CUR_SHOW = '\x1b[?25h';
 const CLEAR = '\x1b[2J\x1b[H';
 const HOME_CUR = '\x1b[H';
 
-const PAGE_ORDER: ReadonlyArray<PageId> = [
-  'home',
-  'marketplace',
-  'stack',
-  'community',
-  'news',
-  'settings'
-];
+const PAGE_ORDER: ReadonlyArray<PageId> = ['home', 'marketplace', 'stack', 'news', 'settings'];
 
 function getPage(id: PageId): Page {
   switch (id) {
@@ -46,8 +38,6 @@ function getPage(id: PageId): Page {
       return marketplacePage;
     case 'stack':
       return stackPage;
-    case 'community':
-      return communityPage;
     case 'news':
       return newsPage;
     case 'settings':
@@ -132,13 +122,8 @@ export function renderHeader(o: HeaderOpts): [string, string] {
   for (const id of PAGE_ORDER) {
     const p = getPage(id);
     const lab = narrow ? (p.navIcon ?? p.navLabel.slice(0, 1)) : p.navLabel;
-    const badgeN = id === 'news' ? app.unread.news : id === 'community' ? app.unread.community : 0;
-    const badge =
-      badgeN > 0
-        ? id === 'community'
-          ? theme.warning(superscript(badgeN))
-          : theme.info(superscript(badgeN))
-        : '';
+    const badgeN = id === 'news' ? app.unread.news : 0;
+    const badge = badgeN > 0 ? theme.info(superscript(badgeN)) : '';
     if (id === current) tabParts.push(theme.accent('[' + lab + ']') + badge);
     else tabParts.push(theme.dim(lab) + badge);
   }
@@ -188,7 +173,7 @@ export function renderFooter(
     if (globalKeys.has(hk.key.toLowerCase())) continue;
     hints.push({ key: hk.key, label: hk.label });
   }
-  hints.push({ key: '1-6', label: 'page' });
+  hints.push({ key: '1-5', label: 'page' });
 
   const rawHotkeyLine = keyHintBar(hints, width, theme);
   // Guard: keyHintBar may be 1 col over at some widths \u2014 truncate to width.
@@ -223,7 +208,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
   const app: AppState = {
     user: { username: env.USER || env.USERNAME || 'anon' },
     cwd,
-    unread: { news: 0, community: 0 }
+    unread: { news: 0 }
   };
 
   let current: PageId = opts.initial ?? 'home';
@@ -258,7 +243,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
     lines.push('');
     lines.push('  ' + style.dim('Global'));
     lines.push('    ' + style.accent('Esc') + '    back / quit');
-    lines.push('    ' + style.accent('1-6') + '    switch page');
+    lines.push('    ' + style.accent('1-5') + '    switch page');
     lines.push('    ' + style.accent('Tab') + '    next page');
     lines.push('    ' + style.accent('?') + '      toggle this help');
     lines.push('    ' + style.accent('Ctrl-L') + ' redraw');
@@ -376,7 +361,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
         }
         return;
       }
-      if (/^[1-6]$/.test(ev.key)) {
+      if (/^[1-5]$/.test(ev.key)) {
         const next = PAGE_ORDER[Number(ev.key) - 1];
         if (next && next !== current) {
           await getPage(current).unmount?.(ctxFor());

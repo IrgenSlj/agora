@@ -8,7 +8,7 @@ interface MenuIo {
   env?: Record<string, string | undefined>;
 }
 
-const GROUPS = ['Marketplace', 'Setup', 'Library', 'Learn', 'Community'] as const;
+const GROUPS = ['Marketplace', 'Setup', 'Library', 'Learn'] as const;
 
 const INTERACTIVE_COMMANDS = new Set(['menu', 'tui']);
 

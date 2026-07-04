@@ -2,8 +2,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
+import { hashContent } from '../manifest.js';
+import { extractMarkerSections, mergeMarkerSections } from './instruction-markers.js';
 import type {
+  AdapterInstructionsLocation,
+  ConfiguredInstruction,
   ConfiguredServer,
+  DesiredInstruction,
   DesiredServer,
   StackEnv,
   SyncChange,
@@ -13,6 +18,10 @@ import type {
 
 function resolveHome(opts: StackEnv): string {
   return opts.home ?? homedir();
+}
+
+function resolveCwd(opts: StackEnv): string {
+  return opts.cwd ?? process.cwd();
 }
 
 type McpEntry = Record<string, unknown>;
@@ -93,7 +102,52 @@ function entriesEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-export const windsurfAdapter: ToolAdapter = {
+// ── Instruction artifacts (P3) ──────────────────────────────────────────────
+// Windsurf reads one rules file per scope: project `.windsurfrules` in the
+// project root, global `global_rules.md` under the Codeium config dir.
+// Multiple named instruction entries are managed as delimited sections
+// inside that one file (see instruction-markers.ts), same as Claude Code.
+// NOTE (judgment call): unlike windsurf's MCP config (user-scope only —
+// windsurfAdapter.writeLocation returns null for 'project'), Windsurf DOES
+// support a project-level rules file independent of MCP config, so
+// instructions are supported at both scopes here.
+
+function windsurfInstructionsLocation(
+  opts: StackEnv,
+  scope: 'project' | 'user'
+): ToolConfigLocation | null {
+  if (scope === 'project') {
+    const cwd = resolveCwd(opts);
+    return { path: join(cwd, '.windsurfrules'), scope: 'project' };
+  }
+  const home = resolveHome(opts);
+  return {
+    path: join(home, '.codeium', 'windsurf', 'memories', 'global_rules.md'),
+    scope: 'user'
+  };
+}
+
+function readWindsurfInstructions(
+  filePath: string,
+  scope: 'project' | 'user'
+): ConfiguredInstruction[] {
+  if (!existsSync(filePath)) return [];
+  let text: string;
+  try {
+    text = readFileSync(filePath, 'utf8');
+  } catch {
+    return [];
+  }
+  return extractMarkerSections(text).map((section) => ({
+    name: section.name,
+    tool: 'windsurf',
+    scope,
+    path: filePath,
+    contentHash: hashContent(section.content)
+  }));
+}
+
+export const windsurfAdapter: ToolAdapter & AdapterInstructionsLocation = {
   id: 'windsurf',
   displayName: 'Windsurf',
 
@@ -243,5 +297,30 @@ export const windsurfAdapter: ToolAdapter = {
       }
     }
     return servers;
+  },
+
+  instructionsLocation: windsurfInstructionsLocation,
+
+  readInstructions(opts: StackEnv): ConfiguredInstruction[] {
+    const project = windsurfInstructionsLocation(opts, 'project')!;
+    const user = windsurfInstructionsLocation(opts, 'user')!;
+    return [
+      ...readWindsurfInstructions(project.path, 'project'),
+      ...readWindsurfInstructions(user.path, 'user')
+    ];
+  },
+
+  writeInstructions(
+    location: ToolConfigLocation,
+    desired: DesiredInstruction[],
+    opts: { prune: boolean }
+  ): SyncChange {
+    const filePath = location.path;
+    const existingText = existsSync(filePath) ? readFileSync(filePath, 'utf8') : '';
+    const { text, change } = mergeMarkerSections(existingText, desired, opts);
+    if (text !== existingText) {
+      atomicWriteFile(filePath, text, 0o644);
+    }
+    return change;
   }
 };
