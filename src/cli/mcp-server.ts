@@ -317,7 +317,16 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
         cwd: opts.stack?.cwd,
         env: opts.stack?.env,
         dataDir: stackDataDir,
-        scanOptions: opts.scan
+        scanOptions: opts.scan,
+        // Route acquire's federation resolution through the same federation env
+        // as agora_search/agora_browse. In production `federationEnv` is `{}`, so
+        // acquire's own derived env passes through unchanged; under test the
+        // injected DI fetcher wins, keeping resolution hermetic (no live fan-out
+        // to the six sources on `agora_acquire`).
+        deps: {
+          fetchFederatedItem: (ref, env, o) =>
+            federatedFetchItem(ref, { ...env, ...federationEnv }, o)
+        }
       });
       return jsonContent(result);
     }

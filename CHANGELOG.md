@@ -2,12 +2,30 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
-## [Unreleased] — the pivot: from terminal marketplace to agentic stack manager
+## [Unreleased]
 
-Repositioning per `AGORA_BRIEF.md` (direction LOCKED): Agora becomes **the system manager for your
+_Next (see [`ROADMAP.md`](./ROADMAP.md)): TUI-1 Acquire flow · marketplace→search vocab rename ·
+TUI-2/3 · P4 inference providers · P5 federated plaza._
+
+## [0.6.0] - 2026-07-04 — the pivot: from terminal marketplace to agentic stack manager
+
+**Repositioning per `AGORA_BRIEF.md` (direction LOCKED).** Agora becomes **the system manager for your
 agentic stack** — a local-first package manager that *manages* (stack + instruction files), *watches*
 (a federated plaza feed), and *gates* (the trust/customs layer) your MCP ecosystem. It federates
 upstream registries rather than growing its own catalog; owns no inference; has no hosted backend.
+The npm package is renamed `opencode-agora` → **`agora-hub`** (binary stays `agora`); the thin
+`opencode-agora` plugin entry is republished at the same version, pinning `agora-hub` exactly.
+
+This release lands **Ring 1 (manage · watch · gate) complete** plus harness integration, catalog
+breadth, and the TUI foundations + flagship Stack page. All five acceptance demos are backed by code.
+
+### Release polish
+- Replaced the pre-pivot "Developers' CLI marketplace" tagline with the system-manager identity across
+  the welcome banner, usage header, and interactive shell; corrected `agora tui` help to the real
+  five-page TUI (Stack included). Rewrote `ROADMAP.md` with the prioritized future-development plan.
+- **Fix:** the `agora_acquire` MCP tool now routes federation resolution through the same federation env
+  as `agora_search`/`agora_browse`, so a supplied DI fetcher governs the full six-source fan-out (kept
+  the acquire tests hermetic; production behavior unchanged when no env is injected).
 
 ### P0 — rename, repackage, reposition
 - **Renamed npm package `opencode-agora` → `agora-hub`** (binary stays `agora`). One codebase, one
