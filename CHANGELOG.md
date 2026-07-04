@@ -242,6 +242,74 @@ path splits into Terraform-style `plan`/`apply` behind the authored `ConfiguredI
   gate-blocking behavior with a DI fetcher — including a poisoned entry that 404s the npm registry
   (`test/stack/plan-apply-cmd.test.ts`).
 
+### P6 — harness integration matrix
+
+`agora mcp` becomes a small, honest, universal plugin; `agora integrate` dogfoods the stack
+manager to install Agora into every harness with one command; and the standard plugin/skill/extension
+artifacts (Claude Code, Gemini CLI) make Agora agent-operable even in harnesses this repo has never
+heard of. This closes Ring 1 → Ring 2 reachability (brief §5b/§5 P6) and is acceptance demo 5.
+
+- **Consolidated the `agora mcp` tool surface from 12 tools to 5** (`src/cli/mcp-server.ts`),
+  matching the brief's canonical table exactly: `agora_search`, `agora_browse`,
+  `agora_stack_status`, `agora_plan`, `agora_acquire`. Dropped `trending`, `install_plan` (folded
+  into `agora_acquire`'s dry-run plan), `outdated`, `tutorials`/`tutorial` (not agent-facing), and
+  `scan` (the gate lives inside `agora_acquire`); `stack_installed`/`stack_doctor`/
+  `stack_capabilities` collapsed into one `agora_stack_status` that enriches `checkStack`'s health
+  summary with each server's cached tool list. Every tool's result is now literal JSON (not
+  prose) sourced directly from `src/federation`/`src/stack`/`src/acquire.ts` — no re-derived logic
+  — so it mirrors the matching CLI `--json` shape one-to-one. Renamed the server identity
+  `agora-marketplace` → `agora` ("marketplace" is banned vocabulary). Annotation hints are honest
+  and dogfood the same hints the P2 gate inspects: `readOnlyHint` on `search`/`browse`/
+  `stack_status`, `readOnlyHint` + `idempotentHint` on `plan`, `destructiveHint` on `acquire`.
+  `agora_acquire`'s `confirm` parameter is a second call mirroring plan/apply — without it the call
+  is always a dry run; the underlying gate in `src/acquire.ts` still decides whether a confirming
+  call is allowed to write (a `fail` verdict is never bypassable; a `warn` verdict additionally
+  needs `acceptWarnings: true`). Fixed a latent bug found while smoke-testing this cut: `agora mcp`
+  launched via the built CLI exited within ~250ms of startup instead of servicing requests —
+  `server.connect(transport)` only finishes the stdio handshake and resolves immediately, but every
+  CLI command follows "resolve once, then `src/cli.ts` calls `process.exit()`"; `runMcpServer()` now
+  awaits the transport's `onclose` so the process stays alive for the life of the session.
+- **`agora integrate [harness|--all]`** (new `src/cli/commands/integrate.ts`) — dogfoods the stack
+  manager on itself: writes one `agora` MCP server entry (the zero-install launcher
+  `npx -y agora-hub mcp`) into a harness's own config via that harness's `ToolAdapter.writeServers`
+  — the identical surgical/atomic write path `agora sync` already uses, so every unrelated key is
+  preserved exactly. Defaults to **user** scope (unlike `sync`/`plan`/`apply`, which default to
+  project) since the point is for Agora's tools to be available to a harness everywhere, not just
+  the current project. `--all` integrates every detected harness, falling back to every supported
+  harness on a fresh machine with nothing detected yet (brief §7 demo 5: "on a fresh machine");
+  a bare harness id integrates just that one. `--dry-run` previews without writing; `--json` reports
+  `{ mode, scope, command, targets }` with an honest per-harness `written`/`planned`/`skipped`/
+  `error` status. Exit codes: 0 ok, 1 error. Wired into `app.ts`'s `CommandMap` and given a `Stack`
+  group `CommandMeta` entry.
+- **In-repo Claude Code plugin** — `.claude-plugin/plugin.json` (the `agora` plugin manifest) +
+  `.claude-plugin/marketplace.json` (lists the one `agora` plugin with `source: "./"`, marketplace
+  = plugin root) + root `.mcp.json` (the npx launcher, tools only — no hooks, keeping the Claude
+  Code trust ask minimal per brief §5) + `commands/agora.md` (a `/agora` slash command routing
+  `$ARGUMENTS` to the matching `agora_*` MCP tool, mirroring the OpenCode router idea in
+  `src/commands.ts`, and calling out the acquire dry-run-then-confirm discipline explicitly).
+  **Judgment call:** verified live against current Claude Code plugin docs that `.mcp.json` and
+  `commands/` live at the plugin ROOT as siblings of `.claude-plugin/`, not nested inside it —
+  `.claude-plugin/` holds only `plugin.json` (and `marketplace.json` when the marketplace is the
+  plugin's own repo). Logged as the OQ-2 pattern (verified reality over a literal reading) rather
+  than re-litigated.
+- **`skills/agora/SKILL.md`** — the Agora Agent Skill (agentskills.io standard: `name` must match
+  the parent directory, here `agora`). Teaches any agent operating the `agora` CLI directly: the
+  `--json` flag discipline, the shared exit-code contract (`0` ok, `1` error, `2` plan-has-changes
+  or gate-warned, `3` gate hard-failed), the plan-before-apply rule for `sync`/`plan`/`apply`, and
+  the gap → `acquire --dry-run` → read the verdict → `--accept-warnings` (only if warranted) loop —
+  including that the MCP `agora_acquire` tool's `confirm` flag encodes the identical two-step shape.
+- **`gemini-extension.json`** (repo root) — Gemini CLI extension manifest registering the same
+  `npx -y agora-hub mcp` launcher under `mcpServers.agora`, verified against the current extension
+  manifest format (`name`, `version`, `description`, `mcpServers`).
+- **`test/mcp-server.test.ts`** rewritten for the 5-tool surface: exact tool-name/annotation
+  assertions, federated search/browse (hermetic via the existing DI fetcher seam), the
+  `agora_stack_status` consolidation (grouped health + folded-in cached tool list), `agora_plan`
+  (no-manifest error path + a real diff against an empty adapter config), and three `agora_acquire`
+  cases proving the gate can't be bypassed by `confirm` alone (dry run by default; `confirm` alone
+  still blocks on a warn verdict; `confirm` + `acceptWarnings` writes). New
+  `test/stack/integrate-cmd.test.ts` covers a single harness, `--all` on a fresh machine, surgical
+  preservation of unrelated config, `--dry-run`, idempotent re-runs, and the usage-error paths.
+
 ## [0.4.5] - 2026-05-30 — the safe capability-acquisition gateway & trust depth
 
 `agora` now closes the loop from discovery to installation via a single agent-callable `acquire` command, deepened OpenCode plugin integration, added description-drift detection for MCP servers, and flattened the monorepo-star-ranking problem. Windows users no longer hit "opencode binary not found." The marketplace, news, and community pillars remain the core.

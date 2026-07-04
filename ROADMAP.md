@@ -21,7 +21,7 @@ This file supersedes the pre-pivot roadmap. Verified external-API corrections li
 | **P2** trust gate over federation | ✅ shipped |
 | **P3** stack instructions + plan/apply | ✅ shipped |
 | **🎉 RING 1 (manage · watch · gate)** | ✅ **complete** |
-| **P6** harness integration matrix | 🔜 next (needs P2 gate) |
+| **P6** harness integration matrix | ✅ shipped |
 | **P1+** follow-on sources (smithery/glama/github/hf) | ⏳ breadth |
 | **P4** inference providers (opencode/claude/ollama) | ⏳ Ring 2 |
 | **P5** plaza read/write sources | ⏳ Ring 3 |

@@ -248,4 +248,35 @@ export const COMMANDS: CommandMeta[] = [
       'agora apply --from https://github.com/someone/agent-profile'
     ]
   },
+  {
+    name: 'integrate',
+    group: 'Stack',
+    summary: 'Install agora itself into a harness (or every detected harness) as an MCP server',
+    usage: 'agora integrate <harness>|--all [--scope project|user] [--dry-run] [--json]',
+    details:
+      "Dogfoods agora's own stack manager: writes one `agora` MCP server entry — the zero-install " +
+      'npx launcher `npx -y agora-hub mcp` — into the target harness\'s config using that harness\'s ' +
+      'ToolAdapter.writeServers, the same surgical/atomic write path `agora sync` uses (every other ' +
+      'key in the config file is preserved untouched). Defaults to user scope (unlike sync/plan/apply) ' +
+      "since the point is for agora's tools to be available to that harness everywhere, not just the " +
+      'current project. --all integrates every detected harness (falling back to every supported ' +
+      'harness on a fresh machine with nothing detected yet); a bare harness id integrates just that ' +
+      'one. --dry-run previews what would be written without writing anything. Exit codes: 0 ok, ' +
+      '1 error (a harness config could not be written).',
+    flags: [
+      { flag: '--all', description: 'Integrate every detected harness (or every supported harness if none are detected)' },
+      {
+        flag: '--scope',
+        description: 'Config scope to write: user (default) or project'
+      },
+      { flag: '--dry-run', description: 'Preview what would be written without writing anything' },
+      { flag: '--json', description: 'Output { mode, scope, command, targets } as JSON' }
+    ],
+    examples: [
+      'agora integrate --all',
+      'agora integrate claude-code',
+      'agora integrate cursor --dry-run',
+      'agora integrate --all --json'
+    ]
+  },
 ];

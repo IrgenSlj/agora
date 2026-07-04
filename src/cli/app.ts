@@ -34,6 +34,7 @@ import * as applyModule from './commands/apply.js';
 import * as tryModule from './commands/try.js';
 import * as capabilitiesModule from './commands/capabilities.js';
 import * as refreshModule from './commands/refresh.js';
+import * as integrateModule from './commands/integrate.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -179,6 +180,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       author: marketplace.commandAuthor,
       try: tryModule.commandTry,
       capabilities: capabilitiesModule.commandCapabilities,
+      integrate: integrateModule.commandIntegrate,
       bookmarks: operations.commandBookmarks,
       welcome: welcomeModule.commandWelcome,
       auth: operations.commandAuth,
