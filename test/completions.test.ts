@@ -145,7 +145,7 @@ describe('marketplace completions', () => {
 
 // ── New command completions ───────────────────────────────────────────────────
 
-describe('similar/compare/flag completions', () => {
+describe('similar/compare completions', () => {
   test('similar <prefix> filters marketplace ids', () => {
     const line = 'similar mcp-g';
     const r = completeShellLine(line, line.length, makeContext());
@@ -157,32 +157,6 @@ describe('similar/compare/flag completions', () => {
     const line = 'compare mcp-p';
     const r = completeShellLine(line, line.length, makeContext());
     expect(r.matches).toContain('mcp-postgres');
-  });
-
-  test('flag <prefix> filters marketplace ids', () => {
-    const line = 'flag mcp-f';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('mcp-filesystem');
-  });
-
-  test('thread <prefix> filters marketplace ids', () => {
-    const line = 'thread wf-';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('wf-tdd-cycle');
-  });
-
-  test('community <board> completes board names', () => {
-    const line = 'community m';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('mcp');
-    expect(r.matches).not.toContain('agents');
-    expect(r.matches).not.toContain('wf-tdd-cycle');
-  });
-
-  test('community <prefix> with no matching board returns none', () => {
-    const line = 'community z';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toHaveLength(0);
   });
 });
 
@@ -199,28 +173,10 @@ describe('flag-value completions', () => {
     expect(r.matches).toContain('arxiv');
   });
 
-  test('post --board a completes to agents', () => {
-    const line = 'post --board a';
+  test('browse --type p completes to package', () => {
+    const line = 'browse --type p';
     const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('agents');
-  });
-
-  test('community --sort t completes to top', () => {
-    const line = 'community --sort t';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('top');
-  });
-
-  test('flag --reason s completes to spam', () => {
-    const line = 'flag --reason s';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('spam');
-  });
-
-  test('vote -t completes type flags', () => {
-    const line = 'post --type d';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('discussion');
+    expect(r.matches).toContain('package');
   });
 });
 

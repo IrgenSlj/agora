@@ -2,7 +2,7 @@
  * Render tests for src/cli/pages/settings.ts (UI2 design-system restyling).
  *
  * Asserts:
- *  - Fields grouped by section (Account / Display / News / Community)
+ *  - Fields grouped by section (Account / Display / News)
  *  - Focused-row indicator present
  *  - Toggle shows on/off affordance; select cycles; number shows +/- affordance
  *  - unsaved → saved indicator on write
@@ -45,7 +45,7 @@ function makeCtx(opts: {
     width,
     height,
     trueColor: false,
-    app: { user: {}, cwd: tmp, unread: { news: 0, community: 0 } } as AppState,
+    app: { user: {}, cwd: tmp, unread: { news: 0 } } as AppState,
     repaint() {}
   } as PageContext;
 }
@@ -66,13 +66,12 @@ beforeEach(() => {
 // ── section grouping ──────────────────────────────────────────────────────────
 
 describe('settings render — section grouping', () => {
-  test('all four sections appear in the output', () => {
+  test('all three sections appear in the output', () => {
     const ctx = makeCtx({ tmp });
     const out = strip(settingsPage.render(ctx));
     expect(out).toContain('account');
     expect(out).toContain('display');
     expect(out).toContain('news');
-    expect(out).toContain('community');
   });
 
   test('Account fields appear before Display fields', () => {
@@ -81,21 +80,18 @@ describe('settings render — section grouping', () => {
     expect(out.indexOf('account')).toBeLessThan(out.indexOf('display'));
   });
 
-  test('News fields appear between Display and Community', () => {
+  test('Display fields appear before News fields', () => {
     const ctx = makeCtx({ tmp });
     const out = strip(settingsPage.render(ctx));
     const dPos = out.indexOf('display');
     const nPos = out.indexOf('news');
-    const cPos = out.indexOf('community');
     expect(dPos).toBeLessThan(nPos);
-    expect(nPos).toBeLessThan(cPos);
   });
 
-  test('username, backend, declared_llm are in Account section', () => {
+  test('username, declared_llm are in Account section', () => {
     const ctx = makeCtx({ tmp });
     const out = strip(settingsPage.render(ctx));
     expect(out).toContain('username');
-    expect(out).toContain('backend');
     expect(out).toContain('declared_llm');
   });
 
@@ -126,8 +122,8 @@ describe('settings render — header', () => {
   test('unsaved indicator shown after a toggle', () => {
     const ctx = makeCtx({ tmp });
     settingsPage.render(ctx); // prime state.current
-    // Navigate to banner field (index 4 = Display → banner toggle)
-    for (let i = 0; i < 4; i++) {
+    // Navigate to banner field (index 3 = Display → banner toggle)
+    for (let i = 0; i < 3; i++) {
       settingsPage.handleKey(key('j'), ctx);
     }
     settingsPage.handleKey(key('space'), ctx);
@@ -138,7 +134,7 @@ describe('settings render — header', () => {
   test('unsaved indicator disappears after write', () => {
     const ctx = makeCtx({ tmp });
     settingsPage.render(ctx);
-    for (let i = 0; i < 4; i++) settingsPage.handleKey(key('j'), ctx);
+    for (let i = 0; i < 3; i++) settingsPage.handleKey(key('j'), ctx);
     settingsPage.handleKey(key('space'), ctx);
     settingsPage.handleKey(key('w'), ctx);
     const out = strip(settingsPage.render(ctx));
@@ -162,8 +158,8 @@ describe('settings render — focused row', () => {
     settingsPage.render(ctx);
     settingsPage.handleKey(key('j'), ctx);
     const out = strip(settingsPage.render(ctx));
-    // 'backend' should now be selected (field[1]); help text should appear
-    expect(out).toContain('backend');
+    // 'declared_llm' should now be selected (field[1]); help text should appear
+    expect(out).toContain('declared_llm');
   });
 
   test('j/k navigation stays in bounds', () => {
@@ -184,9 +180,9 @@ describe('settings render — focused row', () => {
 describe('settings render — toggle affordance', () => {
   test('toggle field shows on or off', () => {
     const ctx = makeCtx({ tmp });
-    // Navigate to banner field (index 4)
+    // Navigate to banner field (index 3)
     settingsPage.render(ctx);
-    for (let i = 0; i < 4; i++) settingsPage.handleKey(key('j'), ctx);
+    for (let i = 0; i < 3; i++) settingsPage.handleKey(key('j'), ctx);
     const out = strip(settingsPage.render(ctx));
     // Default banner=true so shows 'on'
     expect(out.toLowerCase()).toMatch(/\bon\b|\boff\b/);
@@ -195,7 +191,7 @@ describe('settings render — toggle affordance', () => {
   test('space toggles a toggle field and marks dirty', () => {
     const ctx = makeCtx({ tmp });
     settingsPage.render(ctx);
-    for (let i = 0; i < 4; i++) settingsPage.handleKey(key('j'), ctx);
+    for (let i = 0; i < 3; i++) settingsPage.handleKey(key('j'), ctx);
     const before = strip(settingsPage.render(ctx));
     settingsPage.handleKey(key('space'), ctx);
     const after = strip(settingsPage.render(ctx));
@@ -214,8 +210,8 @@ describe('settings render — select affordance', () => {
   test('color field shows its current value', () => {
     const ctx = makeCtx({ tmp });
     settingsPage.render(ctx);
-    // Navigate to color field (index 3)
-    for (let i = 0; i < 3; i++) settingsPage.handleKey(key('j'), ctx);
+    // Navigate to color field (index 2)
+    for (let i = 0; i < 2; i++) settingsPage.handleKey(key('j'), ctx);
     const out = strip(settingsPage.render(ctx));
     expect(out).toMatch(/auto|truecolor|none/);
   });
@@ -223,53 +219,12 @@ describe('settings render — select affordance', () => {
   test('space on select field cycles to next option', () => {
     const ctx = makeCtx({ tmp });
     settingsPage.render(ctx);
-    for (let i = 0; i < 3; i++) settingsPage.handleKey(key('j'), ctx);
+    for (let i = 0; i < 2; i++) settingsPage.handleKey(key('j'), ctx);
     const before = strip(settingsPage.render(ctx));
     settingsPage.handleKey(key('space'), ctx);
     const after = strip(settingsPage.render(ctx));
     // The value should have changed (auto → truecolor → none → auto)
     expect(before).not.toBe(after);
-  });
-});
-
-// ── numeric affordance ────────────────────────────────────────────────────────
-
-describe('settings render — numeric affordance', () => {
-  test('+/- shown for number field when focused', () => {
-    const ctx = makeCtx({ tmp });
-    settingsPage.render(ctx);
-    // collapse_flag_threshold is the last field — navigate to it
-    // Fields: username(0) backend(1) declared_llm(2) color(3) banner(4) hn(5) github-trending(6) arxiv(7) rss(8) default_board(9) collapse_flag_threshold(10)
-    for (let i = 0; i < 10; i++) settingsPage.handleKey(key('j'), ctx);
-    const out = strip(settingsPage.render(ctx));
-    expect(out).toContain('+/-');
-  });
-
-  test('+ increments numeric field', () => {
-    const ctx = makeCtx({ tmp });
-    settingsPage.render(ctx);
-    for (let i = 0; i < 10; i++) settingsPage.handleKey(key('j'), ctx);
-    // Capture the numeric value shown before incrementing
-    const beforeOut = strip(settingsPage.render(ctx));
-    // Extract the number shown next to the field label
-    const m = beforeOut.match(/collapse_flag_threshold\s+(\d+)/);
-    const before = m ? Number(m[1]) : 0;
-    settingsPage.handleKey(key('+'), ctx);
-    const after = strip(settingsPage.render(ctx));
-    // The number in the output should be before+1
-    expect(after).toContain(String(before + 1));
-  });
-
-  test('- decrements numeric field', () => {
-    const ctx = makeCtx({ tmp });
-    settingsPage.render(ctx);
-    for (let i = 0; i < 10; i++) settingsPage.handleKey(key('j'), ctx);
-    settingsPage.handleKey(key('+'), ctx);
-    settingsPage.handleKey(key('+'), ctx);
-    settingsPage.handleKey(key('-'), ctx);
-    const out = strip(settingsPage.render(ctx));
-    // Should contain a number (didn't throw, still renders)
-    expect(out.length).toBeGreaterThan(0);
   });
 });
 
@@ -333,7 +288,7 @@ describe('settings render — write and revert', () => {
   test('after write, dirty flag clears (indicator shows saved)', () => {
     const ctx = makeCtx({ tmp });
     settingsPage.render(ctx);
-    for (let i = 0; i < 4; i++) settingsPage.handleKey(key('j'), ctx);
+    for (let i = 0; i < 3; i++) settingsPage.handleKey(key('j'), ctx);
     settingsPage.handleKey(key('space'), ctx);
     settingsPage.handleKey(key('w'), ctx);
     const out = strip(settingsPage.render(ctx));
@@ -344,7 +299,7 @@ describe('settings render — write and revert', () => {
   test('r revert restores from disk and clears dirty', () => {
     const ctx = makeCtx({ tmp });
     settingsPage.render(ctx);
-    for (let i = 0; i < 4; i++) settingsPage.handleKey(key('j'), ctx);
+    for (let i = 0; i < 3; i++) settingsPage.handleKey(key('j'), ctx);
     settingsPage.handleKey(key('space'), ctx);
     expect(strip(settingsPage.render(ctx))).toContain('unsaved');
     settingsPage.handleKey(key('r'), ctx);

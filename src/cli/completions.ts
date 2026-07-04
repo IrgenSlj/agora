@@ -22,41 +22,20 @@ export interface CompletionContext {
 const PATH_COMMANDS = new Set(['cd', 'ls', 'cat', 'vi', 'vim', 'nano', 'less', 'more']);
 const MARKETPLACE_COMMANDS = new Set(['install', 'browse']);
 const SAVED_COMMANDS = new Set(['remove']);
-const ID_ARG_COMMANDS = new Set(['similar', 'compare', 'flag', 'thread']);
+const ID_ARG_COMMANDS = new Set(['similar', 'compare']);
 
-const BOARDS = ['mcp', 'agents', 'tools', 'workflows', 'show', 'ask', 'meta'];
 const NEWS_SOURCES = ['hn', 'gh', 'arxiv', 'rss'];
-const NEWS_TOPICS = ['mcp', 'ai', 'agents', 'workflows', 'llm', 'tool-use', 'coding', 'security'];
-const SORT_ORDERS = ['top', 'new', 'active'];
 const TYPES = ['package', 'workflow'];
-const TYPES_EXT = ['discussion', 'reply', 'package', 'workflow'];
-const FLAG_REASONS = ['spam', 'harassment', 'undisclosed-llm', 'malicious', 'other'];
 
 type FlagCompleter = (token: string) => string[];
 
 const FLAG_VALUE_COMPLETERS: Record<string, FlagCompleter> = {
   '--source': (t) => NEWS_SOURCES.filter((s) => s.startsWith(t)),
   '-s': (t) => NEWS_SOURCES.filter((s) => s.startsWith(t)),
-  '--topic': (t) => NEWS_TOPICS.filter((s) => s.startsWith(t)),
-  '--sort': (t) => SORT_ORDERS.filter((s) => s.startsWith(t)),
-  '--board': (t) => BOARDS.filter((b) => b.startsWith(t)),
-  '-b': (t) => BOARDS.filter((b) => b.startsWith(t)),
-  '--type': (t) => TYPES_EXT.filter((s) => s.startsWith(t)),
+  '--type': (t) => TYPES.filter((s) => s.startsWith(t)),
   '-t': (t) => TYPES.filter((s) => s.startsWith(t)),
-  '--reason': (t) => FLAG_REASONS.filter((r) => r.startsWith(t)),
   '--category': (t) => {
-    const cats = [
-      'mcp',
-      'prompt',
-      'workflow',
-      'skill',
-      'all',
-      'packages',
-      'question',
-      'idea',
-      'showcase',
-      'discussion'
-    ];
+    const cats = ['mcp', 'prompt', 'workflow', 'skill', 'all', 'packages'];
     return cats.filter((c) => c.startsWith(t));
   },
   '-c': (t) => {
@@ -142,26 +121,8 @@ export function completeShellLine(
       return { matches: ids.slice(0, 12), replaceFrom };
     }
 
-    // community <board> — second token is a board name, not an id
-    if (firstToken === 'community') {
-      const replaceFrom = upToCursor.length - secondToken.length;
-      const matches = BOARDS.filter((b) => b.startsWith(secondToken));
-      return { matches: matches.slice(0, 12), replaceFrom };
-    }
-
     // Flag-only commands: complete flag names
-    const flagCmds = new Set([
-      'post',
-      'reply',
-      'vote',
-      'publish',
-      'discuss',
-      'review',
-      'auth',
-      'init',
-      'use',
-      'config'
-    ]);
+    const flagCmds = new Set(['auth', 'init', 'use', 'config']);
     if (flagCmds.has(firstToken) && secondToken.startsWith('-')) {
       const replaceFrom = upToCursor.length - secondToken.length;
       const knownFlags = getFlags(firstToken).filter((f) => f.startsWith(secondToken));
@@ -233,27 +194,6 @@ function completePath(
 
 function getFlags(cmd: string): string[] {
   const map: Record<string, string[]> = {
-    post: ['--board', '-b', '--title', '--content', '--content-file', '--json'],
-    reply: ['--content', '--content-file', '--parent-id', '--json'],
-    vote: ['--up', '--down', '--type', '--json'],
-    publish: [
-      '--name',
-      '--description',
-      '-d',
-      '--npm',
-      '--prompt-file',
-      '--prompt',
-      '--version',
-      '--category',
-      '-c',
-      '--tags',
-      '--repo',
-      '--repository',
-      '--model',
-      '--json'
-    ],
-    discuss: ['--title', '--content', '--content-file', '--category', '-c', '--json'],
-    review: ['--rating', '-r', '--content', '--type', '-t', '--json'],
     auth: ['--token', '--api-url', '--data-dir', '--json'],
     init: ['--dry-run', '--json', '--mcp'],
     use: ['--json'],

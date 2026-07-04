@@ -42,7 +42,7 @@ export type PageAction =
 export interface AppState {
   user: { username?: string; isLLM?: boolean };
   cwd: string;
-  unread: { news: number; community: number };
+  unread: { news: number };
   lastPage?: PageId;
 }
 

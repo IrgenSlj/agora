@@ -243,11 +243,8 @@ The \`/agora\` slash command is installed by \`agora init\` (or copy
 **CLI-only features** (not plugin tools):
 - \`agora mcp\` — Run an MCP server exposing marketplace tools
 - \`agora shell\` — Interactive bash+chat hybrid shell
-- \`agora review\`, \`agora discuss\`, \`agora profile\`, \`agora publish\`
 - \`agora init\`, \`agora use\`, \`agora config doctor\`
 - \`agora export\`, \`agora watch\`, \`agora completions\`
-
-Community features need a connected backend (\`AGORA_API_URL\` + token).
 
 **Categories:** mcp, prompt, workflow, skill`;
       }

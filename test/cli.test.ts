@@ -819,7 +819,7 @@ describe('TTY gate — no-command path', () => {
     const out = stdout.join('');
 
     expect(code).toBe(0);
-    expect(out).toContain("agora · Developers' CLI marketplace and community hub");
+    expect(out).toContain("agora · Developers' CLI marketplace");
   });
 });
 
@@ -834,7 +834,6 @@ describe('help system', () => {
     expect(out).toContain('Setup');
     expect(out).toContain('Library');
     expect(out).toContain('Learn');
-    expect(out).toContain('Community');
     expect(out).toContain('search');
     expect(out).toContain('install');
     expect(out).toContain('init');

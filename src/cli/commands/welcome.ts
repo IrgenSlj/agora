@@ -68,7 +68,7 @@ export const commandWelcome: CommandHandler = async (parsed, io, style) => {
   writeLine(io.stdout, style.bold('Welcome to agora'));
   writeLine(io.stdout, style.dim('────────────────'));
   writeLine(io.stdout, 'agora is a terminal-native marketplace for MCP servers, agents,');
-  writeLine(io.stdout, 'workflows, and a community hub around the agentic ecosystem.');
+  writeLine(io.stdout, 'and workflows.');
   writeLine(io.stdout, '');
 
   steps.forEach((step, i) => {

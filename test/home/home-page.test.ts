@@ -58,7 +58,7 @@ function makeCtx(opts: {
     app: {
       user: {},
       cwd: tmp,
-      unread: { news: 0, community: 0 }
+      unread: { news: 0 }
     } as AppState,
     repaint() {
       repaints++;

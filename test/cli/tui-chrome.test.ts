@@ -13,7 +13,7 @@ const WIDTH = 100;
 const baseApp = {
   user: { username: 'testuser' },
   cwd: '/tmp/test',
-  unread: { news: 0, community: 0 }
+  unread: { news: 0 }
 };
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -185,7 +185,7 @@ describe('renderHeader active tab', () => {
 
   test('unread news badge appears in header', () => {
     const { style, theme } = makeTheme(false, false);
-    const app = { ...baseApp, unread: { news: 3, community: 0 } };
+    const app = { ...baseApp, unread: { news: 3 } };
     const [row1] = renderHeader({
       width: WIDTH,
       style,

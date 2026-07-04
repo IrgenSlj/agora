@@ -47,7 +47,7 @@ function makeCtx(cwd: string, home: string, env?: Record<string, string>): PageC
     app: {
       user: { username: 'testuser' },
       cwd,
-      unread: { news: 0, community: 0 }
+      unread: { news: 0 }
     },
     repaint: () => {
       repaintCalled = true;

@@ -73,6 +73,37 @@ glyphs, and every current caller's output are byte-identical).
 - Golden tests cover NO_COLOR legibility, verdict integrity (double-rule + no-hint-on-fail),
   provenance ordering/dedup, and the plan-diff tally.
 
+### Repo cleanup — delete the frozen dirs and stale docs
+
+Follow-on to P-freeze: the previous pass excluded `backend/`/`hub/` from the build and removed the
+community commands from the dispatch table, but left the frozen directories, dead settings/
+completions code, and stale docs on disk. This pass deletes what's actually dead.
+
+- **Deleted `backend/`** (Cloudflare Worker, ~207MB incl. `node_modules`/`dist`) and **`hub/`**
+  (web app) — both frozen per brief D3/D11, zero remaining TypeScript importers. Recoverable from
+  git history.
+- **Deleted `docker-compose.yml`** — only orchestrated the now-removed backend+hub.
+- **Deleted `src/community/`** (`client.ts`, `search.ts`, `types.ts`) — dead once the community
+  commands were removed; confirmed zero remaining `.ts` importers before deleting.
+- **Deleted stale docs** — `COMMUNITY_GUIDELINES.md`, `docs/TUI_DESIGN.md` (superseded by the
+  Claude Design engineering handoff), `docs/demo.gif` (old "bazaar" demo, unreferenced),
+  `docs/archive/` (superseded design briefs + the old Phase 1.5 plan).
+- **`package.json`** — removed the dangling `typecheck:backend` and `hub:dev` scripts.
+- **Dead-code sweep** — deleted `commands-meta/community.ts`, moving its still-live `auth` entry
+  into `commands-meta/setup.ts`; `CommandGroup` no longer has a `'Community'` member.
+  `AppState.unread` dropped the dead `community` counter (news-only now). Removed the inert
+  `community` settings section (`default_board`, `collapse_flag_threshold`) and the never-wired
+  `account.backend` field from `src/settings.ts` and the settings TUI page. Shell completions
+  (`src/cli/completions.ts`, `completions-gen.ts`) no longer offer board-name/flag/reason/
+  community completers or flags for the removed `post`/`reply`/`vote`/`publish`/`discuss`/`review`
+  commands. Cleaned stale "community hub" tagline copy and dead command mentions out of
+  `format.ts`, `shell/main.ts`, `welcome.ts`, and the OpenCode plugin's `agora_info` tool text.
+- **CI/lint** — removed the `backend` typecheck job from `.github/workflows/ci.yml`;
+  `eslint.config.js` no longer globs `backend/`/`hub/`.
+- **Rewrote for the current direction** — `AGENTS.md`, `docs/ARCHITECTURE.md`,
+  `CONTRIBUTING.md`, and `docs/frozen/README.md` now describe the three-ring system-manager
+  architecture instead of the old open-marketplace/hosted-backend/community-hub framing.
+
 ## [0.4.5] - 2026-05-30 — the safe capability-acquisition gateway & trust depth
 
 `agora` now closes the loop from discovery to installation via a single agent-callable `acquire` command, deepened OpenCode plugin integration, added description-drift detection for MCP servers, and flattened the monorepo-star-ranking problem. Windows users no longer hit "opencode binary not found." The marketplace, news, and community pillars remain the core.

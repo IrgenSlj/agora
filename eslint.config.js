@@ -7,12 +7,12 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   prettierConfig,
   {
-    files: ['src/**/*.ts', 'scripts/**/*.ts', 'test/**/*.ts', 'backend/src/**/*.ts'],
+    files: ['src/**/*.ts', 'scripts/**/*.ts', 'test/**/*.ts'],
     rules: {
       // Relax noisy rules that fire on legitimate existing patterns.
       // These are tracked issues to address in a separate workstream.
-      '@typescript-eslint/no-explicit-any': 'off', // backend uses `any` for D1/Hono generics
-      'no-useless-escape': 'off', // false positives on intentional regex escapes (backend/src)
+      '@typescript-eslint/no-explicit-any': 'off',
+      'no-useless-escape': 'off', // false positives on intentional regex escapes
       '@typescript-eslint/no-empty-object-type': 'off', // AgoraPlugin marker interface in src/types.ts
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-unused-vars': 'off' // superseded by TS
@@ -34,6 +34,6 @@ export default tseslint.config(
     }
   },
   {
-    ignores: ['dist/**', 'node_modules/**', 'hub/**', 'backend/dist/**', 'backend/node_modules/**']
+    ignores: ['dist/**', 'node_modules/**']
   }
 );

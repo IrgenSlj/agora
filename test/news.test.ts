@@ -365,7 +365,7 @@ function makeRenderCtx(opts: {
     width,
     height,
     trueColor: false,
-    app: { user: {}, cwd: tmp, unread: { news: 0, community: 0 } } as AppState,
+    app: { user: {}, cwd: tmp, unread: { news: 0 } } as AppState,
     repaint() {}
   } as PageContext;
 }

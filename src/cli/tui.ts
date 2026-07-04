@@ -208,7 +208,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
   const app: AppState = {
     user: { username: env.USER || env.USERNAME || 'anon' },
     cwd,
-    unread: { news: 0, community: 0 }
+    unread: { news: 0 }
   };
 
   let current: PageId = opts.initial ?? 'home';

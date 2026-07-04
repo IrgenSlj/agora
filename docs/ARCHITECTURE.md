@@ -1,320 +1,116 @@
-# Architecture & Direction
+# Architecture
 
-This document captures *what Agora is becoming* and the reasoning behind it.
-For the sequenced plan, see [`../ROADMAP.md`](../ROADMAP.md).
+This document captures *what Agora is* and the reasoning behind the shape of the code. For the
+sequenced plan and current status, see [`../ROADMAP.md`](../ROADMAP.md); for open external-API
+questions, see [`OPEN_QUESTIONS.md`](./OPEN_QUESTIONS.md).
 
 ## What Agora is
 
-Agora is a **standalone terminal marketplace** for the agentic-coding ecosystem.
-The name is the thesis: the *agora* was the public square of a Greek city —
-marketplace and forum at once, where independent merchants traded and the polis
-provided the space and the rules. Agora-the-app is the square and the rules; the
-developers are the merchants.
+`agora` is **the system manager for your agentic stack** — a package manager for the MCP
+ecosystem, in the spirit of apt/Homebrew/Terraform, but scoped to what an AI agent can reach:
+MCP servers, skills, and instruction files across OpenCode, Claude Code, Cursor, and Windsurf.
 
-The destination is an **open, self-regulating marketplace**: third-party
-developers publish and sell advanced skills, tools, and kits, and Agora
-facilitates — discovery, trust, payments, delivery — without being the seller.
+It is **local-first with no hosted backend**. It does not grow its own catalog — it federates
+upstream registries (the official MCP Registry, Smithery, Glama, GitHub, …) so its effective
+catalog is the union of all of them. And it does not let anything into a config file without
+passing a **trust gate** first.
 
-## The three-surface model
+## The three rings
 
-Agora is **one marketplace engine** behind three surfaces:
+Everything in the codebase serves one of three rings, and they carry different bars for quality:
 
-| Surface | Role | Owns inference? |
-|---|---|---|
-| **`agora` CLI / TUI** | The primary, standalone experience. Browse, install, manage, (later) buy and publish. | No |
-| **OpenCode / Claude Code plugin** | A thin bridge — surfaces the catalog *inside* the harness and installs into the current project. No payment flow. | Uses the host's |
-| **`hub/` web app** | Discovery / SEO, account and seller dashboards. | No |
+### Ring 1 — Manage & Gate (the core; must be excellent)
 
-The engine — search, browse, trending, install-plan generation, the offline
-catalog — lives in `src/marketplace.ts`, `src/data.ts`, `src/init.ts`. Every
-surface is a thin presentation layer over it.
+- **Stack manager** (`src/stack/`) — one `ToolAdapter` per agent tool (opencode, Claude Code,
+  Cursor, Windsurf) normalizes its MCP config into a single `ConfiguredServer` shape.
+  `agora installed` / `doctor [--probe]` read across all of them; `agora.toml` is the portable,
+  declarative profile; `plan`/`apply` (`sync` = `plan && apply`) reconcile it into real config
+  files surgically — every unrelated key is preserved, writes are atomic
+  (`src/atomic-write.ts`).
+- **Federated catalog** (`src/federation/`) — clients behind a `RegistrySource`/`FederatedItem`
+  contract. `official` (registry.modelcontextprotocol.io) is the required no-auth source;
+  `local` (`src/data.ts`) is the bundled offline fallback; Smithery/Glama/GitHub/HuggingFace
+  (reusing `src/hubs/`) round it out. Results are deduped by reverse-DNS name, repo URL, or npm
+  package, then indexed through the offline BM25 index (`src/search/catalog-index.ts`).
+- **Trust gate** (`src/scan.ts`, `src/acquire.ts`) — `agora acquire` is the safe
+  capability-acquisition gateway: `resolve → install plan → scan gate → config write`. The gate
+  composes static heuristics (injection-pattern checks, permission-manifest diffs, registry
+  status) with live-probe diffing (tool-schema drift, observed-vs-declared permissions).
+  `fail` blocks the write and exits non-zero; `warn` requires `--accept-warnings`; `--dry-run`
+  previews without writing. **It is not a sandbox and does not execute or formally verify server
+  code** — "passed the gate" means *no known red flags*, not "safe," and that distinction is
+  deliberate everywhere the verdict is shown.
 
-### Why standalone, not "an OpenCode plugin"
+### Ring 2 — Surfaces (invisible + fast)
 
-The OpenCode plugin API can register *tools* and *hooks* — not slash commands,
-not a custom TUI. It was never capable of being the whole product. And it didn't
-need to be: `src/cli/app.ts` is already a substantial standalone CLI. So the
-plugin is correctly scoped as **one distribution endpoint**, and the CLI is the
-product. The `/agora` slash command exists only because `agora init` writes a
-command file into the project — the plugin itself cannot create it.
+- **CLI/TUI** (`src/cli/`) — command dispatch, the interactive shell, the prompter, and the
+  full-screen TUI pages. The primary, standalone experience.
+- **`agora mcp`** (`src/cli/mcp-server.ts`) — exposes the stack manager and catalog as MCP tools,
+  so any MCP-capable harness can call Agora directly.
+- **Thin plugins** (`src/plugin/`) — the OpenCode/Claude Code plugin registers explicit named
+  tools (`agora_search`, `agora_acquire`, `agora_config`, …) plus lifecycle hooks
+  (`tool.execute.before` for opt-in capability-gap suggestions, `experimental.session.compacting`
+  for stack-aware context). The plugin never owns a write that bypasses the scan gate.
+- **Inference provider abstraction** (`src/inference/`) — Agora owns no inference of its own. It
+  routes to OpenCode (default, free, zero login), a connected Claude API key, or a local Ollama
+  endpoint.
 
-## The inference question
+### Ring 3 — Plaza & conveniences (allowed to be imperfect)
 
-A recurring question: should Agora be a full agentic terminal app like Claude
-Code or OpenCode, borrowing their LLM/harness?
-
-**Decision: Agora borrows inference from OpenCode, not from a separate provider.**
-Since Agora is built for OpenCode, and OpenCode is already installed and
-configured on the user's machine — with its own model, providers, and free-tier
-gateway models — the chat layer delegates to `opencode run` rather than requiring
-its own API key.
-
-Two surfaces deliver this:
-
-1. **`agora mcp`** — An MCP (Model Context Protocol) server that exposes the
-   marketplace engine (search, browse, trending, install-plan, tutorials) as
-   standard MCP tools. Users configure it in their `opencode.json`:
-
-   ```json
-   {
-     "mcp": {
-       "agora": {
-         "type": "local",
-         "command": ["agora", "mcp"]
-       }
-     }
-   }
-   ```
-
-   Once registered, any OpenCode session can answer marketplace queries
-   conversationally — "find me a postgres MCP server" — by calling Agora's tools
-   through the model's tool-use loop. Free inference, no separate auth, and the
-   MCP server is useful independently of the chat feature.
-
-2. **`agora chat [message]`** — Two modes:
-   - **TUI mode** (`agora chat`): Hands off to the `opencode` TUI with `inherit`
-     stdio, giving a persistent read-eval-print loop with conversation history,
-     editing, and `/agora` slash commands. Zero per-message latency.
-   - **One-shot mode** (`agora chat "question"`): Wraps `opencode run --format json`,
-     streams the response back, and persists the session ID for `--continue`.
-   - A plugin tool `agora_chat` is also available via `/agora chat <message>`
-     inside OpenCode for conversational marketplace Q&A.
-
-Agora still does not *own* inference — it borrows OpenCode's. The marketplace
-core (browse, search, install) works fully offline with zero AI. The
-conversational layer is an optional convenience, not a foundation.
-
-## Trust is the product
-
-An open marketplace where anyone publishes **executable code that runs on the
-buyer's machine** is a supply-chain surface. "Self-regulating" does not mean "no
-rules" — the historical agora had inspectors and standardized weights. It means
-**mechanism design does the policing** rather than a human gatekeeper:
-
-- **Permission manifests** — each item declares what it touches (filesystem,
-  network, process execution); `install` surfaces this like an app-store prompt.
-- **Automated scanning on publish** — does the code match its declared
-  permissions?
-- **Verified-purchase reviews**, install counts, and reputation *earned* over
-  time, not granted.
-- **Flag/report**, plus a **kill switch** for confirmed malware — the one thing
-  pure anarchy cannot do.
-
-This trust layer is arguably Agora's actual product. The listing is commodity;
-making a stranger's tool feel safe to install is not.
+- **Plaza** (`src/news/`) — a federated feed reader (HN, GitHub Trending, arXiv today; more
+  read/write adapters land per the roadmap), ranked by
+  `recencyW·e^(-h/12) + engagementW·log(eng+1) + topicW·topicMatch`, cached locally.
+- Tutorials, cross-session recall, and other conveniences that make the CLI a daily destination
+  without gating a release on their polish.
 
 ## Design principles
 
-- **Browse free, authenticate at purchase.** Discovery costs nothing and works
-  offline. Friction appears only at the point of commitment.
-- **Offline-first is a feature, not a fallback.** The bundled catalog working
-  with no backend is a genuine differentiator — kept on purpose, even after the
-  hosted backend ships.
-- **Honest output.** No fabricated data. Fake `review`/`discussions`/`profile`
-  plugin tools were removed in 0.3.x; community features live in the
-  backend-backed CLI or not at all.
-- **The plugin stays thin.** No payment flow inside an LLM tool call. Purchases
-  are CLI/web only.
-- **Graceful terminal degradation.** Colour, gradients, and the banner degrade
-  cleanly under `NO_COLOR`, `TERM=dumb`, non-TTY pipes, and narrow terminals.
-
-## Destination, not just a tool
-
-Phase 1 made `agora` a polished CLI. Phase 1.5 turns it into a **destination** —
-a place a developer opens daily, not a binary they invoke once. That requires
-two new surfaces alongside the marketplace, both terminal-native and text-only:
-
-### News feed
-
-The thesis: a developer's "morning read" doesn't need a browser. HN, Reddit's
-relevant AI/dev subs, GitHub trending, and arXiv together give you 95% of the
-signal in 5% of the noise. Agora aggregates those (free APIs, local cache),
-ranks by `recencyW · e^(-h/12) + engagementW · log(eng+1) + topicW · topicMatch`,
-and renders a TUI reader you can drive with `j/k/Enter/s/p/?`. Topic weighting
-biases toward the agentic-coding world the marketplace serves — MCP, agent
-skills, harnesses, Obsidian/markdown.
-
-Why this fits Agora: every story is one hop from a marketplace action. A new
-MCP server lands on HN → `agora install <id>` from the reader. The news feed
-and the marketplace share the same demographic and the same offline-first
-discipline (cache locally, work without internet, refresh on demand).
-
-### Community hub
-
-Reddit's basic shape — boards, threaded replies, votes — but reduced to text
-in a terminal. Boards mirror the topics that already drive search:
-`/mcp`, `/agents`, `/tools`, `/workflows`, `/show`, `/ask`, `/meta`.
-
-Two opinionated stances:
-
-1. **Flag, don't delete.** Mechanism over moderator. Content with N flags
-   collapses behind a chip; users can still expand it. The kill switch is
-   reserved for confirmed malware/CSAM/etc. The historical agora had
-   inspectors, not censors — the same instinct.
-2. **LLMs are welcome, if they say so.** Any account can declare itself
-   `is_llm` with a `llm_model` string; their posts render with a `[bot]`
-   chip. Undisclosed AI is flaggable. We expect bots to be useful: a
-   "what's-new-in-MCP" weekly digest bot, a "fix-this-error" responder bot,
-   a per-package release-notes bot. Pretending to be human is the foul,
-   not being a bot.
-
-### Trust as the through-line
-
-All three pillars — news, community, marketplace — are content surfaces where
-strangers' work appears in front of your eyes (and sometimes runs on your
-machine). The same trust mechanism applies:
-
-- Reputation is **earned, not granted** (install counts, post score, age).
-- Reviews are **verified-purchase only** once Phase 3 lands.
-- Permission manifests gate **executable items** at install time.
-- The community gates **public content** via flags + a narrow kill switch.
-
-Phase 1.5 is partly a content release and partly the soft launch of this
-trust layer — community moderation in particular is a dry run of the same
-flag/score/threshold logic that Phase 4 needs for marketplace items.
-
-## The next step: reach, memory, and a self-growing catalog
-
-Phase 1.5 made `agora` a destination you *can* open daily. The 0.4.3 "Destination"
-cut (see [`../ROADMAP.md`](../ROADMAP.md)) makes it one you *want* to — by going
-where developers already are, remembering them across sessions, and growing its
-own catalog. Three convictions, reinforced by the multi-channel agent gateways
-the field is converging on (Hermes Agent, OpenClaw, OpenCode):
-
-- **Be reachable on every channel.** A terminal hub that only exists when you
-  type `agora` leaves most of its value on the table. The same digest that powers
-  `agora today` should arrive in Discord and Telegram on a schedule, and the
-  marketplace engine should answer a `/agora search` from inside those apps. Both
-  run on the existing Cloudflare Worker via inbound webhooks — no always-on server.
-  A small channel/notifier abstraction keeps Slack, RSS, and webhooks one adapter
-  away.
-- **Carry memory across sessions.** The shell already records per-cwd transcripts;
-  `/recall` and `/sessions` turn that into searchable cross-session memory. This is
-  the cheap half of the "closed learning loop" pattern — recall first, summarization
-  and skill-extraction later.
-- **Let the catalog grow itself.** A hand-fed catalog caps at whatever the
-  maintainers curate. The AI curator (`src/curator/`) discovers and verifies items
-  from GitHub + HuggingFace; run server-side on a schedule, it makes the catalog a
-  living thing every user benefits from — while the bundled JSON stays the
-  offline-first fallback.
-
-None of this changes the thesis: the marketplace core works offline with zero AI,
-trust is still the product, and the plugin stays thin. Reach, memory, and curation
-are amplifiers on a foundation that already stands on its own.
-
-## OpenCode plugin: hooks, SDK chat, and explicit tools
-
-The plugin (`src/plugin/`) uses the full OpenCode plugin API — not just tools but
-lifecycle hooks and the SDK `client` for zero-spawn chat:
-
-- **`tool.execute.before` (opt-in via `suggestAcquire`)** — detects capability gaps
-  when the agent runs a tool for a missing server, surfaces a non-intrusive
-  `agora_acquire` suggestion via `client.app.log()` and `client.session.prompt()`.
-  No auto-install — always opt-in, always preview-only.
-- **`experimental.session.compacting` (on by default via `stackMemory`)** — injects
-  the current MCP stack + discovered capabilities into the continuation context so
-  the agent remembers its tools across compaction.
-- **SDK-preferring chat** — `agora_chat` uses `client.session.prompt()` when
-  available (no per-message process spawn), falling back to the CLI `spawnOpencode`
-  path. The TUI shell (`agora shell`) also routes through `spawnOpencode` via
-  `src/opencode-exec.ts`.
-- **Explicit named tools** — `agora_search`, `agora_today`, `agora_scan`,
-  `agora_acquire`, `agora_browse`, `agora_install`, `agora_chat`, `agora_config`,
-  `agora_news`, `agora_info`, `agora_browse_category`, `agora_trending`,
-  `agora_tutorial` are individually registered with clear descriptions, fixing the
-  brittle catch-all routing. The `/agora` slash command (`src/commands.ts`) is a
-  thin router that maps the first word to `agora_<word>`.
-
-The plugin stays offline/safe-only: `acquire` is preview-only (dry-run); write-to-
-config requires the CLI or `agora mcp` `acquire` tool.
-
-## The daily-driver layer: agent stack manager & capability acquisition
-
-The marketplace, news, and community remain the core — but discovery is an
-*occasional* job, and a destination needs a *daily* one. The unlock is to own the
-layer the website competitors structurally cannot: the developer's actual agent
-configuration, and the moment an agent reaches for a new capability.
-
-**Agent stack manager.** Every agent tool — OpenCode, Claude Code, Cursor,
-Windsurf — keeps its MCP servers in a different config file and format. No one owns
-the universal layer. `agora` does, via `src/stack/`, structured like `src/hubs/`:
-one `ToolAdapter` per tool normalizes its config into a single `ConfiguredServer`
-shape. On top of that:
-
-- `agora installed` / `agora doctor` — one view of every configured MCP server
-  across all tools, and a health check (config parses, command resolvable on
-  `PATH`, conflicting definitions, optional `--probe` to actually start it).
-- `agora.toml` + `agora sync` — a declarative manifest of the servers / skills /
-  workflows you want, reconciled into each tool's real config. The Brewfile for
-  your agent stack: reproducible, shareable ("clone someone's setup"), and the
-  on-ramp from *using* the catalog to *publishing* to it.
-
-This is the daily loop that ties the pillars together: discover in the
-marketplace → `install` → `sync`/`doctor` keep it healthy → publish back →
-discuss in the community.
-
-**Capability acquisition for autonomous agents.** `agora acquire` (CLI, MCP tool,
-plugin preview) is the **safe capability-acquisition gateway** — the policy
-checkpoint between an autonomous agent and arbitrary executable code. The flow:
-
-    capability query → resolve to marketplace item →
-    create install plan → run scan gate → write config
-
-The scan gate enforces three outcomes:
-- `fail` (blocked, non-zero exit) — never write config
-- `warn` (—accept-warnings required) — agent must re-call with the flag
-- clean → write config to the target tool's MCP config (opencode, claude-code, etc.)
-
-`acquire` is the academically-correct RAG-MCP shape (arXiv 2505.03275): agents
-shouldn't load thousands of servers; they retrieve the relevant few and activate
-on demand, gated by trust. The trust layer is what makes that defensible; nobody
-should let an agent `npm install` random MCP servers unmediated.
+- **Local-first, no hosted backend.** Every core feature works offline against an on-disk cache —
+  degraded, never broken. If a source is unreachable, it says so; it never fabricates counts.
+- **A package manager, not a registry.** Agora never competes on catalog size; federating existing
+  registries means its effective catalog is everyone's combined.
+- **Trust is the product.** Reputation is earned (install counts, registry status, probe
+  results), not granted. The gate's honest limits are stated everywhere the verdict is shown.
+- **Agent-operable.** `--json` on every command, plan/apply separation, and stable exit codes
+  (`0` ok · `1` error · `2` plan-has-changes · `3` scan-fail) — Agora is meant to be driven by
+  agents as a first-class citizen, not just humans.
+- **The plugin stays thin.** No payment flow, no gate-bypassing write, inside an LLM tool call.
+- **Graceful terminal degradation.** Colour, gradients, and the banner degrade cleanly under
+  `NO_COLOR`, `TERM=dumb`, non-TTY pipes, and narrow terminals.
 
 ## The algorithms (fast, offline, original)
 
-`agora` stays snappy and offline-first by design, not by luck:
+- **BM25 capability/catalog search** (`src/search/catalog-index.ts`) — a no-dependency inverted
+  index with field weighting and query-side synonym expansion, so search stays fast as the
+  federated catalog grows.
+- **SHA-keyed memoized re-curation** (`src/curator/`) — caches AI verdicts against
+  `version=commitSha`, so re-verification cost scales with churn, not catalog size.
+- **Composed trust score** — a Bayesian blend of curation verdicts, mechanical quality signals
+  (`src/hubs/quality.ts`), and opt-in install-retention telemetry.
+- **Description-drift detection** — `descriptionDigest` (canonical SHA-256 of sorted tool names +
+  descriptions + input schemas) computed per server on probe; re-probe detects drift with a
+  per-tool diff, persisted in `agora.toml` for cross-session comparison.
+- **Description-injection heuristic scan** (`src/scan.ts`) — checks tool descriptions against
+  patterns for imperative markers, secret exfiltration, instruction override, and runtime command
+  injection. Status `warn` to avoid false positives.
 
-- **BM25 capability/catalog search** (`src/search/catalog-index.ts`) — a
-  no-dependency inverted index with field weighting and query-side synonym
-  expansion replaces the linear scan, so search stays fast as the catalog grows.
-  The original extension (next): index MCP servers' *declared tool schemas* and
-  rank by capability overlap, not README keywords.
-- **SHA-keyed memoized re-curation** — the curator caches AI verdicts against
-  `version=commitSha`, so the weekly server-side cron re-verifies only what
-  changed: curation cost scales with churn, not catalog size.
-- **Composed trust score** — a Bayesian blend of the LLM genuineness verdict,
-  mechanical quality signals (`src/hubs/quality.ts` — monorepo shared-repo stars
-  dampened via `SHARED_REPO_STAR_WEIGHT = 0.25`), and opt-in install-retention
-  telemetry. Earned reputation for catalog items, with no human curator.
-- **Description-drift detection** — `descriptionDigest` (canonical SHA-256 of
-  sorted tool names + descriptions + input schemas) computed per server on probe.
-  Re-probe detects DRIFT with per-tool diff; approved digest persisted in
-  `agora.toml` for cross-session comparison. Live digest recorded separately from
-  baseline.
-- **Description-injection heuristic scan** (`src/scan.ts`) — checks tool
-  descriptions against patterns for imperative markers, secret exfiltration,
-  instruction override, and runtime command injection. Status `warn` to avoid
-  false positives.
-- **News ranking** — `recencyW·e^(-h/12) + engagementW·log(eng+1) + topicW·topicMatch`,
-  to be extended with LLM dedup/clustering and a topic-weight bandit.
-- **Offline-first, content-addressed caches** throughout (hub cache by
-  `repo@sha`, curation cache, news cache) and a `bun --compile` binary for instant
-  startup.
+## Repository layout
 
-## Open decisions
+```
+src/stack/            cross-harness stack manager — adapters, manifest, plan/apply, doctor, probe
+src/federation/        federated catalog clients (official registry, Smithery, Glama, GitHub, …)
+src/acquire.ts         capability-acquisition gateway (resolve → scan-gate → write)
+src/scan.ts            the trust gate — injection/permission/drift heuristics
+src/search/             offline BM25 catalog index over federated results
+src/inference/          provider abstraction (OpenCode · Claude · Ollama)
+src/news/                the plaza — federated feed sources + ranking
+src/cli/                 command handlers, dispatch, shell, prompter, TUI pages
+src/plugin/               OpenCode plugin (tools, hooks, SDK-preferring chat)
+src/hubs/                 GitHub + HuggingFace connectors + AI README enrichment
+src/data.ts               curated MCP servers, workflows, tutorials — the offline-cache fallback
+packages/opencode-agora/  thin npm entry re-exporting agora-hub/opencode
+```
 
-1. **Sellable unit** — skills/workflows only, or also proprietary MCP servers? This shapes both `install` and the permission manifest.
-2. **Payment model** — per-item Stripe Checkout vs. prepaid credits/wallet.
-3. **Runtime sandbox shape** — the declared permission manifest is currently informational. Phase 4 will enforce it at runtime; the shape (Linux namespaces? Cloudflare-style isolates? Bun's `--prefer-offline` + `npm`'s built-in policies?) is undecided.
-
-## Status
-
-- **Phase 1 (standalone hub experience)** — done.
-- **Phase 1.5 + 1.6 ("Destination" pillars + polish)** — shipped end-to-end. News feed (5 sources + AI summarization), community hub (boards, threads, votes, flags, FTS5 search, kill-switch), live marketplace hubs (GitHub + HuggingFace), reputation calc + sort weighting, permission-manifest display + install acknowledgment.
-- **Phase 2 (backend & accounts)** — feature-complete; deploy blocked on rate-limit middleware + production wrangler config. See [`../ROADMAP.md`](../ROADMAP.md).
-- **Phase 3 (commerce)** — deferred behind Phase 4 trust work. `Pricing` type on `Package` is scaffolded; the paid branch is a typed no-op.
-- **Phase 4 (trust & self-regulation)** — in progress. Display + acknowledgment + earned reputation + flag/kill-switch + client/server scan shipped; description-drift detection and description-injection scanning added in 0.4.5; declared-vs-observed permission diff and runtime sandbox enforcement remain.
-- **Phase 5 (reach)** — `agora mcp` and `agora chat` shipped in 0.4.0; Discord/Telegram bots are future; public web hub and IDE surfaces are future work.
-- **0.4.3 "Destination" cut** — **shipped 2026-05-23.** Wave 1 (cross-session shell memory `/recall` · `/sessions`, never-dead daily surface, `build:binary` script, hardened AI curator, indexed BM25 catalog search) plus the agent stack manager and local capability search. See [`../ROADMAP.md`](../ROADMAP.md).
-- **0.4.5 "Acquire & trust depth"** — **current.** `agora acquire` (capability-acquisition gateway), Windows binary resolution fix (`src/opencode-exec.ts`), OpenCode plugin lifecycle hooks + SDK chat, description-drift / rug-pull detector, description-injection scan, monorepo star ranking fix. See [`../ROADMAP.md`](../ROADMAP.md).
-- **Agent stack manager** (`src/stack/`) — **shipped 0.4.3.** The cross-tool adapter layer (opencode / Claude Code / Cursor / Windsurf) behind `agora installed` · `doctor [--probe]` · `freeze` · `sync [--from]` · `install --save` · `try` · `capabilities`, a TUI Stack page, and read-only `agora mcp` introspection tools. Tool schemas discovered via a minimal MCP stdio client (`src/stack/mcp-probe.ts`) feed a local capability cache. Description-drift detection added in 0.4.5. See [`../ROADMAP.md`](../ROADMAP.md).
+`backend/`, `hub/`, and the community boards that used to live alongside this are frozen and have
+been removed from the working tree — see [`frozen/README.md`](./frozen/README.md) if you land here
+looking for them.
