@@ -3,6 +3,10 @@
 // status. This is the only file that knows about canonicalization/merge — a
 // source implementation only ever has to satisfy RegistrySource.
 import { officialSource } from './sources/official.js';
+import { smitherySource } from './sources/smithery.js';
+import { glamaSource } from './sources/glama.js';
+import { githubSource } from './sources/github.js';
+import { huggingfaceSource } from './sources/huggingface.js';
 import { localSource } from './sources/local.js';
 import { readSourceCache, resolveCacheDir } from './cache.js';
 import type {
@@ -18,14 +22,20 @@ import type { PackageMarketplaceItem } from '../marketplace/types.js';
 
 /**
  * Upstream registries Agora federates, in preference order (used to order
- * merged provenance and to pick which item's metadata wins a merge). P1 ships
- * `official` + `local`; this is the seam for follow-on sources — smithery,
- * glama, github (reuse src/hubs/github.ts), huggingface (reuse
- * src/hubs/huggingface.ts) — see docs/OPEN_QUESTIONS.md OQ-3. Adding one is
- * "implement RegistrySource, push it into this array": federatedSearch/
+ * merged provenance and to pick which item's metadata wins a merge). P1
+ * shipped `official` + `local`; P1+ adds smithery/glama/github/huggingface —
+ * see docs/OPEN_QUESTIONS.md OQ-3 for the verified endpoint shapes. Adding
+ * one is "implement RegistrySource, push it into this array": federatedSearch/
  * federatedFetchItem stay generic.
  */
-export const SOURCES: RegistrySource[] = [officialSource, localSource];
+export const SOURCES: RegistrySource[] = [
+  officialSource,
+  smitherySource,
+  glamaSource,
+  githubSource,
+  huggingfaceSource,
+  localSource
+];
 
 const DEFAULT_TIMEOUT_MS = 5000;
 

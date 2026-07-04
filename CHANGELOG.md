@@ -141,6 +141,52 @@ huggingface are a clean `RegistrySource` seam away, not built here.
 - Hermetic tests under `test/federation/` with a DI fetcher and recorded/modeled registry fixtures in
   `test/fixtures/federation/` — no network in the suite.
 
+### P1+ — federation follow-on sources
+
+Fills the `RegistrySource` seam P1 left open: all four follow-on sources named in
+`docs/OPEN_QUESTIONS.md` OQ-3 landed, none skipped. `agora search`/`acquire`/`agora_search` (MCP) now
+federate a real multi-source catalog, and `--source official|smithery|glama|github|huggingface|local`
+(already accepted by `acquire`) is fully real for `search` too. Most importantly: Smithery's per-server
+`tools[]` now flows into `FederatedItem.tools`, which `src/acquire.ts` already threaded into the P2
+gate's `ScanOptions` — the `annotation_hints`/`observed_permissions` checks have a live input source for
+the first time.
+
+- **`src/federation/sources/smithery.ts`** — client for Smithery (`registry.smithery.ai`, keyless reads).
+  `search()` maps the list endpoint and enriches each result (capped at 15 per query) with its own
+  detail-endpoint `tools[]` in parallel, so `search --source smithery` — not just `acquire` — carries
+  tool schemas. `fetchItem()` resolves a `qualifiedName` (which may itself contain a `/`) to its full
+  detail incl. `tools[]`/`resources[]`/`prompts[]`. Live-verified 2026-07-04: `security` and
+  `tools[].annotations` exist in the schema but were `null`/absent on every sampled server — mapped
+  defensively (annotations pass through when present) rather than depended on.
+- **`src/federation/sources/glama.ts`** — client for Glama (`glama.ai/api/mcp/v1`, no auth). Re-confirmed
+  live: `tools[]` is empty on every sampled server, so `FederatedItem.tools` is never set here (never
+  fabricated). Folds the real `attributes[]=author:official` filter into `Provenance.verified` and
+  `hosting:*` attributes into `tags` — the only structural homes that fit either signal.
+- **`src/federation/sources/github.ts`** / **`huggingface.ts`** — thin wrappers over the existing
+  `src/hubs/github.ts` (`searchGithub`) and `src/hubs/huggingface.ts` (`searchHuggingFace`), mapping
+  `HubItem` → `FederatedItem` 1:1 (`kind: 'package'`, `github`/`huggingface` provenance). Neither
+  underlying function takes a free-text query (both always crawl a fixed topic/category list) — the
+  wrapper applies the query as a client-side name/description/tag filter. `fetchItem()` does one
+  dedicated single-item GET each (`GET /repos/{owner}/{repo}`; HF tries `models`/`datasets`/`spaces` in
+  order) rather than reusing the crawl.
+- **`src/federation/index.ts`** — `SOURCES` grows to
+  `[official, smithery, glama, github, huggingface, local]` (preference order unchanged: official still
+  wins merges, local still the offline floor). The engine itself (`federatedSearch`/`canonicalize`/
+  `mergeGroup`) is untouched — this was purely "implement `RegistrySource`, push it into the array."
+  `src/cli/commands/marketplace.ts`'s `--source` allow-list for `search` grew to match (it only listed
+  `official`/`local`; `acquire`'s already covered all six).
+- `docs/OPEN_QUESTIONS.md` OQ-3 updated with the endpoint shapes verified live 2026-07-04, including two
+  corrections to the 2026-07-03 note: Smithery's `security`/`tools[].annotations` exist in the schema but
+  weren't populated in any sampled server, and Glama's `author:official` attribute filter needs the
+  array-bracket param form (`attributes[]=`, not `attributes=`).
+- Hermetic tests: `test/federation/{smithery,glama,github,huggingface}.test.ts`, with fixtures under
+  `test/fixtures/federation/` — the Smithery/Glama list+detail fixtures are genuine live captures
+  (trimmed for size where the real detail payload ran to tens of KB); one Smithery detail fixture
+  (`smithery-detail-hand-modeled-annotations.json`) is explicitly hand-modeled and labeled as such, since
+  no live server carrying `tools[].annotations` was found to capture. GitHub/Hugging Face tests use
+  hand-modeled `RawGithubRepo`/`RawHfItem` fixtures, matching the existing `test/hubs/*.test.ts`
+  convention.
+
 ### P2 — trust gate over federation
 
 `agora acquire` now resolves against the federated catalog, not just the bundled one, and folds

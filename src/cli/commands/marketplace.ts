@@ -31,7 +31,18 @@ import { header, formatItemList, formatItemTable, formatItemDetail } from '../fo
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
-const SEARCHABLE_SOURCE_IDS: SourceId[] = ['official', 'local'];
+// P1+ registers smithery/glama/github/huggingface as real RegistrySources
+// (src/federation/index.ts SOURCES) — this allow-list has to grow with them
+// or `--source smithery` etc. would 404 at the CLI layer despite the source
+// being fully wired and reachable via federatedSearch().
+const SEARCHABLE_SOURCE_IDS: SourceId[] = [
+  'official',
+  'smithery',
+  'glama',
+  'github',
+  'huggingface',
+  'local'
+];
 
 function isSourceId(value: string): value is SourceId {
   return (SEARCHABLE_SOURCE_IDS as string[]).includes(value);
@@ -151,7 +162,10 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
   // catalog, deduped and merged, with an honest per-source status.
   const sourceFlag = stringFlag(parsed, 'source');
   if (sourceFlag && sourceFlag !== 'all' && !isSourceId(sourceFlag)) {
-    return usageError(io, `Unknown --source "${sourceFlag}". Use official, local, or all.`);
+    return usageError(
+      io,
+      `Unknown --source "${sourceFlag}". Use official, smithery, glama, github, huggingface, local, or all.`
+    );
   }
   const source = sourceFlag && sourceFlag !== 'all' ? (sourceFlag as SourceId) : undefined;
 

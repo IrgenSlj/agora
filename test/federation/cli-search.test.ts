@@ -47,8 +47,12 @@ describe('agora search --json — federated shape', () => {
       expect(payload.source).toBe('all');
       expect(Array.isArray(payload.statuses)).toBe(true);
       expect(payload.statuses.map((s: { source: string }) => s.source).sort()).toEqual([
+        'github',
+        'glama',
+        'huggingface',
         'local',
-        'official'
+        'official',
+        'smithery'
       ]);
       expect(payload.statuses.every((s: { state: string }) => s.state === 'ok')).toBe(true);
       expect(payload.count).toBe(payload.items.length);
@@ -108,27 +112,37 @@ describe('agora search --json — federated shape', () => {
     }
   });
 
-  test('offline fallback — a throwing fetcher still returns local results honestly', async () => {
-    const dataDir = mkdtempSync(join(tmpdir(), 'agora-federation-cli-'));
-    try {
-      const throwingFetcher: FetchLike = async () => {
-        throw new Error('network down');
-      };
-      const { io, stdout, stderr } = createIo(throwingFetcher, dataDir);
+  // github/huggingface reuse src/hubs/*.ts, which retries each of their own
+  // several sequential sub-requests with a real (non-signal-aware) backoff
+  // delay — a fully-down network can legitimately ride the engine's own
+  // per-source timeout ceiling (DEFAULT_TIMEOUT_MS = 5000) instead of
+  // failing instantly. Headroom above that ceiling instead of racing bun's
+  // default 5000ms.
+  test(
+    'offline fallback — a throwing fetcher still returns local results honestly',
+    async () => {
+      const dataDir = mkdtempSync(join(tmpdir(), 'agora-federation-cli-'));
+      try {
+        const throwingFetcher: FetchLike = async () => {
+          throw new Error('network down');
+        };
+        const { io, stdout, stderr } = createIo(throwingFetcher, dataDir);
 
-      const code = await runCli(['search', 'github', '--json'], io);
-      const payload = JSON.parse(stdout.join(''));
+        const code = await runCli(['search', 'github', '--json'], io);
+        const payload = JSON.parse(stdout.join(''));
 
-      expect(code).toBe(0);
-      expect(payload.statuses.find((s: { source: string }) => s.source === 'official').state).toBe(
-        'unreachable'
-      );
-      expect(payload.items.some((i: { id: string }) => i.id === 'mcp-github')).toBe(true);
-      expect(stderr.join('')).toContain('official unreachable');
-    } finally {
-      rmSync(dataDir, { recursive: true, force: true });
-    }
-  });
+        expect(code).toBe(0);
+        expect(payload.statuses.find((s: { source: string }) => s.source === 'official').state).toBe(
+          'unreachable'
+        );
+        expect(payload.items.some((i: { id: string }) => i.id === 'mcp-github')).toBe(true);
+        expect(stderr.join('')).toContain('official unreachable');
+      } finally {
+        rmSync(dataDir, { recursive: true, force: true });
+      }
+    },
+    10000
+  );
 });
 
 describe('agora refresh', () => {

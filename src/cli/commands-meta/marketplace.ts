@@ -6,15 +6,20 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Marketplace',
     summary: 'Search the federated catalog for MCP servers, packages, and workflows',
     usage:
-      'agora search <query> [--source official|local|all] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
+      'agora search <query> [--source official|smithery|glama|github|huggingface|local|all] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
     details:
-      'Federates the official MCP Registry with the bundled local catalog, deduping matches ' +
-      'found in both (each result keeps its provenance). An unreachable source degrades honestly ' +
-      'instead of failing the whole search — local always works offline. ' +
+      'Federates the official MCP Registry, Smithery, Glama, GitHub, and Hugging Face with the ' +
+      'bundled local catalog, deduping matches found across sources (each result keeps its ' +
+      'provenance). An unreachable source degrades honestly instead of failing the whole search — ' +
+      'local always works offline. ' +
       'Use --category to filter by kind, --source to restrict to one upstream. ' +
       'Add --api to query a self-hosted Agora API instead (unrelated to federation).',
     flags: [
-      { flag: '--source', description: 'Restrict to one upstream: official, local, or all (default all)' },
+      {
+        flag: '--source',
+        description:
+          'Restrict to one upstream: official, smithery, glama, github, huggingface, local, or all (default all)'
+      },
       { flag: '--category, -c', description: 'Filter by category: mcp, prompt, workflow, skill' },
       { flag: '--limit, -n', description: 'Maximum number of results (default 10)' },
       { flag: '--json', description: 'Output results as JSON, including per-item provenance' }

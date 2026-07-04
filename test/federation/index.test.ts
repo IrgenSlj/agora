@@ -27,8 +27,15 @@ function tempCacheDir(): string {
 }
 
 describe('SOURCES registry — the seam for follow-on sources', () => {
-  test('ships official + local, official first (preference order for merges)', () => {
-    expect(SOURCES.map((s) => s.id)).toEqual(['official', 'local']);
+  test('ships official, smithery, glama, github, huggingface, local — official first, local last', () => {
+    expect(SOURCES.map((s) => s.id)).toEqual([
+      'official',
+      'smithery',
+      'glama',
+      'github',
+      'huggingface',
+      'local'
+    ]);
   });
 });
 
@@ -91,6 +98,12 @@ describe('federatedSearch() — dedupe / canonicalization', () => {
 });
 
 describe('federatedSearch() — offline fallback', () => {
+  // github/huggingface reuse src/hubs/*.ts, which retries each of their own
+  // several sequential sub-requests (topics / category queries) with a real
+  // backoff delay that isn't signal-aware — so a fully-down network can
+  // legitimately ride the engine's own per-source timeout ceiling
+  // (DEFAULT_TIMEOUT_MS = 5000) rather than fail instantly. Give this test
+  // headroom above that ceiling instead of racing bun's default 5000ms.
   test('a throwing fetcher still returns local results, reports official unreachable, and never throws', async () => {
     const cacheDir = tempCacheDir();
     try {
@@ -113,7 +126,7 @@ describe('federatedSearch() — offline fallback', () => {
     } finally {
       rmSync(cacheDir, { recursive: true, force: true });
     }
-  });
+  }, 10000);
 
   test('AGORA_OFFLINE=1 disables official cleanly (offline, not unreachable) and local still works', async () => {
     const cacheDir = tempCacheDir();

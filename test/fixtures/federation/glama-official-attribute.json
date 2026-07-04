@@ -1,0 +1,75 @@
+{
+  "pageInfo": {
+    "endCursor": "eyJjcmVhdGVkQXQiOjE3ODMxNjMxNzcsImlkIjoiZDBjdTBlYXFmMSJ9",
+    "hasNextPage": true,
+    "hasPreviousPage": false,
+    "startCursor": "eyJjcmVhdGVkQXQiOjE3ODMxNjMyNTgsImlkIjoibHN6em02OTQ2bCJ9"
+  },
+  "servers": [
+    {
+      "attributes": [
+        "author:official",
+        "hosting:remote-capable"
+      ],
+      "description": "Enables real-time search across Google, News, Reddit, YouTube, and Amazon using Scavio's unified API, with secure key injection for Arcade agents.",
+      "environmentVariablesJsonSchema": {
+        "properties": {
+          "SCAVIO_API_KEY": {
+            "description": "Your Scavio API key, get one at https://dashboard.scavio.dev",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": [
+          "SCAVIO_API_KEY"
+        ]
+      },
+      "id": "eipt3eylli",
+      "name": "arcade-scavio",
+      "namespace": "scavio-ai",
+      "repository": {
+        "url": "https://github.com/scavio-ai/arcade-scavio"
+      },
+      "slug": "arcade-scavio",
+      "spdxLicense": {
+        "name": "MIT License",
+        "url": "https://spdx.org/licenses/MIT.json"
+      },
+      "tools": [],
+      "url": "https://glama.ai/mcp/servers/eipt3eylli"
+    },
+    {
+      "attributes": [
+        "hosting:local-only"
+      ],
+      "description": "Enables a side-panel companion that watches your coding session and provides context-aware answers about your codebase and session state through a small, token-cheap MCP interface.",
+      "environmentVariablesJsonSchema": {
+        "properties": {
+          "TOSHI_REPO": {
+            "description": "Absolute path to the repository (defaults to current working directory)",
+            "type": "string"
+          },
+          "CODEBASE_MEMORY_BIN": {
+            "description": "Absolute path to codebase-memory-mcp binary (defaults to PATH)",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "required": []
+      },
+      "id": "r59e1jgj7v",
+      "name": "toshi-mcp",
+      "namespace": "philpof102-svg",
+      "repository": {
+        "url": "https://github.com/philpof102-svg/toshi"
+      },
+      "slug": "toshi",
+      "spdxLicense": {
+        "name": "GPL 3.0",
+        "url": "https://spdx.org/licenses/GPL-3.0.json"
+      },
+      "tools": [],
+      "url": "https://glama.ai/mcp/servers/r59e1jgj7v"
+    }
+  ]
+}

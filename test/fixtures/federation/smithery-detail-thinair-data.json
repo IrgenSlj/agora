@@ -1,0 +1,322 @@
+{
+    "qualifiedName": "thinair/data",
+    "displayName": "ThinAir Data",
+    "description": "Connect AI assistants to PostgreSQL, MySQL, or SQL Server in 60 seconds. 24 dialect-aware tools \u2014 query, schema introspection, anomaly detection, query optimization. Read-only at three layers (firewall + transaction + rules engine).",
+    "iconUrl": "https://api.smithery.ai/servers/thinair/data/icon",
+    "remote": true,
+    "deploymentUrl": "https://thinair-data.run.tools",
+    "connections": [
+        {
+            "type": "http",
+            "deploymentUrl": "https://thinair-data.run.tools",
+            "configSchema": {}
+        }
+    ],
+    "security": null,
+    "tools": [
+        {
+            "name": "query_sql",
+            "description": "Execute a read-only SQL query against the target connection. ONLY SELECT / WITH / EXPLAIN permitted. Write dialect-appropriate SQL for the connection's engine \u2014 use PostgreSQL syntax for postgres connections (`SELECT NOW()`, `LIMIT`, `ILIKE`), T-SQL for mssql (`SELECT GETDATE()`, `TOP N`, `LIKE`), MySQL for mysql (`SELECT NOW()`, `LIMIT`). Response meta includes `connection` + `dialect` so you know which syntax worked; reuse that dialect in follow-up calls. Default LIMIT 100 unless the user asks for all rows.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "limit": {
+                        "type": "number",
+                        "description": "Max rows to return (default 100, max 1000)"
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "SQL SELECT query to execute"
+                    },
+                    "connection": {
+                        "type": "string",
+                        "description": "Target connection name from this tenant's inventory. Call `list_connections` to see every name + dialect, then match semantically to the user's intent (e.g. 'analytics' \u2192 a connection named `*-analytics-*`; 'prod' \u2192 a connection with `prod-` prefix). If the user didn't specify, use the tenant's default (first added). Do not invent names \u2014 resolve from `list_connections` output."
+                    }
+                }
+            },
+            "outputSchema": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "anyOf": [
+                            {
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "additionalProperties": {}
+                                }
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "error": {
+                                        "type": "string"
+                                    },
+                                    "details": {
+                                        "type": "object",
+                                        "additionalProperties": {}
+                                    },
+                                    "message": {
+                                        "type": "string"
+                                    },
+                                    "internal_code": {
+                                        "type": "string"
+                                    },
+                                    "retry_after_s": {
+                                        "type": "number"
+                                    }
+                                },
+                                "additionalProperties": true
+                            }
+                        ]
+                    },
+                    "meta": {
+                        "type": "object",
+                        "properties": {
+                            "plan": {},
+                            "tool": {
+                                "type": "string"
+                            },
+                            "dialect": {
+                                "anyOf": [
+                                    {
+                                        "enum": [
+                                            "postgres",
+                                            "mysql",
+                                            "mssql"
+                                        ],
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "string"
+                                    }
+                                ]
+                            },
+                            "cacheHit": {
+                                "type": "boolean"
+                            },
+                            "rowCount": {
+                                "$ref": "#/properties/meta/properties/executionTimeMs"
+                            },
+                            "truncated": {
+                                "type": "boolean"
+                            },
+                            "connection": {
+                                "type": "string"
+                            },
+                            "executionTimeMs": {
+                                "type": [
+                                    "number",
+                                    "string"
+                                ]
+                            }
+                        },
+                        "additionalProperties": true
+                    },
+                    "display": {
+                        "type": "object",
+                        "properties": {
+                            "map": {
+                                "type": "object",
+                                "properties": {
+                                    "lat": {
+                                        "type": "string"
+                                    },
+                                    "lon": {
+                                        "type": "string"
+                                    },
+                                    "label": {
+                                        "type": "string"
+                                    },
+                                    "title": {
+                                        "type": "string"
+                                    }
+                                },
+                                "additionalProperties": true
+                            },
+                            "code": {
+                                "type": "object",
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "language": {
+                                        "anyOf": [
+                                            {
+                                                "enum": [
+                                                    "sql",
+                                                    "json",
+                                                    "bash",
+                                                    "typescript"
+                                                ],
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "string"
+                                            }
+                                        ]
+                                    },
+                                    "executable": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "additionalProperties": true
+                            },
+                            "type": {
+                                "anyOf": [
+                                    {
+                                        "enum": [
+                                            "table",
+                                            "chart",
+                                            "metric",
+                                            "code",
+                                            "text",
+                                            "list",
+                                            "map"
+                                        ],
+                                        "type": "string"
+                                    },
+                                    {
+                                        "type": "string"
+                                    }
+                                ]
+                            },
+                            "chart": {
+                                "type": "object",
+                                "properties": {
+                                    "x": {
+                                        "type": "string"
+                                    },
+                                    "y": {
+                                        "anyOf": [
+                                            {
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        ]
+                                    },
+                                    "color": {
+                                        "type": "string"
+                                    },
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "xLabel": {
+                                        "type": "string"
+                                    },
+                                    "yLabel": {
+                                        "type": "string"
+                                    },
+                                    "chartType": {
+                                        "type": "string"
+                                    }
+                                },
+                                "additionalProperties": true
+                            },
+                            "metric": {
+                                "type": "object",
+                                "properties": {
+                                    "unit": {
+                                        "type": "string"
+                                    },
+                                    "label": {
+                                        "type": "string"
+                                    },
+                                    "trend": {
+                                        "anyOf": [
+                                            {
+                                                "enum": [
+                                                    "up",
+                                                    "down",
+                                                    "neutral"
+                                                ],
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "string"
+                                            }
+                                        ]
+                                    },
+                                    "value": {
+                                        "type": [
+                                            "string",
+                                            "number"
+                                        ]
+                                    },
+                                    "status": {
+                                        "anyOf": [
+                                            {
+                                                "enum": [
+                                                    "good",
+                                                    "warning",
+                                                    "critical"
+                                                ],
+                                                "type": "string"
+                                            },
+                                            {
+                                                "type": "string"
+                                            }
+                                        ]
+                                    },
+                                    "trendValue": {
+                                        "type": "string"
+                                    }
+                                },
+                                "additionalProperties": true
+                            }
+                        },
+                        "additionalProperties": true
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "insights": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "severity",
+                                "message"
+                            ],
+                            "properties": {
+                                "value": {},
+                                "column": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                },
+                                "severity": {
+                                    "anyOf": [
+                                        {
+                                            "enum": [
+                                                "info",
+                                                "warning",
+                                                "critical"
+                                            ],
+                                            "type": "string"
+                                        },
+                                        {
+                                            "type": "string"
+                                        }
+                                    ]
+                                }
+                            },
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        }
+    ],
+    "resources": [],
+    "prompts": []
+}

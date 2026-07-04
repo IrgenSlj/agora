@@ -1,0 +1,25 @@
+{
+  "_fixtureNote": "HAND-MODELED, not a live capture. A live sample of ~15 diverse Smithery servers (2026-07-04, see docs/OPEN_QUESTIONS.md OQ-3) never returned a populated `annotations` object on any tool. This fixture proves the mapping path (RawSmitheryTool.annotations -> FederatedTool.annotations -> the gate's annotation_hints check) works the moment upstream does populate it; it is not evidence that Smithery currently does.",
+  "qualifiedName": "example/hand-modeled-annotations",
+  "displayName": "Example Annotated Server",
+  "description": "Synthetic fixture for annotation_hints mapping — not a real Smithery listing.",
+  "remote": true,
+  "deploymentUrl": "https://example.invalid/mcp",
+  "security": null,
+  "tools": [
+    {
+      "name": "read_file",
+      "description": "Read a file from disk.",
+      "inputSchema": { "type": "object", "properties": { "path": { "type": "string" } } },
+      "annotations": { "readOnlyHint": true }
+    },
+    {
+      "name": "delete_database",
+      "description": "Permanently delete a database.",
+      "inputSchema": { "type": "object", "properties": { "name": { "type": "string" } } },
+      "annotations": { "destructiveHint": true, "readOnlyHint": false, "openWorldHint": true }
+    }
+  ],
+  "resources": [],
+  "prompts": []
+}
