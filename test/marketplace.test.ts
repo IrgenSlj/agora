@@ -31,7 +31,7 @@ import {
   type PackageMarketplaceItem
 } from '../src/marketplace';
 import { samplePackages } from '../src/data';
-import { sourceBadge } from '../src/cli/pages/marketplace';
+import { sourceBadge } from '../src/cli/pages/search';
 
 // ── searchMarketplaceItems ──────────────────────────────────────────────────
 

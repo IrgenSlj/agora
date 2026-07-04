@@ -1137,7 +1137,7 @@ export const commandBookmarks: CommandHandler = async (parsed, io, style) => {
 
   const theme = cliTheme(style, io);
   if (kind !== 'news' && hasMarketplace) {
-    writeLine(io.stdout, style.accent('Marketplace'));
+    writeLine(io.stdout, style.accent('Catalog'));
     writeLine(io.stdout, style.dim('─'.repeat(40)));
     writeLine(io.stdout, formatSavedList(marketplaceItems, theme));
     writeLine(io.stdout, '');

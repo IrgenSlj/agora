@@ -8,7 +8,7 @@ interface MenuIo {
   env?: Record<string, string | undefined>;
 }
 
-const GROUPS = ['Marketplace', 'Setup', 'Library', 'Learn'] as const;
+const GROUPS = ['Catalog', 'Setup', 'Library', 'Learn'] as const;
 
 const INTERACTIVE_COMMANDS = new Set(['menu', 'tui']);
 
@@ -135,7 +135,7 @@ export async function runInteractiveMenu(io: MenuIo, style: Styler): Promise<num
   const banner = renderBanner({ color: true, trueColor });
   const box = renderBox(
     'Welcome to Agora',
-    ["The developer's terminal marketplace for OpenCode", 'Pick a command to read its manual.'],
+    ['The system manager for your agentic stack', 'Pick a command to read its manual.'],
     { color: true, trueColor }
   );
   process.stdout.write(`\n${banner}\n\n${box}\n\n`);

@@ -1,6 +1,6 @@
 import type { Styler } from '../../ui.js';
 
-export type CommandGroup = 'Marketplace' | 'Setup' | 'Library' | 'Learn' | 'Stack';
+export type CommandGroup = 'Catalog' | 'Setup' | 'Library' | 'Learn' | 'Stack';
 
 export interface CommandMeta {
   name: string;

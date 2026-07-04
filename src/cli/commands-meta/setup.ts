@@ -58,7 +58,7 @@ export const COMMANDS: CommandMeta[] = [
     summary: 'Apply a workflow template as an OpenCode skill',
     usage: 'agora use <workflow-id> [--json]',
     details:
-      'Copies a workflow from the marketplace into .opencode/skills/ and registers it in opencode.json ' +
+      'Copies a workflow from the catalog into .opencode/skills/ and registers it in opencode.json ' +
       'so OpenCode can load it on the next restart.',
     flags: [{ flag: '--json', description: 'Output result as JSON' }],
     examples: ['agora use wf-tdd-cycle', 'agora use wf-security-audit']
@@ -80,7 +80,7 @@ export const COMMANDS: CommandMeta[] = [
       'Opens the keyboard-driven TUI with five pages, switched by 1-5 or Tab. ' +
       'j/k navigates, Enter drills in, Esc backs out, ? toggles help, q quits. ' +
       'Pages: Home (recommendation engine), Stack (your MCP servers across every ' +
-      'harness — health, drift, probe), Marketplace (federated catalog + gated ' +
+      'harness — health, drift, probe), Search (federated catalog + gated ' +
       'acquire), News (ranked feed), Settings (account, display, sources).',
     examples: ['agora tui']
   },
@@ -154,7 +154,7 @@ export const COMMANDS: CommandMeta[] = [
     details:
       "Generates shell completion scripts for the agora CLI. Pipe the output to your shell's " +
       'completions directory or source it directly. Completions include all commands, flags, ' +
-      'marketplace IDs, categories, and common option values.',
+      'catalog IDs, categories, and common option values.',
     examples: [
       'agora completions bash > /usr/local/etc/bash_completion.d/agora',
       'agora completions zsh > /usr/local/share/zsh/site-functions/_agora',

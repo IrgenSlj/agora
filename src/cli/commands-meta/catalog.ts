@@ -3,7 +3,7 @@ import type { CommandMeta } from './types.js';
 export const COMMANDS: CommandMeta[] = [
   {
     name: 'search',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'Search the federated catalog for MCP servers, packages, and workflows',
     usage:
       'agora search <query> [--source official|smithery|glama|github|huggingface|local|all] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
@@ -32,8 +32,8 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'browse',
-    group: 'Marketplace',
-    summary: 'View full details for a single marketplace item',
+    group: 'Catalog',
+    summary: 'View full details for a single catalog item',
     usage: 'agora browse <id> [--type package|workflow] [--json]',
     details:
       'Fetches and displays the full metadata for a package or workflow by its id. ' +
@@ -46,11 +46,11 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'trending',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'Show trending packages and workflows',
     usage: 'agora trending [all|packages|workflows] [--limit 5] [--json]',
     details:
-      'Lists the most-starred marketplace items. Pass a category filter as the first positional ' +
+      'Lists the most-starred catalog items. Pass a category filter as the first positional ' +
       'argument, or use --category.',
     flags: [
       {
@@ -64,11 +64,11 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'workflows',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'List and search AI workflow templates',
     usage: 'agora workflows [query] [--limit 10] [--json]',
     details:
-      'Searches the workflow subset of the marketplace. Provide an optional keyword to narrow results.',
+      'Searches the workflow subset of the catalog. Provide an optional keyword to narrow results.',
     flags: [
       { flag: '--limit, -n', description: 'Maximum number of results (default 10)' },
       { flag: '--json', description: 'Output as JSON' }
@@ -77,11 +77,11 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'similar',
-    group: 'Marketplace',
-    summary: 'Find similar marketplace items by tag overlap',
+    group: 'Catalog',
+    summary: 'Find similar catalog items by tag overlap',
     usage: 'agora similar <id> [--limit 5] [--type package|workflow] [--json]',
     details:
-      'Computes tag-IDF-weighted Jaccard similarity between marketplace items. ' +
+      'Computes tag-IDF-weighted Jaccard similarity between catalog items. ' +
       'Ranks by similarity score, tiebroken by install count. ' +
       'Use --type to restrict to packages or workflows.',
     flags: [
@@ -97,8 +97,8 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'compare',
-    group: 'Marketplace',
-    summary: 'Compare two or more marketplace items side by side',
+    group: 'Catalog',
+    summary: 'Compare two or more catalog items side by side',
     usage: 'agora compare <id1> <id2> [<id3>...] [--type package|workflow] [--json]',
     details:
       'Renders a box-drawn table comparing items across attributes: name, author, installs, ' +
@@ -114,8 +114,8 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'chat',
-    group: 'Marketplace',
-    summary: 'Chat with an AI assistant about the Agora marketplace',
+    group: 'Catalog',
+    summary: 'Chat with an AI assistant about the Agora catalog',
     usage: 'agora chat [message] [--continue] [--session <id>] [--model <model>]',
     details:
       'Starts an interactive OpenCode TUI session with a free model. ' +
@@ -136,11 +136,11 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'install',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'Install a package into your OpenCode config',
     usage: 'agora install <id> [--write] [--config path] [--json]',
     details:
-      'Generates an install plan for a marketplace package. Without --write the plan is previewed only. ' +
+      'Generates an install plan for a catalog package. Without --write the plan is previewed only. ' +
       'With --write, opencode.json is updated and any required npm packages are installed.',
     flags: [
       { flag: '--write', description: 'Apply the install plan (update config + run npm install)' },
@@ -165,7 +165,7 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'acquire',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'Scan-gated capability acquisition for MCP servers',
     usage:
       'agora acquire <id|query> [--tool opencode|claude-code|cursor|windsurf] [--source official|smithery|glama|github|huggingface|local] [--accept-warnings] [--save] [--dry-run] [--json]',
@@ -207,7 +207,7 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'scan',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'Pre-install safety scan for a catalog or live item.',
     usage: 'agora scan <id> [--type package|workflow] [--json]',
     details:
@@ -224,7 +224,7 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'outdated',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'List MCP packages from opencode.json with their latest npm versions.',
     usage: 'agora outdated [--config <path>] [--json]',
     flags: [
@@ -235,7 +235,7 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'refresh',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'Incrementally sync the official MCP registry into the local federation cache.',
     usage: 'agora refresh [--source official] [--json]',
     details:
@@ -253,7 +253,7 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'news',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'Browse ranked tech news from HN, GitHub, arXiv',
     usage: 'agora news [query] [--source hn|gh|arxiv] [--limit 20] [--refresh] [--json]',
     details:
@@ -275,7 +275,7 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'today',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'Daily digest: top news and trending items from the last 24h',
     usage: 'agora today [--section news|market|all] [--json]',
     flags: [
@@ -289,12 +289,12 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'export',
-    group: 'Marketplace',
-    summary: 'Export marketplace data in various formats',
+    group: 'Catalog',
+    summary: 'Export catalog data in various formats',
     usage:
       'agora export [query] [--category all|mcp|prompt|workflow] [--format json|csv|markdown|table] [--limit N] [--api]',
     details:
-      'Exports all marketplace items matching the optional query and category filters. ' +
+      'Exports all catalog items matching the optional query and category filters. ' +
       'Use --format to choose the output format. ' +
       'Add --api to query the live Agora API instead of the bundled offline data.',
     flags: [
@@ -313,7 +313,7 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'watch',
-    group: 'Marketplace',
+    group: 'Catalog',
     summary: 'Repeat a command at a regular interval (like UNIX watch)',
     usage: 'agora watch <interval> <command...> [--count N] [--once]',
     details:
@@ -332,8 +332,8 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'open',
-    group: 'Marketplace',
-    summary: 'Open a marketplace item or URL in the browser',
+    group: 'Catalog',
+    summary: 'Open a catalog item or URL in the browser',
     usage: 'agora open <id|url> [--print] [--json]',
     details:
       'Resolves the item by id and opens its repository or npm page in the default browser. ' +
@@ -350,8 +350,8 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'share',
-    group: 'Marketplace',
-    summary: 'Print a shareable markdown snippet for a marketplace item',
+    group: 'Catalog',
+    summary: 'Print a shareable markdown snippet for a catalog item',
     usage: 'agora share <id> [--json]',
     details:
       'Produces a markdown blurb with the item name, description, link, tags, and install ' +
@@ -361,8 +361,8 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'author',
-    group: 'Marketplace',
-    summary: 'List marketplace items by a specific author',
+    group: 'Catalog',
+    summary: 'List catalog items by a specific author',
     usage: 'agora author <name> [--limit 25] [--page 1] [--json]',
     details:
       'Lists all items where the author matches the given name (case-insensitive). ' +
@@ -380,14 +380,14 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'curate',
-    group: 'Marketplace',
-    summary: 'Run AI-powered curation to discover and verify marketplace items',
+    group: 'Catalog',
+    summary: 'Run AI-powered curation to discover and verify catalog items',
     usage:
       'agora curate [--refresh | --force] [--limit 50] [--concurrency 4] [--stale-days 30] [--status]',
     details:
       'Discovers MCP servers and tools from GitHub and HuggingFace, then uses AI to verify ' +
       'each item is a genuine MCP server/prompt/skill and extract metadata. Results are cached ' +
-      'locally and used by the marketplace search. Three modes are available: incremental ' +
+      'locally and used by catalog search. Three modes are available: incremental ' +
       '(default) only verifies new items; --refresh re-verifies cached items older than ' +
       '--stale-days (default 30) and is suitable for scheduled/cron runs; --force re-verifies ' +
       'everything. Items already present in the bundled catalog are automatically skipped. ' +

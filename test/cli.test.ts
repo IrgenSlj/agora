@@ -841,7 +841,7 @@ describe('help system', () => {
     const out = stdout.join('');
 
     expect(code).toBe(0);
-    expect(out).toContain('Marketplace');
+    expect(out).toContain('Catalog');
     expect(out).toContain('Setup');
     expect(out).toContain('Library');
     expect(out).toContain('Learn');
@@ -1019,7 +1019,7 @@ describe('help system', () => {
       const out = stdout.join('');
 
       expect(code).toBe(0);
-      expect(out).toContain('Marketplace');
+      expect(out).toContain('Catalog');
       expect(out).toContain('mcp-github');
     } finally {
       rmSync(temp, { recursive: true, force: true });

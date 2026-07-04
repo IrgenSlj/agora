@@ -313,7 +313,7 @@ export const homePage: Page = {
   navIcon: 'H',
   hotkeys: [
     { key: 'n', label: 'news' },
-    { key: 'm', label: 'market' },
+    { key: 'm', label: 'search' },
     { key: 't', label: 'hot/top/repos' },
     { key: 'r', label: 'refresh' },
     { key: 'Enter', label: 'open' }
@@ -363,7 +363,7 @@ export const homePage: Page = {
         return { kind: 'switch', to: 'news' };
       case 'm':
       case '/':
-        return { kind: 'switch', to: 'marketplace' };
+        return { kind: 'switch', to: 'search' };
       case 't': {
         const cycle: Record<'hot' | 'top' | 'repos', 'hot' | 'top' | 'repos'> = {
           hot: 'top',
@@ -379,7 +379,7 @@ export const homePage: Page = {
         return { kind: 'status', message: 'refreshing' };
       case 'enter': {
         if (state.cursor === 0) return { kind: 'switch', to: 'news' };
-        return { kind: 'switch', to: 'marketplace' };
+        return { kind: 'switch', to: 'search' };
       }
       case 'j':
       case 'down':

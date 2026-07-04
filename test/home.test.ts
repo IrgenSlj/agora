@@ -32,7 +32,7 @@ describe('home page', () => {
     const ctx = {} as any;
     const evt = { key: 'm' } as any;
     const action = homePage.handleKey!(evt, ctx);
-    expect(action).toEqual({ kind: 'switch', to: 'marketplace' });
+    expect(action).toEqual({ kind: 'switch', to: 'search' });
   });
 
   test('routes j/k for section cursor without throwing', () => {

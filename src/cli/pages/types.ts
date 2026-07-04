@@ -1,7 +1,7 @@
 import type { Styler } from '../../ui.js';
 import type { CliIo } from '../flags.js';
 
-export type PageId = 'home' | 'marketplace' | 'stack' | 'news' | 'settings' | 'acquire';
+export type PageId = 'home' | 'search' | 'stack' | 'news' | 'settings' | 'acquire' | 'item';
 
 export interface KeyEvent {
   raw: string;

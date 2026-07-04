@@ -244,17 +244,10 @@ describe('classifyInput — TUI slash shortcuts', () => {
     expect(classifyInput('/home', neverExecutable)).toEqual({ kind: 'tui', page: 'home' });
   });
 
-  test('/market → tui dispatch on marketplace (short alias)', () => {
-    expect(classifyInput('/market', neverExecutable)).toEqual({
+  test('/catalog → tui dispatch on search (renamed from /marketplace)', () => {
+    expect(classifyInput('/catalog', neverExecutable)).toEqual({
       kind: 'tui',
-      page: 'marketplace'
-    });
-  });
-
-  test('/marketplace → tui dispatch on marketplace (full alias)', () => {
-    expect(classifyInput('/marketplace', neverExecutable)).toEqual({
-      kind: 'tui',
-      page: 'marketplace'
+      page: 'search'
     });
   });
 

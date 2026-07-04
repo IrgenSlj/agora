@@ -3,6 +3,10 @@ import { homedir } from 'node:os';
 import type { SourceOptions } from '../../live.js';
 import { loadAgoraState, getAuthState } from '../../state.js';
 import type { PageContext } from './types.js';
+import type { MarketplaceItem } from '../../marketplace.js';
+import type { FederatedItem } from '../../federation/types.js';
+import { observedCapabilities, type ScanResult } from '../../scan.js';
+import type { HealthTone, Verdict } from './components.js';
 
 // eslint-disable-next-line no-control-regex
 export const ANSI_RE = /\x1b\[[0-9;]*m/g;
@@ -106,4 +110,62 @@ export function pageSourceOptions(
   }
   if (opts.requireAuth && (!apiUrl || !token)) return null;
   return { useApi: Boolean(apiUrl), apiUrl, token, fetcher: ctx.io.fetcher, timeoutMs: 10000 };
+}
+
+// ── shared trust-panel inputs (Acquire's GATE stage + the Item page) ───────
+// Both pages resolve an item over federation, run the scan gate, and render
+// the same `trustPanel` (components.ts) centerpiece — so the declared-vs-
+// observed permission rows and the drift-vs-baseline summary are computed
+// once here instead of drifting into two copies.
+
+const PERM_LABEL: Record<'fs' | 'net' | 'exec', 'fs' | 'net' | 'proc'> = {
+  fs: 'fs',
+  net: 'net',
+  exec: 'proc'
+};
+
+export interface PermRow {
+  kind: 'fs' | 'net' | 'proc';
+  tone: HealthTone;
+  declared: string;
+  observed?: string;
+}
+
+/** Declared (item.permissions) vs observed (tool-schema heuristics) — reuses
+ * the same categories `checkObservedPermissions` (src/scan.ts) computes for
+ * the scan, rather than re-parsing that check's free-text message. */
+export function buildPermRows(item: MarketplaceItem, tools: FederatedItem['tools']): PermRow[] {
+  const perms = item.kind === 'package' ? item.permissions : undefined;
+  const observed = observedCapabilities(tools ?? []);
+  const rows: PermRow[] = [];
+  (['fs', 'net', 'exec'] as const).forEach((cat) => {
+    const declaredList = perms?.[cat];
+    const isObserved = observed.has(cat);
+    if (!declaredList?.length && !isObserved) return;
+    const tone: HealthTone = !declaredList?.length && isObserved ? 'warning' : 'success';
+    rows.push({
+      kind: PERM_LABEL[cat],
+      tone,
+      declared: declaredList?.length ? declaredList.join(', ') : '(not declared)',
+      observed: isObserved ? 'observed in tool schemas' : undefined
+    });
+  });
+  if (rows.length === 0) {
+    rows.push({ kind: 'fs', tone: 'success', declared: 'no fs/net/exec signal declared or observed' });
+  }
+  return rows;
+}
+
+/** Description-drift-vs-baseline summary for the trust panel's `drift` row. */
+export function buildDrift(scan: ScanResult): { changed: boolean; baseline: string } {
+  const check = scan.checks.find((c) => c.name === 'description_drift');
+  if (!check) return { changed: false, baseline: 'no baseline recorded yet' };
+  return { changed: check.status !== 'pass', baseline: 'approved baseline' };
+}
+
+/** The gate verdict — fail on any failed check, else warn on any warning, else pass. */
+export function scanVerdict(scan: ScanResult): Verdict {
+  if (scan.summary.fail > 0) return 'fail';
+  if (scan.summary.warn > 0) return 'warn';
+  return 'pass';
 }

@@ -51,7 +51,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const infoLine = style.dim(
       `v${AGORA_VERSION} · ${model} · /abc · /help · /menu · /search · /quit`
     );
-    const slashLine = style.orange('/home · /marketplace · /news · /settings');
+    const slashLine = style.orange('/home · /catalog · /news · /settings');
     process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${infoLine}\n${slashLine}\n\n`);
   }
 
@@ -121,8 +121,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const slashCommands = [
     '/tui',
     '/home',
-    '/marketplace',
-    '/market',
+    '/catalog',
     '/news',
     '/settings',
     '/abc',
@@ -181,7 +180,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     'type /last to re-run the last bash command',
     'type /again to re-send the last chat message',
     'type /? <agora_cmd> to dry-run an agora command',
-    'type ?how do I use MCP? to ask about the marketplace',
+    'type ?how do I use MCP? to ask about the catalog',
     'type /verbose for detailed AI responses',
     'type /quiet for minimal AI responses',
     'type /env to view tracked env vars, /env FOO=val to set one',
@@ -196,11 +195,11 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     'run `agora completions zsh > /usr/local/share/zsh/site-functions/_agora` for zsh completions',
     'run `agora completions fish > ~/.config/fish/completions/agora.fish` for fish completions',
     'type /home to open the TUI Home page',
-    'type /marketplace to open the TUI Marketplace page',
+    'type /catalog to open the TUI Search page',
     'type /settings to open the TUI Settings page',
     'run `agora save <id>` to bookmark a package',
     'run `agora saved` to see your saved items',
-    'run `agora auth login --api-url <url>` to enable live marketplace search',
+    'run `agora auth login --api-url <url>` to enable live catalog search',
     'run `agora config doctor` to check your OpenCode config',
     'type VAR=val command to set env vars in bash',
     'pipe output with | or redirect with > as normal in bash',
@@ -703,8 +702,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const bashCtx = recentBashContext(dataDir, cwd0, { commands: 3, lines: 20 });
 
     const systemLine =
-      'You are running inside the Agora shell, a marketplace TUI for OpenCode. ' +
-      'Prefer using the agora_* MCP tools when the user asks marketplace questions. ' +
+      'You are running inside the Agora shell, a system-manager TUI for OpenCode. ' +
+      'Prefer using the agora_* MCP tools when the user asks catalog questions. ' +
       'Be concise; output flows directly to a terminal.';
 
     let fullPrompt = `<system>\n${systemLine}`;
@@ -888,7 +887,7 @@ function printLetterHelp(style: Styler): void {
     '',
     '  /a  again     /b  browse    /d  doctor    /e  env',
     '  /f  fg        /g  search    /h  home       /i  init     /j  jobs',
-    '  /k  search    /l  last      /m  marketplace /n  news     /o  browse',
+    '  /k  search    /l  last      /m  catalog     /n  news     /o  browse',
     '  /p  preferences /q  quit   /s  settings /t  terminal',
     '  /u  use       /v  verbose   /w  watch     /x  export   /y  history',
     '  /z  doctor --fix',
@@ -909,7 +908,7 @@ function printHelp(style: Styler): void {
     '  !<cmd>        force bash (e.g. !ls -la)',
     '  ?<msg>        force chat (e.g. ?what is MCP)',
     '  /tui          open the full-screen TUI on Home',
-    '  /home /market /comm /news /settings  open the TUI on that page',
+    '  /home /catalog /comm /news /settings  open the TUI on that page',
     '  /menu         open the command-browser menu',
     '  /transcript   print last 20 transcript entries',
     '  /clear        clear screen',
@@ -934,7 +933,7 @@ function printHelp(style: Styler): void {
     style.dim('Agora commands (also available as /slash shortcuts):')
   ];
 
-  const groups = ['Marketplace', 'Setup', 'Library', 'Learn', 'Community'] as const;
+  const groups = ['Catalog', 'Setup', 'Library', 'Learn', 'Community'] as const;
   for (const g of groups) {
     const cmds = COMMANDS.filter((c) => c.group === g);
     lines.push(`  ${style.dim(g)}`);

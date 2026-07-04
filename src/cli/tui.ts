@@ -14,11 +14,12 @@ import type {
   Hotkey
 } from './pages/types.js';
 import { homePage } from './pages/home.js';
-import { marketplacePage } from './pages/marketplace.js';
+import { searchPage } from './pages/search.js';
 import { stackPage } from './pages/stack.js';
 import { newsPage } from './pages/news.js';
 import { settingsPage } from './pages/settings.js';
 import { acquirePage } from './pages/acquire.js';
+import { itemPage } from './pages/item.js';
 import { vlen, padRight, truncate } from './pages/helpers.js';
 import { keyHintBar, statusLine as statusLineComponent } from './pages/components.js';
 
@@ -29,18 +30,20 @@ const CUR_SHOW = '\x1b[?25h';
 const CLEAR = '\x1b[2J\x1b[H';
 const HOME_CUR = '\x1b[H';
 
-// `acquire` is deliberately NOT in PAGE_ORDER: it's a satellite page reached
-// via the `a` launch affordance from Stack/Marketplace (pre-seeded), not a
-// primary tab — so it never consumes a 1-5 shortcut or a tab slot (see
-// test/cli/tui-chrome.test.ts's "1-5" / five-tab assertions).
-const PAGE_ORDER: ReadonlyArray<PageId> = ['home', 'marketplace', 'stack', 'news', 'settings'];
+// `acquire` and `item` are deliberately NOT in PAGE_ORDER: both are satellite
+// pages reached via a launch affordance (the `a` hotkey from Stack/Search/
+// Item for Acquire; `Enter` on a Search result for Item) with the target
+// pre-seeded through module state, not primary tabs — so neither ever
+// consumes a 1-5 shortcut or a tab slot (see test/cli/tui-chrome.test.ts's
+// "1-5" / five-tab assertions).
+const PAGE_ORDER: ReadonlyArray<PageId> = ['home', 'search', 'stack', 'news', 'settings'];
 
 function getPage(id: PageId): Page {
   switch (id) {
     case 'home':
       return homePage;
-    case 'marketplace':
-      return marketplacePage;
+    case 'search':
+      return searchPage;
     case 'stack':
       return stackPage;
     case 'news':
@@ -49,6 +52,8 @@ function getPage(id: PageId): Page {
       return settingsPage;
     case 'acquire':
       return acquirePage;
+    case 'item':
+      return itemPage;
   }
 }
 

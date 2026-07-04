@@ -151,10 +151,10 @@ describe('Acquire page — RESOLVE → PLAN → GATE → APPLY', () => {
 
   test('esc returns to the page that launched Acquire (returnTo)', async () => {
     const ctx = makeCtx({ cwd: dir, fetcher: makeFetcher() });
-    seedAcquire({ id: 'mcp-filesystem', returnTo: 'marketplace' });
+    seedAcquire({ id: 'mcp-filesystem', returnTo: 'search' });
     await acquirePage.mount?.(ctx);
     const action = await acquirePage.handleKey(key('esc'), ctx);
-    expect(action).toEqual({ kind: 'switch', to: 'marketplace' });
+    expect(action).toEqual({ kind: 'switch', to: 'search' });
   });
 
   test('apply on a non-fail verdict calls the real acquire() write path and reports success', async () => {

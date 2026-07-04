@@ -3,8 +3,7 @@ import type { Dispatch, LetterDispatch, TuiPageId } from './types.js';
 export const TUI_SLASH_ALIASES: Record<string, TuiPageId | 'default'> = {
   '/tui': 'default',
   '/home': 'home',
-  '/market': 'marketplace',
-  '/marketplace': 'marketplace',
+  '/catalog': 'search',
   '/news': 'news',
   '/settings': 'settings'
 };
@@ -21,7 +20,7 @@ export const LETTER_SHORTCUTS: Record<string, LetterDispatch> = {
   '/j': { kind: 'meta', sub: 'jobs' },
   '/k': { kind: 'bash', cmd: 'agora search' },
   '/l': { kind: 'meta', sub: 'last' },
-  '/m': { kind: 'tui', page: 'marketplace' },
+  '/m': { kind: 'tui', page: 'search' },
   '/n': { kind: 'tui', page: 'news' },
   '/o': { kind: 'bash', cmd: 'agora browse' },
   '/p': { kind: 'bash', cmd: 'agora preferences' },

@@ -4,8 +4,20 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
-_Next (see [`ROADMAP.md`](./ROADMAP.md)): marketplace→search vocab rename · TUI-2/3 · P4 inference
-providers · P5 federated plaza._
+_Next (see [`ROADMAP.md`](./ROADMAP.md)): TUI-3 (Plaza · Home · Settings) · P4 inference providers ·
+P5 federated plaza._
+
+### TUI-2 — Search page + Item detail + marketplace→catalog rename
+- **Vocabulary rename** (the design brief bans "marketplace" in the UI): the TUI `PageId` `marketplace`
+  → `search` (`pages/marketplace.ts` → `pages/search.ts`), the CLI command group `Marketplace` →
+  `Catalog` (`commands-meta/marketplace.ts` → `catalog.ts`), the shell alias `/market`/`/marketplace`
+  → `/catalog`, and every remaining user-facing "marketplace" string (welcome banner, menu, `use`/
+  `completions` help, the bookmarks/`today` section header). Internal identifiers (`MarketplaceItem`,
+  `searchMarketplaceItems`, `src/marketplace.ts`) are unchanged — they have no user-facing surface.
+- **Search page** (`src/cli/pages/search.ts`) — wired to live `federatedSearch`: progressive per-source
+  results with honest per-source status and official-first `provenanceBadges` on each merged item.
+- **Item detail page** (`src/cli/pages/item.ts`) — resolves via `federatedFetchItem` + `scanItem` with
+  the `trustPanel` as centerpiece; `a` launches the Acquire flow pre-seeded. Hermetic tests (DI fetcher).
 
 ### TUI-1 — Acquire flow
 - **New `src/cli/pages/acquire.ts`** — the Acquire flow (RESOLVE → PLAN → GATE → APPLY) wired to the

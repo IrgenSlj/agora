@@ -148,9 +148,9 @@ describe('renderHeader active tab', () => {
         narrow: false
       });
       const plain = strip(row1);
-      // 'Market' is the marketplace page's navLabel; it must appear without brackets
-      expect(plain).not.toContain('[Market]');
-      expect(plain).toContain('Market');
+      // 'Search' is the search page's navLabel; it must appear without brackets
+      expect(plain).not.toContain('[Search]');
+      expect(plain).toContain('Search');
     });
 
     test(`header rows fit within width (${label})`, () => {

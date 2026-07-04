@@ -261,7 +261,7 @@ export function header(title: string, meta: string[], theme: Theme): string {
 
 export function usage(theme: Theme, version: string): string {
   const nameWidth = Math.max(...COMMANDS.map((c) => c.name.length));
-  const groups = ['Marketplace', 'Setup', 'Stack', 'Library', 'Learn'] as const;
+  const groups = ['Catalog', 'Setup', 'Stack', 'Library', 'Learn'] as const;
 
   const lines: string[] = [
     `${theme.accent('agora')}${theme.dim(` · the system manager for your agentic stack · v${version}`)}`,

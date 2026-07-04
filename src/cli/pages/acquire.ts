@@ -1,7 +1,7 @@
 // src/cli/pages/acquire.ts
 // The Acquire flow (TUI-1): RESOLVE → PLAN → GATE → APPLY, over the real
 // `acquire()` gateway (src/acquire.ts). A satellite page — launched via the
-// `a` hotkey from Stack/Marketplace (pre-seeded with an item id), not a
+// `a` hotkey from Stack/Search/Item (pre-seeded with an item id), not a
 // primary tab (see tui.ts PAGE_ORDER comment).
 //
 // Honest by construction: a dry-run `acquire()` call gets us RESOLVE + PLAN +
@@ -23,18 +23,18 @@ import {
   trustPanel,
   planDiff,
   type Verdict,
-  type Provenance,
-  type HealthTone
+  type Provenance
 } from './components.js';
 import { liftStyler } from '../theme.js';
 import type { Theme } from '../theme.js';
 import { acquire, writeLocationFor, type AcquireResult, type AcquireInput } from '../../acquire.js';
 import type { FederatedItem } from '../../federation/types.js';
-import { observedCapabilities, type ScanResult } from '../../scan.js';
+import type { ScanResult } from '../../scan.js';
 import type { MarketplaceItem } from '../../marketplace.js';
 import type { AgentToolId, ToolConfigLocation } from '../../stack/types.js';
 import { detectTools } from '../../stack/registry.js';
 import { detectAgoraDataDir } from '../../state.js';
+import { buildPermRows, buildDrift, scanVerdict } from './helpers.js';
 
 const TOOLS: AgentToolId[] = ['opencode', 'claude-code', 'cursor', 'windsurf'];
 
@@ -80,7 +80,7 @@ const state: AcquireState = {
 
 /**
  * Seed the Acquire flow before switching to it — the launch affordance from
- * Stack/Marketplace calls this, then returns `{ kind: 'switch', to: 'acquire' }`.
+ * Stack/Search/Item calls this, then returns `{ kind: 'switch', to: 'acquire' }`.
  * `mount()` reads and clears the seed (module state is the only way to pass
  * data across a page switch — `PageContext` carries no payload).
  */
@@ -122,12 +122,6 @@ function pickDefaultTool(ctx: PageContext): AgentToolId {
   }
 }
 
-function verdictOf(scan: ScanResult): Verdict {
-  if (scan.summary.fail > 0) return 'fail';
-  if (scan.summary.warn > 0) return 'warn';
-  return 'pass';
-}
-
 /** Every item resolved through `acquire()` is structurally a FederatedItem
  * when federation supplied it; the plain bundled-catalog fallback has no
  * `provenance` at all — in which case the honest label is `local` (it came
@@ -136,50 +130,6 @@ function provenanceOf(item: MarketplaceItem): Provenance[] {
   const fed = item as Partial<FederatedItem>;
   if (fed.provenance && fed.provenance.length > 0) return fed.provenance.map((p) => p.source);
   return ['local'];
-}
-
-const PERM_LABEL: Record<'fs' | 'net' | 'exec', 'fs' | 'net' | 'proc'> = {
-  fs: 'fs',
-  net: 'net',
-  exec: 'proc'
-};
-
-interface PermRow {
-  kind: 'fs' | 'net' | 'proc';
-  tone: HealthTone;
-  declared: string;
-  observed?: string;
-}
-
-/** Declared (item.permissions) vs observed (tool-schema heuristics) — the
- * same categories `checkObservedPermissions` computes for the scan, reused
- * directly rather than re-parsing that check's free-text message. */
-function buildPermRows(item: MarketplaceItem, tools: FederatedItem['tools']): PermRow[] {
-  const perms = item.kind === 'package' ? item.permissions : undefined;
-  const observed = observedCapabilities(tools ?? []);
-  const rows: PermRow[] = [];
-  (['fs', 'net', 'exec'] as const).forEach((cat) => {
-    const declaredList = perms?.[cat];
-    const isObserved = observed.has(cat);
-    if (!declaredList?.length && !isObserved) return;
-    const tone: HealthTone = !declaredList?.length && isObserved ? 'warning' : 'success';
-    rows.push({
-      kind: PERM_LABEL[cat],
-      tone,
-      declared: declaredList?.length ? declaredList.join(', ') : '(not declared)',
-      observed: isObserved ? 'observed in tool schemas' : undefined
-    });
-  });
-  if (rows.length === 0) {
-    rows.push({ kind: 'fs', tone: 'success', declared: 'no fs/net/exec signal declared or observed' });
-  }
-  return rows;
-}
-
-function buildDrift(scan: ScanResult): { changed: boolean; baseline: string } {
-  const check = scan.checks.find((c) => c.name === 'description_drift');
-  if (!check) return { changed: false, baseline: 'no baseline recorded yet' };
-  return { changed: check.status !== 'pass', baseline: 'approved baseline' };
 }
 
 interface PlanSection {
@@ -264,14 +214,14 @@ function gateActionFor(result: AcquireResult): PageAction {
   if (!result.scan) {
     return { kind: 'plan', summary: result.reason ?? result.plan?.reason ?? 'not installable' };
   }
-  const v = verdictOf(result.scan);
+  const v = scanVerdict(result.scan);
   const { pass, warn, fail } = result.scan.summary;
   return { kind: 'gate', verdict: v, summary: `${pass} pass · ${warn} warn · ${fail} fail` };
 }
 
 function canApply(): boolean {
   if (!state.result || !state.result.scan || state.applying || state.applyResult) return false;
-  return verdictOf(state.result.scan) !== 'fail';
+  return scanVerdict(state.result.scan) !== 'fail';
 }
 
 export const acquirePage: Page = {
@@ -424,7 +374,7 @@ export const acquirePage: Page = {
 
     // ── GATE ─────────────────────────────────────────────────────────────────
     const scan = result.scan;
-    const verdict = verdictOf(scan);
+    const verdict = scanVerdict(scan);
     body.push(' ' + rule(width - 2, 'Gate', theme));
     const banner = verdictBanner({
       verdict,
@@ -567,7 +517,7 @@ export const acquirePage: Page = {
       }
       case 'y': {
         if (!canApply()) return { kind: 'none' };
-        const verdict = verdictOf(state.result!.scan!);
+        const verdict = scanVerdict(state.result!.scan!);
         const applied = await runApply(ctx, verdict === 'warn');
         if (applied.status === 'installed') {
           return { kind: 'status', message: 'Installed ' + (applied.item?.name ?? state.target) };
