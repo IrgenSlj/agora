@@ -3,7 +3,7 @@
  * No real spawns — probe=false only. Uses temp dirs with fixture configs.
  */
 import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -31,7 +31,6 @@ const passthroughStyle = {
 };
 
 function makeCtx(cwd: string, home: string, env?: Record<string, string>): PageContext {
-  let repaintCalled = false;
   const ctx: PageContext = {
     io: {
       cwd,
@@ -49,9 +48,7 @@ function makeCtx(cwd: string, home: string, env?: Record<string, string>): PageC
       cwd,
       unread: { news: 0 }
     },
-    repaint: () => {
-      repaintCalled = true;
-    }
+    repaint: () => {}
   };
   return ctx;
 }

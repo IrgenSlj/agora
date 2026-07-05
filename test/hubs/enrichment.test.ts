@@ -105,7 +105,6 @@ describe('getEnrichment() / setEnrichment()', () => {
 
 describe('fetchRepoMetadata()', () => {
   const README_CONTENT = '# My Repo\n\nThis is the readme.';
-  const README_B64 = Buffer.from(README_CONTENT).toString('base64');
 
   function makeMetaFetcher(sha: string, readmeContent: string): FetchLike {
     return async (url: string | URL, _init?: RequestInit) => {

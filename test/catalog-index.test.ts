@@ -130,7 +130,7 @@ describe('tokenizeQuery', () => {
     const result = tokenizeQuery('pg database');
     const counts = new Map<string, number>();
     for (const t of result) counts.set(t, (counts.get(t) ?? 0) + 1);
-    for (const [term, count] of counts) {
+    for (const [, count] of counts) {
       expect(count).toBe(1);
     }
   });

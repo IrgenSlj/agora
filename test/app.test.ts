@@ -88,7 +88,7 @@ describe('parseArgs', () => {
 describe('agora init --dry-run', () => {
   test('does not crash and exits 0', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-init-test-'));
-    const { io, stdout, stderr } = createIo(dir);
+    const { io, stderr } = createIo(dir);
     try {
       const code = await runCli(['init', '--dry-run'], io);
       expect(code).toBe(0);

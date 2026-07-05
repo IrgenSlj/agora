@@ -2,7 +2,7 @@
  * Tests for `agora sync` — safety-critical coverage.
  */
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runCli } from '../../src/cli/app';
@@ -38,15 +38,6 @@ function createIo(cwd: string, home: string, extraEnv?: Record<string, string | 
 
 function writeManifestToml(cwd: string, content: string): void {
   writeFileSync(join(cwd, 'agora.toml'), content);
-}
-
-function simpleManifest(): StackManifest {
-  return {
-    mcp: {
-      postgres: { command: ['npx', '@mcp/postgres'] },
-      github: { url: 'https://mcp.github.com/sse' }
-    }
-  };
 }
 
 // ── Preservation tests ────────────────────────────────────────────────────────

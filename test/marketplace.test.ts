@@ -1006,9 +1006,8 @@ describe('trendScore', () => {
 
   test('invalid/garbage createdAt → finite score, no throw', () => {
     const bad = makePkg('bad-date', 500, 'not-a-date');
-    let score: number;
     expect(() => {
-      score = trendScore(bad, NOW);
+      trendScore(bad, NOW);
     }).not.toThrow();
     expect(Number.isFinite(trendScore(bad, NOW))).toBe(true);
   });

@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 import { loadSettings, writeSettings, DEFAULT_SETTINGS } from '../src/settings.js';
-import { existsSync, readFileSync, unlinkSync, rmdirSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';

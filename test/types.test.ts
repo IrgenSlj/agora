@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'bun:test';
-import type { Package, Workflow, Discussion, Tutorial, Review, Profile } from '../src/types';
+import type { Package, Workflow, Discussion, Tutorial, Review } from '../src/types';
 import { samplePackages, sampleWorkflows, sampleDiscussions, sampleTutorials } from '../src/data';
 
 describe('TypeScript Types', () => {

@@ -3,7 +3,7 @@
  * Kept fully offline — trending uses in-process sample data.
  */
 import { describe, expect, test, beforeEach } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 

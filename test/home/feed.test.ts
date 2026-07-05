@@ -2,7 +2,7 @@
  * Tests for src/home/feed.ts — pure-function coverage only.
  */
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -13,7 +13,6 @@ import {
   getHotRepos,
   computeSinceLastSeen
 } from '../../src/home/feed';
-import type { Opportunity } from '../../src/home/feed';
 import { writeCache } from '../../src/news/cache';
 import type { NewsItem } from '../../src/news/types';
 import type { ConfiguredServer } from '../../src/stack/types';
