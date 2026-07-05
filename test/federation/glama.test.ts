@@ -73,7 +73,11 @@ describe('glamaSource.search() — genuine live-captured list shape (2026-07-04)
 
   test('defensive: a differently-shaped response degrades to no matches, never to "undefined/undefined" ids', async () => {
     const officialShaped = loadFixture('official-search-postgres.json');
-    const items = await glamaSource.search('postgres', {}, { fetcher: makeFetcher(officialShaped) });
+    const items = await glamaSource.search(
+      'postgres',
+      {},
+      { fetcher: makeFetcher(officialShaped) }
+    );
     expect(items).toEqual([]);
   });
 });
@@ -106,7 +110,9 @@ describe('glamaSource.fetchItem()', () => {
   });
 
   test('never throws — returns null when the fetcher throws', async () => {
-    const item = await glamaSource.fetchItem('vallaksa/postgresql-mcp', { fetcher: throwingFetcher() });
+    const item = await glamaSource.fetchItem('vallaksa/postgresql-mcp', {
+      fetcher: throwingFetcher()
+    });
     expect(item).toBeNull();
   });
 });

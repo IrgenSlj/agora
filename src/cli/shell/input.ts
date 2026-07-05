@@ -38,11 +38,36 @@ export const LETTER_SHORTCUTS: Record<string, LetterDispatch> = {
 const SHELL_BUILTINS = new Set(['cd', 'export', 'alias', 'source', 'unset', 'umask', 'exec']);
 
 const QUESTION_STARTERS = new Set([
-  'what', 'why', 'how', 'which', 'when', 'where', 'who', 'whose',
-  'should', 'shall', 'can', 'could', 'would', 'will',
-  'do', 'does', 'did', 'is', 'are', 'am', 'was', 'were',
-  'tell', 'explain', 'describe',
-  'help', 'hi', 'hello', 'hey', 'thanks'
+  'what',
+  'why',
+  'how',
+  'which',
+  'when',
+  'where',
+  'who',
+  'whose',
+  'should',
+  'shall',
+  'can',
+  'could',
+  'would',
+  'will',
+  'do',
+  'does',
+  'did',
+  'is',
+  'are',
+  'am',
+  'was',
+  'were',
+  'tell',
+  'explain',
+  'describe',
+  'help',
+  'hi',
+  'hello',
+  'hey',
+  'thanks'
 ]);
 
 const ENV_VAR_RE = /^[A-Za-z_][A-Za-z0-9_]*=/;
@@ -121,7 +146,11 @@ export function classifyInput(line: string, isExecutable: (name: string) => bool
 
   const letterDisp = LETTER_SHORTCUTS[trimmed];
   if (letterDisp) {
-    if (letterDisp.kind === 'meta') return { kind: 'meta', sub: letterDisp.sub as Dispatch extends { kind: 'meta' } ? Dispatch['sub'] : never };
+    if (letterDisp.kind === 'meta')
+      return {
+        kind: 'meta',
+        sub: letterDisp.sub as Dispatch extends { kind: 'meta' } ? Dispatch['sub'] : never
+      };
     if (letterDisp.kind === 'tui') return { kind: 'tui', page: letterDisp.page };
     if (letterDisp.kind === 'bash') return letterDisp;
   }

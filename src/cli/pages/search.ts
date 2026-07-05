@@ -27,7 +27,12 @@ import { fmtCount, scrollbar } from './helpers.js';
 import { seedAcquire } from './acquire.js';
 import { seedItem } from './item.js';
 import { federatedSearch } from '../../federation/index.js';
-import type { FederatedItem, FederationEnv, SourceId, SourceStatus } from '../../federation/types.js';
+import type {
+  FederatedItem,
+  FederationEnv,
+  SourceId,
+  SourceStatus
+} from '../../federation/types.js';
 import type { MarketplaceItem } from '../../marketplace.js';
 import {
   saveItemToState,
@@ -41,7 +46,15 @@ import type { Theme } from '../theme.js';
 type SortKey = 'installs' | 'stars' | 'name';
 type ProvFilter = 'all' | SourceId;
 
-const PROV_ORDER: ProvFilter[] = ['all', 'official', 'smithery', 'glama', 'github', 'huggingface', 'local'];
+const PROV_ORDER: ProvFilter[] = [
+  'all',
+  'official',
+  'smithery',
+  'glama',
+  'github',
+  'huggingface',
+  'local'
+];
 
 interface SearchState {
   query: string;
@@ -219,7 +232,9 @@ export const searchPage: Page = {
     // spinner: "ok N" / "unreachable" / "offline" per source) ──────────────
     if (state.loading) {
       state.tick++;
-      lines.push(' ' + spinnerFrame(state.tick, theme) + '  ' + theme.dim('searching the federation…'));
+      lines.push(
+        ' ' + spinnerFrame(state.tick, theme) + '  ' + theme.dim('searching the federation…')
+      );
     } else if (state.statuses.length > 0) {
       lines.push(' ' + state.statuses.map((s) => sourceStatusChip(s, theme)).join('   '));
     } else if (state.error) {

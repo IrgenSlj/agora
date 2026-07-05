@@ -73,10 +73,7 @@ export async function requestJson<T>(
   return response.json() as Promise<T>;
 }
 
-export async function requestNullable<T>(
-  options: SourceOptions,
-  path: string
-): Promise<T | null> {
+export async function requestNullable<T>(options: SourceOptions, path: string): Promise<T | null> {
   const response = await fetchWithTimeout(options, buildUrl(options, path));
   if (response.status === 404) return null;
   if (!response.ok) {
@@ -158,11 +155,13 @@ function parseTags(tags: unknown): string[] {
 }
 
 function parseTutorialSteps(steps: unknown): TutorialStep[] {
-  if (Array.isArray(steps)) return steps.map(normalizeTutorialStep).filter(Boolean) as TutorialStep[];
+  if (Array.isArray(steps))
+    return steps.map(normalizeTutorialStep).filter(Boolean) as TutorialStep[];
   if (!steps) return [];
   try {
     const parsed = JSON.parse(steps as string);
-    if (Array.isArray(parsed)) return parsed.map(normalizeTutorialStep).filter(Boolean) as TutorialStep[];
+    if (Array.isArray(parsed))
+      return parsed.map(normalizeTutorialStep).filter(Boolean) as TutorialStep[];
   } catch {
     // Fall back to plain text step.
   }
@@ -172,7 +171,8 @@ function parseTutorialSteps(steps: unknown): TutorialStep[] {
 function normalizeTutorialStep(step: unknown): TutorialStep | null {
   if (!step || typeof step !== 'object') return null;
   const candidate = step as Partial<TutorialStep>;
-  const title = typeof candidate.title === 'string' && candidate.title.trim() ? candidate.title : 'Step';
+  const title =
+    typeof candidate.title === 'string' && candidate.title.trim() ? candidate.title : 'Step';
   const content = typeof candidate.content === 'string' ? candidate.content : '';
   const code = typeof candidate.code === 'string' && candidate.code ? candidate.code : undefined;
   if (!content) return null;
@@ -194,7 +194,7 @@ export function mapPackage(pkg: Record<string, unknown>): PackageMarketplaceItem
     installs: Number(pkg.installs || 0),
     repository: (pkg.repository as string) || undefined,
     npmPackage: (pkg.npmPackage || pkg.npm_package) as string | undefined,
-    createdAt: (pkg.createdAt || pkg.created_at) as string || '',
+    createdAt: ((pkg.createdAt || pkg.created_at) as string) || '',
     kind: 'package'
   };
 }
@@ -210,7 +210,7 @@ export function mapWorkflow(workflow: Record<string, unknown>): WorkflowMarketpl
     tags: parseTags(workflow.tags),
     stars: Number(workflow.stars || 0),
     forks: Number(workflow.forks || 0),
-    createdAt: (workflow.createdAt || workflow.created_at) as string || '',
+    createdAt: ((workflow.createdAt || workflow.created_at) as string) || '',
     category: 'workflow',
     installs: Number(workflow.forks || 0),
     kind: 'workflow'
@@ -226,17 +226,17 @@ export function mapDiscussion(discussion: Record<string, unknown>): Discussion {
     category: normalizeDiscussionCategory(discussion.category as string | undefined),
     replies: Number(discussion.replies ?? discussion.reply_count ?? 0),
     stars: Number(discussion.stars || 0),
-    createdAt: (discussion.createdAt || discussion.created_at) as string || ''
+    createdAt: ((discussion.createdAt || discussion.created_at) as string) || ''
   };
 }
 
 export function mapTutorial(tutorial: Record<string, unknown>): Tutorial {
-  const level = normalizeTutorialLevel(tutorial.level as string || 'beginner');
+  const level = normalizeTutorialLevel((tutorial.level as string) || 'beginner');
   return {
     id: tutorial.id as string,
     title: tutorial.title as string,
     description: (tutorial.description as string) || '',
-    level: level === 'all' ? 'beginner' : level as 'beginner' | 'intermediate' | 'advanced',
+    level: level === 'all' ? 'beginner' : (level as 'beginner' | 'intermediate' | 'advanced'),
     duration: (tutorial.duration as string) || '',
     steps: parseTutorialSteps(tutorial.steps)
   };

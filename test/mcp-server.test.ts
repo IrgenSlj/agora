@@ -237,7 +237,9 @@ describe('agora_plan', () => {
   test('diffs agora.toml against a real (empty) opencode config', async () => {
     const { root, proj, home } = makePlanEnv();
     try {
-      const manifest: StackManifest = { mcp: { fooserver: { command: ['npx', '-y', 'some-mcp'] } } };
+      const manifest: StackManifest = {
+        mcp: { fooserver: { command: ['npx', '-y', 'some-mcp'] } }
+      };
       writeManifest(manifestPath({ cwd: proj }), manifest);
 
       const { client } = await createTestClient({ stack: { cwd: proj, env: { HOME: home } } });

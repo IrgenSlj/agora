@@ -33,5 +33,5 @@ export const COMMANDS: CommandMeta[] = [
       'agora tutorial tut-mcp-basics 2',
       'agora tutorial tut-mcp-basics --json'
     ]
-  },
+  }
 ];

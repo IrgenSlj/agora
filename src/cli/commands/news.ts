@@ -5,13 +5,7 @@ import { hnSource } from '../../news/sources/hn.js';
 import { githubTrendingSource } from '../../news/sources/github-trending.js';
 import { arxivSource } from '../../news/sources/arxiv.js';
 import { formatNumber } from '../../format.js';
-import {
-  stringFlag,
-  numberFlag,
-  writeLine,
-  writeJson,
-  detectDataDir
-} from '../helpers.js';
+import { stringFlag, numberFlag, writeLine, writeJson, detectDataDir } from '../helpers.js';
 import { header } from '../format.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';

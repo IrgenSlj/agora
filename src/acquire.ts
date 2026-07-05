@@ -11,11 +11,7 @@ import { scanItem, type ScanOptions, type ScanResult } from './scan.js';
 import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js';
 import { getAdapter } from './stack/registry.js';
 import { manifestPath, readManifest, writeManifest, type StackManifest } from './stack/manifest.js';
-import {
-  capabilityKey,
-  descriptionDigest,
-  readCapabilityCache
-} from './stack/capability-cache.js';
+import { capabilityKey, descriptionDigest, readCapabilityCache } from './stack/capability-cache.js';
 import type { AgentToolId, DesiredServer, StackEnv, ToolConfigLocation } from './stack/types.js';
 import { federatedFetchItem } from './federation/index.js';
 import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
@@ -99,12 +95,9 @@ async function findRequestedItem(input: AcquireInput): Promise<ResolvedItem | nu
     // by contract; the direct bundled lookup below is kept as a defensive
     // fallback so a stubbed-out or offline federation dependency never
     // regresses plain id resolution.
-    let federated: FederatedItem | null = null;
-    try {
-      federated = await fetchFederated(target, federationEnvFrom(input), { source: input.source });
-    } catch {
-      federated = null;
-    }
+    const federated = await fetchFederated(target, federationEnvFrom(input), {
+      source: input.source
+    }).catch(() => null);
     if (federated) return { item: federated, federated };
 
     const exact = find(target);
@@ -143,7 +136,10 @@ function resolveConfigPath(path: string, cwd?: string): string {
  * before any write happens (a dry run never reaches the code path that
  * computes this). Read-only: only detects/resolves a path, never touches disk.
  */
-export function writeLocationFor(input: AcquireInput, tool: AgentToolId): ToolConfigLocation | null {
+export function writeLocationFor(
+  input: AcquireInput,
+  tool: AgentToolId
+): ToolConfigLocation | null {
   if (input.configPath) {
     return { path: resolveConfigPath(input.configPath, input.cwd), scope: 'project' };
   }
@@ -334,7 +330,9 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     // schemas (the freshest baseline for exactly what's being installed)
     // over whatever was previously cached/recorded.
     const federatedDigest =
-      federated?.tools && federated.tools.length > 0 ? descriptionDigest(federated.tools) : undefined;
+      federated?.tools && federated.tools.length > 0
+        ? descriptionDigest(federated.tools)
+        : undefined;
     const digestBaseline = federatedDigest ?? previousDigest;
     manifest.mcp[desired.name] = manifestEntryFor(desired, digestBaseline);
     writeManifest(mPath, manifest);

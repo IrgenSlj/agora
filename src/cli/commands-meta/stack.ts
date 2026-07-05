@@ -141,7 +141,7 @@ export const COMMANDS: CommandMeta[] = [
       'pass --write --yes to apply (equivalent to `agora apply`). --prune removes servers/instructions ' +
       'not listed in the manifest; without --prune, unmanaged entries are left intact. --scope controls ' +
       'whether project or user config files are targeted (default project). --from <git-url|gist|path> ' +
-      'clones someone else\'s profile: it fetches agora.toml plus any referenced instruction files, then ' +
+      "clones someone else's profile: it fetches agora.toml plus any referenced instruction files, then " +
       'runs the scan gate (the same `scanItem` trust gate used by `agora acquire`) on every mcp/instruction ' +
       'entry BEFORE writing anything — a hard fail refuses the whole sync (exit 3). ' +
       'Exit codes: 0 ok, 1 error, 3 scan-gate blocked (--from only). --write --yes always returns 0 on ' +
@@ -186,27 +186,30 @@ export const COMMANDS: CommandMeta[] = [
     name: 'plan',
     group: 'Stack',
     summary: 'Read-only diff of agora.toml against your real MCP config and instruction files',
-    usage:
-      'agora plan [--from <url|path>] [--tool <id>] [--scope project|user] [--prune] [--json]',
+    usage: 'agora plan [--from <url|path>] [--tool <id>] [--scope project|user] [--prune] [--json]',
     details:
       'Computes what `agora apply` (or `agora sync --write --yes`) WOULD change — both MCP servers ' +
       'and managed instruction artifacts (CLAUDE.md, AGENTS.md, .cursor/rules, OpenCode instructions) — ' +
       'across every detected agent tool, without writing anything (Terraform-style plan/apply split, P3). ' +
-      '--from <git-url|gist|path> previews someone else\'s profile: it fetches agora.toml plus any ' +
+      "--from <git-url|gist|path> previews someone else's profile: it fetches agora.toml plus any " +
       'referenced instruction files and runs the scan gate on every entry first — a hard fail exits 3 ' +
       'before any diff is even computed. Exit codes: 0 no changes pending, 2 changes pending (run ' +
       '`agora apply`), 1 error, 3 scan-gate blocked (--from only).',
     flags: [
       {
         flag: '--from',
-        description: 'Preview a shared profile from a URL, gist, or file path instead of ./agora.toml'
+        description:
+          'Preview a shared profile from a URL, gist, or file path instead of ./agora.toml'
       },
       {
         flag: '--tool',
         description: 'Target a single tool: opencode, claude-code, cursor, or windsurf'
       },
       { flag: '--scope', description: 'Config scope to diff: project (default) or user' },
-      { flag: '--prune', description: 'Include removal of unmanaged servers/instructions in the diff' },
+      {
+        flag: '--prune',
+        description: 'Include removal of unmanaged servers/instructions in the diff'
+      },
       { flag: '--json', description: 'Output { mode: "plan", tools, instructions } as JSON' }
     ],
     examples: [
@@ -222,10 +225,10 @@ export const COMMANDS: CommandMeta[] = [
     usage:
       'agora apply [--from <url|path>] [--tool <id>] [--scope project|user] [--prune] [--json]',
     details:
-      'Reconciles agora.toml\'s MCP servers and managed instruction artifacts into the real config ' +
+      "Reconciles agora.toml's MCP servers and managed instruction artifacts into the real config " +
       'files/instruction files of every detected agent tool — the write half of the plan/apply split ' +
       '(P3). Surgical, atomic writes only: every adapter preserves unrelated keys/files exactly as ' +
-      'writeServers already does. --from <git-url|gist|path> applies someone else\'s profile directly: ' +
+      "writeServers already does. --from <git-url|gist|path> applies someone else's profile directly: " +
       'it fetches agora.toml plus any referenced instruction files and runs the scan gate on every entry ' +
       'first — a hard fail refuses to write anything (exit 3). Exit codes: 0 applied, 1 error, ' +
       '3 scan-gate blocked (--from only).',
@@ -239,7 +242,10 @@ export const COMMANDS: CommandMeta[] = [
         description: 'Target a single tool: opencode, claude-code, cursor, or windsurf'
       },
       { flag: '--scope', description: 'Config scope to write: project (default) or user' },
-      { flag: '--prune', description: 'Remove servers/instructions from configs that are not in the manifest' },
+      {
+        flag: '--prune',
+        description: 'Remove servers/instructions from configs that are not in the manifest'
+      },
       { flag: '--json', description: 'Output { mode: "applied", tools, instructions } as JSON' }
     ],
     examples: [
@@ -255,7 +261,7 @@ export const COMMANDS: CommandMeta[] = [
     usage: 'agora integrate <harness>|--all [--scope project|user] [--dry-run] [--json]',
     details:
       "Dogfoods agora's own stack manager: writes one `agora` MCP server entry — the zero-install " +
-      'npx launcher `npx -y agora-hub mcp` — into the target harness\'s config using that harness\'s ' +
+      "npx launcher `npx -y agora-hub mcp` — into the target harness's config using that harness's " +
       'ToolAdapter.writeServers, the same surgical/atomic write path `agora sync` uses (every other ' +
       'key in the config file is preserved untouched). Defaults to user scope (unlike sync/plan/apply) ' +
       "since the point is for agora's tools to be available to that harness everywhere, not just the " +
@@ -264,7 +270,11 @@ export const COMMANDS: CommandMeta[] = [
       'one. --dry-run previews what would be written without writing anything. Exit codes: 0 ok, ' +
       '1 error (a harness config could not be written).',
     flags: [
-      { flag: '--all', description: 'Integrate every detected harness (or every supported harness if none are detected)' },
+      {
+        flag: '--all',
+        description:
+          'Integrate every detected harness (or every supported harness if none are detected)'
+      },
       {
         flag: '--scope',
         description: 'Config scope to write: user (default) or project'
@@ -278,5 +288,5 @@ export const COMMANDS: CommandMeta[] = [
       'agora integrate cursor --dry-run',
       'agora integrate --all --json'
     ]
-  },
+  }
 ];

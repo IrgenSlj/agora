@@ -239,7 +239,7 @@ export function welcome(color: boolean, trueColor: boolean, theme: Theme, versio
   const box = renderBox(
     'Welcome to Agora',
     [
-      "the system manager for your agentic stack - type a command, bash or chat:",
+      'the system manager for your agentic stack - type a command, bash or chat:',
       `v${version} · run \`agora help\` to get started`
     ],
     { color, trueColor }

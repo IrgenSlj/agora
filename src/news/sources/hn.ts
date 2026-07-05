@@ -5,10 +5,7 @@ import { agoraUserAgent } from '../types.js';
 export type Fetcher = (url: string | URL, init?: RequestInit) => Promise<Response>;
 
 export interface SourceAdapter {
-  fetch(opts: {
-    fetcher?: Fetcher;
-    signal?: AbortSignal;
-  }): Promise<NewsItem[]>;
+  fetch(opts: { fetcher?: Fetcher; signal?: AbortSignal }): Promise<NewsItem[]>;
 }
 
 interface HnHit {
@@ -31,10 +28,14 @@ export const hnSource: SourceAdapter = {
     const url =
       'https://hn.algolia.com/api/v1/search?tags=front_page&numericFilters=points>50&hitsPerPage=30';
 
-    const res = await fetchWithRetry(url, {
-      signal: opts.signal,
-      headers: { 'User-Agent': agoraUserAgent }
-    }, { maxRetries: 2, fetcher });
+    const res = await fetchWithRetry(
+      url,
+      {
+        signal: opts.signal,
+        headers: { 'User-Agent': agoraUserAgent }
+      },
+      { maxRetries: 2, fetcher }
+    );
     if (!res.ok) throw new Error(`HN API returned ${res.status}`);
     const data = (await res.json()) as HnResponse;
 

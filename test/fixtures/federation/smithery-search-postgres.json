@@ -1,1 +1,59 @@
-{"servers":[{"id":"a21f1117-31e4-4147-8d30-a5f0d21075d4","qualifiedName":"neon","namespace":"neon","slug":"","displayName":"Neon","description":"Manage PostgreSQL projects, branches, and databases with integrated administrative controls. Execute SQL queries, perform safe schema migrations using temporary branches, and optimize performance through automated query tuning. Provision integrated services like managed authentication and HTTP-based data access to accelerate development workflows.","iconUrl":"https://api.smithery.ai/servers/neon/icon","verified":true,"useCount":1024,"remote":true,"isDeployed":true,"createdAt":"2026-01-29T06:26:32.660Z","homepage":"https://smithery.ai/servers/neon","bySmithery":true,"owner":"org_01KPBXJTDN7ASH7MJ3958C05QY","score":0.061553030303030304},{"id":"a851c6a2-05f8-483c-b41d-4e97bdaf4779","qualifiedName":"prisma","namespace":"prisma","slug":"","displayName":"Prisma","description":"Database toolkit and ORM for TypeScript. Query schemas, explore data models, and manage database migrations.","iconUrl":"https://api.smithery.ai/servers/prisma/icon","verified":true,"useCount":2,"remote":true,"isDeployed":true,"createdAt":"2026-03-29T10:16:16.714Z","homepage":"https://prisma.io","bySmithery":true,"owner":"org_01KPBXJTDN7ASH7MJ3958C05QY","score":0.0608294930875576},{"id":"202c0135-882a-479c-beba-a63c60bed96a","qualifiedName":"thinair/data","namespace":"thinair","slug":"data","displayName":"ThinAir Data","description":"Connect AI assistants to PostgreSQL, MySQL, or SQL Server in 60 seconds. 24 dialect-aware tools — query, schema introspection, anomaly detection, query optimization. Read-only at three layers (firewall + transaction + rules engine).","iconUrl":"https://api.smithery.ai/servers/thinair/data/icon","verified":true,"useCount":131,"remote":true,"isDeployed":true,"createdAt":"2026-04-30T04:28:56.501Z","homepage":"https://data.thinair.co","bySmithery":false,"owner":"org_01KQE8QXG5Y1MM58EDG5BWHQGB","score":0.049516908212560384}],"pagination":{"currentPage":1,"pageSize":3,"totalPages":35,"totalCount":105}}
+{
+  "servers": [
+    {
+      "id": "a21f1117-31e4-4147-8d30-a5f0d21075d4",
+      "qualifiedName": "neon",
+      "namespace": "neon",
+      "slug": "",
+      "displayName": "Neon",
+      "description": "Manage PostgreSQL projects, branches, and databases with integrated administrative controls. Execute SQL queries, perform safe schema migrations using temporary branches, and optimize performance through automated query tuning. Provision integrated services like managed authentication and HTTP-based data access to accelerate development workflows.",
+      "iconUrl": "https://api.smithery.ai/servers/neon/icon",
+      "verified": true,
+      "useCount": 1024,
+      "remote": true,
+      "isDeployed": true,
+      "createdAt": "2026-01-29T06:26:32.660Z",
+      "homepage": "https://smithery.ai/servers/neon",
+      "bySmithery": true,
+      "owner": "org_01KPBXJTDN7ASH7MJ3958C05QY",
+      "score": 0.061553030303030304
+    },
+    {
+      "id": "a851c6a2-05f8-483c-b41d-4e97bdaf4779",
+      "qualifiedName": "prisma",
+      "namespace": "prisma",
+      "slug": "",
+      "displayName": "Prisma",
+      "description": "Database toolkit and ORM for TypeScript. Query schemas, explore data models, and manage database migrations.",
+      "iconUrl": "https://api.smithery.ai/servers/prisma/icon",
+      "verified": true,
+      "useCount": 2,
+      "remote": true,
+      "isDeployed": true,
+      "createdAt": "2026-03-29T10:16:16.714Z",
+      "homepage": "https://prisma.io",
+      "bySmithery": true,
+      "owner": "org_01KPBXJTDN7ASH7MJ3958C05QY",
+      "score": 0.0608294930875576
+    },
+    {
+      "id": "202c0135-882a-479c-beba-a63c60bed96a",
+      "qualifiedName": "thinair/data",
+      "namespace": "thinair",
+      "slug": "data",
+      "displayName": "ThinAir Data",
+      "description": "Connect AI assistants to PostgreSQL, MySQL, or SQL Server in 60 seconds. 24 dialect-aware tools — query, schema introspection, anomaly detection, query optimization. Read-only at three layers (firewall + transaction + rules engine).",
+      "iconUrl": "https://api.smithery.ai/servers/thinair/data/icon",
+      "verified": true,
+      "useCount": 131,
+      "remote": true,
+      "isDeployed": true,
+      "createdAt": "2026-04-30T04:28:56.501Z",
+      "homepage": "https://data.thinair.co",
+      "bySmithery": false,
+      "owner": "org_01KQE8QXG5Y1MM58EDG5BWHQGB",
+      "score": 0.049516908212560384
+    }
+  ],
+  "pagination": { "currentPage": 1, "pageSize": 3, "totalPages": 35, "totalCount": 105 }
+}

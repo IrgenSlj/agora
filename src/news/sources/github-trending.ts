@@ -8,10 +8,7 @@ import { agoraUserAgent } from '../types.js';
 export type Fetcher = (url: string | URL, init?: RequestInit) => Promise<Response>;
 
 export interface SourceAdapter {
-  fetch(opts: {
-    fetcher?: Fetcher;
-    signal?: AbortSignal;
-  }): Promise<NewsItem[]>;
+  fetch(opts: { fetcher?: Fetcher; signal?: AbortSignal }): Promise<NewsItem[]>;
 }
 
 const LANGUAGES = ['typescript', 'python', 'go', 'rust'];
@@ -25,10 +22,14 @@ export const githubTrendingSource: SourceAdapter = {
     for (const lang of LANGUAGES) {
       try {
         const url = `https://github.com/trending/${lang}?since=daily`;
-        const res = await fetchWithRetry(url, {
-          signal: opts.signal,
-          headers: { 'User-Agent': agoraUserAgent }
-        }, { maxRetries: 2, fetcher });
+        const res = await fetchWithRetry(
+          url,
+          {
+            signal: opts.signal,
+            headers: { 'User-Agent': agoraUserAgent }
+          },
+          { maxRetries: 2, fetcher }
+        );
         if (!res.ok) continue;
         const html = await res.text();
         const items = parseTrendingHtml(html, lang, now);

@@ -41,8 +41,18 @@ describe('statusTriad — the one-glance trust line', () => {
 
 describe('verdictBanner — the one weighty element', () => {
   test('FAIL uses the ═ double rule; PASS/WARN use single ─', () => {
-    const fail = verdictBanner({ verdict: 'fail', headline: 'blocked', width: 40, theme: plain }).join('\n');
-    const pass = verdictBanner({ verdict: 'pass', headline: 'admitted', width: 40, theme: plain }).join('\n');
+    const fail = verdictBanner({
+      verdict: 'fail',
+      headline: 'blocked',
+      width: 40,
+      theme: plain
+    }).join('\n');
+    const pass = verdictBanner({
+      verdict: 'pass',
+      headline: 'admitted',
+      width: 40,
+      theme: plain
+    }).join('\n');
     expect(fail).toContain('═');
     expect(fail).not.toContain('─');
     expect(pass).toContain('─');
@@ -70,7 +80,9 @@ describe('verdictBanner — the one weighty element', () => {
     expect(warn).toContain('--accept-warnings');
   });
   test('ascii FAIL uses = for the double rule', () => {
-    const fail = verdictBanner({ verdict: 'fail', headline: 'x', width: 10, theme: ascii }).join('\n');
+    const fail = verdictBanner({ verdict: 'fail', headline: 'x', width: 10, theme: ascii }).join(
+      '\n'
+    );
     expect(fail).toContain('=');
   });
 });

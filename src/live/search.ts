@@ -1,9 +1,4 @@
-import type {
-  SourceResult,
-  SourceOptions,
-  SearchSourceOptions,
-  MarketplaceItem
-} from './types.js';
+import type { SourceResult, SourceOptions, SearchSourceOptions, MarketplaceItem } from './types.js';
 import {
   requestJson,
   requestNullable,
@@ -15,11 +10,7 @@ import {
   api,
   offline
 } from './internal.js';
-import {
-  searchMarketplaceItems,
-  findMarketplaceItem,
-  getTrendingItems
-} from '../marketplace.js';
+import { searchMarketplaceItems, findMarketplaceItem, getTrendingItems } from '../marketplace.js';
 
 /* ── API helpers ── */
 
@@ -37,18 +28,20 @@ async function searchApi(options: SearchSourceOptions): Promise<MarketplaceItem[
     const params = new URLSearchParams({ q: query, limit: String(limit) });
     if (isPackageCategory(category)) params.set('category', category);
     tasks.push(
-      requestJson<{ packages?: Record<string, unknown>[] }>(options, `/api/packages?${params}`).then(
-        (payload) => (payload.packages || []).map(mapPackage)
-      )
+      requestJson<{ packages?: Record<string, unknown>[] }>(
+        options,
+        `/api/packages?${params}`
+      ).then((payload) => (payload.packages || []).map(mapPackage))
     );
   }
 
   if (category === 'all' || category === 'workflow') {
     const params = new URLSearchParams({ q: query, limit: String(limit) });
     tasks.push(
-      requestJson<{ workflows?: Record<string, unknown>[] }>(options, `/api/workflows?${params}`).then(
-        (payload) => (payload.workflows || []).map(mapWorkflow)
-      )
+      requestJson<{ workflows?: Record<string, unknown>[] }>(
+        options,
+        `/api/workflows?${params}`
+      ).then((payload) => (payload.workflows || []).map(mapWorkflow))
     );
   }
 
@@ -64,7 +57,9 @@ async function searchApi(options: SearchSourceOptions): Promise<MarketplaceItem[
   return results.slice(0, limit);
 }
 
-async function findApi(options: SourceOptions & { id: string; type?: string }): Promise<MarketplaceItem | null> {
+async function findApi(
+  options: SourceOptions & { id: string; type?: string }
+): Promise<MarketplaceItem | null> {
   const type = options.type?.toLowerCase();
 
   if (type === 'package') {
@@ -96,13 +91,15 @@ async function findApi(options: SourceOptions & { id: string; type?: string }): 
   return workflow?.workflow ? mapWorkflow(workflow.workflow) : null;
 }
 
-async function trendingApi(options: SourceOptions & { category?: string; limit?: number }): Promise<MarketplaceItem[]> {
+async function trendingApi(
+  options: SourceOptions & { category?: string; limit?: number }
+): Promise<MarketplaceItem[]> {
   const category = normalizeCategory(options.category || 'all');
   const limit = normalizeLimit(options.limit) || 5;
-  const payload = await requestJson<{ packages?: Record<string, unknown>[]; workflows?: Record<string, unknown>[] }>(
-    options,
-    '/api/trending'
-  );
+  const payload = await requestJson<{
+    packages?: Record<string, unknown>[];
+    workflows?: Record<string, unknown>[];
+  }>(options, '/api/trending');
   const packages = (payload.packages || []).map(mapPackage);
   const workflows = (payload.workflows || []).map(mapWorkflow);
 

@@ -41,7 +41,11 @@ async function checkPackage(pkg: string, opts: OutdatedOptions): Promise<Outdate
   const now = opts.now ? opts.now() : new Date();
 
   try {
-    const res = await fetchWithRetry(url, { signal: AbortSignal.timeout(8000) }, { maxRetries: 2, fetcher });
+    const res = await fetchWithRetry(
+      url,
+      { signal: AbortSignal.timeout(8000) },
+      { maxRetries: 2, fetcher }
+    );
 
     if (res.status === 404) {
       return {

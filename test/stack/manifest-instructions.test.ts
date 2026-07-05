@@ -155,10 +155,7 @@ describe('hashContent', () => {
 
 describe('resolveInstructionContent', () => {
   test('inline source returns content directly', async () => {
-    const text = await resolveInstructionContent(
-      { source: 'inline', content: 'hello inline' },
-      {}
-    );
+    const text = await resolveInstructionContent({ source: 'inline', content: 'hello inline' }, {});
     expect(text).toBe('hello inline');
   });
 

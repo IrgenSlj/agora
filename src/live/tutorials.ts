@@ -21,7 +21,10 @@ function shouldUseApi(options: SourceOptions): boolean {
 }
 
 async function tutorialsApi(options: TutorialSourceOptions): Promise<Tutorial[]> {
-  const payload = await requestJson<{ tutorials?: Record<string, unknown>[] }>(options, '/api/tutorials');
+  const payload = await requestJson<{ tutorials?: Record<string, unknown>[] }>(
+    options,
+    '/api/tutorials'
+  );
   const query = (options.query || '').trim().toLowerCase();
   const level = normalizeTutorialLevel(options.level || 'all');
   const limit = normalizeLimit(options.limit);

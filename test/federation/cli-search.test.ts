@@ -118,31 +118,27 @@ describe('agora search --json — federated shape', () => {
   // per-source timeout ceiling (DEFAULT_TIMEOUT_MS = 5000) instead of
   // failing instantly. Headroom above that ceiling instead of racing bun's
   // default 5000ms.
-  test(
-    'offline fallback — a throwing fetcher still returns local results honestly',
-    async () => {
-      const dataDir = mkdtempSync(join(tmpdir(), 'agora-federation-cli-'));
-      try {
-        const throwingFetcher: FetchLike = async () => {
-          throw new Error('network down');
-        };
-        const { io, stdout, stderr } = createIo(throwingFetcher, dataDir);
+  test('offline fallback — a throwing fetcher still returns local results honestly', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'agora-federation-cli-'));
+    try {
+      const throwingFetcher: FetchLike = async () => {
+        throw new Error('network down');
+      };
+      const { io, stdout, stderr } = createIo(throwingFetcher, dataDir);
 
-        const code = await runCli(['search', 'github', '--json'], io);
-        const payload = JSON.parse(stdout.join(''));
+      const code = await runCli(['search', 'github', '--json'], io);
+      const payload = JSON.parse(stdout.join(''));
 
-        expect(code).toBe(0);
-        expect(payload.statuses.find((s: { source: string }) => s.source === 'official').state).toBe(
-          'unreachable'
-        );
-        expect(payload.items.some((i: { id: string }) => i.id === 'mcp-github')).toBe(true);
-        expect(stderr.join('')).toContain('official unreachable');
-      } finally {
-        rmSync(dataDir, { recursive: true, force: true });
-      }
-    },
-    10000
-  );
+      expect(code).toBe(0);
+      expect(payload.statuses.find((s: { source: string }) => s.source === 'official').state).toBe(
+        'unreachable'
+      );
+      expect(payload.items.some((i: { id: string }) => i.id === 'mcp-github')).toBe(true);
+      expect(stderr.join('')).toContain('official unreachable');
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  }, 10000);
 });
 
 describe('agora refresh', () => {

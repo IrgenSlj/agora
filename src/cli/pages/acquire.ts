@@ -161,7 +161,11 @@ function buildPlanSections(
     {
       harness: tool,
       file: plan.commands.length ? '(shell — no config file write)' : file,
-      changes: plan.commands.map((cmd) => ({ op: '+' as const, name: 'run', detail: truncate(cmd, width) }))
+      changes: plan.commands.map((cmd) => ({
+        op: '+' as const,
+        name: 'run',
+        detail: truncate(cmd, width)
+      }))
     }
   ];
 }
@@ -295,7 +299,10 @@ export const acquirePage: Page = {
       state.tick++;
       lines.push('');
       lines.push(
-        ' ' + spinnerFrame(state.tick, theme) + '  ' + theme.dim('Resolving ' + state.target + ' via federation…')
+        ' ' +
+          spinnerFrame(state.tick, theme) +
+          '  ' +
+          theme.dim('Resolving ' + state.target + ' via federation…')
       );
       return frame(lines, width, height);
     }
@@ -396,7 +403,9 @@ export const acquirePage: Page = {
         fail: scan.summary.fail,
         lines: scan.checks
           .filter((c) => c.status !== 'pass')
-          .map((c) => truncate(c.status.toUpperCase() + ' ' + c.label + ' — ' + c.message, width - 6))
+          .map((c) =>
+            truncate(c.status.toUpperCase() + ' ' + c.label + ' — ' + c.message, width - 6)
+          )
       },
       perms: buildPermRows(item, (item as Partial<FederatedItem>).tools),
       drift: buildDrift(scan),
@@ -425,7 +434,9 @@ export const acquirePage: Page = {
       if (applied.status === 'installed') {
         body.push(' ' + theme.success(theme.glyph('ok') + ' Installed ' + item.name));
         if (applied.written) {
-          body.push(' ' + kvRow('config', truncate(applied.written.configPath, width - 10), 8, theme));
+          body.push(
+            ' ' + kvRow('config', truncate(applied.written.configPath, width - 10), 8, theme)
+          );
         }
         for (const step of (applied.nextSteps ?? []).slice(0, 3)) {
           body.push(' ' + theme.dim('- ' + truncate(step, width - 4)));
@@ -456,7 +467,8 @@ export const acquirePage: Page = {
       theme.dim(' tool   ');
     if (verdict !== 'fail') {
       footerLine +=
-        theme.accent('y') + theme.dim(verdict === 'warn' ? ' accept warnings + apply   ' : ' apply   ');
+        theme.accent('y') +
+        theme.dim(verdict === 'warn' ? ' accept warnings + apply   ' : ' apply   ');
     }
     footerLine += theme.accent('Esc') + theme.dim(' back');
     const footer = [' ' + rule(width - 2, undefined, theme), footerLine];
@@ -522,7 +534,11 @@ export const acquirePage: Page = {
         if (applied.status === 'installed') {
           return { kind: 'status', message: 'Installed ' + (applied.item?.name ?? state.target) };
         }
-        return { kind: 'status', message: applied.reason ?? 'Apply did not complete', tone: 'error' };
+        return {
+          kind: 'status',
+          message: applied.reason ?? 'Apply did not complete',
+          tone: 'error'
+        };
       }
       case 'esc':
         return { kind: 'switch', to: state.returnTo };

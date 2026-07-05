@@ -1169,7 +1169,12 @@ describe('agora sync --from', () => {
   // unless a fetcher is injected — this hermetic stub keeps these tests
   // offline by answering that check with a clean "pass" for any package.
   const okNpmFetcher = async (_url: string) =>
-    ({ ok: true, status: 200, text: async () => '{}', json: async () => ({ version: '1.0.0' }) }) as Response;
+    ({
+      ok: true,
+      status: 200,
+      text: async () => '{}',
+      json: async () => ({ version: '1.0.0' })
+    }) as Response;
 
   test('--from <file path>: dry-run uses shared manifest, ignores missing local agora.toml', async () => {
     const cwd = makeTmp('agora-sync-from-file-');

@@ -22,7 +22,8 @@ function makeFetcher(searchBody: unknown, detailBodies: Record<string, unknown> 
     }
     const qualifiedName = decodeURIComponent(url.pathname.replace(/^\/servers\//, ''));
     const body = detailBodies[qualifiedName];
-    if (!body) return new Response(JSON.stringify({ error: 'Namespace not found' }), { status: 404 });
+    if (!body)
+      return new Response(JSON.stringify({ error: 'Namespace not found' }), { status: 404 });
     return new Response(JSON.stringify(body), { status: 200 });
   };
 }
@@ -142,7 +143,11 @@ describe('smitherySource.search() — genuine live-captured list + detail shape 
     // `servers` key, entirely different item shape (`{server, _meta}` vs
     // `{qualifiedName, ...}`).
     const officialShaped = loadFixture('official-search-postgres.json');
-    const items = await smitherySource.search('postgres', {}, { fetcher: makeFetcher(officialShaped) });
+    const items = await smitherySource.search(
+      'postgres',
+      {},
+      { fetcher: makeFetcher(officialShaped) }
+    );
     expect(items).toEqual([]);
   });
 });

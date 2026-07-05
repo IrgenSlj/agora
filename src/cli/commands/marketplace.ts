@@ -14,7 +14,12 @@ import {
   trendingMarketplaceSource
 } from '../../live.js';
 import { federatedSearch } from '../../federation/index.js';
-import type { FederatedItem, FederationEnv, SourceId, SourceStatus } from '../../federation/types.js';
+import type {
+  FederatedItem,
+  FederationEnv,
+  SourceId,
+  SourceStatus
+} from '../../federation/types.js';
 import {
   stringFlag,
   numberFlag,
@@ -54,7 +59,10 @@ function matchesFederatedCategory(item: FederatedItem, category: string): boolea
   return category === 'package' && item.kind === 'package';
 }
 
-function federationEnvFor(parsed: Parameters<CommandHandler>[0], io: Parameters<CommandHandler>[1]): FederationEnv {
+function federationEnvFor(
+  parsed: Parameters<CommandHandler>[0],
+  io: Parameters<CommandHandler>[1]
+): FederationEnv {
   return {
     fetcher: io.fetcher,
     env: io.env,
@@ -224,7 +232,11 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
   const theme = cliTheme(style, io);
   writeLine(
     io.stdout,
-    header('agora search', [`"${query || 'all'}"`, `${totalMatches} results`, statusSummary(statuses)], theme)
+    header(
+      'agora search',
+      [`"${query || 'all'}"`, `${totalMatches} results`, statusSummary(statuses)],
+      theme
+    )
   );
   writeLine(io.stdout, '');
 

@@ -1,112 +1,112 @@
 {
-    "qualifiedName": "neon",
-    "displayName": "Neon",
-    "description": "Manage PostgreSQL projects, branches, and databases with integrated administrative controls. Execute SQL queries, perform safe schema migrations using temporary branches, and optimize performance through automated query tuning. Provision integrated services like managed authentication and HTTP-based data access to accelerate development workflows.",
-    "iconUrl": "https://api.smithery.ai/servers/neon/icon",
-    "remote": true,
-    "deploymentUrl": "https://neon.run.tools",
-    "connections": [
-        {
-            "type": "http",
-            "deploymentUrl": "https://neon.run.tools",
-            "configSchema": {}
+  "qualifiedName": "neon",
+  "displayName": "Neon",
+  "description": "Manage PostgreSQL projects, branches, and databases with integrated administrative controls. Execute SQL queries, perform safe schema migrations using temporary branches, and optimize performance through automated query tuning. Provision integrated services like managed authentication and HTTP-based data access to accelerate development workflows.",
+  "iconUrl": "https://api.smithery.ai/servers/neon/icon",
+  "remote": true,
+  "deploymentUrl": "https://neon.run.tools",
+  "connections": [
+    {
+      "type": "http",
+      "deploymentUrl": "https://neon.run.tools",
+      "configSchema": {}
+    }
+  ],
+  "security": null,
+  "tools": [
+    {
+      "name": "list_projects",
+      "description": "Lists the first 10 Neon projects in your account. If you can't find the project, increase the limit by passing a higher value to the `limit` parameter. Optionally filter by project name or ID using the `search` parameter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "number",
+            "default": 10,
+            "description": "Specify a value from 1 to 400 to limit number of projects in the response."
+          },
+          "cursor": {
+            "type": "string",
+            "description": "Specify the cursor value from the previous response to retrieve the next batch of projects."
+          },
+          "org_id": {
+            "type": "string",
+            "description": "Search for projects by org_id."
+          },
+          "search": {
+            "type": "string",
+            "description": "Search by project name or id. You can specify partial name or id values to filter results."
+          }
         }
-    ],
-    "security": null,
-    "tools": [
-        {
-            "name": "list_projects",
-            "description": "Lists the first 10 Neon projects in your account. If you can't find the project, increase the limit by passing a higher value to the `limit` parameter. Optionally filter by project name or ID using the `search` parameter.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "limit": {
-                        "type": "number",
-                        "default": 10,
-                        "description": "Specify a value from 1 to 400 to limit number of projects in the response."
-                    },
-                    "cursor": {
-                        "type": "string",
-                        "description": "Specify the cursor value from the previous response to retrieve the next batch of projects."
-                    },
-                    "org_id": {
-                        "type": "string",
-                        "description": "Search for projects by org_id."
-                    },
-                    "search": {
-                        "type": "string",
-                        "description": "Search by project name or id. You can specify partial name or id values to filter results."
-                    }
-                }
-            }
-        },
-        {
-            "name": "list_organizations",
-            "description": "Lists all organizations that the current user has access to. Optionally filter by organization name or ID using the `search` parameter.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "search": {
-                        "type": "string",
-                        "description": "Search organizations by name or ID. You can specify partial name or ID values to filter results."
-                    }
-                }
-            }
+      }
+    },
+    {
+      "name": "list_organizations",
+      "description": "Lists all organizations that the current user has access to. Optionally filter by organization name or ID using the `search` parameter.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string",
+            "description": "Search organizations by name or ID. You can specify partial name or ID values to filter results."
+          }
         }
-    ],
-    "resources": [
+      }
+    }
+  ],
+  "resources": [
+    {
+      "name": "neon-auth",
+      "uri": "https://github.com/neondatabase-labs/ai-rules/blob/main/neon-auth.mdc",
+      "description": "Neon Auth usage instructions",
+      "mimeType": "text/plain"
+    },
+    {
+      "name": "neon-serverless",
+      "uri": "https://github.com/neondatabase-labs/ai-rules/blob/main/neon-serverless.mdc",
+      "description": "Neon Serverless usage instructions",
+      "mimeType": "text/plain"
+    },
+    {
+      "name": "neon-drizzle",
+      "uri": "https://github.com/neondatabase-labs/ai-rules/blob/main/neon-drizzle.mdc",
+      "description": "Neon Drizzle usage instructions",
+      "mimeType": "text/plain"
+    },
+    {
+      "name": "neon-get-started",
+      "uri": "https://github.com/neondatabase-labs/ai-rules/blob/main/neon-get-started.mdc",
+      "description": "Neon getting started guide",
+      "mimeType": "text/markdown"
+    },
+    {
+      "name": "neon-js",
+      "uri": "https://github.com/neondatabase-labs/ai-rules/blob/main/neon-js.mdc",
+      "description": "Neon JS SDK usage instructions",
+      "mimeType": "text/plain"
+    }
+  ],
+  "prompts": [
+    {
+      "name": "setup-neon-auth",
+      "description": "Interactive guide for setting up Neon Auth in a Vite+React project. Walks through provisioning, package installation, client setup, and UI components.",
+      "arguments": [
         {
-            "name": "neon-auth",
-            "uri": "https://github.com/neondatabase-labs/ai-rules/blob/main/neon-auth.mdc",
-            "description": "Neon Auth usage instructions",
-            "mimeType": "text/plain"
+          "name": "projectId",
+          "description": "Optional Neon project ID. If not provided, the guide will help discover available projects.",
+          "required": false
         },
         {
-            "name": "neon-serverless",
-            "uri": "https://github.com/neondatabase-labs/ai-rules/blob/main/neon-serverless.mdc",
-            "description": "Neon Serverless usage instructions",
-            "mimeType": "text/plain"
+          "name": "branchId",
+          "description": "Optional branch ID. If not provided, the default branch will be used.",
+          "required": false
         },
         {
-            "name": "neon-drizzle",
-            "uri": "https://github.com/neondatabase-labs/ai-rules/blob/main/neon-drizzle.mdc",
-            "description": "Neon Drizzle usage instructions",
-            "mimeType": "text/plain"
-        },
-        {
-            "name": "neon-get-started",
-            "uri": "https://github.com/neondatabase-labs/ai-rules/blob/main/neon-get-started.mdc",
-            "description": "Neon getting started guide",
-            "mimeType": "text/markdown"
-        },
-        {
-            "name": "neon-js",
-            "uri": "https://github.com/neondatabase-labs/ai-rules/blob/main/neon-js.mdc",
-            "description": "Neon JS SDK usage instructions",
-            "mimeType": "text/plain"
+          "name": "databaseName",
+          "description": "Optional database name. If not provided, the default database (neondb) will be used.",
+          "required": false
         }
-    ],
-    "prompts": [
-        {
-            "name": "setup-neon-auth",
-            "description": "Interactive guide for setting up Neon Auth in a Vite+React project. Walks through provisioning, package installation, client setup, and UI components.",
-            "arguments": [
-                {
-                    "name": "projectId",
-                    "description": "Optional Neon project ID. If not provided, the guide will help discover available projects.",
-                    "required": false
-                },
-                {
-                    "name": "branchId",
-                    "description": "Optional branch ID. If not provided, the default branch will be used.",
-                    "required": false
-                },
-                {
-                    "name": "databaseName",
-                    "description": "Optional database name. If not provided, the default database (neondb) will be used.",
-                    "required": false
-                }
-            ]
-        }
-    ]
+      ]
+    }
+  ]
 }

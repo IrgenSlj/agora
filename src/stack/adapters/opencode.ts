@@ -126,7 +126,13 @@ function readOpencodeInstructions(
     } catch {
       continue;
     }
-    results.push({ name, tool: 'opencode', scope, path: absPath, contentHash: hashContent(content) });
+    results.push({
+      name,
+      tool: 'opencode',
+      scope,
+      path: absPath,
+      contentHash: hashContent(content)
+    });
   }
   return results;
 }
@@ -154,7 +160,9 @@ function writeOpencodeInstructions(
   }
 
   const result: Record<string, unknown> = { ...doc };
-  const existingArr = Array.isArray(doc['instructions']) ? [...(doc['instructions'] as unknown[])] : [];
+  const existingArr = Array.isArray(doc['instructions'])
+    ? [...(doc['instructions'] as unknown[])]
+    : [];
   const configDir = dirname(configPath);
 
   const added: string[] = [];

@@ -183,7 +183,9 @@ export const itemPage: Page = {
     const body: string[] = [];
 
     const pricePill =
-      item.kind === 'package' && item.pricing?.kind === 'paid' ? pill('PAID', 'accent', theme) + ' ' : '';
+      item.kind === 'package' && item.pricing?.kind === 'paid'
+        ? pill('PAID', 'accent', theme) + ' '
+        : '';
     body.push(' ' + pricePill + theme.bold(theme.accent(item.name)) + theme.muted('  ' + item.id));
     body.push(' ' + provenanceBadges(prov, theme));
 
@@ -223,7 +225,9 @@ export const itemPage: Page = {
           fail: scan.summary.fail,
           lines: scan.checks
             .filter((c) => c.status !== 'pass')
-            .map((c) => truncate(c.status.toUpperCase() + ' ' + c.label + ' — ' + c.message, width - 6))
+            .map((c) =>
+              truncate(c.status.toUpperCase() + ' ' + c.label + ' — ' + c.message, width - 6)
+            )
         },
         perms: buildPermRows(item, item.tools),
         drift: buildDrift(scan),
@@ -259,7 +263,8 @@ export const itemPage: Page = {
         return { kind: 'switch', to: 'acquire' };
       }
       case 'o': {
-        const repoUrl = state.item && state.item.kind === 'package' ? state.item.repository : undefined;
+        const repoUrl =
+          state.item && state.item.kind === 'package' ? state.item.repository : undefined;
         if (repoUrl) return { kind: 'open-url', url: repoUrl };
         return { kind: 'status', message: 'no repo url' };
       }

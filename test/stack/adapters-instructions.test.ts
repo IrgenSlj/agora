@@ -37,7 +37,9 @@ describe('opencodeAdapter instructions', () => {
       writeFileSync(filePath, JSON.stringify(existing, null, 2));
 
       const location = { path: filePath, scope: 'project' as const };
-      const desired: DesiredInstruction[] = [{ name: 'claude-md', source: 'inline', content: 'be terse' }];
+      const desired: DesiredInstruction[] = [
+        { name: 'claude-md', source: 'inline', content: 'be terse' }
+      ];
       const change = opencodeAdapter.writeInstructions!(location, desired, { prune: false });
 
       expect(change.added).toEqual(['claude-md']);
@@ -244,7 +246,10 @@ describe('cursorAdapter instructions', () => {
     const cwd = makeTmp();
     try {
       mkdirSync(join(cwd, '.cursor', 'rules'), { recursive: true });
-      writeFileSync(join(cwd, '.cursor', 'rules', 'handwritten.md'), 'keep me (not in prune set... wait)');
+      writeFileSync(
+        join(cwd, '.cursor', 'rules', 'handwritten.md'),
+        'keep me (not in prune set... wait)'
+      );
       const location = { path: join(cwd, '.cursor', 'rules'), scope: 'project' as const };
 
       cursorAdapter.writeInstructions!(

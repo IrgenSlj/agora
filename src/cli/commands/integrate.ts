@@ -98,19 +98,25 @@ function writeEntry(toolId: AgentToolId, env: StackEnv, scope: 'project' | 'user
   }
 }
 
-function renderEntries(entries: IntegrateEntry[], dryRun: boolean, theme: ReturnType<typeof cliTheme>): string {
-  const lines: string[] = [
-    theme.accent(dryRun ? 'agora integrate — plan' : 'agora integrate')
-  ];
+function renderEntries(
+  entries: IntegrateEntry[],
+  dryRun: boolean,
+  theme: ReturnType<typeof cliTheme>
+): string {
+  const lines: string[] = [theme.accent(dryRun ? 'agora integrate — plan' : 'agora integrate')];
   for (const entry of entries) {
     const locationLabel = entry.location ?? '(no location)';
     lines.push(`  ${entry.displayName}  →  ${locationLabel}`);
     switch (entry.status) {
       case 'written':
-        lines.push(`    ${entry.change!.added.length > 0 ? '+ agora (added)' : '~ agora (updated)'}`);
+        lines.push(
+          `    ${entry.change!.added.length > 0 ? '+ agora (added)' : '~ agora (updated)'}`
+        );
         break;
       case 'planned':
-        lines.push(`    ${entry.change!.added.length > 0 ? '+ agora (would add)' : '~ agora (would update)'}`);
+        lines.push(
+          `    ${entry.change!.added.length > 0 ? '+ agora (would add)' : '~ agora (would update)'}`
+        );
         break;
       case 'skipped':
         lines.push(`    ${theme.dim(`skipped: ${entry.reason}`)}`);
@@ -191,7 +197,7 @@ export const commandIntegrate: CommandHandler = async (parsed, io, style) => {
     theme.muted(
       dryRun
         ? 'Dry run — nothing written. Re-run without --dry-run to apply.'
-        : "Restart each harness (or start a new session) so the agora MCP server is loaded."
+        : 'Restart each harness (or start a new session) so the agora MCP server is loaded.'
     )
   );
 

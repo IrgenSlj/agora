@@ -5,7 +5,14 @@ import type {
   WorkflowMarketplaceItem
 } from '../marketplace.js';
 
-export type { Discussion, Tutorial, TutorialStep, MarketplaceItem, PackageMarketplaceItem, WorkflowMarketplaceItem };
+export type {
+  Discussion,
+  Tutorial,
+  TutorialStep,
+  MarketplaceItem,
+  PackageMarketplaceItem,
+  WorkflowMarketplaceItem
+};
 
 export type SourceName = 'api' | 'offline';
 export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;

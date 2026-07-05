@@ -16,7 +16,12 @@
 // `Provenance.verified` (official attribute) and `tags` (hosting attribute)
 // respectively, the only structural homes that fit.
 import { fetchWithRetry } from '../../retry.js';
-import type { FederatedItem, FederatedSearchOptions, FederationEnv, RegistrySource } from '../types.js';
+import type {
+  FederatedItem,
+  FederatedSearchOptions,
+  FederationEnv,
+  RegistrySource
+} from '../types.js';
 import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 
 export const GLAMA_BASE_URL = 'https://glama.ai/api/mcp/v1';
@@ -122,7 +127,12 @@ export async function fetchGlamaPage(
   // misrouted/malformed response must degrade to "no match", never to items
   // keyed by "undefined/undefined".
   return (body.servers ?? [])
-    .filter((s): s is RawGlamaServer => typeof s?.namespace === 'string' && typeof s?.slug === 'string' && typeof s?.name === 'string')
+    .filter(
+      (s): s is RawGlamaServer =>
+        typeof s?.namespace === 'string' &&
+        typeof s?.slug === 'string' &&
+        typeof s?.name === 'string'
+    )
     .map((s) => mapGlamaServer(s, fetchedAt));
 }
 

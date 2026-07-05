@@ -345,7 +345,10 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
         setStatus(a.summary, 'info');
         return;
       case 'gate':
-        setStatus(a.summary, a.verdict === 'fail' ? 'error' : a.verdict === 'warn' ? 'warn' : 'info');
+        setStatus(
+          a.summary,
+          a.verdict === 'fail' ? 'error' : a.verdict === 'warn' ? 'warn' : 'info'
+        );
         return;
     }
   }

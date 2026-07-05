@@ -5,10 +5,7 @@ import { agoraUserAgent } from '../types.js';
 export type Fetcher = (url: string | URL, init?: RequestInit) => Promise<Response>;
 
 export interface SourceAdapter {
-  fetch(opts: {
-    fetcher?: Fetcher;
-    signal?: AbortSignal;
-  }): Promise<NewsItem[]>;
+  fetch(opts: { fetcher?: Fetcher; signal?: AbortSignal }): Promise<NewsItem[]>;
 }
 
 const QUERY_CATEGORIES = ['cs.AI', 'cs.CL', 'cs.SE', 'cs.LG'];
@@ -24,10 +21,14 @@ export const arxivSource: SourceAdapter = {
     const url = `https://export.arxiv.org/api/query?search_query=cat:${categories}&sortBy=submittedDate&sortOrder=descending&max_results=${MAX_RESULTS}`;
 
     try {
-      const res = await fetchWithRetry(url, {
-        signal: opts.signal,
-        headers: { 'User-Agent': agoraUserAgent }
-      }, { maxRetries: 2, fetcher });
+      const res = await fetchWithRetry(
+        url,
+        {
+          signal: opts.signal,
+          headers: { 'User-Agent': agoraUserAgent }
+        },
+        { maxRetries: 2, fetcher }
+      );
       if (!res.ok) throw new Error(`arXiv API returned ${res.status}`);
       const xml = await res.text();
       const items = parseArxivAtom(xml, now);

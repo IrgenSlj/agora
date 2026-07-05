@@ -138,9 +138,7 @@ function checkRegistryStatus(officialStatus: OfficialStatus): ScanCheck {
 // either side of "delete"). Split snake_case/kebab-case/camelCase into
 // space-separated words first so every heuristic below actually sees them.
 function tokenizeToolText(text: string): string {
-  return text
-    .replace(/[_-]+/g, ' ')
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+  return text.replace(/[_-]+/g, ' ').replace(/([a-z0-9])([A-Z])/g, '$1 $2');
 }
 
 // ── annotation_hints (P2: MCP tool annotation hints) ────────────────────────
@@ -491,7 +489,10 @@ async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Pro
   if (annotationCheck) checks.push(annotationCheck);
 
   // 9. observed_permissions (P2, optional/offline-safe)
-  const observedCheck = checkObservedPermissions(item.permissions, opts.observedTools ?? opts.tools);
+  const observedCheck = checkObservedPermissions(
+    item.permissions,
+    opts.observedTools ?? opts.tools
+  );
   if (observedCheck) checks.push(observedCheck);
 
   // 10. description_drift (P2, optional/offline-safe)

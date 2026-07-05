@@ -12,5 +12,5 @@ export const COMMANDS = [
   ...SetupCommands,
   ...LibraryCommands,
   ...LearnCommands,
-  ...StackCommands,
+  ...StackCommands
 ];

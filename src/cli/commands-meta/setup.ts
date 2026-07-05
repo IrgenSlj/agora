@@ -210,5 +210,5 @@ export const COMMANDS: CommandMeta[] = [
       'agora notify "Deploy finished" --title "CI" --sound',
       'agora watch 60 agora news --count 1 && agora notify "News updated"'
     ]
-  },
+  }
 ];

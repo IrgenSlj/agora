@@ -10,7 +10,8 @@ import type { DesiredInstruction, SyncChange } from '../types.js';
  * text file instead of a JSON/TOML document.
  */
 
-const MARKER_RE = /<!-- agora:instructions:begin:(.+?) -->\n([\s\S]*?)<!-- agora:instructions:end:\1 -->\n?/g;
+const MARKER_RE =
+  /<!-- agora:instructions:begin:(.+?) -->\n([\s\S]*?)<!-- agora:instructions:end:\1 -->\n?/g;
 
 function beginMarker(name: string): string {
   return `<!-- agora:instructions:begin:${name} -->`;

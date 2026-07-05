@@ -2,11 +2,7 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  refreshOfficialCache,
-  readSourceCache,
-  readSourceMeta
-} from '../../src/federation/cache';
+import { refreshOfficialCache, readSourceCache, readSourceMeta } from '../../src/federation/cache';
 import type { FetchLike } from '../../src/retry';
 
 const FIXTURES_DIR = join(import.meta.dir, '../fixtures/federation');
@@ -64,7 +60,10 @@ describe('refreshOfficialCache()', () => {
     await refreshOfficialCache({ fetcher: pageFetcher(seed.servers), cacheDir: dir });
 
     const delta = loadFixture('official-updated-since.json');
-    const result = await refreshOfficialCache({ fetcher: pageFetcher(delta.servers), cacheDir: dir });
+    const result = await refreshOfficialCache({
+      fetcher: pageFetcher(delta.servers),
+      cacheDir: dir
+    });
 
     // delta = capital.hove/... (already cached -> updated) + ai.agenticshelf/graffeo
     // (new -> added) + ac.inference.sh/inference (deleted, never cached -> no-op prune).
@@ -94,7 +93,10 @@ describe('refreshOfficialCache()', () => {
     );
 
     const delta = loadFixture('official-updated-since.json');
-    const result = await refreshOfficialCache({ fetcher: pageFetcher(delta.servers), cacheDir: dir });
+    const result = await refreshOfficialCache({
+      fetcher: pageFetcher(delta.servers),
+      cacheDir: dir
+    });
 
     expect(result.pruned).toBe(1);
     expect(readSourceCache(dir, 'official').some((i) => i.id === 'ac.inference.sh/inference')).toBe(

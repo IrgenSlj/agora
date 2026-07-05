@@ -239,8 +239,8 @@ export const COMMANDS: CommandMeta[] = [
     summary: 'Incrementally sync the official MCP registry into the local federation cache.',
     usage: 'agora refresh [--source official] [--json]',
     details:
-      'Fetches servers added/changed since the last sync via the official registry\'s ' +
-      '`updated_since` filter, and prunes any it has tombstoned as deleted. Powers `agora search`\'s ' +
+      "Fetches servers added/changed since the last sync via the official registry's " +
+      "`updated_since` filter, and prunes any it has tombstoned as deleted. Powers `agora search`'s " +
       'offline fallback when the live registry is unreachable.',
     flags: [
       {

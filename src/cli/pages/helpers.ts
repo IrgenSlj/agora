@@ -151,7 +151,11 @@ export function buildPermRows(item: MarketplaceItem, tools: FederatedItem['tools
     });
   });
   if (rows.length === 0) {
-    rows.push({ kind: 'fs', tone: 'success', declared: 'no fs/net/exec signal declared or observed' });
+    rows.push({
+      kind: 'fs',
+      tone: 'success',
+      declared: 'no fs/net/exec signal declared or observed'
+    });
   }
   return rows;
 }

@@ -54,5 +54,5 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--json', description: 'Output { marketplace, news } as JSON' }
     ],
     examples: ['agora bookmarks', 'agora bookmarks --kind marketplace', 'agora bookmarks --json']
-  },
+  }
 ];

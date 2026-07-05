@@ -13,7 +13,12 @@
 import { searchHuggingFace, type RawHfItem } from '../../hubs/huggingface.js';
 import { fetchWithRetry } from '../../retry.js';
 import type { HubItem } from '../../hubs/types.js';
-import type { FederatedItem, FederatedSearchOptions, FederationEnv, RegistrySource } from '../types.js';
+import type {
+  FederatedItem,
+  FederatedSearchOptions,
+  FederationEnv,
+  RegistrySource
+} from '../types.js';
 import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 
 const DETAIL_ENDPOINTS = ['models', 'datasets', 'spaces'] as const;

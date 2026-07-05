@@ -119,11 +119,7 @@ function tomlSegment(seg: string): string {
 // instruction content (P3 `content` field) round-trips through a single
 // TOML line without breaking the line-based parser below.
 function escapeString(s: string): string {
-  return s
-    .replace(/\\/g, '\\\\')
-    .replace(/"/g, '\\"')
-    .replace(/\n/g, '\\n')
-    .replace(/\r/g, '\\r');
+  return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '\\r');
 }
 
 function serializeStringArray(arr: string[]): string {
@@ -551,10 +547,9 @@ export async function resolveInstructionContent(
     try {
       res = await fetcher(url);
     } catch (e) {
-      throw new Error(
-        `Could not fetch ${label}: ${e instanceof Error ? e.message : String(e)}`,
-        { cause: e }
-      );
+      throw new Error(`Could not fetch ${label}: ${e instanceof Error ? e.message : String(e)}`, {
+        cause: e
+      });
     }
     if (!res.ok) {
       throw new Error(`Could not fetch ${label}: HTTP ${res.status}`);
@@ -576,7 +571,9 @@ export async function resolveInstructionContent(
 
   const absPath = resolve(opts.cwd ?? process.cwd(), entry.ref);
   if (!existsSync(absPath)) {
-    throw new Error(`Could not read instruction file: ${entry.ref} (resolved ${absPath}) not found`);
+    throw new Error(
+      `Could not read instruction file: ${entry.ref} (resolved ${absPath}) not found`
+    );
   }
   return readFileSync(absPath, 'utf8');
 }

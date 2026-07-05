@@ -272,9 +272,7 @@ export function originChip(origin: Origin, theme: Theme): string {
 
 /** The small drift chip. `changed` → orchid ≠ drift; else dim "no drift". */
 export function driftChip(changed: boolean, theme: Theme): string {
-  return changed
-    ? theme.tone('drift', theme.glyph('drift') + ' drift')
-    : theme.dim('no drift');
+  return changed ? theme.tone('drift', theme.glyph('drift') + ' drift') : theme.dim('no drift');
 }
 
 /**
@@ -307,7 +305,10 @@ export function verdictBanner(o: {
   const ruleLine = theme.tone(tone, ruleCh.repeat(Math.max(0, width)));
   const chipText = verdictGlyph(verdict, theme) + ' ' + label;
   const chip = theme.useColor ? REV + theme.tone(tone, ' ' + chipText + ' ') + '\x1b[0m' : chipText;
-  const lines: string[] = [ruleLine, padRight(' ' + chip + '  ' + theme.bold(theme.fg(headline)), width)];
+  const lines: string[] = [
+    ruleLine,
+    padRight(' ' + chip + '  ' + theme.bold(theme.fg(headline)), width)
+  ];
   if (detail) lines.push(padRight('   ' + theme.muted(detail), width));
   // A hard FAIL is final — never offer a re-run flag.
   if (hint && verdict !== 'fail') lines.push(padRight('   ' + theme.dim(hint), width));
@@ -321,7 +322,12 @@ export function verdictBanner(o: {
  */
 export function trustPanel(o: {
   scan: { pass: number; warn: number; fail: number; lines: ReadonlyArray<string> };
-  perms: ReadonlyArray<{ kind: 'fs' | 'net' | 'proc'; tone: HealthTone; declared: string; observed?: string }>;
+  perms: ReadonlyArray<{
+    kind: 'fs' | 'net' | 'proc';
+    tone: HealthTone;
+    declared: string;
+    observed?: string;
+  }>;
   drift: { changed: boolean; baseline: string };
   width: number;
   theme: Theme;
@@ -369,18 +375,27 @@ export function planDiff(
   let filesTouched = 0;
   for (const sec of sections) {
     if (sec.changes.length > 0) filesTouched++;
-    lines.push(padRight(' ' + theme.bold(theme.accent(sec.harness)) + '  ' + theme.dim(sec.file), width));
+    lines.push(
+      padRight(' ' + theme.bold(theme.accent(sec.harness)) + '  ' + theme.dim(sec.file), width)
+    );
     for (const c of sec.changes) {
       const tone: Tone = c.op === '+' ? 'success' : c.op === '-' ? 'error' : 'warning';
       if (c.op === '+') add++;
       else if (c.op === '-') rem++;
       else upd++;
-      lines.push(padRight('   ' + theme.tone(tone, c.op + ' ' + c.name) + '  ' + theme.dim(c.detail), width));
+      lines.push(
+        padRight('   ' + theme.tone(tone, c.op + ' ' + c.name) + '  ' + theme.dim(c.detail), width)
+      );
     }
   }
   const dot = ' ' + theme.dim(theme.glyph('bullet')) + ' ';
   if (add + upd + rem === 0) {
-    lines.push(padRight(' ' + theme.success(theme.glyph('ok') + ' no changes — stack matches profile'), width));
+    lines.push(
+      padRight(
+        ' ' + theme.success(theme.glyph('ok') + ' no changes — stack matches profile'),
+        width
+      )
+    );
     return lines;
   }
   const summary =

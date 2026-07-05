@@ -33,7 +33,9 @@ describe('officialSource.search() — official → FederatedItem mapping', () =>
     if (waystation!.kind !== 'package') throw new Error('unreachable');
     expect(waystation!.name).toBe('ai.waystation/postgres');
     expect(waystation!.author).toBe('ai.waystation');
-    expect(waystation!.description).toBe('Connect to your PostgreSQL database to query data and schemas.');
+    expect(waystation!.description).toBe(
+      'Connect to your PostgreSQL database to query data and schemas.'
+    );
     expect(waystation!.version).toBe('0.3.1');
     expect(waystation!.category).toBe('mcp');
     expect(waystation!.tags).toEqual([]);
@@ -71,7 +73,9 @@ describe('officialSource.search() — official → FederatedItem mapping', () =>
     const items = await officialSource.search('', { limit: 50 }, { fetcher: makeFetcher(fixture) });
 
     expect(items.find((i) => i.id === 'ac.inference.sh/inference')?.officialStatus).toBe('deleted');
-    expect(items.find((i) => i.id === 'ai.agenticshelf/graffeo')?.officialStatus).toBe('deprecated');
+    expect(items.find((i) => i.id === 'ai.agenticshelf/graffeo')?.officialStatus).toBe(
+      'deprecated'
+    );
     expect(
       items.find((i) => i.id === 'capital.hove/read-only-local-postgres-mcp-server')?.officialStatus
     ).toBe('active');

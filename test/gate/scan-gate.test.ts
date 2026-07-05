@@ -125,7 +125,9 @@ describe('observed_permissions', () => {
 
   test('pass when observed capabilities match declared permissions', async () => {
     const item = makePackage({ permissions: { exec: ['npx'] } });
-    const tools: FederatedTool[] = [{ name: 'run_command', description: 'Execute a shell command.' }];
+    const tools: FederatedTool[] = [
+      { name: 'run_command', description: 'Execute a shell command.' }
+    ];
     const result = await scanItem(item, { tools });
     const check = result.checks.find((c) => c.name === 'observed_permissions')!;
     expect(check.status).toBe('pass');

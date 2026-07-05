@@ -142,7 +142,7 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
         'Windsurf: per-server static health (command resolvable, valid remote url, disabled, ' +
         'conflicting definitions) plus discovered tool capabilities from the local probe cache. ' +
         'Static checks only — never starts servers (use `agora doctor --probe` in the CLI for that). ' +
-        'Mirrors `agora doctor --json`, enriched with each server\'s cached tool list.',
+        "Mirrors `agora doctor --json`, enriched with each server's cached tool list.",
       inputSchema: z.object({
         tool: z
           .enum([...AGENT_TOOL_IDS, 'all'] as [string, ...string[]])
@@ -201,7 +201,9 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
         from: z
           .string()
           .optional()
-          .describe('Preview a shared profile from a git url, gist, or file path instead of ./agora.toml')
+          .describe(
+            'Preview a shared profile from a git url, gist, or file path instead of ./agora.toml'
+          )
       }),
       annotations: { readOnlyHint: true, idempotentHint: true }
     },

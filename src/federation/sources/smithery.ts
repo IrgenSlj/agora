@@ -60,7 +60,12 @@ interface RawSmitheryServerSummary {
 
 interface RawSmitheryServersResponse {
   servers?: RawSmitheryServerSummary[];
-  pagination?: { currentPage?: number; pageSize?: number; totalPages?: number; totalCount?: number };
+  pagination?: {
+    currentPage?: number;
+    pageSize?: number;
+    totalPages?: number;
+    totalCount?: number;
+  };
 }
 
 interface RawSmitheryTool {
@@ -196,7 +201,10 @@ export async function fetchSmitheryPage(
   // against the same DI fetcher in tests) must degrade to "no match", never
   // to items keyed by `undefined`.
   return (body.servers ?? [])
-    .filter((s): s is RawSmitheryServerSummary => typeof s?.qualifiedName === 'string' && s.qualifiedName.length > 0)
+    .filter(
+      (s): s is RawSmitheryServerSummary =>
+        typeof s?.qualifiedName === 'string' && s.qualifiedName.length > 0
+    )
     .map((s) => mapSummary(s, fetchedAt));
 }
 

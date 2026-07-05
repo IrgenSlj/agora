@@ -5,7 +5,14 @@ import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../
 import type { CommandHandler } from './types.js';
 
 const AGENT_TOOLS = new Set<AgentToolId>(['opencode', 'claude-code', 'cursor', 'windsurf']);
-const SOURCE_IDS = new Set<SourceId>(['official', 'smithery', 'glama', 'github', 'huggingface', 'local']);
+const SOURCE_IDS = new Set<SourceId>([
+  'official',
+  'smithery',
+  'glama',
+  'github',
+  'huggingface',
+  'local'
+]);
 
 function toolFlag(value: string | undefined): AgentToolId | undefined {
   if (!value) return undefined;

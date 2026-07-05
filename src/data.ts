@@ -24,6 +24,7 @@ function catalog(): Catalog {
 export const dataRefreshedAt: string = /* @__PURE__ */ (() => catalog().dataRefreshedAt)();
 export const samplePackages: Package[] = /* @__PURE__ */ (() => catalog().samplePackages)();
 export const sampleWorkflows: Workflow[] = /* @__PURE__ */ (() => catalog().sampleWorkflows)();
-export const sampleDiscussions: Discussion[] = /* @__PURE__ */ (() => catalog().sampleDiscussions)();
+export const sampleDiscussions: Discussion[] = /* @__PURE__ */ (() =>
+  catalog().sampleDiscussions)();
 export const sampleTutorials: Tutorial[] = /* @__PURE__ */ (() => catalog().sampleTutorials)();
 export const trendingTags: string[] = /* @__PURE__ */ (() => catalog().trendingTags)();

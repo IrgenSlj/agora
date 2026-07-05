@@ -181,7 +181,10 @@ function cursorInstructionsLocation(
   return { path: join(home, '.cursor', 'rules'), scope: 'user' };
 }
 
-function readCursorInstructions(dirPath: string, scope: 'project' | 'user'): ConfiguredInstruction[] {
+function readCursorInstructions(
+  dirPath: string,
+  scope: 'project' | 'user'
+): ConfiguredInstruction[] {
   if (!existsSync(dirPath)) return [];
   let names: string[];
   try {

@@ -15,7 +15,12 @@ import { searchGithub } from '../../hubs/github.js';
 import { toHubItem, type RawGithubRepo } from '../../hubs/quality.js';
 import { fetchWithRetry } from '../../retry.js';
 import type { HubItem } from '../../hubs/types.js';
-import type { FederatedItem, FederatedSearchOptions, FederationEnv, RegistrySource } from '../types.js';
+import type {
+  FederatedItem,
+  FederatedSearchOptions,
+  FederationEnv,
+  RegistrySource
+} from '../types.js';
 import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 
 function toFederatedItem(item: HubItem, fetchedAt: string): FederatedItem {

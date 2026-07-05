@@ -184,7 +184,10 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
       writeJson(io.stdout, { mode: doWrite ? 'applied' : 'plan', tools: [], instructions: [] });
       return 0;
     }
-    writeLine(io.stdout, theme.muted('Nothing to sync: manifest has no MCP servers or instructions.'));
+    writeLine(
+      io.stdout,
+      theme.muted('Nothing to sync: manifest has no MCP servers or instructions.')
+    );
     writeLine(io.stdout, theme.muted('Run `agora freeze --write` to populate the manifest first.'));
     return 0;
   }

@@ -342,7 +342,9 @@ function diffInstructions(
   return { added, updated, removed };
 }
 
-function unresolvedSkips(errors: { name: string; error: string }[]): { name: string; reason: string }[] {
+function unresolvedSkips(
+  errors: { name: string; error: string }[]
+): { name: string; reason: string }[] {
   return errors.map((e) => ({ name: e.name, reason: `could not resolve content: ${e.error}` }));
 }
 
@@ -373,7 +375,10 @@ export async function planInstructionsSync(
         tool: toolId,
         location: null,
         change: { added: [], updated: [], removed: [] },
-        skipped: [...skipped, { name: '*', reason: `${toolId} does not manage instruction artifacts` }]
+        skipped: [
+          ...skipped,
+          { name: '*', reason: `${toolId} does not manage instruction artifacts` }
+        ]
       });
       continue;
     }
@@ -384,7 +389,10 @@ export async function planInstructionsSync(
         tool: toolId,
         location: null,
         change: { added: [], updated: [], removed: [] },
-        skipped: [...skipped, { name: '*', reason: `${toolId} has no ${scope} instructions location` }]
+        skipped: [
+          ...skipped,
+          { name: '*', reason: `${toolId} has no ${scope} instructions location` }
+        ]
       });
       continue;
     }
@@ -422,7 +430,10 @@ export async function applyInstructionsSync(
         tool: toolId,
         location: null,
         change: { added: [], updated: [], removed: [] },
-        skipped: [...skipped, { name: '*', reason: `${toolId} does not manage instruction artifacts` }]
+        skipped: [
+          ...skipped,
+          { name: '*', reason: `${toolId} does not manage instruction artifacts` }
+        ]
       });
       continue;
     }
@@ -433,7 +444,10 @@ export async function applyInstructionsSync(
         tool: toolId,
         location: null,
         change: { added: [], updated: [], removed: [] },
-        skipped: [...skipped, { name: '*', reason: `${toolId} has no ${scope} instructions location` }]
+        skipped: [
+          ...skipped,
+          { name: '*', reason: `${toolId} has no ${scope} instructions location` }
+        ]
       });
       continue;
     }

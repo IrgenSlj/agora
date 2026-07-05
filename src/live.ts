@@ -24,7 +24,4 @@ export {
   trendingMarketplaceSource
 } from './live/search.js';
 
-export {
-  tutorialsSource,
-  findTutorialSource
-} from './live/tutorials.js';
+export { tutorialsSource, findTutorialSource } from './live/tutorials.js';

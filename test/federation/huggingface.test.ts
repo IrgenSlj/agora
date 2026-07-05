@@ -33,7 +33,11 @@ function throwingFetcher(message = 'network unreachable'): FetchLike {
   };
 }
 
-const LLAMA = makeHfItem({ id: 'meta-llama/Llama-3.1-8B', author: 'meta-llama', downloads: 500000 });
+const LLAMA = makeHfItem({
+  id: 'meta-llama/Llama-3.1-8B',
+  author: 'meta-llama',
+  downloads: 500000
+});
 
 describe('huggingfaceSource.search() — wraps searchHuggingFace()', () => {
   test('maps HubItem -> FederatedItem with huggingface provenance', async () => {
@@ -60,38 +64,46 @@ describe('huggingfaceSource.search() — wraps searchHuggingFace()', () => {
 
   test('applies the query as a client-side name/description/tag filter (searchHuggingFace has no query param of its own)', async () => {
     const other = makeHfItem({ id: 'owner/unrelated-model', author: 'owner' });
-    const items = await huggingfaceSource.search('llama', {}, {
-      fetcher: searchFetcher([LLAMA, other])
-    });
+    const items = await huggingfaceSource.search(
+      'llama',
+      {},
+      {
+        fetcher: searchFetcher([LLAMA, other])
+      }
+    );
     expect(items.length).toBe(1);
     expect(items[0]!.id).toBe('hf:meta-llama/Llama-3.1-8B');
   });
 
   test('an empty query returns everything the quality gate lets through', async () => {
     const other = makeHfItem({ id: 'owner/other-model', author: 'owner' });
-    const items = await huggingfaceSource.search('', {}, { fetcher: searchFetcher([LLAMA, other]) });
+    const items = await huggingfaceSource.search(
+      '',
+      {},
+      { fetcher: searchFetcher([LLAMA, other]) }
+    );
     expect(items.length).toBe(2);
   });
 
   test('respects opts.limit', async () => {
     const other = makeHfItem({ id: 'meta-llama/llama-two', author: 'meta-llama' });
-    const items = await huggingfaceSource.search('llama', { limit: 1 }, {
-      fetcher: searchFetcher([LLAMA, other])
-    });
+    const items = await huggingfaceSource.search(
+      'llama',
+      { limit: 1 },
+      {
+        fetcher: searchFetcher([LLAMA, other])
+      }
+    );
     expect(items.length).toBe(1);
   });
 
   // searchHuggingFace() retries each of its 5 sequential category requests
   // (maxRetries: 2, real non-signal-aware backoff) — headroom above bun's
   // default 5000ms in case of CI jitter (observed ~3.5-4s locally).
-  test(
-    'never throws — resolves to [] when the fetcher throws',
-    async () => {
-      const items = await huggingfaceSource.search('llama', {}, { fetcher: throwingFetcher() });
-      expect(items).toEqual([]);
-    },
-    10000
-  );
+  test('never throws — resolves to [] when the fetcher throws', async () => {
+    const items = await huggingfaceSource.search('llama', {}, { fetcher: throwingFetcher() });
+    expect(items).toEqual([]);
+  }, 10000);
 });
 
 describe('huggingfaceSource.isEnabled()', () => {
@@ -143,25 +155,25 @@ describe('huggingfaceSource.fetchItem()', () => {
   });
 
   test('returns null for a ref with no owner/name split', async () => {
-    const item = await huggingfaceSource.fetchItem('no-slash-here', { fetcher: detailFetcher(null) });
+    const item = await huggingfaceSource.fetchItem('no-slash-here', {
+      fetcher: detailFetcher(null)
+    });
     expect(item).toBeNull();
   });
 
   test('returns null when every endpoint 404s', async () => {
-    const item = await huggingfaceSource.fetchItem('owner/nope', { fetcher: detailFetcher(null, 404) });
+    const item = await huggingfaceSource.fetchItem('owner/nope', {
+      fetcher: detailFetcher(null, 404)
+    });
     expect(item).toBeNull();
   });
 
-  test(
-    'never throws — returns null when the fetcher throws',
-    async () => {
-      const item = await huggingfaceSource.fetchItem('meta-llama/Llama-3.1-8B', {
-        fetcher: throwingFetcher()
-      });
-      expect(item).toBeNull();
-    },
-    // Real jittered retry backoff — generous budget so it never brushes the
-    // default 5s timeout under full-suite load (matches the search sibling).
-    15000
-  );
+  // Real jittered retry backoff — generous budget so it never brushes the
+  // default 5s timeout under full-suite load (matches the search sibling).
+  test('never throws — returns null when the fetcher throws', async () => {
+    const item = await huggingfaceSource.fetchItem('meta-llama/Llama-3.1-8B', {
+      fetcher: throwingFetcher()
+    });
+    expect(item).toBeNull();
+  }, 15000);
 });

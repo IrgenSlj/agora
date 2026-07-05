@@ -1,48 +1,42 @@
 {
-    "attributes": [
-        "hosting:remote-capable"
-    ],
-    "description": "Read-only MCP server for PostgreSQL, enabling schema discovery, table metadata, and safe SELECT queries via READ ONLY transactions.",
-    "environmentVariablesJsonSchema": {
-        "properties": {
-            "DATABASE_URL": {
-                "description": "PostgreSQL connection string",
-                "type": "string"
-            },
-            "MCP_MAX_ROWS": {
-                "description": "Max rows per query (default 100, max 1000)",
-                "type": "string"
-            },
-            "MCP_POSTGRES_URL": {
-                "description": "Alias for DATABASE_URL",
-                "type": "string"
-            }
-        },
-        "type": "object",
-        "oneOf": [
-            {
-                "required": [
-                    "DATABASE_URL"
-                ]
-            },
-            {
-                "required": [
-                    "MCP_POSTGRES_URL"
-                ]
-            }
-        ]
+  "attributes": ["hosting:remote-capable"],
+  "description": "Read-only MCP server for PostgreSQL, enabling schema discovery, table metadata, and safe SELECT queries via READ ONLY transactions.",
+  "environmentVariablesJsonSchema": {
+    "properties": {
+      "DATABASE_URL": {
+        "description": "PostgreSQL connection string",
+        "type": "string"
+      },
+      "MCP_MAX_ROWS": {
+        "description": "Max rows per query (default 100, max 1000)",
+        "type": "string"
+      },
+      "MCP_POSTGRES_URL": {
+        "description": "Alias for DATABASE_URL",
+        "type": "string"
+      }
     },
-    "id": "y5l0n5s474",
-    "name": "PostgreSQL MCP",
-    "namespace": "vallaksa",
-    "repository": {
-        "url": "https://github.com/vallaksa/postgresql-mcp"
-    },
-    "slug": "postgresql-mcp",
-    "spdxLicense": {
-        "name": "MIT License",
-        "url": "https://spdx.org/licenses/MIT.json"
-    },
-    "tools": [],
-    "url": "https://glama.ai/mcp/servers/y5l0n5s474"
+    "type": "object",
+    "oneOf": [
+      {
+        "required": ["DATABASE_URL"]
+      },
+      {
+        "required": ["MCP_POSTGRES_URL"]
+      }
+    ]
+  },
+  "id": "y5l0n5s474",
+  "name": "PostgreSQL MCP",
+  "namespace": "vallaksa",
+  "repository": {
+    "url": "https://github.com/vallaksa/postgresql-mcp"
+  },
+  "slug": "postgresql-mcp",
+  "spdxLicense": {
+    "name": "MIT License",
+    "url": "https://spdx.org/licenses/MIT.json"
+  },
+  "tools": [],
+  "url": "https://glama.ai/mcp/servers/y5l0n5s474"
 }

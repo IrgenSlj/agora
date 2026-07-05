@@ -14,7 +14,10 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'off',
       'no-useless-escape': 'off', // false positives on intentional regex escapes
       '@typescript-eslint/no-empty-object-type': 'off', // AgoraPlugin marker interface in src/types.ts
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
+      ],
       'no-unused-vars': 'off' // superseded by TS
     }
   },

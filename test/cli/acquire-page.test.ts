@@ -171,7 +171,9 @@ describe('Acquire page — RESOLVE → PLAN → GATE → APPLY', () => {
 
     const configPath = join(dir, 'opencode.json');
     expect(existsSync(configPath)).toBe(true);
-    const config = JSON.parse(readFileSync(configPath, 'utf8')) as { mcp?: Record<string, unknown> };
+    const config = JSON.parse(readFileSync(configPath, 'utf8')) as {
+      mcp?: Record<string, unknown>;
+    };
     expect(config.mcp?.['mcp-filesystem']).toBeDefined();
 
     const out = strip(acquirePage.render(ctx));

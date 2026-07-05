@@ -260,10 +260,7 @@ describe('agora sync --from: scan gate blocks a poisoned entry', () => {
       const { io, out } = createIo(cwd, home);
       (io as any).fetcher = fakeFetcher;
 
-      const code = await runCli(
-        ['sync', '--from', sharedPath, '--tool', 'opencode', '--json'],
-        io
-      );
+      const code = await runCli(['sync', '--from', sharedPath, '--tool', 'opencode', '--json'], io);
       expect(code).toBe(3);
       const payload = JSON.parse(out());
       expect(payload.mode).toBe('gate-blocked');
@@ -283,13 +280,19 @@ describe('agora sync --from: scan gate blocks a poisoned entry', () => {
       const filePath = join(cwd, 'opencode.json');
       writeFileSync(filePath, JSON.stringify({ mcp: {} }));
 
-      const cleanToml = '[mcp.good-server]\ncommand = ["npx", "-y", "@modelcontextprotocol/server-fetch"]\n';
+      const cleanToml =
+        '[mcp.good-server]\ncommand = ["npx", "-y", "@modelcontextprotocol/server-fetch"]\n';
       const sharedPath = join(cwd, 'clean.toml');
       writeFileSync(sharedPath, cleanToml);
 
       // Package "exists" per our fake registry.
       const fakeFetcher = async (_url: string) =>
-        ({ ok: true, status: 200, text: async () => '{}', json: async () => ({ version: '1.0.0' }) }) as Response;
+        ({
+          ok: true,
+          status: 200,
+          text: async () => '{}',
+          json: async () => ({ version: '1.0.0' })
+        }) as Response;
 
       const { io } = createIo(cwd, home);
       (io as any).fetcher = fakeFetcher;

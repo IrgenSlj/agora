@@ -50,7 +50,11 @@ const POSTGRES_REPO = makeRepo({
 
 describe('githubSource.search() — wraps searchGithub()', () => {
   test('maps HubItem -> FederatedItem with github provenance', async () => {
-    const items = await githubSource.search('postgres', {}, { fetcher: searchFetcher([POSTGRES_REPO]) });
+    const items = await githubSource.search(
+      'postgres',
+      {},
+      { fetcher: searchFetcher([POSTGRES_REPO]) }
+    );
 
     expect(items.length).toBe(1);
     const item = items[0]!;
@@ -73,24 +77,36 @@ describe('githubSource.search() — wraps searchGithub()', () => {
 
   test('applies the query as a client-side name/description/tag filter (searchGithub has no query param of its own)', async () => {
     const other = makeRepo({ id: 2, full_name: 'owner/unrelated-tool', name: 'unrelated-tool' });
-    const items = await githubSource.search('postgres', {}, {
-      fetcher: searchFetcher([POSTGRES_REPO, other])
-    });
+    const items = await githubSource.search(
+      'postgres',
+      {},
+      {
+        fetcher: searchFetcher([POSTGRES_REPO, other])
+      }
+    );
     expect(items.length).toBe(1);
     expect(items[0]!.id).toBe('gh:acme/postgres-mcp');
   });
 
   test('an empty query returns everything the quality gate lets through', async () => {
     const other = makeRepo({ id: 2, full_name: 'owner/unrelated-tool', name: 'unrelated-tool' });
-    const items = await githubSource.search('', {}, { fetcher: searchFetcher([POSTGRES_REPO, other]) });
+    const items = await githubSource.search(
+      '',
+      {},
+      { fetcher: searchFetcher([POSTGRES_REPO, other]) }
+    );
     expect(items.length).toBe(2);
   });
 
   test('respects opts.limit', async () => {
     const other = makeRepo({ id: 2, full_name: 'owner/postgres-two', name: 'postgres-two' });
-    const items = await githubSource.search('postgres', { limit: 1 }, {
-      fetcher: searchFetcher([POSTGRES_REPO, other])
-    });
+    const items = await githubSource.search(
+      'postgres',
+      { limit: 1 },
+      {
+        fetcher: searchFetcher([POSTGRES_REPO, other])
+      }
+    );
     expect(items.length).toBe(1);
   });
 
@@ -98,14 +114,10 @@ describe('githubSource.search() — wraps searchGithub()', () => {
   // (maxRetries: 2, real non-signal-aware backoff) — a fetcher that always
   // throws genuinely takes several seconds to exhaust every topic. Headroom
   // above bun's default 5000ms test timeout instead of racing it.
-  test(
-    'never throws — resolves to [] when the fetcher throws',
-    async () => {
-      const items = await githubSource.search('postgres', {}, { fetcher: throwingFetcher() });
-      expect(items).toEqual([]);
-    },
-    15000
-  );
+  test('never throws — resolves to [] when the fetcher throws', async () => {
+    const items = await githubSource.search('postgres', {}, { fetcher: throwingFetcher() });
+    expect(items).toEqual([]);
+  }, 15000);
 });
 
 describe('githubSource.isEnabled()', () => {
@@ -147,19 +159,19 @@ describe('githubSource.fetchItem()', () => {
   });
 
   test('returns null on 404', async () => {
-    const item = await githubSource.fetchItem('gh:nope/nope', { fetcher: detailFetcher(null, 404) });
+    const item = await githubSource.fetchItem('gh:nope/nope', {
+      fetcher: detailFetcher(null, 404)
+    });
     expect(item).toBeNull();
   });
 
-  test(
-    'never throws — returns null when the fetcher throws',
-    async () => {
-      const item = await githubSource.fetchItem('gh:acme/postgres-mcp', { fetcher: throwingFetcher() });
-      expect(item).toBeNull();
-    },
-    // fetchWithRetry does real (jittered) backoff sleeps between retries; give
-    // this the same generous budget as the search sibling so it never brushes
-    // the default 5s timeout under full-suite load (was an intermittent flake).
-    15000
-  );
+  // fetchWithRetry does real (jittered) backoff sleeps between retries; give this
+  // the same generous budget as the search sibling so it never brushes the
+  // default 5s timeout under full-suite load (was an intermittent flake).
+  test('never throws — returns null when the fetcher throws', async () => {
+    const item = await githubSource.fetchItem('gh:acme/postgres-mcp', {
+      fetcher: throwingFetcher()
+    });
+    expect(item).toBeNull();
+  }, 15000);
 });

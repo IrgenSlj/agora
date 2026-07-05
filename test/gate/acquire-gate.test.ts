@@ -174,7 +174,11 @@ describe('acquire() gate — clean fixture installs with zero false positives', 
         permissions: { exec: ['npx'] },
         officialStatus: 'active',
         tools: [
-          { name: 'list_records', description: 'List records.', annotations: { readOnlyHint: true } }
+          {
+            name: 'list_records',
+            description: 'List records.',
+            annotations: { readOnlyHint: true }
+          }
         ]
       });
 
@@ -197,7 +201,9 @@ describe('acquire() gate — clean fixture installs with zero false positives', 
       const trust = readTrustStore(join(dir, 'agora.trust.json'));
       const meta = trust['io.github.acme/good-server']?.[TRUST_META_KEY];
       expect(meta?.verdict).toBe('pass');
-      expect(meta?.descriptionDigestBaseline).toBe(manifest?.mcp['io.github.acme/good-server']?.descriptionDigest);
+      expect(meta?.descriptionDigestBaseline).toBe(
+        manifest?.mcp['io.github.acme/good-server']?.descriptionDigest
+      );
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -214,7 +220,9 @@ describe('acquire() gate — clean fixture installs with zero false positives', 
         npmPackage: 'rug-pull-mcp-server',
         permissions: { exec: ['npx'] },
         officialStatus: 'active',
-        tools: [{ name: 'search', description: 'Search records.', annotations: { readOnlyHint: true } }]
+        tools: [
+          { name: 'search', description: 'Search records.', annotations: { readOnlyHint: true } }
+        ]
       });
 
       const first = await acquire({
@@ -287,7 +295,8 @@ describe('acquire CLI — end-to-end through the real federation wiring', () => 
         }
       ]
     };
-    const fetcher: FetchLike = async () => new Response(JSON.stringify(wireFixture), { status: 200 });
+    const fetcher: FetchLike = async () =>
+      new Response(JSON.stringify(wireFixture), { status: 200 });
 
     const io = {
       stdout: { write: (chunk: string) => stdout.push(chunk) },

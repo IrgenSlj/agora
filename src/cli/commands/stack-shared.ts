@@ -35,9 +35,7 @@ export interface ResolvedStackArgs {
   isRemoteSource: boolean;
 }
 
-export type ResolveResult =
-  | { ok: true; value: ResolvedStackArgs }
-  | { ok: false; code: number };
+export type ResolveResult = { ok: true; value: ResolvedStackArgs } | { ok: false; code: number };
 
 /** Parse + validate --tool/--scope/--prune/--from and load the manifest. */
 export async function resolveStackArgs(parsed: ParsedArgs, io: CliIo): Promise<ResolveResult> {
@@ -132,8 +130,7 @@ export async function computeApply(args: ResolvedStackArgs, io: CliIo): Promise<
 export function combinedHasChanges(plan: CombinedPlan): boolean {
   const hasAny = (plans: ToolSyncPlan[]) =>
     plans.some(
-      (p) =>
-        p.change.added.length > 0 || p.change.updated.length > 0 || p.change.removed.length > 0
+      (p) => p.change.added.length > 0 || p.change.updated.length > 0 || p.change.removed.length > 0
     );
   return hasAny(plan.servers) || hasAny(plan.instructions);
 }
