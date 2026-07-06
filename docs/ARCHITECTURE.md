@@ -1,80 +1,92 @@
 # Architecture
 
 This document captures *what Agora is* and the reasoning behind the shape of the code. For the
-sequenced plan and current status, see [`../ROADMAP.md`](../ROADMAP.md); for open external-API
-questions, see [`OPEN_QUESTIONS.md`](./OPEN_QUESTIONS.md).
+locked specification, see [`../AGORA_BRIEF_v2.md`](../AGORA_BRIEF_v2.md); for the phase-by-phase
+execution plan and current status, see [`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_PLAN.md) and
+[`../ROADMAP.md`](../ROADMAP.md); for open external-API questions, see
+[`OPEN_QUESTIONS.md`](./OPEN_QUESTIONS.md).
 
 ## What Agora is
 
-`agora` is **the system manager for your agentic stack** — a package manager for the MCP
-ecosystem, in the spirit of apt/Homebrew/Terraform, but scoped to what an AI agent can reach:
-MCP servers, skills, and instruction files across OpenCode, Claude Code, Cursor, and Windsurf.
+`agora` is **the trust plane for agentic tooling** — it verifies where MCP servers and Agent
+Skills come from, observes what they actually do, enforces user-defined policy over both, and
+manages them across every host (OpenCode, Claude Code, Cursor, Windsurf).
 
-It is **local-first with no hosted backend**. It does not grow its own catalog — it federates
-upstream registries (the official MCP Registry, Smithery, Glama, GitHub, …) so its effective
-catalog is the union of all of them. And it does not let anything into a config file without
-passing a **trust gate** first.
+It is a **customs office over federated registries**, never a competing catalog: it does not grow
+its own catalog, it federates upstream registries (the official MCP Registry as canonical, then
+Glama, PulseMCP, + skills sources) so its effective catalog is the union of all of them. It deals
+in **evidence** — verifiable, inspectable attestations — never opaque numeric "trust scores." It
+is host-neutral (OpenCode is one integration among four, not the identity) and local-first with no
+hosted backend it depends on.
 
-## The three rings
+## The four planes
 
-Everything in the codebase serves one of three rings, and they carry different bars for quality:
+Everything in the codebase serves one of four planes:
 
-### Ring 1 — Manage & Gate (the core; must be excellent)
+### Federate (`src/federation/`) — live
 
-- **Stack manager** (`src/stack/`) — one `ToolAdapter` per agent tool (opencode, Claude Code,
-  Cursor, Windsurf) normalizes its MCP config into a single `ConfiguredServer` shape.
-  `agora installed` / `doctor [--probe]` read across all of them; `agora.toml` is the portable,
-  declarative profile; `plan`/`apply` (`sync` = `plan && apply`) reconcile it into real config
-  files surgically — every unrelated key is preserved, writes are atomic
-  (`src/atomic-write.ts`).
-- **Federated catalog** (`src/federation/`) — clients behind a `RegistrySource`/`FederatedItem`
-  contract. `official` (registry.modelcontextprotocol.io) is the required no-auth source;
-  `local` (`src/data.ts`) is the bundled offline fallback; Smithery/Glama/GitHub/HuggingFace
-  (reusing `src/hubs/`) round it out. Results are deduped by reverse-DNS name, repo URL, or npm
-  package, then indexed through the offline BM25 index (`src/search/catalog-index.ts`).
-- **Trust gate** (`src/scan.ts`, `src/acquire.ts`) — `agora acquire` is the safe
-  capability-acquisition gateway: `resolve → install plan → scan gate → config write`. The gate
-  composes static heuristics (injection-pattern checks, permission-manifest diffs, registry
-  status) with live-probe diffing (tool-schema drift, observed-vs-declared permissions).
-  `fail` blocks the write and exits non-zero; `warn` requires `--accept-warnings`; `--dry-run`
-  previews without writing. **It is not a sandbox and does not execute or formally verify server
-  code** — "passed the gate" means *no known red flags*, not "safe," and that distinction is
-  deliberate everywhere the verdict is shown.
+Adapters behind a `RegistrySource`/`FederatedItem` contract normalize results from upstream
+registries (the official MCP Registry, Glama, GitHub, HuggingFace, …), deduped and merged into one
+search. `agora search`/`refresh` read from this. Target shape (brief §4): `src/federation/adapters/`
+with per-source files plus `sync.ts` doing dedupe-by-purl and precedence — today's
+`src/federation/sources/` + `index.ts` are the pre-migration form of this.
 
-### Ring 2 — Surfaces (invisible + fast)
+### Verify — evidence (`src/evidence/`) — planned, heuristic precursor live today
+
+Not yet built: provenance verification (Sigstore / npm & GitHub attestations), schema/description
+hashing with rug-pull drift detection, a sandboxed `vet` recording what a server actually
+reads/writes/contacts, canary-token exfiltration detection — all emitted as in-toto/DSSE
+attestations (brief §6). Today, `src/scan.ts` implements a heuristic precursor: injection-pattern
+checks, permission-manifest diffs, and live-probe tool-schema drift, without sandboxing or signed
+attestations.
+
+### Gate — policy (`src/policy/`) — planned, heuristic gate live today
+
+Not yet built: a real Cedar policy engine evaluated over evidence, plus a signed revocation feed
+with anti-rollback (brief §7). Today, `agora acquire` (`src/acquire.ts`) is the safe
+capability-acquisition gateway: `resolve → install plan → scan gate → config write`. `fail` blocks
+the write and exits non-zero; `warn` requires `--accept-warnings`; `--dry-run` previews without
+writing. **It is not a sandbox and does not execute or formally verify server code** — "passed the
+gate" means *no known red flags*, not "safe," and that distinction is deliberate everywhere the
+verdict is shown. This is what Agora *is*; this plane's code gets the most scrutiny.
+
+### Manage (`src/stack/`) — live
+
+One `ToolAdapter` per agent tool (opencode, Claude Code, Cursor, Windsurf) normalizes its MCP
+config into a single `ConfiguredServer` shape. `agora installed` / `doctor [--probe]` read across
+all of them; `agora.toml` is the portable, declarative profile; `plan`/`apply` (`sync` =
+`plan && apply`) reconcile it into real config files surgically — every unrelated key is
+preserved, writes are atomic (`src/atomic-write.ts`). Planned: a committed `agora.lock` as machine
+truth (brief §5.5), and `agora serve` exposing Agora itself as an MCP server (brief §8).
+
+## Supporting surfaces
 
 - **CLI/TUI** (`src/cli/`) — command dispatch, the interactive shell, the prompter, and the
   full-screen TUI pages. The primary, standalone experience.
 - **`agora mcp`** (`src/cli/mcp-server.ts`) — exposes the stack manager and catalog as MCP tools,
-  so any MCP-capable harness can call Agora directly.
+  so any MCP-capable harness can call Agora directly. Planned: `src/serve/`, the brief §8
+  agent-facing server with policy-filtered discovery tools (`search_tools`, `get_evidence`,
+  `check_policy`, `request_install`).
 - **Thin plugins** (`src/plugin/`) — the OpenCode/Claude Code plugin registers explicit named
   tools (`agora_search`, `agora_acquire`, `agora_config`, …) plus lifecycle hooks
   (`tool.execute.before` for opt-in capability-gap suggestions, `experimental.session.compacting`
-  for stack-aware context). The plugin never owns a write that bypasses the scan gate.
-- **Inference provider abstraction** (`src/inference/`) — Agora owns no inference of its own. It
-  routes to OpenCode (default, free, zero login), a connected Claude API key, or a local Ollama
-  endpoint.
-
-### Ring 3 — Plaza & conveniences (allowed to be imperfect)
-
-- **Plaza** (`src/news/`) — a federated feed reader (HN, GitHub Trending, arXiv today; more
-  read/write adapters land per the roadmap), ranked by
-  `recencyW·e^(-h/12) + engagementW·log(eng+1) + topicW·topicMatch`, cached locally.
-- Tutorials, cross-session recall, and other conveniences that make the CLI a daily destination
-  without gating a release on their polish.
+  for stack-aware context). The plugin never owns a write that bypasses the gate.
+- **News** (`src/news/`) — a federated feed reader (HN, GitHub Trending, arXiv today), retained
+  read-only with zero new investment (brief §3), surfaced via `agora today`.
 
 ## Design principles
 
 - **Local-first, no hosted backend.** Every core feature works offline against an on-disk cache —
   degraded, never broken. If a source is unreachable, it says so; it never fabricates counts.
-- **A package manager, not a registry.** Agora never competes on catalog size; federating existing
+- **A customs office, not a registry.** Agora never competes on catalog size; federating existing
   registries means its effective catalog is everyone's combined.
-- **Trust is the product.** Reputation is earned (install counts, registry status, probe
-  results), not granted. The gate's honest limits are stated everywhere the verdict is shown.
-- **Agent-operable.** `--json` on every command, plan/apply separation, and stable exit codes
-  (`0` ok · `1` error · `2` plan-has-changes · `3` scan-fail) — Agora is meant to be driven by
-  agents as a first-class citizen, not just humans.
-- **The plugin stays thin.** No payment flow, no gate-bypassing write, inside an LLM tool call.
+- **Evidence, not scores.** Every verdict is policy evaluated over verifiable attestations — no
+  opaque numeric trust score exists anywhere in the product.
+- **Agent-operable.** `--json` on every command and stable exit codes (brief §9, supersedes the
+  old `0/1/2/3` plan/scan mapping): `0` ok · `1` policy forbid / drift / revocation hit · `2`
+  usage · `3` network · `4` sandbox unavailable — Agora is meant to be driven by agents as a
+  first-class citizen, not just humans.
+- **The plugin stays thin.** No gate-bypassing write inside an LLM tool call.
 - **Graceful terminal degradation.** Colour, gradients, and the banner degrade cleanly under
   `NO_COLOR`, `TERM=dumb`, non-TTY pipes, and narrow terminals.
 
@@ -83,34 +95,37 @@ Everything in the codebase serves one of three rings, and they carry different b
 - **BM25 capability/catalog search** (`src/search/catalog-index.ts`) — a no-dependency inverted
   index with field weighting and query-side synonym expansion, so search stays fast as the
   federated catalog grows.
-- **SHA-keyed memoized re-curation** (`src/curator/`) — caches AI verdicts against
-  `version=commitSha`, so re-verification cost scales with churn, not catalog size.
-- **Composed trust score** — a Bayesian blend of curation verdicts, mechanical quality signals
-  (`src/hubs/quality.ts`), and opt-in install-retention telemetry.
 - **Description-drift detection** — `descriptionDigest` (canonical SHA-256 of sorted tool names +
   descriptions + input schemas) computed per server on probe; re-probe detects drift with a
-  per-tool diff, persisted in `agora.toml` for cross-session comparison.
+  per-tool diff, persisted in `agora.toml` for cross-session comparison. Precursor to the brief §5.5
+  drift rule and §6.1 provenance cross-check.
 - **Description-injection heuristic scan** (`src/scan.ts`) — checks tool descriptions against
   patterns for imperative markers, secret exfiltration, instruction override, and runtime command
-  injection. Status `warn` to avoid false positives.
+  injection. Status `warn` to avoid false positives. Precursor to the brief §6.3 deterministic
+  description-poisoning checks.
 
-## Repository layout
+## Repository layout (today → target)
 
 ```
 src/stack/            cross-harness stack manager — adapters, manifest, plan/apply, doctor, probe
-src/federation/        federated catalog clients (official registry, Smithery, Glama, GitHub, …)
-src/acquire.ts         capability-acquisition gateway (resolve → scan-gate → write)
-src/scan.ts            the trust gate — injection/permission/drift heuristics
-src/search/             offline BM25 catalog index over federated results
-src/inference/          provider abstraction (OpenCode · Claude · Ollama)
-src/news/                the plaza — federated feed sources + ranking
-src/cli/                 command handlers, dispatch, shell, prompter, TUI pages
-src/plugin/               OpenCode plugin (tools, hooks, SDK-preferring chat)
-src/hubs/                 GitHub + HuggingFace connectors + AI README enrichment
-src/data.ts               curated MCP servers, workflows, tutorials — the offline-cache fallback
+                      → target: src/hosts/ (brief §4)
+src/federation/       federated catalog clients (official registry, Glama, GitHub, …)
+                      → target: src/federation/adapters/ + sync.ts
+src/acquire.ts        capability-acquisition gateway (resolve → scan-gate → write)
+src/scan.ts           the heuristic gate — injection/permission/drift heuristics
+                      → target: src/evidence/ + src/policy/ (brief §6, §7)
+src/search/           offline BM25 catalog index over federated results
+src/news/             federated feed sources + ranking (read-only, frozen)
+src/cli/              command handlers, dispatch, shell, prompter, TUI pages
+src/plugin/           OpenCode plugin (tools, hooks, SDK-preferring chat)
+src/hubs/             GitHub + HuggingFace connectors + AI README enrichment
+                      → repurposed: src/evidence/enrich.ts (brief §3)
+src/data.ts           curated MCP servers, workflows, tutorials — the offline-cache fallback
 packages/opencode-agora/  thin npm entry re-exporting agora-hub/opencode
 ```
 
-`backend/`, `hub/`, and the community boards that used to live alongside this are frozen and have
-been removed from the working tree — see [`frozen/README.md`](./frozen/README.md) if you land here
-looking for them.
+Not yet present, per the brief §4 target tree: `src/model/` (zod schemas), `src/evidence/`,
+`src/policy/`, `src/serve/`, `src/store/` (SQLite + CAS), `workers/api/` (Cloudflare Worker),
+`schemas/` (generated JSON Schema). These land phase by phase — see
+[`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_PLAN.md).
+</content>

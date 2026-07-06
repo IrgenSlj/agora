@@ -60,7 +60,7 @@ alphabetical order within their category. Run `bun test test/data.test.ts` to co
    `share.ts` as compact references).
 2. Wire dispatch in `src/cli/app.ts` (look for the `cmd` object — alphabetical-ish).
 3. Register metadata in `src/cli/commands-meta.ts` so completions, `/abc` shortcuts, and
-   `agora help <name>` pick it up. Pick the right `group` (`Marketplace` / `Setup` / `Library` /
+   `agora help <name>` pick it up. Pick the right `group` (`Catalog` / `Setup` / `Library` /
    `Learn` / `Stack`).
 4. Add tests in `test/cli.test.ts` (or a new `test/<name>.test.ts` if substantial). Use the
    `runCli` + `createIo` harness; pass `fetcher` for HTTP-touching commands.
@@ -81,17 +81,19 @@ alphabetical order within their category. Run `bun test test/data.test.ts` to co
 ```
 src/cli/              command dispatch, shell, prompter, TUI runner
 src/cli/commands/     one file per top-level CLI command
-src/cli/pages/        full-screen TUI pages (home, marketplace, stack, news, settings)
+src/cli/pages/        full-screen TUI pages (home, search, item, stack, news, settings, acquire)
 src/stack/            cross-harness stack manager — adapters, manifest, plan/apply, doctor
-src/federation/       federated catalog clients (official registry, Smithery, Glama, GitHub, …)
-src/marketplace.ts    curated catalog + live hub merge + install planner
+src/federation/       federated catalog clients (official registry, Glama, GitHub, HuggingFace, …)
+src/marketplace.ts    legacy catalog + live hub merge + install planner — being superseded by the
+                      v2 `Artifact` model (`src/model/`) and federation catalog (brief §5, §13 S1/S2)
 src/hubs/             GitHub + HuggingFace connectors + AI README enrichment
-src/news/             scoring, cache, per-source adapters (the plaza)
+src/news/             scoring, cache, per-source adapters (read-only, frozen)
 src/scan.ts           the trust gate — injection/permission/drift heuristics
 src/state.ts          local state, saves, auth (atomic 0o600 writes)
 src/atomic-write.ts   shared atomic + 0o600 file write helper
 src/data.ts           offline-cache fallback: curated MCP servers, workflows, tutorials, prompts
-src/types.ts          shared types — Package, Workflow, Permissions, Pricing, …
+src/types.ts          shared legacy types — superseded by the v2 `Artifact` model (see
+                      `AGORA_BRIEF_v2.md` §5)
 test/                 bun:test suite
 ```
 

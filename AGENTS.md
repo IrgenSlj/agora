@@ -1,23 +1,26 @@
 # Agora agent instructions
 
-`agora` is **the system manager for your agentic stack** — a local-first terminal app that
-*manages* what your agents can do (MCP servers, skills, instruction files), *watches* what the
-ecosystem is doing (a federated crossroads feed, the "plaza"), and *gates* what gets in (the
-trust/customs layer). See [`README.md`](./README.md) for the pitch and [`ROADMAP.md`](./ROADMAP.md)
-for the sequenced plan — read both before making structural changes.
+`agora` is **the trust plane for agentic tooling** — it verifies where MCP servers and Agent
+Skills come from, observes what they actually do, enforces user-defined policy over both, and
+manages them across every host (OpenCode, Claude Code, Cursor, Windsurf). See
+[`README.md`](./README.md) for the pitch, [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md) for the
+locked specification, and [`docs/V2_EXECUTION_PLAN.md`](./docs/V2_EXECUTION_PLAN.md) for the
+phase-by-phase build plan — read all three before making structural changes.
 
-## The three rings
+## The four planes
 
-- **Ring 1 — Manage & Gate** (must be excellent; blocks releases): the stack manager
-  (`src/stack/`), the federated catalog (`src/federation/`), the trust gate (`src/scan.ts`,
-  `src/acquire.ts`). This is what Agora *is*.
-- **Ring 2 — Surfaces** (invisible + fast): the CLI/TUI (`src/cli/`), `agora mcp`, thin plugins
-  (`src/plugin/`), the inference-provider abstraction (`src/inference/`).
-- **Ring 3 — Plaza & conveniences** (allowed to be imperfect): the federated feed reader
-  (`src/news/`), tutorials, recall.
-
-Ring 1 code gets the most scrutiny — correctness and honest failure modes there matter more than
-polish elsewhere.
+- **Federate** (`src/federation/`) — one search across federated upstream registries (official
+  MCP Registry as canonical, then Glama, PulseMCP, + skills sources). Agora never competes on
+  catalog size; its effective catalog is everyone's, deduped by purl.
+- **Verify** (`src/evidence/`, planned) — provenance verification (Sigstore / npm & GitHub
+  attestations), schema/description hashing with rug-pull drift detection, a sandboxed `vet` that
+  records what a server actually reads/writes/contacts, canary-token exfiltration detection — all
+  emitted as in-toto/DSSE attestations.
+- **Gate** (`src/policy/`, planned; heuristic gate live today in `src/scan.ts`) — a real policy
+  engine (Cedar) evaluated over evidence, plus a signed revocation feed with anti-rollback. This is
+  what Agora *is*; it gets the most scrutiny.
+- **Manage** (`src/stack/`) — the stack manager: `agora.toml` profile, `agora.lock` machine
+  truth, per-host adapters, `plan`/`apply`, `agora serve` exposing Agora itself as an MCP server.
 
 ## Non-negotiables
 
@@ -26,13 +29,14 @@ polish elsewhere.
 - **Honest output.** No fabricated data, no invented counts. If a source is unreachable, say so.
   "Passed the gate" means *no known red flags*, not "safe" — never blur that line.
 - **Agent-operable.** Every new command should support `--json`, use plan/apply separation where
-  it writes anything, and return stable exit codes: `0` ok · `1` error · `2` plan-has-changes ·
-  `3` scan-fail.
+  it writes anything, and return stable exit codes (brief §9, supersedes the old
+  `2=plan-changes/3=scan-fail`): `0` ok · `1` policy forbid / drift / revocation hit · `2` usage ·
+  `3` network · `4` sandbox unavailable.
 - **Surgical writes.** Config-writing code (stack adapters, `agora.toml`) must preserve every
   unrelated key and write atomically (see `src/atomic-write.ts`). Never credential-stuff
   `agora.toml` — secrets belong in settings/state, not the portable manifest.
 - **Thin plugins.** The OpenCode/Claude Code plugin surfaces tools and hooks; it never owns a
-  payment flow or a write that bypasses the scan gate.
+  write that bypasses the gate.
 - **Graceful terminal degradation.** Colour, gradients, and the banner degrade cleanly under
   `NO_COLOR`, `TERM=dumb`, non-TTY pipes, and narrow terminals.
 
@@ -40,15 +44,14 @@ polish elsewhere.
 
 ```bash
 bun install
-bun test              # hermetic, no network
-bun run typecheck      # alias for typecheck:cli
-bun run typecheck:cli  # tsc -p tsconfig.check.json
-bun run build           # tsc + copy catalog.json + chmod +x dist/cli.js — gates on noUnusedLocals
-bun run lint
-bun src/cli.ts <cmd>    # run from source, no build needed
+bun run test        # vitest, hermetic (no network)
+bun run lint        # biome
+bun run typecheck   # tsc
+bun run build       # tsc + copy catalog + chmod +x dist/cli.js
+bun src/cli.ts <cmd> # run from source, no build needed
 ```
 
-Run `bun test && bun run typecheck && bun run build` clean before any PR.
+Run `bun run test && bun run typecheck && bun run build` clean before any PR.
 
 ## Plugin tool design (`src/plugin/`)
 
@@ -94,7 +97,7 @@ when a release is created.
 1. **Bump the version** in `package.json` (check `CHANGELOG.md`'s `## Unreleased` section to decide
    the scope).
 2. **Finalize the changelog** — rename `## Unreleased` to `## [<version>] - <YYYY-MM-DD>`.
-3. **Quality gates** — `bun run typecheck && bun run lint && bun run build && bun test`.
+3. **Quality gates** — `bun run typecheck && bun run lint && bun run build && bun run test`.
 4. **Commit and push:** `git add -A && git commit -m "Release v<version>" && git push origin main`.
 5. **Tag the release:** `git tag v<version> && git push origin v<version>`.
 6. **Create the GitHub Release**, using the changelog section as the body — this triggers
