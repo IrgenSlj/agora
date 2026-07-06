@@ -1,12 +1,12 @@
-import { normalizeNewsSource, DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
-import { rankItems } from '../../news/score.js';
-import { readCache, writeCache, isStale } from '../../news/cache.js';
-import { hnSource } from '../../news/sources/hn.js';
-import { githubTrendingSource } from '../../news/sources/github-trending.js';
-import { arxivSource } from '../../news/sources/arxiv.js';
 import { formatNumber } from '../../format.js';
-import { stringFlag, numberFlag, writeLine, writeJson, detectDataDir } from '../helpers.js';
+import { isStale, readCache, writeCache } from '../../news/cache.js';
+import { rankItems } from '../../news/score.js';
+import { arxivSource } from '../../news/sources/arxiv.js';
+import { githubTrendingSource } from '../../news/sources/github-trending.js';
+import { hnSource } from '../../news/sources/hn.js';
+import { DEFAULT_NEWS_CONFIG, hostFromUrl, normalizeNewsSource } from '../../news/types.js';
 import { header } from '../format.js';
+import { detectDataDir, numberFlag, stringFlag, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 

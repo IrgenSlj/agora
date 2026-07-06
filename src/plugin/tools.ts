@@ -1,8 +1,9 @@
-import type { ToolDefinition } from '@opencode-ai/plugin';
-import type { PluginInput } from '@opencode-ai/plugin';
+import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
+import { type AcquireInput, acquire, renderAcquireResult } from '../acquire.js';
+import { formatConfigJson } from '../config.js';
 import { sampleTutorials } from '../data.js';
-import { acquire, renderAcquireResult, type AcquireInput } from '../acquire.js';
+import { formatInstalls, formatStars } from '../format.js';
 import {
   createInstallPlan,
   findMarketplaceItem,
@@ -11,13 +12,11 @@ import {
   type MarketplaceItem,
   searchMarketplaceItems
 } from '../marketplace.js';
-import { formatConfigJson } from '../config.js';
-import { formatInstalls, formatStars } from '../format.js';
-import { scanItem, type ScanResult } from '../scan.js';
-import { detectAgoraDataDir } from '../state.js';
 import { readCache } from '../news/cache.js';
 import { rankItems } from '../news/score.js';
 import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../news/types.js';
+import { type ScanResult, scanItem } from '../scan.js';
+import { detectAgoraDataDir } from '../state.js';
 import { createAgoraRuntimeTools } from './runtime-tools.js';
 
 function statusIcon(status: 'pass' | 'warn' | 'fail'): string {

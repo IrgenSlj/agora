@@ -1,0 +1,88 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.2/schema.json",
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": {
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.mjs",
+      "**/*.cjs",
+      "**/*.json",
+      "**/*.jsonc",
+      "!**/dist",
+      "!backend/dist",
+      "!**/node_modules",
+      "!backend/node_modules"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": false,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 100,
+    "attributePosition": "auto",
+    "bracketSameLine": false,
+    "bracketSpacing": true,
+    "expand": "auto",
+    "useEditorconfig": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "trailingCommas": "none",
+      "semicolons": "always",
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "quoteStyle": "single",
+      "attributePosition": "auto",
+      "bracketSpacing": true
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
+      "linter": {
+        "rules": {
+          "complexity": { "noUselessEscapeInRegex": "off" },
+          "correctness": {
+            "noUnusedVariables": "warn",
+            "noVoidTypeReturn": "off"
+          },
+          "suspicious": {
+            "noExplicitAny": "off",
+            "noControlCharactersInRegex": "off",
+            "noAssignInExpressions": "off",
+            "noImplicitAnyLet": "off",
+            "useIterableCallbackReturn": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["test/fixtures/**/*.js"],
+      "javascript": {
+        "globals": [
+          "setTimeout",
+          "console",
+          "Buffer",
+          "setInterval",
+          "process",
+          "clearTimeout",
+          "clearInterval"
+        ]
+      }
+    }
+  ],
+  "assist": { "enabled": true, "actions": { "source": { "organizeImports": "on" } } }
+}

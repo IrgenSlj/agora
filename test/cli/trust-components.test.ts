@@ -1,15 +1,15 @@
-import { test, expect, describe } from 'bun:test';
-import { createTheme } from '../../src/cli/theme.js';
+import { describe, expect, test } from 'vitest';
 import {
-  statusTriad,
-  verdictBanner,
-  provenanceBadges,
-  provenanceBadge,
-  trustPanel,
-  planDiff,
   driftChip,
-  originChip
+  originChip,
+  planDiff,
+  provenanceBadge,
+  provenanceBadges,
+  statusTriad,
+  trustPanel,
+  verdictBanner
 } from '../../src/cli/pages/components.js';
+import { createTheme } from '../../src/cli/theme.js';
 
 // NO_COLOR theme: identity tones, so we can assert on plain text with no ANSI.
 const plain = createTheme({ useColor: false, unicode: true });

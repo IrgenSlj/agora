@@ -1,18 +1,4 @@
 import { join } from 'node:path';
-import {
-  getMarketplaceItems,
-  getTrendingTags,
-  similarItems,
-  sortMarketplaceItems,
-  type MarketplaceItem
-} from '../../marketplace.js';
-import { formatNumber } from '../../format.js';
-import { appendHistory } from '../../history.js';
-import {
-  searchMarketplaceSource,
-  findMarketplaceSource,
-  trendingMarketplaceSource
-} from '../../live.js';
 import { federatedSearch } from '../../federation/index.js';
 import type {
   FederatedItem,
@@ -20,19 +6,33 @@ import type {
   SourceId,
   SourceStatus
 } from '../../federation/types.js';
+import { formatNumber } from '../../format.js';
+import { appendHistory } from '../../history.js';
 import {
-  stringFlag,
+  findMarketplaceSource,
+  searchMarketplaceSource,
+  trendingMarketplaceSource
+} from '../../live.js';
+import {
+  getMarketplaceItems,
+  getTrendingTags,
+  type MarketplaceItem,
+  similarItems,
+  sortMarketplaceItems
+} from '../../marketplace.js';
+import { formatItemDetail, formatItemList, formatItemTable, header } from '../format.js';
+import {
+  detectDataDir,
   numberFlag,
-  sourceOptions,
   sourceLabel,
-  warnFallback,
+  sourceOptions,
   sourcePayload,
-  writeLine,
-  writeJson,
+  stringFlag,
   usageError,
-  detectDataDir
+  warnFallback,
+  writeJson,
+  writeLine
 } from '../helpers.js';
-import { header, formatItemList, formatItemTable, formatItemDetail } from '../format.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 

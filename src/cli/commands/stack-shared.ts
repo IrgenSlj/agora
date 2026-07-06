@@ -6,19 +6,20 @@
  * (applySync/applyInstructionsSync) engines, so behavior never drifts
  * between them.
  */
+
+import type { StackManifest } from '../../stack/manifest.js';
+import { loadManifestFromSource, manifestPath, readManifest } from '../../stack/manifest.js';
 import { ALL_ADAPTERS, detectTools } from '../../stack/registry.js';
-import { manifestPath, readManifest, loadManifestFromSource } from '../../stack/manifest.js';
 import {
-  planSync,
-  applySync,
-  planInstructionsSync,
   applyInstructionsSync,
+  applySync,
+  type GateReport,
   gateManifestForSync,
-  type ToolSyncPlan,
-  type GateReport
+  planInstructionsSync,
+  planSync,
+  type ToolSyncPlan
 } from '../../stack/sync.js';
 import type { AgentToolId, StackEnv } from '../../stack/types.js';
-import type { StackManifest } from '../../stack/manifest.js';
 import type { CliIo, ParsedArgs } from '../flags.js';
 import { stringFlag, usageError } from '../helpers.js';
 import type { Theme } from '../theme.js';

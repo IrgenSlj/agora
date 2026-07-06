@@ -4,8 +4,8 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import {
   extractPackageFromConfig,
   formatConfigJson,
-  parseOpenCodeConfig,
-  type OpenCodeConfig
+  type OpenCodeConfig,
+  parseOpenCodeConfig
 } from './config.js';
 
 export interface ConfigPathOptions {

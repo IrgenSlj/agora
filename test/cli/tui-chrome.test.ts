@@ -1,7 +1,7 @@
-import { describe, test, expect } from 'bun:test';
-import { renderHeader, renderFooter } from '../../src/cli/tui';
-import { createStyler } from '../../src/ui';
+import { describe, expect, test } from 'vitest';
 import { liftStyler } from '../../src/cli/theme';
+import { renderFooter, renderHeader } from '../../src/cli/tui';
+import { createStyler } from '../../src/ui';
 
 // eslint-disable-next-line no-control-regex
 const ANSI_RE = /\x1b\[[0-9;]*m/g;

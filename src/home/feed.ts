@@ -1,16 +1,16 @@
-import { readAllServers, groupServersByName } from '../stack/registry.js';
-import { checkStack } from '../stack/doctor.js';
-import type { StackHealth } from '../stack/doctor.js';
-import { readCapabilityCache } from '../stack/capability-cache.js';
-import type { ServerCapabilities } from '../stack/capability-cache.js';
-import { manifestPath, readManifest } from '../stack/manifest.js';
-import type { StackManifest } from '../stack/manifest.js';
-import { getHotItems } from '../marketplace.js';
 import type { MarketplaceItem } from '../marketplace.js';
-import type { ConfiguredServer, StackEnv } from '../stack/types.js';
+import { getHotItems } from '../marketplace.js';
 import { readCache } from '../news/cache.js';
-import { hostFromUrl } from '../news/types.js';
 import type { NewsItem } from '../news/types.js';
+import { hostFromUrl } from '../news/types.js';
+import type { ServerCapabilities } from '../stack/capability-cache.js';
+import { readCapabilityCache } from '../stack/capability-cache.js';
+import type { StackHealth } from '../stack/doctor.js';
+import { checkStack } from '../stack/doctor.js';
+import type { StackManifest } from '../stack/manifest.js';
+import { manifestPath, readManifest } from '../stack/manifest.js';
+import { groupServersByName, readAllServers } from '../stack/registry.js';
+import type { ConfiguredServer, StackEnv } from '../stack/types.js';
 
 // ── Hot repos feed ────────────────────────────────────────────────────────────
 

@@ -1,9 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { getAdapter } from './registry.js';
-import { hashContent, resolveInstructionContent } from './manifest.js';
-import { scanItem, type ScanOptions, type ScanResult } from '../scan.js';
-import type { MarketplaceItem } from '../marketplace/types.js';
 import type { FetchLike } from '../live.js';
+import type { MarketplaceItem } from '../marketplace/types.js';
+import { type ScanOptions, type ScanResult, scanItem } from '../scan.js';
+import type { ManifestEntry, StackManifest } from './manifest.js';
+import { hashContent, resolveInstructionContent } from './manifest.js';
+import { getAdapter } from './registry.js';
 import type {
   AdapterInstructionsLocation,
   AgentToolId,
@@ -14,7 +15,6 @@ import type {
   ToolAdapter,
   ToolConfigLocation
 } from './types.js';
-import type { ManifestEntry, StackManifest } from './manifest.js';
 
 // ── Public types ──────────────────────────────────────────────────────────────
 

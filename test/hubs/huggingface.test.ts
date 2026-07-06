@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test';
-import { searchHuggingFace, type RawHfItem, type FetchLike } from '../../src/hubs/huggingface';
+import { describe, expect, test } from 'vitest';
+import { type FetchLike, type RawHfItem, searchHuggingFace } from '../../src/hubs/huggingface';
 import type { HubItem } from '../../src/hubs/types';
 
 const NOW = new Date('2026-05-17T00:00:00Z');

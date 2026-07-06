@@ -1,19 +1,19 @@
-import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import {
-  enrichmentPath,
-  readEnrichmentStore,
-  writeEnrichmentStore,
-  getEnrichment,
-  setEnrichment,
-  fetchRepoMetadata,
-  enrichItem,
-  enrichHfItem,
   type EnrichmentEntry,
   type EnrichmentStore,
-  type FetchLike
+  enrichHfItem,
+  enrichItem,
+  enrichmentPath,
+  type FetchLike,
+  fetchRepoMetadata,
+  getEnrichment,
+  readEnrichmentStore,
+  setEnrichment,
+  writeEnrichmentStore
 } from '../../src/hubs/enrichment';
 
 function makeTmpDir(): string {

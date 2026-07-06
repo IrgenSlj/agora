@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { atomicWriteFile } from './atomic-write.js';
 import { join } from 'node:path';
+import { atomicWriteFile } from './atomic-write.js';
 
 export interface LocalPreferences {
   theme: 'dark' | 'light' | 'auto';

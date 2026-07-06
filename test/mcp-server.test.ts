@@ -1,12 +1,12 @@
-import { describe, test, expect } from 'bun:test';
-import { existsSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { describe, expect, test } from 'vitest';
 import { createAgoraMcpServer } from '../src/cli/mcp-server';
 import { writeCapabilityCache } from '../src/stack/capability-cache';
-import { manifestPath, writeManifest, type StackManifest } from '../src/stack/manifest';
-import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { manifestPath, type StackManifest, writeManifest } from '../src/stack/manifest';
 
 function extractJson(result: Record<string, unknown>): any {
   const contents = result.content as { type: string; text?: string }[];

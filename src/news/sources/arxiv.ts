@@ -91,9 +91,7 @@ function parseArxivAtom(xml: string, now: string): NewsItem[] {
         tags: extractArxivTags(categories, title, summary),
         summary: summary || undefined
       });
-    } catch {
-      continue;
-    }
+    } catch {}
   }
 
   return items;

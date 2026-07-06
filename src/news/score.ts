@@ -1,4 +1,4 @@
-import type { NewsItem, ScoredNewsItem, NewsConfig } from './types.js';
+import type { NewsConfig, NewsItem, ScoredNewsItem } from './types.js';
 import { DEFAULT_NEWS_CONFIG, hostFromUrl, slugFromUrl } from './types.js';
 
 export function scoreItem(item: NewsItem, config: NewsConfig, now: Date): ScoredNewsItem {

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { HubItem } from './types.js';
 
@@ -17,9 +17,7 @@ export function readHubsCache(dataDir: string): HubItem[] {
     for (const line of raw.split('\n').filter(Boolean)) {
       try {
         items.push(JSON.parse(line));
-      } catch {
-        continue;
-      }
+      } catch {}
     }
     return items;
   } catch {

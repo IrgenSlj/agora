@@ -3,7 +3,6 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
 import { hashContent } from '../manifest.js';
-import { extractMarkerSections, mergeMarkerSections } from './instruction-markers.js';
 import type {
   AdapterInstructionsLocation,
   ConfiguredInstruction,
@@ -15,6 +14,7 @@ import type {
   ToolAdapter,
   ToolConfigLocation
 } from '../types.js';
+import { extractMarkerSections, mergeMarkerSections } from './instruction-markers.js';
 
 function resolveHome(opts: StackEnv): string {
   return opts.home ?? homedir();

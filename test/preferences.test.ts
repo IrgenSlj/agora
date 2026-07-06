@@ -1,8 +1,8 @@
-import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { loadPreferences, writePreferences, prefsPath } from '../src/preferences';
+import { describe, expect, test } from 'vitest';
+import { loadPreferences, prefsPath, writePreferences } from '../src/preferences';
 
 function makeTmp(): string {
   return mkdtempSync(join(tmpdir(), 'agora-prefs-test-'));

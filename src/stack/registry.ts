@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
-import { opencodeAdapter } from './adapters/opencode.js';
 import { claudeCodeAdapter } from './adapters/claude-code.js';
 import { cursorAdapter } from './adapters/cursor.js';
+import { opencodeAdapter } from './adapters/opencode.js';
 import { windsurfAdapter } from './adapters/windsurf.js';
 import type {
   AgentToolId,

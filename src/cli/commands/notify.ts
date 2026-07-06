@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { stringFlag, writeLine, writeJson, usageError } from '../helpers.js';
+import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
 function notifyDarwin(title: string, message: string, sound: boolean): void {

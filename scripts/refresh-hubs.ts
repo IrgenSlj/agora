@@ -7,9 +7,9 @@
  * Set AGORA_GITHUB_TOKEN to avoid GitHub rate limits (60 req/hr unauth, 5000 auth).
  */
 
+import { writeHubsCache } from '../src/hubs/cache.js';
 import { searchGithub } from '../src/hubs/github.js';
 import { searchHuggingFace } from '../src/hubs/huggingface.js';
-import { writeHubsCache } from '../src/hubs/cache.js';
 import { detectAgoraDataDir } from '../src/state.js';
 
 const dataDir = detectAgoraDataDir({ env: process.env as Record<string, string | undefined> });

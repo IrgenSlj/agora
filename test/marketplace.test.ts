@@ -2,36 +2,37 @@
  * Contract tests for src/marketplace.ts.
  * Calls the REAL exported functions — no re-implementation of filtering logic.
  */
-import { describe, expect, test, afterEach } from 'bun:test';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, describe, expect, test } from 'vitest';
+import { sourceBadge } from '../src/cli/pages/search';
+import { samplePackages } from '../src/data';
 import {
   buildOpenCodeConfig,
+  clearMarketplaceItemsCache,
   createInstallPlan,
+  describePermissionGlob,
   extractPostInstallHint,
   findMarketplaceItem,
-  getInstallKind,
+  findTutorial,
   getHotItems,
+  getInstallKind,
   getMarketplaceItems,
   getTrendingItems,
-  hasSharedRepositoryStars,
   getTutorials,
-  findTutorial,
-  clearMarketplaceItemsCache,
-  describePermissionGlob,
   hasPermissions,
+  hasSharedRepositoryStars,
+  type MarketplaceItem,
+  type PackageMarketplaceItem,
   renderPermissionLines,
   searchMarketplaceItems,
   similarItems,
   sortMarketplaceItems,
   starCountLabel,
-  trendScore,
-  type MarketplaceItem,
-  type PackageMarketplaceItem
+  trendScore
 } from '../src/marketplace';
-import { samplePackages } from '../src/data';
-import { sourceBadge } from '../src/cli/pages/search';
 
 // ── searchMarketplaceItems ──────────────────────────────────────────────────
 

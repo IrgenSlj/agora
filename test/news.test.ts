@@ -1,14 +1,14 @@
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { scoreItem, rankItems } from '../src/news/score.js';
-import { readCache, writeCache, isStale } from '../src/news/cache.js';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { _resetNewsState, newsPage, visible } from '../src/cli/pages/news.js';
+import type { AppState, PageContext } from '../src/cli/pages/types.js';
+import { isStale, readCache, writeCache } from '../src/news/cache.js';
+import { rankItems, scoreItem } from '../src/news/score.js';
+import type { NewsConfig, NewsItem, ScoredNewsItem } from '../src/news/types.js';
 import { hostFromUrl, slugFromUrl } from '../src/news/types.js';
-import type { NewsItem, NewsConfig, ScoredNewsItem } from '../src/news/types.js';
-import { visible, newsPage, _resetNewsState } from '../src/cli/pages/news.js';
 import { createStyler } from '../src/ui.js';
-import type { PageContext, AppState } from '../src/cli/pages/types.js';
 
 const BASE_CONFIG: NewsConfig = {
   sources: {

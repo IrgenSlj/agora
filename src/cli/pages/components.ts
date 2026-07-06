@@ -5,8 +5,8 @@
 // - Components accept a Theme (theme.ts). Many also accept a plain Styler
 //   for callers that haven't migrated — see `themeLike` shim.
 
-import type { Theme, Tone } from '../theme.js';
 import type { SourceId } from '../../federation/types.js';
+import type { Theme, Tone } from '../theme.js';
 
 // ── width helpers ────────────────────────────────────────────────────────────
 // eslint-disable-next-line no-control-regex

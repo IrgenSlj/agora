@@ -1,6 +1,6 @@
-import { existsSync, readFileSync, readdirSync, unlinkSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, basename } from 'node:path';
+import { basename, join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
 import { hashContent } from '../manifest.js';
 import type {

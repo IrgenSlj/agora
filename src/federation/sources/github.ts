@@ -12,16 +12,16 @@
 // single-item resolve stays byte-for-byte consistent with search()'s mapping
 // instead of re-deriving it.
 import { searchGithub } from '../../hubs/github.js';
-import { toHubItem, type RawGithubRepo } from '../../hubs/quality.js';
-import { fetchWithRetry } from '../../retry.js';
+import { type RawGithubRepo, toHubItem } from '../../hubs/quality.js';
 import type { HubItem } from '../../hubs/types.js';
+import type { PackageMarketplaceItem } from '../../marketplace/types.js';
+import { fetchWithRetry } from '../../retry.js';
 import type {
   FederatedItem,
   FederatedSearchOptions,
   FederationEnv,
   RegistrySource
 } from '../types.js';
-import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 
 function toFederatedItem(item: HubItem, fetchedAt: string): FederatedItem {
   const base: PackageMarketplaceItem = {

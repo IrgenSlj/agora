@@ -9,32 +9,33 @@
 // explicit `acquire()` call on APPLY is the only one that ever writes. `fail`
 // never reaches an apply prompt — verdictBanner already enforces that
 // visually; this page enforces it functionally too.
-import type { Page, PageAction, PageContext, PageId } from './types.js';
-import {
-  frame,
-  truncate,
-  rule,
-  pageHeader,
-  kvRow,
-  spinnerFrame,
-  bp,
-  provenanceBadges,
-  verdictBanner,
-  trustPanel,
-  planDiff,
-  type Verdict,
-  type Provenance
-} from './components.js';
-import { liftStyler } from '../theme.js';
-import type { Theme } from '../theme.js';
-import { acquire, writeLocationFor, type AcquireResult, type AcquireInput } from '../../acquire.js';
+
+import { type AcquireInput, type AcquireResult, acquire, writeLocationFor } from '../../acquire.js';
 import type { FederatedItem } from '../../federation/types.js';
-import type { ScanResult } from '../../scan.js';
 import type { MarketplaceItem } from '../../marketplace.js';
-import type { AgentToolId, ToolConfigLocation } from '../../stack/types.js';
+import type { ScanResult } from '../../scan.js';
 import { detectTools } from '../../stack/registry.js';
+import type { AgentToolId, ToolConfigLocation } from '../../stack/types.js';
 import { detectAgoraDataDir } from '../../state.js';
-import { buildPermRows, buildDrift, scanVerdict } from './helpers.js';
+import type { Theme } from '../theme.js';
+import { liftStyler } from '../theme.js';
+import {
+  bp,
+  frame,
+  kvRow,
+  type Provenance,
+  pageHeader,
+  planDiff,
+  provenanceBadges,
+  rule,
+  spinnerFrame,
+  truncate,
+  trustPanel,
+  type Verdict,
+  verdictBanner
+} from './components.js';
+import { buildDrift, buildPermRows, scanVerdict } from './helpers.js';
+import type { Page, PageAction, PageContext, PageId } from './types.js';
 
 const TOOLS: AgentToolId[] = ['opencode', 'claude-code', 'cursor', 'windsurf'];
 

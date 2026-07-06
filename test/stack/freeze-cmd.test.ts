@@ -1,10 +1,11 @@
 /**
  * Tests for `agora freeze` CLI command.
  */
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import { runCli } from '../../src/cli/app';
 
 // ── Harness ───────────────────────────────────────────────────────────────────

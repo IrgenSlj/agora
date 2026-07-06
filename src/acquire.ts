@@ -1,26 +1,26 @@
 import { resolve } from 'node:path';
+import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js';
+import { federatedFetchItem } from './federation/index.js';
+import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
 import type { FetchLike } from './live.js';
 import {
   createInstallPlan,
   findMarketplaceItem,
-  searchMarketplaceItems,
   type InstallPlan,
-  type MarketplaceItem
+  type MarketplaceItem,
+  searchMarketplaceItems
 } from './marketplace.js';
-import { scanItem, type ScanOptions, type ScanResult } from './scan.js';
-import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js';
-import { getAdapter } from './stack/registry.js';
-import { manifestPath, readManifest, writeManifest, type StackManifest } from './stack/manifest.js';
+import { type ScanOptions, type ScanResult, scanItem } from './scan.js';
 import { capabilityKey, descriptionDigest, readCapabilityCache } from './stack/capability-cache.js';
+import { manifestPath, readManifest, type StackManifest, writeManifest } from './stack/manifest.js';
+import { getAdapter } from './stack/registry.js';
 import type { AgentToolId, DesiredServer, StackEnv, ToolConfigLocation } from './stack/types.js';
-import { federatedFetchItem } from './federation/index.js';
-import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
 import {
   buildTrustMeta,
   readTrustStore,
   recordTrust,
-  trustStorePath,
-  TRUST_META_KEY
+  TRUST_META_KEY,
+  trustStorePath
 } from './trust-store.js';
 
 export interface AcquireInput {

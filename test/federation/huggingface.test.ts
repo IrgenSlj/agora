@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import { huggingfaceSource } from '../../src/federation/sources/huggingface';
 import type { RawHfItem } from '../../src/hubs/huggingface';
 import type { FetchLike } from '../../src/retry';

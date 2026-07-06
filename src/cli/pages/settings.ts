@@ -1,8 +1,8 @@
-import type { Page, PageAction, PageContext } from './types.js';
-import { loadSettings, writeSettings, type AgoraSettings } from '../../settings.js';
+import { type AgoraSettings, loadSettings, writeSettings } from '../../settings.js';
 import { detectAgoraDataDir } from '../../state.js';
 import { liftStyler } from '../theme.js';
-import { vlen, frame, rule, rail, kvRow, pill, status, pageHeader } from './components.js';
+import { frame, kvRow, pageHeader, pill, rail, rule, status, vlen } from './components.js';
+import type { Page, PageAction, PageContext } from './types.js';
 
 interface Field {
   section: 'Account' | 'Display' | 'News';

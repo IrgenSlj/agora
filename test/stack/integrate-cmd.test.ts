@@ -3,10 +3,11 @@
  * dogfooding the stack manager's own ToolAdapter.writeServers to install
  * agora itself as an MCP server into each harness. This is acceptance demo 5.
  */
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import { runCli } from '../../src/cli/app';
 
 function makeTmp(prefix: string): string {

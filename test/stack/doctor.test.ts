@@ -1,21 +1,21 @@
 /**
  * Tests for src/stack/doctor.ts (static checks only, probe=false).
  */
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync, chmodSync } from 'node:fs';
+
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-
-import { checkServer, checkStack } from '../../src/stack/doctor';
+import { describe, expect, test } from 'vitest';
 import {
   capabilityKey,
   descriptionDigest,
   readCapabilityCache,
   writeCapabilityCache
 } from '../../src/stack/capability-cache';
+import { checkServer, checkStack } from '../../src/stack/doctor';
 import type { ConfiguredServer } from '../../src/stack/types';
 
-const FAKE_SERVER = join(import.meta.dir, '../fixtures/mcp-fake-server.js');
+const FAKE_SERVER = join(import.meta.dirname, '../fixtures/mcp-fake-server.js');
 
 function makeTmp(): string {
   return mkdtempSync(join(tmpdir(), 'agora-doctor-test-'));

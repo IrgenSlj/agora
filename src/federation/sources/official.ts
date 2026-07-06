@@ -7,6 +7,8 @@
 //   GET /v0.1/servers/{encoded-name}/versions[/{version}]
 // `updated_since` auto-includes deleted tombstones — that's what src/federation/cache.ts
 // uses for incremental refresh + prune.
+
+import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 import { fetchWithRetry } from '../../retry.js';
 import type {
   FederatedItem,
@@ -18,7 +20,6 @@ import type {
   ServerPackage,
   ServerRemote
 } from '../types.js';
-import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 
 export const OFFICIAL_BASE_URL = 'https://registry.modelcontextprotocol.io';
 const META_KEY = 'io.modelcontextprotocol.registry/official';

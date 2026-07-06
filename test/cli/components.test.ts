@@ -1,19 +1,19 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import {
-  vlen,
-  padRight,
+  bp,
+  healthStripe,
+  keyHintBar,
   padLeft,
-  truncate,
+  padRight,
+  pageHeader,
   pill,
+  progress,
+  sparkline,
   status,
   statusLine,
-  keyHintBar,
-  sparkline,
-  progress,
-  healthStripe,
-  pageHeader,
   tableRow,
-  bp
+  truncate,
+  vlen
 } from '../../src/cli/pages/components';
 import { createTheme } from '../../src/cli/theme';
 

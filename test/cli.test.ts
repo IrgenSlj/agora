@@ -1,7 +1,7 @@
-import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
 import { parseArgs } from '../src/cli/flags';
 import type { FetchLike } from '../src/live';

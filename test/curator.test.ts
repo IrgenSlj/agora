@@ -1,22 +1,23 @@
 /**
  * Unit tests for src/curator/index.ts — pure helpers only; no network or opencode calls.
  */
-import { describe, expect, test } from 'bun:test';
+
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  normaliseRepo,
-  filterBundledDuplicates,
-  curationStatus,
-  readCuratedCache,
-  writeCuratedCache,
-  mapWithConcurrency,
-  isStale,
-  dedupeById,
-  type CuratedPackage
-} from '../src/curator/index';
+import { describe, expect, test } from 'vitest';
 import { parsePositiveIntFlag } from '../src/cli/commands/curate';
+import {
+  type CuratedPackage,
+  curationStatus,
+  dedupeById,
+  filterBundledDuplicates,
+  isStale,
+  mapWithConcurrency,
+  normaliseRepo,
+  readCuratedCache,
+  writeCuratedCache
+} from '../src/curator/index';
 import { samplePackages } from '../src/data';
 import type { HubItem } from '../src/hubs/types';
 

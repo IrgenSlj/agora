@@ -1,16 +1,16 @@
-import type { SourceResult, SourceOptions, SearchSourceOptions, MarketplaceItem } from './types.js';
+import { findMarketplaceItem, getTrendingItems, searchMarketplaceItems } from '../marketplace.js';
 import {
-  requestJson,
-  requestNullable,
-  normalizeCategory,
-  normalizeLimit,
+  api,
   isPackageCategory,
   mapPackage,
   mapWorkflow,
-  api,
-  offline
+  normalizeCategory,
+  normalizeLimit,
+  offline,
+  requestJson,
+  requestNullable
 } from './internal.js';
-import { searchMarketplaceItems, findMarketplaceItem, getTrendingItems } from '../marketplace.js';
+import type { MarketplaceItem, SearchSourceOptions, SourceOptions, SourceResult } from './types.js';
 
 /* ── API helpers ── */
 

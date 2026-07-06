@@ -1,12 +1,12 @@
-import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import { runCli } from '../../src/cli/app';
 import { clearMarketplaceItemsCache } from '../../src/marketplace';
 
-const FAKE_SERVER = join(import.meta.dir, '../fixtures/mcp-fake-server.js');
-const STDERR_SERVER = join(import.meta.dir, '../fixtures/mcp-stderr-server.js');
+const FAKE_SERVER = join(import.meta.dirname, '../fixtures/mcp-fake-server.js');
+const STDERR_SERVER = join(import.meta.dirname, '../fixtures/mcp-stderr-server.js');
 
 function makeIo(cwd: string, extraEnv?: Record<string, string | undefined>) {
   const out: string[] = [];

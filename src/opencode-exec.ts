@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process';
+import { type ChildProcess, type SpawnOptions, spawn } from 'node:child_process';
 import { extname } from 'node:path';
 import process from 'node:process';
 import { resolveOnPath } from './stack/path-resolve.js';

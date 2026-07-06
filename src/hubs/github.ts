@@ -2,8 +2,8 @@
 // marketplace. Distinct from src/news/sources/github-trending.ts, which scrapes
 // the human Trending page for news-feed cards.
 import { fetchWithRetry } from '../retry.js';
+import { passes, type RawGithubRepo, toHubItem } from './quality.js';
 import type { HubItem } from './types.js';
-import { passes, toHubItem, type RawGithubRepo } from './quality.js';
 
 export const TOPICS = [
   'mcp',
@@ -57,9 +57,7 @@ export async function searchGithub(opts: GithubSearchOptions = {}): Promise<HubI
       for (const repo of json.items ?? []) {
         if (!byId.has(repo.id)) byId.set(repo.id, repo);
       }
-    } catch {
-      continue; // graceful; we have cache fallback
-    }
+    } catch {}
   }
 
   const items: HubItem[] = [];

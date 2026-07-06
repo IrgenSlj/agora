@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { findMarketplaceItem } from '../../marketplace.js';
-import { writeLine, writeJson, usageError } from '../helpers.js';
+import { usageError, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
 function openUrl(url: string): void {

@@ -2,14 +2,14 @@
  * Tests for each tool adapter: opencode, claude-code, cursor, windsurf.
  * Uses temp dirs. No network. No spawns.
  */
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-
-import { opencodeAdapter } from '../../src/stack/adapters/opencode';
+import { describe, expect, test } from 'vitest';
 import { claudeCodeAdapter } from '../../src/stack/adapters/claude-code';
 import { cursorAdapter } from '../../src/stack/adapters/cursor';
+import { opencodeAdapter } from '../../src/stack/adapters/opencode';
 import { windsurfAdapter } from '../../src/stack/adapters/windsurf';
 
 function makeTmp(): string {

@@ -2,16 +2,16 @@
  * Unit tests for src/search/catalog-index.ts
  * Pure in-memory, no network, no filesystem.
  */
-import { describe, expect, test } from 'bun:test';
-import {
-  tokenize,
-  tokenizeQuery,
-  buildIndex,
-  searchIndex,
-  STOPWORDS,
-  SYNONYMS
-} from '../src/search/catalog-index';
+import { describe, expect, test } from 'vitest';
 import type { IndexableItem } from '../src/search/catalog-index';
+import {
+  buildIndex,
+  STOPWORDS,
+  SYNONYMS,
+  searchIndex,
+  tokenize,
+  tokenizeQuery
+} from '../src/search/catalog-index';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 

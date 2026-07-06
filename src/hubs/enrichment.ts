@@ -1,10 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { atomicWriteFile } from '../atomic-write.js';
 import { join } from 'node:path';
-import { fetchWithRetry } from '../retry.js';
+import { atomicWriteFile } from '../atomic-write.js';
 import { FREE_MODELS } from '../cli/commands/chat.js';
 import { extractPostInstallHint } from '../marketplace.js';
 import { buildOpencodeRunArgs, spawnOpencode } from '../opencode-exec.js';
+import { fetchWithRetry } from '../retry.js';
 
 export interface EnrichmentEntry {
   repoId: string;

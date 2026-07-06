@@ -1,7 +1,7 @@
-import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 
 import {
   capabilityCachePath,
@@ -10,9 +10,9 @@ import {
   diffToolDescriptions,
   formatToolDrift,
   readCapabilityCache,
-  writeCapabilityCache,
+  type ServerCapabilities,
   upsertCapabilities,
-  type ServerCapabilities
+  writeCapabilityCache
 } from '../../src/stack/capability-cache';
 
 function makeTmp(): string {

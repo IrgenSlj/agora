@@ -2,20 +2,20 @@
  * Integration-level tests for the home page TUI (src/cli/pages/home.ts).
  * Kept fully offline — trending uses in-process sample data.
  */
-import { describe, expect, test, beforeEach } from 'bun:test';
+
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-
-import { homePage } from '../../src/cli/pages/home';
-import { createStyler } from '../../src/ui';
+import { beforeEach, describe, expect, test } from 'vitest';
 import { vlen } from '../../src/cli/pages/helpers';
-import { writeCapabilityCache } from '../../src/stack/capability-cache';
+import { homePage } from '../../src/cli/pages/home';
+import type { AppState, KeyEvent, PageContext } from '../../src/cli/pages/types';
 import { writeCache } from '../../src/news/cache';
-import { writeAgoraState, loadAgoraState } from '../../src/state';
-import type { PageContext, KeyEvent, AppState } from '../../src/cli/pages/types';
-import type { ServerCapabilities } from '../../src/stack/capability-cache';
 import type { NewsItem } from '../../src/news/types';
+import type { ServerCapabilities } from '../../src/stack/capability-cache';
+import { writeCapabilityCache } from '../../src/stack/capability-cache';
+import { loadAgoraState, writeAgoraState } from '../../src/state';
+import { createStyler } from '../../src/ui';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

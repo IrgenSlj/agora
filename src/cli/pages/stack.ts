@@ -1,25 +1,28 @@
-import type { Page, PageAction, PageContext } from './types.js';
-import { frame, padRight, truncate, vlen } from './components.js';
-import {
-  pageHeader,
-  rule,
-  rail,
-  status,
-  kvRow,
-  tagList,
-  spinnerFrame,
-  pill
-} from './components.js';
-import { liftStyler } from '../theme.js';
-import type { Theme } from '../theme.js';
-import { readAllServers, groupServersByName, detectTools } from '../../stack/registry.js';
-import { checkStack } from '../../stack/doctor.js';
-import { readCapabilityCache } from '../../stack/capability-cache.js';
-import { detectAgoraDataDir } from '../../state.js';
-import type { StackHealth } from '../../stack/doctor.js';
 import type { ServerCapabilities } from '../../stack/capability-cache.js';
+import { readCapabilityCache } from '../../stack/capability-cache.js';
+import type { StackHealth } from '../../stack/doctor.js';
+import { checkStack } from '../../stack/doctor.js';
+import { detectTools, groupServersByName, readAllServers } from '../../stack/registry.js';
 import type { ConfiguredServer, StackEnv } from '../../stack/types.js';
+import { detectAgoraDataDir } from '../../state.js';
+import type { Theme } from '../theme.js';
+import { liftStyler } from '../theme.js';
 import { seedAcquire } from './acquire.js';
+import {
+  frame,
+  kvRow,
+  padRight,
+  pageHeader,
+  pill,
+  rail,
+  rule,
+  spinnerFrame,
+  status,
+  tagList,
+  truncate,
+  vlen
+} from './components.js';
+import type { Page, PageAction, PageContext } from './types.js';
 
 // suppress unused-import warning for pill (used below)
 void pill;

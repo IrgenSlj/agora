@@ -1,7 +1,7 @@
-import { describe, test, expect } from 'bun:test';
-import { formatStars, formatInstalls } from '../src/format';
+import { describe, expect, test } from 'vitest';
 import { formatProfileDetail } from '../src/cli/format.js';
 import { createTheme } from '../src/cli/theme.js';
+import { formatInstalls, formatStars } from '../src/format';
 import type { ApiProfile } from '../src/live.js';
 
 describe('Formatting Utilities', () => {

@@ -1,10 +1,10 @@
-import { detectOpenCodeConfigPath, loadOpenCodeConfig } from '../../config-files.js';
 import { extractPackageFromConfig } from '../../config.js';
+import { detectOpenCodeConfigPath, loadOpenCodeConfig } from '../../config-files.js';
 import { checkOutdated } from '../../outdated.js';
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
-import { cliTheme } from '../theme.js';
+import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { status } from '../pages/components.js';
+import { cliTheme } from '../theme.js';
+import type { CommandHandler } from './types.js';
 
 export const commandOutdated: CommandHandler = async (parsed, io, style) => {
   const theme = cliTheme(style, io);

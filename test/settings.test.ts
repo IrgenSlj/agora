@@ -1,8 +1,8 @@
-import { describe, expect, test } from 'bun:test';
-import { loadSettings, writeSettings, DEFAULT_SETTINGS } from '../src/settings.js';
-import { join } from 'node:path';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
+import { DEFAULT_SETTINGS, loadSettings, writeSettings } from '../src/settings.js';
 
 const TEST_DIR = '/tmp/agora-settings-test';
 

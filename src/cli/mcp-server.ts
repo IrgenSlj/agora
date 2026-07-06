@@ -1,19 +1,19 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { AGORA_VERSION } from './app.js';
-import { scanItem, type ScanOptions } from '../scan.js';
-import { federatedSearch, federatedFetchItem, SOURCES } from '../federation/index.js';
-import type { FederationEnv, SourceId } from '../federation/types.js';
-import { readAllServers, detectTools, ALL_ADAPTERS } from '../stack/registry.js';
-import { checkStack } from '../stack/doctor.js';
-import { readCapabilityCache } from '../stack/capability-cache.js';
-import { manifestPath, readManifest, loadManifestFromSource } from '../stack/manifest.js';
-import { planSync, planInstructionsSync, gateManifestForSync } from '../stack/sync.js';
-import { detectAgoraDataDir } from '../state.js';
-import type { StackEnv, AgentToolId } from '../stack/types.js';
 import { acquire } from '../acquire.js';
-import { trustStorePath, readTrustStore, TRUST_META_KEY } from '../trust-store.js';
+import { federatedFetchItem, federatedSearch, SOURCES } from '../federation/index.js';
+import type { FederationEnv, SourceId } from '../federation/types.js';
+import { type ScanOptions, scanItem } from '../scan.js';
+import { readCapabilityCache } from '../stack/capability-cache.js';
+import { checkStack } from '../stack/doctor.js';
+import { loadManifestFromSource, manifestPath, readManifest } from '../stack/manifest.js';
+import { ALL_ADAPTERS, detectTools, readAllServers } from '../stack/registry.js';
+import { gateManifestForSync, planInstructionsSync, planSync } from '../stack/sync.js';
+import type { AgentToolId, StackEnv } from '../stack/types.js';
+import { detectAgoraDataDir } from '../state.js';
+import { readTrustStore, TRUST_META_KEY, trustStorePath } from '../trust-store.js';
+import { AGORA_VERSION } from './app.js';
 
 /**
  * The `agora mcp` tool surface (brief §5b) — the universal plugin. Kept small

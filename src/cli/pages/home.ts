@@ -1,19 +1,19 @@
-import { join } from 'node:path';
 import { homedir } from 'node:os';
-import type { Page, PageAction, PageContext } from './types.js';
-import type { ScoredNewsItem } from '../../news/types.js';
+import { join } from 'node:path';
+import { formatNumber } from '../../format.js';
+import type { HotRepo, Opportunity, SinceDelta, StackSummary } from '../../home/feed.js';
+import { buildHomeFeed, computeSinceLastSeen, getHotRepos } from '../../home/feed.js';
 import { getHotItems, getTrendingItems, type MarketplaceItem } from '../../marketplace.js';
 import { readCache } from '../../news/cache.js';
-import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
 import { rankItems } from '../../news/score.js';
-import { vlen, fmtCount, frame, truncate } from './helpers.js';
-import { formatNumber } from '../../format.js';
-import { buildHomeFeed, getHotRepos, computeSinceLastSeen } from '../../home/feed.js';
-import type { StackSummary, Opportunity, HotRepo, SinceDelta } from '../../home/feed.js';
+import type { ScoredNewsItem } from '../../news/types.js';
+import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
 import type { StackEnv } from '../../stack/types.js';
 import { loadAgoraState, writeAgoraState } from '../../state.js';
 import { liftStyler } from '../theme.js';
-import { rule, status, pageHeader, bp } from './components.js';
+import { bp, pageHeader, rule, status } from './components.js';
+import { fmtCount, frame, truncate, vlen } from './helpers.js';
+import type { Page, PageAction, PageContext } from './types.js';
 
 const SOURCE_LABELS: Record<string, string> = {
   hn: 'HN',

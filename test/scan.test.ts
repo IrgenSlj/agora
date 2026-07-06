@@ -1,7 +1,7 @@
-import { describe, expect, test } from 'bun:test';
-import { scanItem } from '../src/scan';
-import type { PackageMarketplaceItem, WorkflowMarketplaceItem } from '../src/marketplace';
+import { describe, expect, test } from 'vitest';
 import { samplePackages } from '../src/data';
+import type { PackageMarketplaceItem, WorkflowMarketplaceItem } from '../src/marketplace';
+import { scanItem } from '../src/scan';
 
 function makePackage(overrides: Partial<PackageMarketplaceItem> = {}): PackageMarketplaceItem {
   return {

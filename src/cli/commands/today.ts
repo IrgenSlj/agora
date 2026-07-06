@@ -1,14 +1,14 @@
+import { formatNumber } from '../../format.js';
+import type { MarketplaceItem } from '../../marketplace.js';
+import { getTrendingItems } from '../../marketplace.js';
 import { readCache } from '../../news/cache.js';
 import { rankItems } from '../../news/score.js';
+import type { ScoredNewsItem } from '../../news/types.js';
 import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
-import { getTrendingItems } from '../../marketplace.js';
-import { formatNumber } from '../../format.js';
-import { writeLine, writeJson, stringFlag, detectDataDir } from '../helpers.js';
 import { header } from '../format.js';
+import { detectDataDir, stringFlag, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
-import type { ScoredNewsItem } from '../../news/types.js';
-import type { MarketplaceItem } from '../../marketplace.js';
 
 const DAY_MS = 86400 * 1000;
 

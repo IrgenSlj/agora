@@ -3,14 +3,14 @@
  * add/update/remove, and — the non-negotiable — preservation of every
  * unrelated key/file already on disk (same discipline as writeServers).
  */
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
+
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-
-import { opencodeAdapter } from '../../src/stack/adapters/opencode';
+import { describe, expect, test } from 'vitest';
 import { claudeCodeAdapter } from '../../src/stack/adapters/claude-code';
 import { cursorAdapter } from '../../src/stack/adapters/cursor';
+import { opencodeAdapter } from '../../src/stack/adapters/opencode';
 import { windsurfAdapter } from '../../src/stack/adapters/windsurf';
 import type { DesiredInstruction } from '../../src/stack/types';
 

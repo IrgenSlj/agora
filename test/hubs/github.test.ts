@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test';
-import { searchGithub, type FetchLike } from '../../src/hubs/github';
+import { describe, expect, test } from 'vitest';
+import { type FetchLike, searchGithub } from '../../src/hubs/github';
 import type { RawGithubRepo } from '../../src/hubs/quality';
 
 const NOW = new Date('2026-05-17T00:00:00Z');

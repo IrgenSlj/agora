@@ -1,16 +1,16 @@
-import type { Discussion, Tutorial, TutorialStep } from '../types.js';
 import type {
   MarketplaceItem,
   PackageMarketplaceItem,
   WorkflowMarketplaceItem
 } from '../marketplace.js';
+import type { Discussion, Tutorial, TutorialStep } from '../types.js';
 
 export type {
   Discussion,
-  Tutorial,
-  TutorialStep,
   MarketplaceItem,
   PackageMarketplaceItem,
+  Tutorial,
+  TutorialStep,
   WorkflowMarketplaceItem
 };
 

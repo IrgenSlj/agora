@@ -1,8 +1,8 @@
-import type { ParsedArgs, CliIo } from '../flags.js';
-import type { Styler } from '../../ui.js';
-import { writeLine, detectDataDir } from '../helpers.js';
 import { curateAll, curationStatus } from '../../curator/index.js';
 import { clearMarketplaceItemsCache, getCuratedSource } from '../../marketplace.js';
+import type { Styler } from '../../ui.js';
+import type { CliIo, ParsedArgs } from '../flags.js';
+import { detectDataDir, writeLine } from '../helpers.js';
 
 /**
  * Coerces a flag value (string | boolean | undefined) to a positive integer.

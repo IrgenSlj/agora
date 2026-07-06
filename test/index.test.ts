@@ -1,9 +1,9 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import {
-  samplePackages,
-  sampleWorkflows,
   sampleDiscussions,
+  samplePackages,
   sampleTutorials,
+  sampleWorkflows,
   trendingTags
 } from '../src/data';
 

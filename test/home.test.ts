@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test';
-import { truncate, homePage } from '../src/cli/pages/home';
+import { describe, expect, test } from 'vitest';
+import { homePage, truncate } from '../src/cli/pages/home';
 
 describe('home truncate', () => {
   test('returns short strings unchanged', () => {

@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import { localSource } from '../../src/federation/sources/local';
 
 describe('localSource — the always-works offline source', () => {

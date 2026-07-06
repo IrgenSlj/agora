@@ -1,25 +1,26 @@
 /**
  * Tests for src/home/feed.ts — pure-function coverage only.
  */
-import { describe, expect, test } from 'bun:test';
+
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 
 import {
-  summarizeStack,
-  computeOpportunities,
   buildHomeFeed,
+  computeOpportunities,
+  computeSinceLastSeen,
   getHotRepos,
-  computeSinceLastSeen
+  summarizeStack
 } from '../../src/home/feed';
+import type { MarketplaceItem } from '../../src/marketplace';
 import { writeCache } from '../../src/news/cache';
 import type { NewsItem } from '../../src/news/types';
-import type { ConfiguredServer } from '../../src/stack/types';
-import type { StackHealth, ServerHealth } from '../../src/stack/doctor';
-import type { StackManifest } from '../../src/stack/manifest';
-import type { MarketplaceItem } from '../../src/marketplace';
 import type { ServerCapabilities } from '../../src/stack/capability-cache';
+import type { ServerHealth, StackHealth } from '../../src/stack/doctor';
+import type { StackManifest } from '../../src/stack/manifest';
+import type { ConfiguredServer } from '../../src/stack/types';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 

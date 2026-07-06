@@ -2,13 +2,15 @@
 // the results into one deduped catalog, and reports an honest per-source
 // status. This is the only file that knows about canonicalization/merge — a
 // source implementation only ever has to satisfy RegistrySource.
-import { officialSource } from './sources/official.js';
-import { smitherySource } from './sources/smithery.js';
-import { glamaSource } from './sources/glama.js';
+
+import type { PackageMarketplaceItem } from '../marketplace/types.js';
+import { readSourceCache, resolveCacheDir } from './cache.js';
 import { githubSource } from './sources/github.js';
+import { glamaSource } from './sources/glama.js';
 import { huggingfaceSource } from './sources/huggingface.js';
 import { localSource } from './sources/local.js';
-import { readSourceCache, resolveCacheDir } from './cache.js';
+import { officialSource } from './sources/official.js';
+import { smitherySource } from './sources/smithery.js';
 import type {
   FederatedItem,
   FederatedSearchOptions,
@@ -18,7 +20,6 @@ import type {
   SourceId,
   SourceStatus
 } from './types.js';
-import type { PackageMarketplaceItem } from '../marketplace/types.js';
 
 /**
  * Upstream registries Agora federates, in preference order (used to order

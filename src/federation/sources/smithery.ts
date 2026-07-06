@@ -24,6 +24,8 @@
 // mapped defensively (annotations passed through when present) so real data
 // flows through the day upstream starts setting them, without this source
 // depending on it.
+
+import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 import { fetchWithRetry } from '../../retry.js';
 import type {
   FederatedItem,
@@ -33,7 +35,6 @@ import type {
   RegistrySource,
   ToolAnnotationHints
 } from '../types.js';
-import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 
 export const SMITHERY_BASE_URL = 'https://registry.smithery.ai';
 

@@ -1,12 +1,12 @@
-import type { Theme } from './theme.js';
 import { formatNumber } from '../format.js';
-import { getInstallKind, renderPermissionLines, type MarketplaceItem } from '../marketplace.js';
+import type { ApiProfile, ApiReview } from '../live.js';
+import { getInstallKind, type MarketplaceItem, renderPermissionLines } from '../marketplace.js';
 import type { ResolvedSavedItem } from '../state.js';
-import type { Tutorial, Pricing } from '../types.js';
-import type { ApiReview, ApiProfile } from '../live.js';
-import { COMMANDS } from './commands-meta.js';
+import type { Pricing, Tutorial } from '../types.js';
 import { renderBanner, renderBox } from '../ui.js';
-import { pill, tagList, kvRow } from './pages/components.js';
+import { COMMANDS } from './commands-meta.js';
+import { kvRow, pill, tagList } from './pages/components.js';
+import type { Theme } from './theme.js';
 
 function pricingBadge(pricing: Pricing | undefined, theme: Theme): string {
   if (!pricing) return '';

@@ -1,14 +1,14 @@
-import { KNOWN_RUNNERS, resolveOnPath } from './path-resolve.js';
-import { probeMcpServer, type McpProbeResult } from './mcp-probe.js';
 import {
+  capabilityKey,
   descriptionDigest,
   diffToolDescriptions,
   formatToolDrift,
   readCapabilityCache,
-  upsertCapabilities,
-  capabilityKey,
-  type ServerCapabilities
+  type ServerCapabilities,
+  upsertCapabilities
 } from './capability-cache.js';
+import { type McpProbeResult, probeMcpServer } from './mcp-probe.js';
+import { KNOWN_RUNNERS, resolveOnPath } from './path-resolve.js';
 import type { ConfiguredServer, StackEnv } from './types.js';
 
 export type HealthStatus = 'ok' | 'warn' | 'error';

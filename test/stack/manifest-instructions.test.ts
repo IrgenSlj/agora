@@ -2,16 +2,17 @@
  * Tests for the P3 `instructions` manifest table: TOML parse/serialize
  * round-trip, and resolveInstructionContent (inline | file | url).
  */
-import { describe, expect, test } from 'bun:test';
+
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import {
-  serializeManifest,
-  parseManifest,
   hashContent,
+  parseManifest,
   resolveInstructionContent,
-  type StackManifest
+  type StackManifest,
+  serializeManifest
 } from '../../src/stack/manifest';
 
 function makeTmp(): string {

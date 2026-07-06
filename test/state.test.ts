@@ -1,18 +1,11 @@
 /**
  * Contract tests for src/state.ts and src/config-files.ts — data safety.
  */
-import { describe, expect, test } from 'bun:test';
+
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import {
-  detectAgoraDataDir,
-  loadAgoraState,
-  saveItemToState,
-  writeAgoraState,
-  type AgoraState,
-  type HomeMeta
-} from '../src/state';
+import { describe, expect, test } from 'vitest';
 import {
   detectOpenCodeConfigPath,
   doctorOpenCodeConfig,
@@ -20,6 +13,14 @@ import {
   writeOpenCodeConfig
 } from '../src/config-files';
 import { findMarketplaceItem } from '../src/marketplace';
+import {
+  type AgoraState,
+  detectAgoraDataDir,
+  type HomeMeta,
+  loadAgoraState,
+  saveItemToState,
+  writeAgoraState
+} from '../src/state';
 
 function makeTmp(): string {
   return mkdtempSync(join(tmpdir(), 'agora-state-test-'));

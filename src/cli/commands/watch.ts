@@ -1,4 +1,4 @@
-import { numberFlag, writeLine, usageError } from '../helpers.js';
+import { numberFlag, usageError, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
 export const commandWatch: CommandHandler = async (parsed, io, style) => {

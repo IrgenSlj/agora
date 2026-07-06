@@ -1,8 +1,8 @@
+import * as readline from 'node:readline';
 import { cancel, intro, isCancel, multiselect, select, text } from '@clack/prompts';
 import { execSync } from 'child_process';
-import * as readline from 'node:readline';
+import { renderBanner, renderBox, type Styler, supportsTrueColor } from '../ui.js';
 import { COMMANDS, renderManual } from './commands-meta.js';
-import { renderBanner, renderBox, supportsTrueColor, type Styler } from '../ui.js';
 
 interface MenuIo {
   env?: Record<string, string | undefined>;

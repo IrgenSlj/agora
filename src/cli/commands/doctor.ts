@@ -1,10 +1,10 @@
-import { readAllServers, detectTools, ALL_ADAPTERS } from '../../stack/registry.js';
 import { checkStack } from '../../stack/doctor.js';
+import { ALL_ADAPTERS, detectTools, readAllServers } from '../../stack/registry.js';
 import type { AgentToolId } from '../../stack/types.js';
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, usageError, detectDataDir } from '../helpers.js';
-import { cliTheme } from '../theme.js';
+import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { status } from '../pages/components.js';
+import { cliTheme } from '../theme.js';
+import type { CommandHandler } from './types.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 

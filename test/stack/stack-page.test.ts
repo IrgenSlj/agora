@@ -2,10 +2,11 @@
  * Unit tests for src/cli/pages/stack.ts
  * No real spawns — probe=false only. Uses temp dirs with fixture configs.
  */
-import { describe, expect, test, beforeEach, afterEach } from 'bun:test';
+
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 
 import { stackPage } from '../../src/cli/pages/stack';
 import type { PageContext } from '../../src/cli/pages/types';

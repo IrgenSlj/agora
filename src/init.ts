@@ -1,8 +1,8 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { execFileSync } from 'node:child_process';
-import { writeOpenCodeConfig } from './config-files.js';
 import type { OpenCodeConfig } from './config.js';
+import { writeOpenCodeConfig } from './config-files.js';
 import { samplePackages } from './data.js';
 
 export interface ProjectScan {

@@ -1,11 +1,11 @@
-import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
-import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { refreshOfficialCache, readSourceCache, readSourceMeta } from '../../src/federation/cache';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { readSourceCache, readSourceMeta, refreshOfficialCache } from '../../src/federation/cache';
 import type { FetchLike } from '../../src/retry';
 
-const FIXTURES_DIR = join(import.meta.dir, '../fixtures/federation');
+const FIXTURES_DIR = join(import.meta.dirname, '../fixtures/federation');
 
 function loadFixture(name: string): { servers: unknown[] } {
   return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf8'));

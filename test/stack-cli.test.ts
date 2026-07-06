@@ -1,10 +1,11 @@
 /**
  * Tests for `agora installed` and `agora doctor` CLI commands.
  */
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, chmodSync } from 'node:fs';
+
+import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
 import { writeCapabilityCache } from '../src/stack/capability-cache';
 

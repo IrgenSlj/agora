@@ -2,7 +2,7 @@
  * Data integrity contract tests for src/data.ts.
  * Every assertion covers the FULL dataset, not just the first element.
  */
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import { samplePackages, sampleTutorials, sampleWorkflows, trendingTags } from '../src/data';
 
 // npm package-name shape: optional scope (@scope/) + package name
@@ -298,7 +298,7 @@ describe('samplePackages — permissions backfill', () => {
 
 // ── Network-gated test — only runs when AGORA_NETWORK_TESTS=1 ──────────────
 describe('samplePackages — npm registry reachability (network-gated)', () => {
-  test.if(!!process.env.AGORA_NETWORK_TESTS)(
+  test.runIf(!!process.env.AGORA_NETWORK_TESTS)(
     'every npmPackage resolves to HTTP 200 on the npm registry',
     async () => {
       const mcpPkgs = samplePackages.filter((p) => p.npmPackage);

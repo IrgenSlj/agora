@@ -1,8 +1,8 @@
 import type { Hooks, PluginInput, PluginOptions } from '@opencode-ai/plugin';
-import { detectAgoraDataDir } from '../state.js';
-import { readAllServers, groupServersByName } from '../stack/registry.js';
 import { readCapabilityCache } from '../stack/capability-cache.js';
+import { groupServersByName, readAllServers } from '../stack/registry.js';
 import type { ConfiguredServer, StackEnv } from '../stack/types.js';
+import { detectAgoraDataDir } from '../state.js';
 
 export interface AgoraPluginConfig {
   suggestAcquire: boolean;

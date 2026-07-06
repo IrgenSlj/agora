@@ -42,7 +42,7 @@ export async function withRetry<T>(
       if (err instanceof DOMException && err.name === 'AbortError') throw err;
       lastError = err;
       if (attempt < maxRetries) {
-        const delay = Math.min(baseDelayMs * Math.pow(2, attempt - 1), maxDelayMs);
+        const delay = Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs);
         await sleep(jitter(delay), signal);
       }
     }

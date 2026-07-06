@@ -1,8 +1,8 @@
+import { buildIndex, type IndexableItem, searchIndex } from '../../search/catalog-index.js';
 import { readCapabilityCache } from '../../stack/capability-cache.js';
-import { buildIndex, searchIndex, type IndexableItem } from '../../search/catalog-index.js';
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, detectDataDir } from '../helpers.js';
+import { detectDataDir, stringFlag, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
+import type { CommandHandler } from './types.js';
 
 interface FlatTool {
   server: string;

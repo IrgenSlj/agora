@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
 import { loadOpenCodeConfig } from '../../config-files.js';
 import { hashContent } from '../manifest.js';

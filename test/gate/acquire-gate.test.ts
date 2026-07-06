@@ -8,16 +8,14 @@
 //   - a mocked `fetcher` returning raw official-registry wire JSON (mirrors
 //     test/federation/official.test.ts's fixture shape) for one true
 //     end-to-end run through the real CLI, proving the production wiring.
-import { describe, expect, test } from 'bun:test';
+
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 
 import { acquire } from '../../src/acquire';
 import { runCli } from '../../src/cli/app';
-import { readManifest } from '../../src/stack/manifest';
-import { readTrustStore, TRUST_META_KEY } from '../../src/trust-store';
-import type { PackageMarketplaceItem } from '../../src/marketplace';
 import type {
   FederatedTool,
   OfficialStatus,
@@ -25,6 +23,9 @@ import type {
   ServerJson
 } from '../../src/federation/types';
 import type { FetchLike } from '../../src/live';
+import type { PackageMarketplaceItem } from '../../src/marketplace';
+import { readManifest } from '../../src/stack/manifest';
+import { readTrustStore, TRUST_META_KEY } from '../../src/trust-store';
 
 // Package-only projection of FederatedItem — every fixture here is a package,
 // and narrowing this way avoids the union-distribution headache of

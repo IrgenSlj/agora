@@ -1,6 +1,6 @@
-import type { AgoraState } from '../state.js';
-import { setAuthState, getAuthState, clearAuthState, writeAgoraState } from '../state.js';
 import type { FetchLike } from '../live.js';
+import type { AgoraState } from '../state.js';
+import { clearAuthState, getAuthState, setAuthState, writeAgoraState } from '../state.js';
 
 export interface EnsureFreshOpts {
   dataDir: string;

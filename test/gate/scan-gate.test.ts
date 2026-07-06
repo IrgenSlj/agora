@@ -5,11 +5,11 @@
 // directions matter — poisoned inputs must fail/warn *exactly*, and clean
 // inputs must never produce a false-positive warning on these checks, or the
 // gate stops being trusted (brief §5c).
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
+import type { FederatedTool } from '../../src/federation/types';
+import type { PackageMarketplaceItem } from '../../src/marketplace';
 import { scanItem } from '../../src/scan';
 import { descriptionDigest } from '../../src/stack/capability-cache';
-import type { PackageMarketplaceItem } from '../../src/marketplace';
-import type { FederatedTool } from '../../src/federation/types';
 
 function makePackage(overrides: Partial<PackageMarketplaceItem> = {}): PackageMarketplaceItem {
   return {

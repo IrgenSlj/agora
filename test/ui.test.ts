@@ -1,11 +1,11 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import {
-  MEANDER,
   MASCOT_FRAMES,
+  MEANDER,
+  MOVEMENT_COLOR,
   mascotFrame,
-  renderMeander,
   movementBar,
-  MOVEMENT_COLOR
+  renderMeander
 } from '../src/ui';
 
 describe('MEANDER', () => {

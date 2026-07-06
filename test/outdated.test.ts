@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import { checkOutdated } from '../src/outdated';
 
 const NOW = new Date('2026-05-19T00:00:00Z');

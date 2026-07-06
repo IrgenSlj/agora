@@ -1,7 +1,7 @@
-import { describe, expect, test, afterEach } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, statSync, existsSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { afterEach, describe, expect, test } from 'vitest';
 import { atomicWriteFile } from '../src/atomic-write';
 
 const cleanup: string[] = [];

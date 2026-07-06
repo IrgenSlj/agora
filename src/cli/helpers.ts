@@ -1,18 +1,18 @@
-import process from 'node:process';
 import { existsSync, readFileSync } from 'node:fs';
-import {
-  detectAgoraDataDir,
-  loadAgoraState,
-  getAuthState,
-  getAgoraStatePath,
-  writeAgoraState,
-  type ResolvedSavedItem
-} from '../state.js';
+import process from 'node:process';
 import { ensureFreshAccess } from '../auth/refresh.js';
 import { dataRefreshedAt } from '../data.js';
-import type { Tutorial } from '../types.js';
 import type { SourceOptions, SourceResult } from '../live.js';
-import type { CliIo, ParsedArgs, OutputStream } from './flags.js';
+import {
+  detectAgoraDataDir,
+  getAgoraStatePath,
+  getAuthState,
+  loadAgoraState,
+  type ResolvedSavedItem,
+  writeAgoraState
+} from '../state.js';
+import type { Tutorial } from '../types.js';
+import type { CliIo, OutputStream, ParsedArgs } from './flags.js';
 
 // ── I/O helpers ──────────────────────────────────────────────────────────────
 

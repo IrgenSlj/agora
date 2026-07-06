@@ -1,11 +1,11 @@
-import { fetchWithRetry } from './retry.js';
-import type { MarketplaceItem, PackageMarketplaceItem } from './marketplace.js';
-import { hasPermissions, getInstallKind } from './marketplace.js';
-import type { FetchLike } from './live.js';
-import type { Permissions } from './types.js';
 import type { FederatedTool, OfficialStatus } from './federation/types.js';
+import type { FetchLike } from './live.js';
+import type { MarketplaceItem, PackageMarketplaceItem } from './marketplace.js';
+import { getInstallKind, hasPermissions } from './marketplace.js';
+import { fetchWithRetry } from './retry.js';
 import { descriptionDigest } from './stack/capability-cache.js';
 import type { McpTool } from './stack/mcp-probe.js';
+import type { Permissions } from './types.js';
 
 export type CheckStatus = 'pass' | 'warn' | 'fail';
 

@@ -1,6 +1,6 @@
-import { acquire, renderAcquireResult, type AcquireResult } from '../../acquire.js';
-import type { AgentToolId } from '../../stack/types.js';
+import { type AcquireResult, acquire, renderAcquireResult } from '../../acquire.js';
 import type { SourceId } from '../../federation/types.js';
+import type { AgentToolId } from '../../stack/types.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 

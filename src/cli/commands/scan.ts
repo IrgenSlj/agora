@@ -1,9 +1,9 @@
 import { findMarketplaceItem } from '../../marketplace.js';
 import { scanItem } from '../../scan.js';
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
-import { cliTheme } from '../theme.js';
+import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { status } from '../pages/components.js';
+import { cliTheme } from '../theme.js';
+import type { CommandHandler } from './types.js';
 
 /**
  * Exit codes (brief P2, agent-operable contract): 0 pass · 1 usage/error ·

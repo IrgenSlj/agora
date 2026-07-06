@@ -1,8 +1,8 @@
-import { ALL_ADAPTERS, getAdapter, detectTools } from '../../stack/registry.js';
+import { ALL_ADAPTERS, detectTools, getAdapter } from '../../stack/registry.js';
 import type { AgentToolId, DesiredServer, StackEnv, SyncChange } from '../../stack/types.js';
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
+import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
+import type { CommandHandler } from './types.js';
 
 /**
  * `agora integrate [harness|--all]` (brief P6 deliverable 1) — Agora installs

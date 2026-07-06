@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { refreshOfficialCache } from '../../federation/cache.js';
 import type { FederationEnv } from '../../federation/types.js';
-import { writeLine, writeJson, stringFlag, detectDataDir, usageError } from '../helpers.js';
+import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
 export const commandRefresh: CommandHandler = async (parsed, io, style) => {

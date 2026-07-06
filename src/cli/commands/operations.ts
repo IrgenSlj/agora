@@ -1,5 +1,4 @@
-import { execSync, execFileSync, spawnSync } from 'node:child_process';
-import { readNewsMeta, readCache } from '../../news/cache.js';
+import { execFileSync, execSync, spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { formatConfigJson } from '../../config.js';
 import {
@@ -8,22 +7,26 @@ import {
   loadOpenCodeConfig,
   writeOpenCodeConfig
 } from '../../config-files.js';
+import { clearHistory, loadHistory } from '../../history.js';
+import { findMarketplaceSource } from '../../live.js';
 import { createInstallPlan, hasPermissions, renderPermissionLines } from '../../marketplace.js';
+import { readCache, readNewsMeta } from '../../news/cache.js';
+import { isOpencodeAvailable } from '../../opencode-exec.js';
+import { loadPreferences, prefsPath, writePreferences } from '../../preferences.js';
+import { type ScanResult, scanItem } from '../../scan.js';
 import {
   manifestPath,
-  readManifest,
-  writeManifest,
   opencodeEntryToManifest,
-  type StackManifest
+  readManifest,
+  type StackManifest,
+  writeManifest
 } from '../../stack/manifest.js';
-import { scanItem, type ScanResult } from '../../scan.js';
-import { findMarketplaceSource } from '../../live.js';
 import {
   clearAuthState,
   decodeJwtExp,
   detectAgoraDataDir,
-  getAuthState,
   getAgoraStatePath,
+  getAuthState,
   loadAgoraState,
   removeItemFromState,
   resolveSavedItems,
@@ -31,28 +34,25 @@ import {
   setAuthState,
   writeAgoraState
 } from '../../state.js';
-import { loadPreferences, writePreferences, prefsPath } from '../../preferences.js';
-import { loadHistory, clearHistory } from '../../history.js';
+import { formatDate, formatSavedList, header } from '../format.js';
 import {
-  stringFlag,
-  numberFlag,
-  envString,
-  authTokenInput,
-  sourceOptions,
-  warnFallback,
-  writeLine,
-  writeJson,
-  usageError,
-  detectDataDir,
   authStatusPayload,
-  maskToken,
+  authTokenInput,
+  detectDataDir,
+  envString,
   formatRelativeExp,
-  matchesSavedQuery
+  maskToken,
+  matchesSavedQuery,
+  numberFlag,
+  sourceOptions,
+  stringFlag,
+  usageError,
+  warnFallback,
+  writeJson,
+  writeLine
 } from '../helpers.js';
-import { header, formatSavedList, formatDate } from '../format.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
-import { isOpencodeAvailable } from '../../opencode-exec.js';
 
 export const commandInstall: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];

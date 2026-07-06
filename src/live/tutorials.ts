@@ -1,20 +1,20 @@
-import type {
-  SourceResult,
-  SourceOptions,
-  TutorialSourceOptions,
-  FindTutorialSourceOptions,
-  Tutorial
-} from './types.js';
+import { findTutorial, getTutorials } from '../marketplace.js';
 import {
-  requestJson,
-  normalizeTutorialLevel,
-  normalizeLimit,
-  mapTutorial,
-  findTutorialInList,
   api,
-  offline
+  findTutorialInList,
+  mapTutorial,
+  normalizeLimit,
+  normalizeTutorialLevel,
+  offline,
+  requestJson
 } from './internal.js';
-import { getTutorials, findTutorial } from '../marketplace.js';
+import type {
+  FindTutorialSourceOptions,
+  SourceOptions,
+  SourceResult,
+  Tutorial,
+  TutorialSourceOptions
+} from './types.js';
 
 function shouldUseApi(options: SourceOptions): boolean {
   return Boolean(options.useApi && options.apiUrl);

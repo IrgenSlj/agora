@@ -34,9 +34,7 @@ export const githubTrendingSource: SourceAdapter = {
         const html = await res.text();
         const items = parseTrendingHtml(html, lang, now);
         allItems.push(...items);
-      } catch {
-        continue;
-      }
+      } catch {}
     }
 
     return allItems;
@@ -85,9 +83,7 @@ function parseTrendingHtml(html: string, lang: string, now: string): NewsItem[] 
         tags: extractGithubTags(repoPath, description, lang),
         summary: description || undefined
       });
-    } catch {
-      continue;
-    }
+    } catch {}
   }
 
   return items;

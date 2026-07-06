@@ -1,18 +1,18 @@
+import { loadManifestFromSource, manifestPath, readManifest } from '../../stack/manifest.js';
 import { ALL_ADAPTERS, detectTools } from '../../stack/registry.js';
-import { manifestPath, readManifest, loadManifestFromSource } from '../../stack/manifest.js';
 import {
-  planSync,
-  applySync,
-  planInstructionsSync,
   applyInstructionsSync,
+  applySync,
   gateManifestForSync,
+  planInstructionsSync,
+  planSync,
   type ToolSyncPlan
 } from '../../stack/sync.js';
 import type { AgentToolId, StackEnv } from '../../stack/types.js';
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, usageError } from '../helpers.js';
-import { cliTheme } from '../theme.js';
+import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import type { Theme } from '../theme.js';
+import { cliTheme } from '../theme.js';
+import type { CommandHandler } from './types.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 

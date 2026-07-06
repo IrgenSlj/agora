@@ -1,11 +1,12 @@
 /**
  * Contract tests for src/init.ts — the untested headline feature.
  */
-import { describe, expect, test } from 'bun:test';
-import { join } from 'node:path';
-import { generateInitPlan, runCommands, scanProject, type ProjectScan } from '../src/init';
 
-const FIXTURES = join(import.meta.dir, 'fixtures');
+import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
+import { generateInitPlan, type ProjectScan, runCommands, scanProject } from '../src/init';
+
+const FIXTURES = join(import.meta.dirname, 'fixtures');
 
 // ── scanProject ─────────────────────────────────────────────────────────────
 

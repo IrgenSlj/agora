@@ -11,21 +11,6 @@
 // Async fetch happens in `mount()` (and on submitting a new query) — never in
 // `render()`, which stays a pure function of state.
 import { join } from 'node:path';
-import type { Page, PageAction, PageContext } from './types.js';
-import {
-  frame,
-  rule,
-  pageHeader,
-  status,
-  spinnerFrame,
-  bp,
-  vlen,
-  rail,
-  provenanceBadges
-} from './components.js';
-import { fmtCount, scrollbar } from './helpers.js';
-import { seedAcquire } from './acquire.js';
-import { seedItem } from './item.js';
 import { federatedSearch } from '../../federation/index.js';
 import type {
   FederatedItem,
@@ -35,13 +20,28 @@ import type {
 } from '../../federation/types.js';
 import type { MarketplaceItem } from '../../marketplace.js';
 import {
-  saveItemToState,
+  detectAgoraDataDir,
   loadAgoraState,
-  writeAgoraState,
-  detectAgoraDataDir
+  saveItemToState,
+  writeAgoraState
 } from '../../state.js';
-import { liftStyler } from '../theme.js';
 import type { Theme } from '../theme.js';
+import { liftStyler } from '../theme.js';
+import { seedAcquire } from './acquire.js';
+import {
+  bp,
+  frame,
+  pageHeader,
+  provenanceBadges,
+  rail,
+  rule,
+  spinnerFrame,
+  status,
+  vlen
+} from './components.js';
+import { fmtCount, scrollbar } from './helpers.js';
+import { seedItem } from './item.js';
+import type { Page, PageAction, PageContext } from './types.js';
 
 type SortKey = 'installs' | 'stars' | 'name';
 type ProvFilter = 'all' | SourceId;

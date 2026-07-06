@@ -1,11 +1,11 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import {
   applyKeyEvent,
+  type EditorState,
+  type KeyEvent,
   makeInitialState,
   renderPromptFrame,
-  visibleWidth,
-  type EditorState,
-  type KeyEvent
+  visibleWidth
 } from '../src/cli/prompter';
 
 function state(overrides: Partial<EditorState> = {}): EditorState {

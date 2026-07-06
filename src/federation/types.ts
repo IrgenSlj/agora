@@ -15,8 +15,8 @@
  * PulseMCP and mcp.so have no self-serve public API — deliberately absent.
  */
 
-import type { FetchLike } from '../retry.js';
 import type { MarketplaceItem } from '../marketplace/types.js';
+import type { FetchLike } from '../retry.js';
 
 /** The upstream registries Agora federates. `local` = bundled/offline cache. */
 export type SourceId = 'official' | 'smithery' | 'glama' | 'github' | 'huggingface' | 'local';

@@ -1,12 +1,13 @@
 /**
  * Tests for src/stack/path-resolve.ts
  */
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync, chmodSync } from 'node:fs';
+
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 
-import { resolveOnPath, KNOWN_RUNNERS } from '../../src/stack/path-resolve';
+import { KNOWN_RUNNERS, resolveOnPath } from '../../src/stack/path-resolve';
 
 function makeTmp(): string {
   return mkdtempSync(join(tmpdir(), 'agora-pathresolve-test-'));

@@ -1,49 +1,47 @@
 import { join } from 'node:path';
-import type { Discussion, Tutorial } from './types.js';
+import type { OpenCodeConfig } from './config.js';
+import { readCuratedCache } from './curator/index.js';
 import {
-  samplePackages,
-  sampleWorkflows,
   sampleDiscussions,
+  samplePackages,
   sampleTutorials,
+  sampleWorkflows,
   trendingTags
 } from './data.js';
-import type { OpenCodeConfig } from './config.js';
-import { detectAgoraDataDir } from './state.js';
 import { isHubCacheStale, readHubsCache } from './hubs/cache.js';
 import type { HubItem, InstallKind } from './hubs/types.js';
-import { readCuratedCache } from './curator/index.js';
-import { buildIndex, searchIndex } from './search/catalog-index.js';
-import type { CatalogIndex } from './search/catalog-index.js';
-
 import type {
+  FindOptions,
+  InstallPlan,
   MarketplaceCategory,
+  MarketplaceItem,
   MarketplaceItemType,
   PackageMarketplaceItem,
-  WorkflowMarketplaceItem,
-  MarketplaceItem,
   SearchOptions,
   TutorialSearchOptions,
-  FindOptions,
-  InstallPlan
+  WorkflowMarketplaceItem
 } from './marketplace/types.js';
-
-export type {
-  MarketplaceCategory,
-  MarketplaceItemType,
-  PackageMarketplaceItem,
-  WorkflowMarketplaceItem,
-  MarketplaceItem,
-  SearchOptions,
-  TutorialSearchOptions,
-  FindOptions,
-  InstallPlan
-} from './marketplace/types.js';
+import type { CatalogIndex } from './search/catalog-index.js';
+import { buildIndex, searchIndex } from './search/catalog-index.js';
+import { detectAgoraDataDir } from './state.js';
+import type { Discussion, Tutorial } from './types.js';
 
 export {
-  renderPermissionLines,
+  describePermissionGlob,
   hasPermissions,
-  describePermissionGlob
+  renderPermissionLines
 } from './marketplace/permissions.js';
+export type {
+  FindOptions,
+  InstallPlan,
+  MarketplaceCategory,
+  MarketplaceItem,
+  MarketplaceItemType,
+  PackageMarketplaceItem,
+  SearchOptions,
+  TutorialSearchOptions,
+  WorkflowMarketplaceItem
+} from './marketplace/types.js';
 
 // ── trendScore tunable weights ────────────────────────────────────────────────
 // Growth + recency intentionally outweigh absolute stars so a young fast riser

@@ -62,9 +62,7 @@ export async function searchHuggingFace(opts: HfSearchOptions = {}): Promise<Hub
           byId.set(item.id, { raw: item, endpoint: query.endpoint });
         }
       }
-    } catch {
-      continue; // graceful; we have cache fallback
-    }
+    } catch {}
   }
 
   const items: HubItem[] = [];

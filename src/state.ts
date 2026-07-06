@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { atomicWriteFile } from './atomic-write.js';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
+import { atomicWriteFile } from './atomic-write.js';
 import type { MarketplaceItem } from './marketplace.js';
 import { findMarketplaceItem } from './marketplace.js';
 
@@ -292,7 +292,7 @@ function isMarketplaceItem(value: unknown): value is MarketplaceItem {
   const candidate = value as Partial<MarketplaceItem>;
   return Boolean(
     typeof candidate.id === 'string' &&
-    typeof candidate.name === 'string' &&
-    (candidate.kind === 'package' || candidate.kind === 'workflow')
+      typeof candidate.name === 'string' &&
+      (candidate.kind === 'package' || candidate.kind === 'workflow')
   );
 }

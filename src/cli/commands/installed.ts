@@ -1,14 +1,14 @@
+import { readCapabilityCache } from '../../stack/capability-cache.js';
 import {
-  readAllServers,
+  ALL_ADAPTERS,
   detectTools,
   groupServersByName,
-  ALL_ADAPTERS
+  readAllServers
 } from '../../stack/registry.js';
-import { readCapabilityCache } from '../../stack/capability-cache.js';
 import type { AgentToolId } from '../../stack/types.js';
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, usageError, detectDataDir } from '../helpers.js';
+import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
+import type { CommandHandler } from './types.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 

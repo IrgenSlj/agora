@@ -10,17 +10,8 @@
   "dependencies": {
     "agora-hub": "0.6.0"
   },
-  "files": [
-    "index.mjs",
-    "README.md"
-  ],
-  "keywords": [
-    "opencode",
-    "opencode-plugin",
-    "mcp",
-    "agora",
-    "agora-hub"
-  ],
+  "files": ["index.mjs", "README.md"],
+  "keywords": ["opencode", "opencode-plugin", "mcp", "agora", "agora-hub"],
   "repository": {
     "type": "git",
     "url": "https://github.com/IrgenSlj/agora.git"

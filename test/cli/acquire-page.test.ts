@@ -1,11 +1,11 @@
-import { describe, test, expect, beforeEach } from 'bun:test';
-import { mkdtempSync, existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createStyler } from '../../src/ui.js';
+import { beforeEach, describe, expect, test } from 'vitest';
 import { acquirePage, seedAcquire } from '../../src/cli/pages/acquire.js';
-import type { PageContext, KeyEvent } from '../../src/cli/pages/types.js';
+import type { KeyEvent, PageContext } from '../../src/cli/pages/types.js';
 import type { FetchLike } from '../../src/retry.js';
+import { createStyler } from '../../src/ui.js';
 
 // eslint-disable-next-line no-control-regex
 const ANSI_RE = /\x1b\[[0-9;]*m/g;

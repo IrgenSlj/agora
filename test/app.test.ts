@@ -2,10 +2,11 @@
  * Contract tests for parseArgs and CLI commands (src/cli/app.ts).
  * Uses the CliIo harness pattern from cli.test.ts.
  */
-import { describe, expect, test } from 'bun:test';
+
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
 import { parseArgs } from '../src/cli/flags';
 

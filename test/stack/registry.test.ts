@@ -1,17 +1,18 @@
 /**
  * Tests for src/stack/registry.ts
  */
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
+
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 
 import {
+  ALL_ADAPTERS,
   detectTools,
-  readAllServers,
-  groupServersByName,
   getAdapter,
-  ALL_ADAPTERS
+  groupServersByName,
+  readAllServers
 } from '../../src/stack/registry';
 
 function makeTmp(): string {

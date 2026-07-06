@@ -1,17 +1,18 @@
 /**
  * Tests for `agora sync` — safety-critical coverage.
  */
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import { runCli } from '../../src/cli/app';
-import { opencodeAdapter } from '../../src/stack/adapters/opencode';
 import { claudeCodeAdapter } from '../../src/stack/adapters/claude-code';
 import { cursorAdapter } from '../../src/stack/adapters/cursor';
+import { opencodeAdapter } from '../../src/stack/adapters/opencode';
 import { windsurfAdapter } from '../../src/stack/adapters/windsurf';
-import { planSync, applySync } from '../../src/stack/sync';
 import type { StackManifest } from '../../src/stack/manifest';
+import { applySync, planSync } from '../../src/stack/sync';
 
 // ── Harness ───────────────────────────────────────────────────────────────────
 

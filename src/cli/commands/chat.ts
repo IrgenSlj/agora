@@ -6,12 +6,12 @@ import {
   spawnOpencode
 } from '../../opencode-exec.js';
 import {
-  stringFlag,
-  writeLine,
   detectDataDir,
-  loadLastChatSession,
   extractSessionId,
-  persistChatSession
+  loadLastChatSession,
+  persistChatSession,
+  stringFlag,
+  writeLine
 } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 

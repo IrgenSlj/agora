@@ -9,26 +9,27 @@
 //
 // Async fetch happens in `mount()` only; `render()` stays a pure function of
 // state.
-import type { Page, PageAction, PageContext, PageId } from './types.js';
-import {
-  frame,
-  rule,
-  pageHeader,
-  kvRow,
-  tagList,
-  pill,
-  provenanceBadges,
-  trustPanel,
-  spinnerFrame,
-  truncate
-} from './components.js';
-import { fmtCount, buildPermRows, buildDrift } from './helpers.js';
-import { liftStyler } from '../theme.js';
-import type { Theme } from '../theme.js';
+
 import { federatedFetchItem } from '../../federation/index.js';
 import type { FederatedItem, FederationEnv } from '../../federation/types.js';
-import { scanItem, type ScanResult } from '../../scan.js';
+import { type ScanResult, scanItem } from '../../scan.js';
+import type { Theme } from '../theme.js';
+import { liftStyler } from '../theme.js';
 import { seedAcquire } from './acquire.js';
+import {
+  frame,
+  kvRow,
+  pageHeader,
+  pill,
+  provenanceBadges,
+  rule,
+  spinnerFrame,
+  tagList,
+  truncate,
+  trustPanel
+} from './components.js';
+import { buildDrift, buildPermRows, fmtCount } from './helpers.js';
+import type { Page, PageAction, PageContext, PageId } from './types.js';
 
 export interface ItemSeed {
   /** Item id — resolved via `federatedFetchItem` (federation + local catalog). */

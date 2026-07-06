@@ -2,12 +2,8 @@ import { execSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { COMMANDS } from '../commands-meta.js';
-import { runInteractiveMenu } from '../menu.js';
-import { runTui } from '../tui.js';
-import { AGORA_VERSION } from '../app.js';
-import { FREE_MODELS } from '../commands/chat.js';
-import type { CliIo } from '../flags.js';
+import { getMarketplaceItems } from '../../marketplace.js';
+import { buildOpencodeRunArgs, spawnOpencode } from '../../opencode-exec.js';
 import { detectAgoraDataDir, loadAgoraState, resolveSavedItems } from '../../state.js';
 import {
   appendTranscript,
@@ -18,26 +14,30 @@ import {
   searchTranscripts,
   writeSessionMeta
 } from '../../transcript.js';
-import { gradientText, renderBanner, supportsTrueColor, type Styler } from '../../ui.js';
+import { gradientText, renderBanner, type Styler, supportsTrueColor } from '../../ui.js';
+import { AGORA_VERSION } from '../app.js';
 import { createChatRenderer, type Verbosity } from '../chat-renderer.js';
-import { buildOpencodeRunArgs, spawnOpencode } from '../../opencode-exec.js';
-import { readLine } from '../prompter.js';
+import { FREE_MODELS } from '../commands/chat.js';
+import { COMMANDS } from '../commands-meta.js';
 import { completeShellLine, ghostFromHistory } from '../completions.js';
-import { getMarketplaceItems } from '../../marketplace.js';
-import type { Dispatch } from './types.js';
-import { classifyInput } from './input.js';
+import type { CliIo } from '../flags.js';
+import { runInteractiveMenu } from '../menu.js';
+import { readLine } from '../prompter.js';
+import { runTui } from '../tui.js';
 import {
-  makeExecutableChecker,
-  expandHome,
-  tailBuffer,
-  shortCwd,
   checkOpencodeAvailable,
-  extractFirstBashBlock,
-  readOneKey,
   copyToClipboard,
-  MAX_BASH_BUFFER
+  expandHome,
+  extractFirstBashBlock,
+  MAX_BASH_BUFFER,
+  makeExecutableChecker,
+  readOneKey,
+  shortCwd,
+  tailBuffer
 } from './bash.js';
-import { loadShellHistory, appendShellHistory } from './history.js';
+import { appendShellHistory, loadShellHistory } from './history.js';
+import { classifyInput } from './input.js';
+import type { Dispatch } from './types.js';
 
 export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const env = io.env ?? {};

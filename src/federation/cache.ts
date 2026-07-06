@@ -6,7 +6,7 @@
 //      status honestly; only the *items* come from cache).
 //   2. `agora refresh` — official's `updated_since` incremental sync, which
 //      also prunes entries the registry has tombstoned as `deleted`.
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { detectAgoraDataDir } from '../state.js';
 import { fetchOfficialPage } from './sources/official.js';
@@ -45,9 +45,7 @@ export function readSourceCache(cacheDir: string, sourceId: SourceId): Federated
     for (const line of raw.split('\n').filter(Boolean)) {
       try {
         items.push(JSON.parse(line));
-      } catch {
-        continue;
-      }
+      } catch {}
     }
     return items;
   } catch {

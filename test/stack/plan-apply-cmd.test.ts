@@ -3,10 +3,11 @@
  * `sync --from` scan gate that blocks a poisoned profile before anything is
  * written — the flagship P3 demo (AGORA_BRIEF §7 demo 2).
  */
-import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
+
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import { runCli } from '../../src/cli/app';
 
 function makeTmp(prefix: string): string {

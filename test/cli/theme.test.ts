@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import { createTheme, liftStyler } from '../../src/cli/theme';
 import { createStyler } from '../../src/ui';
 

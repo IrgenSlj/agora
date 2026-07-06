@@ -1,17 +1,17 @@
 import { existsSync } from 'node:fs';
-import { readAllServers, groupServersByName, ALL_ADAPTERS } from '../../stack/registry.js';
+import { capabilityKey, readCapabilityCache } from '../../stack/capability-cache.js';
 import {
   manifestPath,
+  type StackManifest,
   serializeManifest,
-  writeManifest,
   serverToEntry,
-  type StackManifest
+  writeManifest
 } from '../../stack/manifest.js';
+import { ALL_ADAPTERS, groupServersByName, readAllServers } from '../../stack/registry.js';
 import type { AgentToolId } from '../../stack/types.js';
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, stringFlag, usageError, detectDataDir } from '../helpers.js';
+import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
-import { capabilityKey, readCapabilityCache } from '../../stack/capability-cache.js';
+import type { CommandHandler } from './types.js';
 
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 

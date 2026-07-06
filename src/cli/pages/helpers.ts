@@ -1,12 +1,12 @@
-import { join } from 'node:path';
 import { homedir } from 'node:os';
-import type { SourceOptions } from '../../live.js';
-import { loadAgoraState, getAuthState } from '../../state.js';
-import type { PageContext } from './types.js';
-import type { MarketplaceItem } from '../../marketplace.js';
+import { join } from 'node:path';
 import type { FederatedItem } from '../../federation/types.js';
+import type { SourceOptions } from '../../live.js';
+import type { MarketplaceItem } from '../../marketplace.js';
 import { observedCapabilities, type ScanResult } from '../../scan.js';
+import { getAuthState, loadAgoraState } from '../../state.js';
 import type { HealthTone, Verdict } from './components.js';
+import type { PageContext } from './types.js';
 
 // eslint-disable-next-line no-control-regex
 export const ANSI_RE = /\x1b\[[0-9;]*m/g;

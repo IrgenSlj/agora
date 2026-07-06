@@ -15,6 +15,8 @@
 // Neither has a dedicated field on MarketplaceItem — folded into
 // `Provenance.verified` (official attribute) and `tags` (hosting attribute)
 // respectively, the only structural homes that fit.
+
+import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 import { fetchWithRetry } from '../../retry.js';
 import type {
   FederatedItem,
@@ -22,7 +24,6 @@ import type {
   FederationEnv,
   RegistrySource
 } from '../types.js';
-import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 
 export const GLAMA_BASE_URL = 'https://glama.ai/api/mcp/v1';
 const OFFICIAL_ATTRIBUTE = 'author:official';

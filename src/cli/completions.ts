@@ -3,8 +3,8 @@
  * All functions are side-effect-free; callers inject I/O via context.
  */
 
-import { join, resolve, dirname, basename } from 'node:path';
 import { homedir } from 'node:os';
+import { basename, dirname, join, resolve } from 'node:path';
 
 export interface CompletionResult {
   matches: string[];

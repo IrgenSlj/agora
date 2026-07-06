@@ -1,20 +1,20 @@
-import type { Page, PageAction, PageContext } from './types.js';
-import type { NewsItem, ScoredNewsItem, NewsSource } from '../../news/types.js';
-import { DEFAULT_NEWS_CONFIG, agoraUserAgent, hostFromUrl } from '../../news/types.js';
-import { rankItems } from '../../news/score.js';
-import { readCache, writeCache, isStale, readNewsMeta, writeNewsMeta } from '../../news/cache.js';
-import { formatNumber } from '../../format.js';
-import { hnSource } from '../../news/sources/hn.js';
-import { githubTrendingSource } from '../../news/sources/github-trending.js';
-import { arxivSource } from '../../news/sources/arxiv.js';
-import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { vlen, frame, scrollbar } from './helpers.js';
-import { FREE_MODELS } from '../commands/chat.js';
+import { join } from 'node:path';
+import { formatNumber } from '../../format.js';
+import { isStale, readCache, readNewsMeta, writeCache, writeNewsMeta } from '../../news/cache.js';
+import { rankItems } from '../../news/score.js';
+import { arxivSource } from '../../news/sources/arxiv.js';
+import { githubTrendingSource } from '../../news/sources/github-trending.js';
+import { hnSource } from '../../news/sources/hn.js';
+import type { NewsItem, NewsSource, ScoredNewsItem } from '../../news/types.js';
+import { agoraUserAgent, DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
 import { buildOpencodeRunArgs, spawnOpencode } from '../../opencode-exec.js';
-import { liftStyler } from '../theme.js';
+import { FREE_MODELS } from '../commands/chat.js';
 import type { Tone } from '../theme.js';
-import { pageHeader, rule, pill, status, truncate, padRight, bp } from './components.js';
+import { liftStyler } from '../theme.js';
+import { bp, padRight, pageHeader, pill, rule, status, truncate } from './components.js';
+import { frame, scrollbar, vlen } from './helpers.js';
+import type { Page, PageAction, PageContext } from './types.js';
 
 const SOURCE_LABELS: Record<string, string> = {
   hn: 'HN',

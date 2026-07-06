@@ -1,12 +1,12 @@
 /**
  * Tests for src/stack/manifest.ts
  */
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import {
-  serializeManifest,
   parseManifest,
-  serverToEntry,
-  type StackManifest
+  type StackManifest,
+  serializeManifest,
+  serverToEntry
 } from '../../src/stack/manifest';
 import type { ConfiguredServer } from '../../src/stack/types';
 

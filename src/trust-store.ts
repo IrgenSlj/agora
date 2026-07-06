@@ -18,9 +18,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { atomicWriteFile } from './atomic-write.js';
-import type { StackEnv } from './stack/types.js';
-import type { ScanResult } from './scan.js';
 import type { OfficialStatus } from './federation/types.js';
+import type { ScanResult } from './scan.js';
+import type { StackEnv } from './stack/types.js';
 
 /** Namespaced `_meta` key Agora writes trust data under (brief P2). */
 export const TRUST_META_KEY = 'io.github.irgenslj.agora/trust' as const;

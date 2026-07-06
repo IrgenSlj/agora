@@ -1,7 +1,8 @@
 // Federation source: the bundled/offline catalog. Always enabled, never touches
 // the network — the source every other source degrades to (brief §5f).
-import { searchMarketplaceItems, findMarketplaceItem } from '../../marketplace.js';
+
 import type { MarketplaceItem } from '../../marketplace/types.js';
+import { findMarketplaceItem, searchMarketplaceItems } from '../../marketplace.js';
 import type {
   FederatedItem,
   FederatedSearchOptions,

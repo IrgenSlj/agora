@@ -1,5 +1,5 @@
-import { readFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
 import type { FetchLike } from '../live.js';

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { Package, Workflow, Discussion, Tutorial } from './types.js';
+import type { Discussion, Package, Tutorial, Workflow } from './types.js';
 
 const CATALOG_PATH = new URL('./catalog.json', import.meta.url);
 

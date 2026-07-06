@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import { githubSource } from '../../src/federation/sources/github';
 import type { RawGithubRepo } from '../../src/hubs/quality';
 import type { FetchLike } from '../../src/retry';

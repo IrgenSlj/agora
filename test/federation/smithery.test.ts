@@ -1,10 +1,10 @@
-import { describe, test, expect } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { smitherySource, SMITHERY_BASE_URL } from '../../src/federation/sources/smithery';
+import { describe, expect, test } from 'vitest';
+import { SMITHERY_BASE_URL, smitherySource } from '../../src/federation/sources/smithery';
 import type { FetchLike } from '../../src/retry';
 
-const FIXTURES_DIR = join(import.meta.dir, '../fixtures/federation');
+const FIXTURES_DIR = join(import.meta.dirname, '../fixtures/federation');
 
 function loadFixture(name: string): unknown {
   return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf8'));

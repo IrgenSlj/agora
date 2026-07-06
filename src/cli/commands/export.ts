@@ -1,15 +1,15 @@
-import { getMarketplaceItems, type MarketplaceItem } from '../../marketplace.js';
 import { searchMarketplaceSource } from '../../live.js';
+import { getMarketplaceItems, type MarketplaceItem } from '../../marketplace.js';
+import { header } from '../format.js';
 import {
-  stringFlag,
   numberFlag,
   sourceOptions,
+  stringFlag,
+  usageError,
   warnFallback,
-  writeLine,
   writeJson,
-  usageError
+  writeLine
 } from '../helpers.js';
-import { header } from '../format.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 

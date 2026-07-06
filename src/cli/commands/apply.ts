@@ -1,13 +1,13 @@
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson } from '../helpers.js';
+import { writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import {
-  resolveStackArgs,
   computeApply,
-  runGate,
+  formatGateBlocked,
   formatToolPlans,
-  formatGateBlocked
+  resolveStackArgs,
+  runGate
 } from './stack-shared.js';
+import type { CommandHandler } from './types.js';
 
 /**
  * `agora apply` — executes the plan: reconciles agora.toml's MCP servers and

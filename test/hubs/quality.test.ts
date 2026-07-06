@@ -1,5 +1,5 @@
-import { describe, expect, test } from 'bun:test';
-import { passes, score, categorize, toHubItem, type RawGithubRepo } from '../../src/hubs/quality';
+import { describe, expect, test } from 'vitest';
+import { categorize, passes, type RawGithubRepo, score, toHubItem } from '../../src/hubs/quality';
 
 const NOW = new Date('2026-05-17T00:00:00Z');
 

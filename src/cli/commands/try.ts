@@ -1,11 +1,11 @@
-import { findMarketplaceItem, buildOpenCodeConfig } from '../../marketplace.js';
-import { scanItem, type ScanResult } from '../../scan.js';
-import { probeMcpServer, type McpProbeResult } from '../../stack/mcp-probe.js';
-import { upsertCapabilities, capabilityKey } from '../../stack/capability-cache.js';
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson, numberFlag, usageError, detectDataDir } from '../helpers.js';
-import { cliTheme } from '../theme.js';
+import { buildOpenCodeConfig, findMarketplaceItem } from '../../marketplace.js';
+import { type ScanResult, scanItem } from '../../scan.js';
+import { capabilityKey, upsertCapabilities } from '../../stack/capability-cache.js';
+import { type McpProbeResult, probeMcpServer } from '../../stack/mcp-probe.js';
+import { detectDataDir, numberFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { status } from '../pages/components.js';
+import { cliTheme } from '../theme.js';
+import type { CommandHandler } from './types.js';
 
 export const commandTry: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];

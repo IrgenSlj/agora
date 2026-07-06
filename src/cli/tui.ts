@@ -1,27 +1,27 @@
 import { spawn } from 'node:child_process';
 import type { Styler } from '../ui.js';
 import { createStyler, supportsTrueColor } from '../ui.js';
-import { liftStyler } from './theme.js';
-import type { Theme } from './theme.js';
 import type { CliIo } from './flags.js';
-import type {
-  Page,
-  PageId,
-  KeyEvent,
-  PageContext,
-  AppState,
-  PageAction,
-  Hotkey
-} from './pages/types.js';
-import { homePage } from './pages/home.js';
-import { searchPage } from './pages/search.js';
-import { stackPage } from './pages/stack.js';
-import { newsPage } from './pages/news.js';
-import { settingsPage } from './pages/settings.js';
 import { acquirePage } from './pages/acquire.js';
-import { itemPage } from './pages/item.js';
-import { vlen, padRight, truncate } from './pages/helpers.js';
 import { keyHintBar, statusLine as statusLineComponent } from './pages/components.js';
+import { padRight, truncate, vlen } from './pages/helpers.js';
+import { homePage } from './pages/home.js';
+import { itemPage } from './pages/item.js';
+import { newsPage } from './pages/news.js';
+import { searchPage } from './pages/search.js';
+import { settingsPage } from './pages/settings.js';
+import { stackPage } from './pages/stack.js';
+import type {
+  AppState,
+  Hotkey,
+  KeyEvent,
+  Page,
+  PageAction,
+  PageContext,
+  PageId
+} from './pages/types.js';
+import type { Theme } from './theme.js';
+import { liftStyler } from './theme.js';
 
 const ALT_ON = '\x1b[?1049h';
 const ALT_OFF = '\x1b[?1049l';

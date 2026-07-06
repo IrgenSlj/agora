@@ -1,7 +1,7 @@
-import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { describe, expect, test } from 'vitest';
 import {
   appendTranscript,
   cwdHash,
@@ -10,9 +10,9 @@ import {
   loadSessionMeta,
   readTranscript,
   recentBashContext,
+  type SessionMeta,
   searchTranscripts,
-  writeSessionMeta,
-  type SessionMeta
+  writeSessionMeta
 } from '../src/transcript';
 
 function makeTmp(): string {

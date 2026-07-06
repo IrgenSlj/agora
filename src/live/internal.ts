@@ -1,13 +1,13 @@
 import type {
+  ApiProfile,
+  ApiReview,
+  Discussion,
+  PackageMarketplaceItem,
   SourceOptions,
   SourceResult,
-  PackageMarketplaceItem,
-  WorkflowMarketplaceItem,
-  Discussion,
   Tutorial,
   TutorialStep,
-  ApiReview,
-  ApiProfile
+  WorkflowMarketplaceItem
 } from './types.js';
 
 /* ── HTTP utilities ── */

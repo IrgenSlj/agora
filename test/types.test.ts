@@ -1,6 +1,6 @@
-import { describe, test, expect } from 'bun:test';
-import type { Package, Workflow, Discussion, Tutorial, Review } from '../src/types';
-import { samplePackages, sampleWorkflows, sampleDiscussions, sampleTutorials } from '../src/data';
+import { describe, expect, test } from 'vitest';
+import { sampleDiscussions, samplePackages, sampleTutorials, sampleWorkflows } from '../src/data';
+import type { Discussion, Package, Review, Tutorial, Workflow } from '../src/types';
 
 describe('TypeScript Types', () => {
   test('Package type matches sample data', () => {

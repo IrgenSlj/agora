@@ -1,8 +1,8 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'vitest';
 import {
+  type CompletionContext,
   completeShellLine,
-  ghostFromHistory,
-  type CompletionContext
+  ghostFromHistory
 } from '../src/cli/completions';
 
 function makeContext(overrides: Partial<CompletionContext> = {}): CompletionContext {

@@ -1,14 +1,14 @@
-import type { CommandHandler } from './types.js';
-import { writeLine, writeJson } from '../helpers.js';
+import { writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import {
-  resolveStackArgs,
-  computePlan,
   combinedHasChanges,
-  runGate,
+  computePlan,
+  formatGateBlocked,
   formatToolPlans,
-  formatGateBlocked
+  resolveStackArgs,
+  runGate
 } from './stack-shared.js';
+import type { CommandHandler } from './types.js';
 
 /**
  * `agora plan` — pure, read-only diff between agora.toml and the real config

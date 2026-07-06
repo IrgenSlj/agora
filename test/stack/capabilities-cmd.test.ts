@@ -1,9 +1,9 @@
-import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writeCapabilityCache, type ServerCapabilities } from '../../src/stack/capability-cache';
+import { describe, expect, test } from 'vitest';
 import { runCli } from '../../src/cli/app';
+import { type ServerCapabilities, writeCapabilityCache } from '../../src/stack/capability-cache';
 
 function makeTmp(): string {
   return mkdtempSync(join(tmpdir(), 'agora-capabilities-test-'));

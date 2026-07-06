@@ -1,6 +1,6 @@
-import { loadAgoraState, getAuthState } from '../../state.js';
 import { loadPreferences } from '../../preferences.js';
-import { writeLine, writeJson, detectDataDir } from '../helpers.js';
+import { getAuthState, loadAgoraState } from '../../state.js';
+import { detectDataDir, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
 interface WelcomeStep {

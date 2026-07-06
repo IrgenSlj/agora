@@ -10,14 +10,15 @@
  *  - NO_COLOR mode: readable plain text, no ANSI codes
  *  - Help overlay: hotkey list + field descriptions
  */
-import { describe, expect, test, beforeEach } from 'bun:test';
+
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { beforeEach, describe, expect, test } from 'vitest';
 
-import { settingsPage, _resetSettingsState } from '../../src/cli/pages/settings.js';
+import { _resetSettingsState, settingsPage } from '../../src/cli/pages/settings.js';
+import type { AppState, KeyEvent, PageContext } from '../../src/cli/pages/types.js';
 import { createStyler } from '../../src/ui.js';
-import type { PageContext, AppState, KeyEvent } from '../../src/cli/pages/types.js';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,6 @@
-import process from 'node:process';
-import { join } from 'node:path';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { scanProject, generateInitPlan, applyInitPlan, runCommands } from '../../init.js';
+import { join } from 'node:path';
+import process from 'node:process';
 import { installAgoraCommand } from '../../commands.js';
 import { formatConfigJson } from '../../config.js';
 import {
@@ -10,9 +9,10 @@ import {
   writeOpenCodeConfig
 } from '../../config-files.js';
 import { sampleWorkflows } from '../../data.js';
-import { stringFlag, writeLine, writeJson, usageError } from '../helpers.js';
-import { header } from '../format.js';
+import { applyInitPlan, generateInitPlan, runCommands, scanProject } from '../../init.js';
 import { renderMeander, supportsTrueColor } from '../../ui.js';
+import { header } from '../format.js';
+import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 

@@ -1,7 +1,7 @@
-import { existsSync, readFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { NewsItem, NewsSource } from './types.js';
 import { atomicWriteFile } from '../atomic-write.js';
+import type { NewsItem, NewsSource } from './types.js';
 
 const MAX_ITEMS = 2000;
 
@@ -18,9 +18,7 @@ export function readCache(dataDir: string): NewsItem[] {
     for (const line of raw.split('\n').filter(Boolean)) {
       try {
         items.push(JSON.parse(line));
-      } catch {
-        continue;
-      }
+      } catch {}
     }
     return items;
   } catch {
