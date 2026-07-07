@@ -25,9 +25,9 @@ function buildSteps(signedIn: boolean, username: string): WelcomeStep[] {
   return [
     signInStep,
     {
-      title: 'Browse the marketplace',
-      commands: ['agora marketplace', 'agora search <query>', 'agora today'],
-      effect: 'discover MCP servers, agents, and workflow templates'
+      title: 'Browse the catalog',
+      commands: ['agora search <query>', 'agora today'],
+      effect: 'discover MCP servers, agent skills, and workflow templates'
     },
     {
       title: 'Read the news',
@@ -37,7 +37,7 @@ function buildSteps(signedIn: boolean, username: string): WelcomeStep[] {
     {
       title: 'Set up shell completions',
       commands: ['agora completions bash', 'agora completions zsh', 'agora completions fish'],
-      effect: 'tab-complete commands, flags, and marketplace IDs'
+      effect: 'tab-complete commands, flags, and catalog item IDs'
     },
     {
       title: 'Start an MCP project of your own',
@@ -67,8 +67,8 @@ export const commandWelcome: CommandHandler = async (parsed, io, style) => {
 
   writeLine(io.stdout, style.bold('Welcome to agora'));
   writeLine(io.stdout, style.dim('────────────────'));
-  writeLine(io.stdout, 'agora is a terminal-native marketplace for MCP servers, agents,');
-  writeLine(io.stdout, 'and workflows.');
+  writeLine(io.stdout, 'agora is the trust plane for agentic tooling — verify provenance,');
+  writeLine(io.stdout, 'enforce policy, manage MCP servers and skills across every host.');
   writeLine(io.stdout, '');
 
   steps.forEach((step, i) => {

@@ -64,7 +64,7 @@ export const commandCapabilities: CommandHandler = async (parsed, io, style) => 
     );
     writeLine(io.stdout, theme.muted('Hints:'));
     writeLine(io.stdout, theme.muted('  agora doctor --probe   (probe all configured servers)'));
-    writeLine(io.stdout, theme.muted('  agora try <id>         (test-drive a marketplace item)'));
+    writeLine(io.stdout, theme.muted('  agora try <id>         (test-drive a catalog item)'));
     return 0;
   }
 

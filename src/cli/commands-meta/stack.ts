@@ -4,10 +4,10 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'try',
     group: 'Stack',
-    summary: 'Ephemeral test-drive a marketplace MCP server without saving any config',
+    summary: 'Ephemeral test-drive an MCP server without saving any config',
     usage: 'agora try <id> [--timeout <ms>] [--skip-scan] [--json]',
     details:
-      'Spawns the MCP server for the given marketplace item, performs a real MCP ' +
+      'Spawns the MCP server for the given catalog item, performs a real MCP ' +
       'initialize + tools/list handshake over stdio, reports the server name and tools, ' +
       'then kills the process — without writing any configuration file. ' +
       'Runs the pre-install scan by default (same as agora install); pass --skip-scan ' +

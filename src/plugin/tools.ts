@@ -59,7 +59,7 @@ function renderToday(directory?: string, section = 'all'): string {
   const trending = getTrendingItems().slice(0, 3);
   const lines: string[] = ['📅 **Agora Today**', ''];
   const wantsNews = section === 'all' || section === 'news';
-  const wantsMarket = section === 'all' || section === 'market' || section === 'marketplace';
+  const wantsMarket = section === 'all' || section === 'market' || section === 'catalog';
 
   if (wantsNews) {
     lines.push('**News**');
@@ -105,7 +105,7 @@ async function pluginAcquirePreview(input: Pick<AcquireInput, 'id' | 'query' | '
 export function createAgoraTools(input?: PluginInput): Record<string, ToolDefinition> {
   return {
     agora_search: tool({
-      description: 'Search Agora marketplace for packages, workflows, and prompts',
+      description: 'Search the Agora catalog for MCP servers, packages, and workflows',
       args: {
         query: tool.schema.string().describe('Search query'),
         category: tool.schema
@@ -140,7 +140,7 @@ Run \`/agora browse <id>\` for details or \`/agora install <id>\` to install.`;
     }),
 
     agora_today: tool({
-      description: 'Show today’s Agora news and marketplace highlights',
+      description: 'Show today’s Agora news and catalog highlights',
       args: {
         section: tool.schema.string().optional().describe('Section to show: news, market, or all')
       },
@@ -209,7 +209,7 @@ Plugin acquire is preview-only. To write config after reviewing the scan gate, r
             : category === 'prompt'
               ? '💬 Prompts'
               : category === 'all'
-                ? '🏛️ Marketplace'
+                ? '🏛️ Catalog'
                 : '📦 Packages';
 
         if (items.length === 0) {

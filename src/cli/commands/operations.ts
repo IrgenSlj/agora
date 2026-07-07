@@ -1104,7 +1104,8 @@ export const commandAuth: CommandHandler = async (parsed, io, style) => {
 
 export const commandBookmarks: CommandHandler = async (parsed, io, style) => {
   const dataDir = detectDataDir(parsed, io);
-  const kind = (parsed.flags.kind as string | undefined) || 'all';
+  const rawKind = (parsed.flags.kind as string | undefined) || 'all';
+  const kind = rawKind === 'catalog' ? 'marketplace' : rawKind;
 
   const state = loadAgoraState(dataDir);
   const marketplaceItems = kind === 'news' ? [] : resolveSavedItems(state);
@@ -1131,7 +1132,7 @@ export const commandBookmarks: CommandHandler = async (parsed, io, style) => {
 
   if (!hasMarketplace && !hasNews) {
     writeLine(io.stdout, 'No bookmarks yet.');
-    writeLine(io.stdout, style.dim('Use `agora save <id>` to bookmark marketplace items.'));
+    writeLine(io.stdout, style.dim('Use `agora save <id>` to bookmark catalog items.'));
     return 0;
   }
 

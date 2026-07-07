@@ -39,7 +39,6 @@ function acquireExitCode(result: AcquireResult): number {
       return 2;
     case 'blocked':
       return result.scan && result.scan.summary.fail > 0 ? 3 : 1;
-    case 'not_found':
     default:
       return 1;
   }

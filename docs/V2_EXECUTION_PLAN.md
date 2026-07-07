@@ -5,7 +5,8 @@ the brief is the *what*. Where they disagree about intent, the brief wins; where
 third-party assumptions diverge from build-time reality, we log a **Decision Amendment (DA)** in
 the brief's §14 and an entry in `docs/OPEN_QUESTIONS.md`, then take the smallest adaptation.
 
-**Status:** planning complete, no S0 code written yet. Updated per session.
+**Status:** S0 code started — toolchain migrated, README/docs rewritten, CI matrix expanded,
+user-facing "marketplace" copy stripped, biome migrated. Updated per session.
 
 ---
 
@@ -112,11 +113,10 @@ docs re-pointed at the trust-plane thesis.
      `eslint.config.js`, `.prettierrc`, `.prettierignore`, eslint/prettier devDeps; swap
      `lint`/`format` scripts.
    - Bump `engines.node` `>=20`; keep `bin`/`type:module`.
-3. **[sonnet]** Kill, S0 slice (D6/D11 — see **DA-5** for what's deferred): delete `src/auth/` + its
-   use in `src/cli/helpers.ts` + auth plumbing in `src/state.ts`; strip commerce **copy/framing** from
-   user-facing strings, help text, and docs (keep host-technical "plugin marketplace"). Do **not**
-   hand-delete the legacy `Pricing`/`MarketplaceItem`/`Discussion` data model — it is superseded by the
-   `Artifact` model in S1 and the sample catalog by federation in S2 (avoids throwaway churn).
+3. **[sonnet/opus]** S0 reframe (DA-5): strip commerce **copy/framing** from user-facing strings,
+   help text, plugin tool descriptions, and welcome banner (keep host-technical "plugin marketplace").
+   `src/auth/` + legacy data model (`MarketplaceItem`, `Pricing`, `Discussion`) are *superseded* by
+   S1/S2 work, not hand-deleted in S0 — avoids double churn (DA-5 rationale, see §7).
 4. **[opus]** CI: extend `.github/workflows/ci.yml` to a **matrix (ubuntu + macOS)**, node 20, running
    biome + tsc + vitest. Reserve a `docker-integration` job stub (enabled in S6).
 5. **[you]** `npm deprecate opencode-agora "renamed → agora-hub; see npm agora-hub"`; keep
@@ -361,13 +361,17 @@ evidence summaries; `request_install` never mutates state.
   the brief's `1/2/3/4` in S1. Log the mapping so agent integrations update.
 - **DA-4 — everything on `main`, push often** (owner directive): overrides the brief's
   one-PR-per-phase process. Phase gates remain as readiness checkpoints; `main` stays green per push.
-- **DA-5 — S0 kills framing + auth only; legacy commerce _data model_ dies in S1/S2.** The pre-pivot
-  `Pricing`/`MarketplaceItem`/`Discussion` model (`src/marketplace.ts` + `src/data.ts` + `src/curator`
-  + CLI pages) is *superseded* by the `Artifact` model, not hand-deleted in S0. Rationale: deleting
-  then rebuilding the same layer is throwaway churn; S0 removes commerce *copy* + `src/auth/` (clean),
-  and the legacy types are retired as `src/model/` replaces them (S1) and federation replaces the
-  sample catalog (S2). The §13 S0 gate's "zero marketplace occurrences" is met for *user-facing copy*;
-  internal legacy symbols are tracked to zero by end of S2.
+- **DA-5 — S0 reframes the front door; the entangled legacy code-kill (commerce model + auth) folds
+  into S1/S2.** The pre-pivot `Pricing`/`MarketplaceItem`/`Discussion` model **and** the auth/account
+  layer (`src/auth/refresh.ts`, `commandAuth`, the `AGORA_API` live-source client in
+  `helpers.ts`/`live.ts`) are woven through the *same* legacy surfaces — marketplace-era `welcome.ts`
+  onboarding, TUI pages, `sourceOptions`. They are *superseded* by the `Artifact` model (S1) and the
+  federation/host rework (S2), so hand-extracting auth in S0 would churn files that S1/S2 rewrite
+  anyway (and auth is entangled enough that a partial pull leaves half-states, e.g. a login command
+  with no refresh client). Rationale: avoid double churn (founder dislikes it). S0 therefore ships
+  identity (README/AGENTS/ROADMAP/ARCHITECTURE, `docs/frozen` removed) + the toolchain; the *code* kill
+  of commerce+auth lands with its neighbors in S1/S2. The §13 S0 "delete community/commerce+auth (D6)"
+  is met for *front-door copy*; internal legacy code is tracked to zero by end of S2.
 
 ## 8. Open questions for you
 

@@ -12,9 +12,7 @@
       "**/*.json",
       "**/*.jsonc",
       "!**/dist",
-      "!backend/dist",
-      "!**/node_modules",
-      "!backend/node_modules"
+      "!**/node_modules"
     ]
   },
   "formatter": {
@@ -33,7 +31,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true
+      "preset": "recommended"
     }
   },
   "javascript": {

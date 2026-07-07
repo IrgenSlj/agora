@@ -54,7 +54,7 @@ async function chatWithOpenCodeClient(
 export function createAgoraRuntimeTools(input?: PluginInput): Record<string, ToolDefinition> {
   return {
     agora_chat: tool({
-      description: 'Chat with an AI assistant about the Agora marketplace',
+      description: 'Chat with an AI assistant about MCP servers and agent tooling',
       args: {
         message: tool.schema.string().describe('Question or message'),
         model: tool.schema
@@ -219,11 +219,11 @@ export function createAgoraRuntimeTools(input?: PluginInput): Record<string, Too
       async execute() {
         return `🏛️ **Agora** v${AGORA_VERSION}
 
-The Developer's Terminal Marketplace for OpenCode.
+The trust plane for agentic tooling.
 
 Type \`/agora <request>\` in OpenCode and it routes to the right tool:
-- \`/agora search <query> [category]\` - Search the marketplace
-- \`/agora today\` - Daily news and marketplace highlights
+- \`/agora search <query> [category]\` - Search the catalog
+- \`/agora today\` - Daily news and catalog highlights
 - \`/agora browse <id>\` - View package or workflow details
 - \`/agora browse_category <category>\` - Browse a category
 - \`/agora trending [type]\` - See trending packages and workflows
@@ -241,7 +241,7 @@ The \`/agora\` slash command is installed by \`agora init\` (or copy
 \`agora_*\` tools are still callable directly by the assistant.
 
 **CLI-only features** (not plugin tools):
-- \`agora mcp\` — Run an MCP server exposing marketplace tools
+- \`agora mcp\` — Run an MCP server exposing Agora tools
 - \`agora shell\` — Interactive bash+chat hybrid shell
 - \`agora init\`, \`agora use\`, \`agora config doctor\`
 - \`agora export\`, \`agora watch\`, \`agora completions\`

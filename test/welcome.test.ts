@@ -72,7 +72,7 @@ describe('agora welcome', () => {
       await runCli(['welcome'], io);
       const out = stdout.join('');
       expect(out).toContain('Sign in');
-      expect(out).toContain('Browse the marketplace');
+      expect(out).toContain('Browse the catalog');
       expect(out).toContain('Read the news');
       expect(out).toContain('Set up shell completions');
       expect(out).toContain('Start an MCP project');
@@ -88,7 +88,7 @@ describe('agora welcome', () => {
       await runCli(['welcome'], io);
       const out = stdout.join('');
       expect(out).toContain('agora auth login');
-      expect(out).toContain('agora marketplace');
+      expect(out).toContain('agora search');
       expect(out).toContain('agora news');
       expect(out).toContain('agora completions');
       expect(out).toContain('agora init --template');

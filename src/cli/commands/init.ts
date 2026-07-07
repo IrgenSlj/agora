@@ -174,7 +174,7 @@ export const commandInit: CommandHandler = async (parsed, io, style) => {
       enabled: true
     };
     plan.servers.push('agora');
-    plan.notes.push('Agora MCP server registered — OpenCode can discover marketplace tools.');
+    plan.notes.push('Agora MCP server registered — OpenCode can discover catalog tools.');
   }
 
   if (parsed.flags.json) {
@@ -259,7 +259,7 @@ export const commandInit: CommandHandler = async (parsed, io, style) => {
 
     writeLine(io.stdout, '\n✓ Agora initialized! Restart OpenCode to pick up the changes.');
     writeLine(io.stdout, '  Plugin "opencode-agora" is now registered in your config.');
-    writeLine(io.stdout, '  Type `/agora` in OpenCode to use the marketplace.');
+    writeLine(io.stdout, '  Type \`/agora\` in OpenCode to use catalog tools.');
     writeLine(io.stdout, `  ${plan.servers.length} MCP servers configured.`);
     if (withMcp)
       writeLine(

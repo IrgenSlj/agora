@@ -146,7 +146,7 @@ export function computeOpportunities(input: {
       id: 'getting-started',
       kind: 'getting-started',
       title: 'No MCP servers configured yet',
-      detail: 'Search the marketplace to find and install MCP servers.',
+      detail: 'Search the catalog to find and install MCP servers.',
       command: 'agora search',
       priority: 100
     });

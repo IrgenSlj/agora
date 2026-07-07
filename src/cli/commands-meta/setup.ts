@@ -185,7 +185,7 @@ export const COMMANDS: CommandMeta[] = [
     summary: 'Show a guided onboarding tour of the agora CLI',
     usage: 'agora welcome [--json]',
     details:
-      'Displays a five-section guide covering sign-in, the marketplace, news, ' +
+      'Displays a five-section guide covering sign-in, the catalog, news, ' +
       'shell completions, and scaffolding an MCP project. ' +
       'Step 1 adapts to show your saved-items commands when you are already signed in. ' +
       'Use --json to get a machine-readable list of steps.',
