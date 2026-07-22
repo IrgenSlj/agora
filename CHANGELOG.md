@@ -24,7 +24,7 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   existing catalog categories for compatibility.
 - Added the initial Cloudflare Worker catalog API scaffold under `workers/api/` with Hono routes for
   `GET /v1/health` and paginated `GET /v1/catalog`, a D1 schema, Wrangler config, and a fake-D1 test
-  harness.
+  harness. The worker now includes a 6-hour cron trigger and a minimal official-registry sync into D1.
 
 ### V2 direction refresh
 - Updated front-door project copy to the locked identity: Agora is **the trust plane for agentic

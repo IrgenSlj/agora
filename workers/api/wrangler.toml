@@ -2,6 +2,9 @@ name = "agora-api"
 main = "src/index.ts"
 compatibility_date = "2026-07-22"
 
+[triggers]
+crons = ["0 */6 * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "agora-catalog"

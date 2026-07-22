@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { app, type Env } from '../workers/api/src/index';
+import { app, type Env, syncOfficialRegistry } from '../workers/api/src/index';
 
 interface ArtifactRow {
   purl: string;
@@ -27,6 +27,38 @@ class FakeStatement {
 
   bind(...values: unknown[]): FakeStatement {
     return new FakeStatement(this.db, this.sql, values);
+  }
+
+  async run(): Promise<void> {
+    if (this.sql.includes('INSERT INTO artifacts')) {
+      const [purl, kind, displayName, publisherNamespace, verified] = this.values;
+      const row: ArtifactRow = {
+        purl: String(purl),
+        kind: String(kind),
+        display_name: String(displayName),
+        publisher_namespace: String(publisherNamespace),
+        publisher_identity_verified: Number(verified)
+      };
+      const existing = this.db.artifacts.findIndex((artifact) => artifact.purl === row.purl);
+      if (existing >= 0) this.db.artifacts[existing] = row;
+      else this.db.artifacts.push(row);
+    }
+
+    if (this.sql.includes('INSERT INTO artifact_sources')) {
+      const [purl, adapter, upstreamId, url, firstSeen] = this.values;
+      const row: ArtifactSourceRow = {
+        purl: String(purl),
+        adapter: String(adapter),
+        upstream_id: String(upstreamId),
+        url: String(url),
+        first_seen: String(firstSeen)
+      };
+      const existing = this.db.sources.findIndex(
+        (source) => source.purl === row.purl && source.adapter === row.adapter
+      );
+      if (existing >= 0) this.db.sources[existing] = row;
+      else this.db.sources.push(row);
+    }
   }
 
   async all<T>(): Promise<{ results: T[] }> {
@@ -129,6 +161,52 @@ describe('workers/api', () => {
     expect(res.status).toBe(200);
     expect(body.items.map((item: { purl: string }) => item.purl)).toEqual([
       'pkg:npm/@example/b@1.0.0'
+    ]);
+  });
+
+  test('syncOfficialRegistry upserts official registry artifacts into D1', async () => {
+    const fakeDb = new FakeD1([], []);
+    const result = await syncOfficialRegistry(
+      { DB: fakeDb },
+      async () =>
+        new Response(
+          JSON.stringify({
+            servers: [
+              {
+                server: {
+                  name: 'io.github.example/filesystem',
+                  version: '1.0.0',
+                  packages: [
+                    {
+                      registryType: 'npm',
+                      identifier: '@example/server-filesystem',
+                      version: '1.0.0'
+                    }
+                  ]
+                },
+                _meta: {
+                  'io.modelcontextprotocol.registry/official': { status: 'active' }
+                }
+              }
+            ]
+          }),
+          { status: 200 }
+        )
+    );
+
+    expect(result).toEqual({ source: 'official', upserted: 1, skipped: 0 });
+    expect(fakeDb.artifacts).toEqual([
+      expect.objectContaining({
+        purl: 'pkg:npm/%40example/server-filesystem@1.0.0',
+        display_name: 'io.github.example/filesystem',
+        publisher_identity_verified: 1
+      })
+    ]);
+    expect(fakeDb.sources).toEqual([
+      expect.objectContaining({
+        adapter: 'official',
+        upstream_id: 'io.github.example/filesystem'
+      })
     ]);
   });
 });

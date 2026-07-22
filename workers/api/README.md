@@ -7,6 +7,7 @@ Cloudflare Worker scaffold for the S2 catalog surface.
 - `GET /v1/health` returns a small liveness payload.
 - `GET /v1/catalog?cursor=<purl>&limit=<n>` reads normalized artifacts from D1, ordered by purl, and
   includes source references from `artifact_sources`.
+- A scheduled trigger runs every 6 hours and syncs the latest official registry page into D1.
 
 ## Local Setup
 

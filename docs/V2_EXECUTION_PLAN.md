@@ -199,7 +199,8 @@ on the macOS+Linux matrix — pin a version with prebuilds.
    `GET /v1/health`. **[you]** create Cloudflare account + `wrangler` project + D1/KV; I author the code
    + `wrangler.toml` and a local `miniflare` test harness.
    - ✅ **Started:** `workers/api/` now has a Hono Worker with `GET /v1/health`, paginated
-     `GET /v1/catalog`, D1 schema, Wrangler config placeholder, and a fake-D1 unit test harness.
+     `GET /v1/catalog`, D1 schema, Wrangler config placeholder, a 6-hour cron trigger, minimal
+     official-registry sync into D1, and a fake-D1 unit test harness.
 5. **[sonnet]** Adapter **contract tests** against recorded upstream responses (no live calls in CI).
 
 **New deps:** `hono`, `wrangler` (dev), `@cloudflare/workers-types` (dev).
