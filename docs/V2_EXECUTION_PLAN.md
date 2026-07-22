@@ -8,9 +8,9 @@ the brief's §14 and an entry in `docs/OPEN_QUESTIONS.md`, then take the smalles
 **Status:** S0 complete — toolchain migrated, README/docs rewritten, CI matrix expanded,
 user-facing commerce/account framing stripped, biome migrated. S1 (data model & lockfile) in
 progress: model schemas, generated schemas, schema freshness tests, purl helpers, JCS/SHA-256
-helpers, SQLite/CAS store, manifest-backed `agora lock verify`, the brief §9 CLI exit-code remap,
-and refresh-backed source-item indexing are present; remaining S1 work is integration hardening
-across legacy surfaces.
+helpers, SQLite/CAS store, manifest-backed `agora lock verify`, byte-identical lockfile
+serialization, the brief §9 CLI exit-code remap, and refresh-backed source-item indexing are
+present; remaining S1 work is integration hardening across legacy surfaces.
 
 ---
 
@@ -156,7 +156,8 @@ issue (no native deps until S1).
    `~/.agora/cas/<sha256>`; `agora refresh` now mirrors official source items into SQLite + CAS
    while the JSONL cache remains the compatibility read path. JCS hashing via `canonicalize` +
    SHA-256 (D15) as a shared util.
-5. **[sonnet]** `agora lock verify` (recompute hashes, exit 1 on drift) + round-trip test.
+5. **[sonnet]** `agora lock verify` (recompute hashes, exit 1 on drift) + byte-identical
+   parser/serializer round-trip test.
 6. **[sonnet]** Migrate exit-code contract to brief §9 across commands + tests (DA-3) — core CLI
    command paths now use the shared `ExitCode` contract.
 

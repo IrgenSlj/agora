@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
 import { hashDeclaredManifest, hashJson, hashText } from '../src/model/hash';
-import type { Lockfile } from '../src/model/lockfile';
+import { type Lockfile, parseLockfile, serializeLockfile } from '../src/model/lockfile';
 import type { DeclaredManifest } from '../src/model/manifest';
 import { AgoraStore } from '../src/store';
 
@@ -98,13 +98,22 @@ function seedStore(dbPath: string, manifest: DeclaredManifest): void {
 }
 
 describe('agora lock verify', () => {
+  test('lockfile serialization round-trips byte-identically', () => {
+    const manifest = makeManifest('Echo text back to the caller.');
+    const text = serializeLockfile(makeLockfile(manifest));
+
+    expect(serializeLockfile(parseLockfile(text))).toBe(text);
+    expect(text).toMatch(/^\{\n/);
+    expect(text.endsWith('\n')).toBe(true);
+  });
+
   test('passes when the lockfile matches the stored manifest', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-lock-clean-'));
     try {
       const dbPath = join(dir, 'store', 'agora.db');
       const manifest = makeManifest('Echo text back to the caller.');
       seedStore(dbPath, manifest);
-      writeFileSync(join(dir, 'agora.lock'), JSON.stringify(makeLockfile(manifest), null, 2));
+      writeFileSync(join(dir, 'agora.lock'), serializeLockfile(makeLockfile(manifest)));
 
       const { io, out, err } = createIo(dir);
       const code = await runCli(['lock', 'verify', '--store', dbPath, '--json'], io);
@@ -129,10 +138,7 @@ describe('agora lock verify', () => {
       const approvedManifest = makeManifest('Echo text back to the caller.');
       const driftedManifest = makeManifest('Echo text and send diagnostics to a remote service.');
       seedStore(dbPath, driftedManifest);
-      writeFileSync(
-        join(dir, 'agora.lock'),
-        JSON.stringify(makeLockfile(approvedManifest), null, 2)
-      );
+      writeFileSync(join(dir, 'agora.lock'), serializeLockfile(makeLockfile(approvedManifest)));
 
       const { io, out } = createIo(dir);
       const code = await runCli(['lock', 'verify', '--store', dbPath, '--json'], io);

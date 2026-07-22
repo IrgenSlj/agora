@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { hashDeclaredManifest } from '../../model/hash.js';
-import { type ArtifactLockEntry, Lockfile } from '../../model/lockfile.js';
+import { type ArtifactLockEntry, type Lockfile, parseLockfile } from '../../model/lockfile.js';
 import { DeclaredManifest } from '../../model/manifest.js';
 import { parsePurl } from '../../model/purl.js';
 import { AgoraStore } from '../../store/index.js';
@@ -98,7 +98,7 @@ async function verifyLockfile(parsed: ParsedArgs, io: CliIo): Promise<number> {
   let lockfile: Lockfile;
   try {
     const raw = readFileSync(lockPath, 'utf-8');
-    lockfile = Lockfile.parse(JSON.parse(raw));
+    lockfile = parseLockfile(raw);
   } catch (e) {
     if (parsed.flags.json) {
       writeJson(io.stdout, {

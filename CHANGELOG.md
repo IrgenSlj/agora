@@ -25,6 +25,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   hashing.
 - `agora lock verify` now compares `agora.lock` entries against the current manifest in the local
   SQLite store and exits `1` on manifest/tool drift.
+- Added a deterministic `agora.lock` parser/serializer and byte-identical round-trip coverage for
+  the S1 lockfile gate.
 - Core CLI command paths now use the brief §9 exit-code contract: `1` for policy/drift failures,
   `2` for usage, `3` for network failure, and `4` reserved for sandbox unavailability.
 - `agora refresh` now mirrors official registry source items into the SQLite store with CAS-backed
