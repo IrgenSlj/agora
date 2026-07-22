@@ -12,11 +12,18 @@
     },
     "vet_level": {
       "type": "string",
-      "enum": ["L0-offline", "L1-proxied-net"]
+      "enum": [
+        "L0-offline",
+        "L1-proxied-net"
+      ]
     },
     "backend": {
       "type": "string",
-      "enum": ["docker", "bwrap", "sandbox-exec"]
+      "enum": [
+        "docker",
+        "bwrap",
+        "sandbox-exec"
+      ]
     },
     "duration_ms": {
       "type": "number",
@@ -62,11 +69,19 @@
               },
               "during": {
                 "type": "string",
-                "enum": ["startup", "handshake", "tool-call"],
+                "enum": [
+                  "startup",
+                  "handshake",
+                  "tool-call"
+                ],
                 "description": "Phase when contact occurred"
               }
             },
-            "required": ["host", "port", "during"],
+            "required": [
+              "host",
+              "port",
+              "during"
+            ],
             "additionalProperties": false,
             "description": "A network connection observed during vetting"
           },
@@ -123,10 +138,18 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["info", "warn", "critical"]
+            "enum": [
+              "info",
+              "warn",
+              "critical"
+            ]
           }
         },
-        "required": ["kind", "detail", "severity"],
+        "required": [
+          "kind",
+          "detail",
+          "severity"
+        ],
         "additionalProperties": false,
         "description": "Computed difference between declared capabilities and observed behavior"
       },

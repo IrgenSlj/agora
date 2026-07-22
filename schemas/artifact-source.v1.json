@@ -4,7 +4,13 @@
   "properties": {
     "adapter": {
       "type": "string",
-      "enum": ["official", "glama", "pulsemcp", "skills-github", "manual"]
+      "enum": [
+        "official",
+        "glama",
+        "pulsemcp",
+        "skills-github",
+        "manual"
+      ]
     },
     "upstream_id": {
       "type": "string",
@@ -22,6 +28,11 @@
       "description": "ISO timestamp when this source first reported the artifact"
     }
   },
-  "required": ["adapter", "upstream_id", "url", "first_seen"],
+  "required": [
+    "adapter",
+    "upstream_id",
+    "url",
+    "first_seen"
+  ],
   "additionalProperties": false
 }

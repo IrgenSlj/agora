@@ -11,6 +11,9 @@
       "description": "provenance chain ties publisher to source (D2: evidence over scores)"
     }
   },
-  "required": ["namespace", "identity_verified"],
+  "required": [
+    "namespace",
+    "identity_verified"
+  ],
   "additionalProperties": false
 }

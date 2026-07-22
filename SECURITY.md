@@ -1,55 +1,57 @@
 # Security Policy
 
-## Supported versions
+## Supported Versions
+
+Agora is pre-1.0 and moving quickly against the locked v2 trust-plane brief.
 
 | Version | Supported |
 |---|---|
-| 0.4.x | yes |
-| 0.3.x | security fixes only |
-| < 0.3 | no |
+| 0.6.x | yes |
+| < 0.6 | security fixes only when practical |
 
-## Reporting a vulnerability
+## Reporting A Vulnerability
 
-Do **not** open a public issue. Use GitHub's [private vulnerability reporting](https://github.com/IrgenSlj/agora/security/advisories/new) with a description, reproduction steps, and impact assessment. Expect a response within 48 hours.
+Do **not** open a public issue. Use GitHub's
+[private vulnerability reporting](https://github.com/IrgenSlj/agora/security/advisories/new) with
+a description, reproduction steps, affected commands, and impact. Expect a response within 48 hours.
 
-## How `agora` handles user data
+## Current Security Model
 
-- `~/.config/agora/state.json` (saves + auth tokens), `settings.toml`, `preferences.json`, `news-meta.json`, and the hub enrichment store are written **atomically** (`.tmp` + `renameSync`) at **`0o600`** via the shared `src/atomic-write.ts` helper. A crash mid-flush leaves the previous file intact.
-- Tokens are masked in `agora auth status` output and never logged.
-- The bundled offline catalog contains no secrets.
-- Auto-installable packages are validated against the live npm registry by the test suite; entries without a published `npmPackage` are marked browsable-only.
+Agora is local-first and has no hosted auth backend in the v2 direction. Core state is on disk:
 
-## Install consent (Phase 4 trust step 1)
+- `~/.agora/agora.db` — SQLite evidence/catalog/store state (S1).
+- `~/.agora/cas/<sha256>` — content-addressed artifact blobs (S1).
+- `agora.toml` — portable human intent; never store credentials here.
+- `agora.lock` — committed machine truth: exact artifacts, hashes, policy verdicts.
+- Legacy `~/.config/agora/*` state files may still exist while S1/S2 retire pre-v2 surfaces.
 
-Items in the catalog can declare a `permissions: { fs?, net?, exec? }` manifest. When present:
+Config and state writes must be surgical and atomic via `src/atomic-write.ts`. Secrets belong in
+local settings/state or host-native secret stores, never in `agora.toml`.
 
-- **TUI install preview** flips its footer from `y confirm` to `g grant + install   d details   n cancel`.
-- **CLI `agora install <id> --write`** refuses without `--yes`, prints the manifest, and exits 1.
-- **CLI `agora install <id> --write --yes`** prints `Granted permissions:` followed by the manifest before any `execSync` runs.
+## Gate Semantics
 
-The manifest is currently **informational** — there is no runtime sandbox yet. Treat installed MCP servers like any other dependency you would `npm i -g`. Runtime enforcement is open Phase 4 work; see [`ROADMAP.md`](./ROADMAP.md).
+Today's live gate is heuristic (`src/scan.ts`, `src/acquire.ts`): description-injection checks,
+permission/declaration checks, registry status, npm reachability, and tool-schema drift when a probe
+baseline exists. It is not a sandbox and does not formally verify code.
 
-## Authentication model
+**"Passed the gate" means "no known red flags," not "safe."**
 
-`agora` uses an OAuth-style token pair on every authenticated backend request:
+The v2 build is replacing this with evidence and policy:
 
-- **Access token** — stateless JWT (HS256), 1h lifetime. Carried as `Authorization: Bearer <token>`. Verified by signature + `exp` only; no per-request DB lookup.
-- **Refresh token** — JWT with a random `jti`, 90d lifetime. The server stores `sha256(jti)` keyed by `user_id` in `refresh_tokens`. Every `POST /auth/refresh` rotates: the old row is deleted and a fresh pair is issued, so a leaked refresh token is single-use.
-- **Logout** — `POST /auth/logout` revokes either one refresh token or all of the user's tokens (logout everywhere). `agora logout` calls it best-effort before clearing local state.
-- **GitHub** — used only for identity binding (`users.github_id`); the GitHub OAuth access token is never persisted.
+- S1: zod schemas, JSON Schema export, purl handling, SQLite/CAS, `agora lock verify`.
+- S3/S6: provenance, schema/description hashing, sandboxed `vet`, DSSE attestations.
+- S4/S5: signed revocation feed and Cedar policy enforcement.
 
-## Moderation
+## Execution Safety
 
-`agora admin hide` and `agora admin log` are gated by a `requireAdmin` middleware that checks the caller's user id against the comma-separated `AGORA_ADMIN_USER_IDS` env on the backend. Every kill-switch use is recorded in the public `kill_switch_log` table per [`COMMUNITY_GUIDELINES.md`](./COMMUNITY_GUIDELINES.md). Community-side moderation is flag-don't-delete: items with ≥3 flags auto-collapse, ≥10 flags auto-hide.
+- Every config-writing command must support preview/plan separation or an explicit dry run.
+- Agents never get an ungated write path through plugins or MCP tools.
+- Network failures must degrade honestly; do not fabricate source counts or trust results.
+- Exit codes follow the v2 contract: `0` ok, `1` policy forbid / drift / revocation hit, `2`
+  usage, `3` network, `4` sandbox unavailable.
 
-## Recent hardening
+## Known Transitional Risk
 
-- Shell-injection paths reviewed and switched to `execFileSync` / `spawnSync` with args arrays: `$EDITOR` open, OAuth `verificationUri` browser open, `git clone` install kind (also gated by a URL allowlist at plan-build time)
-- arXiv news source switched from `http://` to `https://`
-- Backend write endpoints (`POST /api/packages|workflows|discussions`) have length caps; `/api/community/threads` validates `?sort=` against an explicit allowlist before SQL interpolation
-- OAuth device-code + token responses are narrowly typed and validated for required fields
-
-## Known issues tracked for the next release
-
-- **Redundant rate-limit check on `/api/*` write endpoints.** Each write flows through both the `/api/*` middleware and an inline `checkRateLimit` call. Functionally correct (both buckets must permit) but burns two DB writes per request.
-- **`/api/*` rate-limit keying by auth-header prefix.** The middleware keys authenticated requests by `auth.slice(0, 16)` — `Bearer eyJ...` is identical for every JWT from the same secret. Collapses to per-IP keying for all authed traffic. Replace with per-user keying derived from the verified JWT `sub` claim during the deploy-readiness pass.
+Some legacy auth/live-source code is still present while S1/S2 replace the old catalog/account-era
+model with `Artifact` + federation/store contracts. Do not expand those surfaces; remove or route
+around them as their replacement phase lands.

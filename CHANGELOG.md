@@ -4,8 +4,24 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [Unreleased]
 
-_Next (see [`ROADMAP.md`](./ROADMAP.md)): TUI-3 (Plaza · Home · Settings) · P4 inference providers ·
-P5 federated plaza._
+_Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardening._
+
+### V2 direction refresh
+- Updated front-door project copy to the locked identity: Agora is **the trust plane for agentic
+  tooling**, not the older system-manager/plaza framing.
+- Rewrote `SECURITY.md` and `CONTRIBUTING.md` around the v2 local-first trust-plane model,
+  vitest/biome toolchain, stable exit codes, and no hosted auth backend dependency.
+- Refreshed roadmap/architecture/status docs for the current S1 state: model schemas, generated JSON
+  Schema, schema registry/snapshot coverage, purl helpers, SQLite/CAS store, JCS/SHA-256 helpers,
+  and manifest-backed `lock verify`.
+
+### S1 — data model & lockfile
+- Added RFC-8785/JCS SHA-256 helpers via `canonicalize` for declared manifest, JSON schema, and text
+  hashing.
+- `agora lock verify` now compares `agora.lock` entries against the current manifest in the local
+  SQLite store and exits `1` on manifest/tool drift.
+- Added model contract tests for generated schema freshness, deterministic JCS hashing, purl helpers,
+  and focused lock verifier tests for clean verification and drift detection.
 
 ### TUI-2 — Search page + Item detail + marketplace→catalog rename
 - **Vocabulary rename** (the design brief bans "marketplace" in the UI): the TUI `PageId` `marketplace`

@@ -34,7 +34,9 @@
       "type": "number"
     }
   },
-  "required": ["verified"],
+  "required": [
+    "verified"
+  ],
   "additionalProperties": false,
   "description": "Provenance verification result (AGORA_BRIEF_v2.md §6.1)"
 }

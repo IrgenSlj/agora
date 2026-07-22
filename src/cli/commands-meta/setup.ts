@@ -4,18 +4,19 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'auth',
     group: 'Setup',
-    summary: 'Manage Agora API credentials',
+    summary: 'Manage legacy Agora API credentials',
     usage:
       'agora auth login [--api-url url] [--data-dir path]\n' +
       '  agora auth login --token <token> [--api-url url]\n' +
       '  agora auth status [--data-dir path] [--json]\n' +
       '  agora auth logout [--data-dir path]',
     details:
-      'Stores or clears API credentials in the Agora state file. ' +
+      'Stores or clears legacy live-API credentials in the Agora state file. ' +
+      'Core v2 trust-plane flows are local-first and do not require accounts. ' +
       'Without --token, runs the device-code login flow: opens your browser to ' +
       'authorize via GitHub and returns a short-lived JWT. ' +
       'Pass --token (or set AGORA_TOKEN / AGORA_API_TOKEN) for headless/CI use. ' +
-      'Saved credentials are used automatically by write commands.',
+      'Do not build new core flows on this surface; it is being retired as S1/S2 replace pre-v2 live APIs.',
     flags: [
       { flag: '--token', description: 'API auth token (also AGORA_TOKEN / AGORA_API_TOKEN env)' },
       { flag: '--api-url', description: 'Override AGORA_API_URL for stored auth' },
@@ -74,14 +75,14 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'tui',
     group: 'Setup',
-    summary: 'Open the full-screen Agora TUI (Home · Stack · Market · News · Settings)',
+    summary: 'Open the full-screen Agora TUI (Home · Stack · Search · News · Settings)',
     usage: 'agora tui',
     details:
       'Opens the keyboard-driven TUI with five pages, switched by 1-5 or Tab. ' +
       'j/k navigates, Enter drills in, Esc backs out, ? toggles help, q quits. ' +
       'Pages: Home (recommendation engine), Stack (your MCP servers across every ' +
       'harness — health, drift, probe), Search (federated catalog + gated ' +
-      'acquire), News (ranked feed), Settings (account, display, sources).',
+      'acquire), News (ranked feed), Settings (display, local preferences, sources).',
     examples: ['agora tui']
   },
   {

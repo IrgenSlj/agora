@@ -1,8 +1,7 @@
 # Open Questions
 
-Log of decisions the AGORA_BRIEF.md locks in *direction* but where the load-bearing
-third-party reality diverged from the brief's assumptions at build time (per brief §10).
-Direction stays locked; these record the smallest-change adaptation.
+Log of decisions where the locked v2 direction in [`AGORA_BRIEF_v2.md`](../AGORA_BRIEF_v2.md)
+meets third-party reality. Direction stays locked; these record the smallest-change adaptation.
 
 ## OQ-1 — Claude inference tier (P4/D7): subscription auth is NOT available to third parties
 
@@ -36,7 +35,7 @@ discipline as the official source.
   `include_deleted`). Cursor is `metadata.nextCursor` (opaque — pass back, don't parse). Status in
   `_meta["io.modelcontextprotocol.registry/official"]`. `packages[]` registryType now includes
   `cargo`; schema dated 2025-12-11. Gotcha: `updated_since` auto-sets `include_deleted=true` (tombstones
-  arrive unasked — exactly what we want for prune-on-refresh). **Required source; the only one Ring 1 depends on.**
+  arrive unasked — exactly what we want for prune-on-refresh). **Required source for federation.**
 - **Smithery** — `https://registry.smithery.ai` (`api.smithery.ai` resolves to byte-identical
   responses in testing; the client uses `registry.smithery.ai`). `GET /servers` (`q`, `pageSize`≤100 —
   over 100 gets a structured HTTP 400, not a clamp), `GET /servers/{qualifiedName}` (qualifiedName may

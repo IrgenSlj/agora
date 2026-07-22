@@ -1,7 +1,7 @@
 # opencode-agora
 
-The **OpenCode plugin entry** for [Agora](https://github.com/IrgenSlj/agora) — the system
-manager for your agentic stack.
+The **OpenCode plugin entry** for [Agora](https://github.com/IrgenSlj/agora) — the trust
+plane for agentic tooling.
 
 This package is a one-line re-export of `agora-hub/opencode`. It exists only so that
 

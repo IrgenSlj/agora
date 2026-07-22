@@ -8,7 +8,10 @@
     },
     "kind": {
       "type": "string",
-      "enum": ["mcp-server", "agent-skill"]
+      "enum": [
+        "mcp-server",
+        "agent-skill"
+      ]
     },
     "integrity": {
       "type": "object",
@@ -22,7 +25,10 @@
           "description": "JCS hash of the declared manifest"
         }
       },
-      "required": ["tarball_sha256", "manifest_sha256"],
+      "required": [
+        "tarball_sha256",
+        "manifest_sha256"
+      ],
       "additionalProperties": false,
       "description": "Content integrity hashes"
     },
@@ -46,7 +52,9 @@
           "type": "number"
         }
       },
-      "required": ["verified"],
+      "required": [
+        "verified"
+      ],
       "additionalProperties": false,
       "description": "Provenance verification result"
     },
@@ -68,7 +76,11 @@
             "description": "JCS hash of input schema"
           }
         },
-        "required": ["name", "description_sha256", "input_schema_sha256"],
+        "required": [
+          "name",
+          "description_sha256",
+          "input_schema_sha256"
+        ],
         "additionalProperties": false
       },
       "description": "Declared tools with their hashes"
@@ -78,7 +90,10 @@
       "properties": {
         "decision": {
           "type": "string",
-          "enum": ["allow", "forbid"]
+          "enum": [
+            "allow",
+            "forbid"
+          ]
         },
         "policy_sha256": {
           "type": "string",
@@ -95,7 +110,11 @@
           "type": "string"
         }
       },
-      "required": ["decision", "policy_sha256", "evaluated_at"],
+      "required": [
+        "decision",
+        "policy_sha256",
+        "evaluated_at"
+      ],
       "additionalProperties": false,
       "description": "Outcome of Cedar policy evaluation for an artifact"
     },
@@ -109,10 +128,21 @@
     "state": {
       "description": "Current state — quarantined if drift or revocation detected",
       "type": "string",
-      "enum": ["installed", "quarantined"]
+      "enum": [
+        "installed",
+        "quarantined"
+      ]
     }
   },
-  "required": ["purl", "kind", "integrity", "provenance", "tools", "policy_verdict", "hosts"],
+  "required": [
+    "purl",
+    "kind",
+    "integrity",
+    "provenance",
+    "tools",
+    "policy_verdict",
+    "hosts"
+  ],
   "additionalProperties": false,
   "description": "A single artifact entry in the lockfile (AGORA_BRIEF_v2.md §5.5)"
 }

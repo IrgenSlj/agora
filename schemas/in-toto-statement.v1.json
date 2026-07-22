@@ -24,12 +24,17 @@
                 "description": "SHA-256 hash of the artifact"
               }
             },
-            "required": ["sha256"],
+            "required": [
+              "sha256"
+            ],
             "additionalProperties": false,
             "description": "Content hash"
           }
         },
-        "required": ["name", "digest"],
+        "required": [
+          "name",
+          "digest"
+        ],
         "additionalProperties": false,
         "description": "Subject of an in-toto Statement"
       },
@@ -52,7 +57,12 @@
       "description": "The attestation data (DeclaredManifest, ObservedProfile, or provenance result)"
     }
   },
-  "required": ["_type", "subject", "predicateType", "predicate"],
+  "required": [
+    "_type",
+    "subject",
+    "predicateType",
+    "predicate"
+  ],
   "additionalProperties": false,
   "description": "In-toto Statement (AGORA_BRIEF_v2.md §5.4)"
 }

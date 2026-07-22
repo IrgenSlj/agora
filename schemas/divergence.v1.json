@@ -18,10 +18,18 @@
     },
     "severity": {
       "type": "string",
-      "enum": ["info", "warn", "critical"]
+      "enum": [
+        "info",
+        "warn",
+        "critical"
+      ]
     }
   },
-  "required": ["kind", "detail", "severity"],
+  "required": [
+    "kind",
+    "detail",
+    "severity"
+  ],
   "additionalProperties": false,
   "description": "Computed difference between declared capabilities and observed behavior"
 }

@@ -4,7 +4,10 @@
   "properties": {
     "decision": {
       "type": "string",
-      "enum": ["allow", "forbid"]
+      "enum": [
+        "allow",
+        "forbid"
+      ]
     },
     "policy_sha256": {
       "type": "string",
@@ -21,7 +24,11 @@
       "type": "string"
     }
   },
-  "required": ["decision", "policy_sha256", "evaluated_at"],
+  "required": [
+    "decision",
+    "policy_sha256",
+    "evaluated_at"
+  ],
   "additionalProperties": false,
   "description": "Outcome of Cedar policy evaluation for an artifact"
 }

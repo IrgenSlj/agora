@@ -27,7 +27,10 @@
               "type": "boolean"
             }
           },
-          "required": ["namespace", "identity_verified"],
+          "required": [
+            "namespace",
+            "identity_verified"
+          ],
           "additionalProperties": false,
           "description": "Cedar Publisher entity attributes"
         },
@@ -82,7 +85,11 @@
       "description": "Cedar Artifact entity attributes (AGORA_BRIEF_v2.md §7.1)"
     }
   },
-  "required": ["type", "id", "attributes"],
+  "required": [
+    "type",
+    "id",
+    "attributes"
+  ],
   "additionalProperties": false,
   "description": "Cedar Artifact entity — the resource in policy evaluation"
 }

@@ -9,7 +9,10 @@
       "type": "boolean"
     }
   },
-  "required": ["namespace", "identity_verified"],
+  "required": [
+    "namespace",
+    "identity_verified"
+  ],
   "additionalProperties": false,
   "description": "Cedar Publisher entity attributes"
 }

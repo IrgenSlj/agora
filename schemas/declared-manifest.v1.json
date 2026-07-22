@@ -14,13 +14,22 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["stdio", "streamable-http"]
+        "enum": [
+          "stdio",
+          "streamable-http"
+        ]
       },
       "description": "Supported MCP transports"
     },
     "auth_model": {
       "type": "string",
-      "enum": ["none", "static-key", "oauth2.1", "oidc", "unknown"],
+      "enum": [
+        "none",
+        "static-key",
+        "oauth2.1",
+        "oidc",
+        "unknown"
+      ],
       "description": "How the artifact authenticates"
     },
     "tools": {
@@ -50,11 +59,20 @@
           },
           "source": {
             "type": "string",
-            "enum": ["registry", "handshake", "inferred"],
+            "enum": [
+              "registry",
+              "handshake",
+              "inferred"
+            ],
             "description": "Where this tool declaration came from"
           }
         },
-        "required": ["name", "description_sha256", "input_schema_sha256", "source"],
+        "required": [
+          "name",
+          "description_sha256",
+          "input_schema_sha256",
+          "source"
+        ],
         "additionalProperties": false,
         "description": "A declared tool from the artifact's capability manifest"
       },
@@ -90,7 +108,13 @@
           "description": "Environment variable names requested"
         }
       },
-      "required": ["fs_read", "fs_write", "net_egress", "exec", "credentials"],
+      "required": [
+        "fs_read",
+        "fs_write",
+        "net_egress",
+        "exec",
+        "credentials"
+      ],
       "additionalProperties": false,
       "description": "Coarse capability declarations for policy evaluation"
     },

@@ -24,11 +24,20 @@
     },
     "source": {
       "type": "string",
-      "enum": ["registry", "handshake", "inferred"],
+      "enum": [
+        "registry",
+        "handshake",
+        "inferred"
+      ],
       "description": "Where this tool declaration came from"
     }
   },
-  "required": ["name", "description_sha256", "input_schema_sha256", "source"],
+  "required": [
+    "name",
+    "description_sha256",
+    "input_schema_sha256",
+    "source"
+  ],
   "additionalProperties": false,
   "description": "A declared tool from the artifact's capability manifest"
 }

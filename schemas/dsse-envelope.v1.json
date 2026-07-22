@@ -25,18 +25,30 @@
             "description": "Base64-encoded signature"
           }
         },
-        "required": ["keyid", "sig"],
+        "required": [
+          "keyid",
+          "sig"
+        ],
         "additionalProperties": false
       },
       "description": "At least one signature"
     },
     "tier": {
       "type": "string",
-      "enum": ["sigstore", "local", "none"],
+      "enum": [
+        "sigstore",
+        "local",
+        "none"
+      ],
       "description": "How this envelope was signed"
     }
   },
-  "required": ["payloadType", "payload", "signatures", "tier"],
+  "required": [
+    "payloadType",
+    "payload",
+    "signatures",
+    "tier"
+  ],
   "additionalProperties": false,
   "description": "DSSE envelope wrapping an in-toto Statement (AGORA_BRIEF_v2.md §5.4)"
 }

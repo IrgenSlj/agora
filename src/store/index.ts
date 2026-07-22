@@ -1,8 +1,8 @@
+import { createHash } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { dirname, join } from 'node:path';
 import Database from 'better-sqlite3';
-import { join } from 'path';
-import { mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs';
-import { homedir } from 'os';
-import { createHash } from 'crypto';
 
 /**
  * Default path for the Agora database.
@@ -15,12 +15,9 @@ const CAS_DIR = join(AGORA_DIR, 'cas');
 /**
  * Ensure the Agora directory structure exists.
  */
-function ensureAgoraDir(): void {
-  if (!existsSync(AGORA_DIR)) {
-    mkdirSync(AGORA_DIR, { recursive: true });
-  }
-  if (!existsSync(CAS_DIR)) {
-    mkdirSync(CAS_DIR, { recursive: true });
+function ensureDir(path: string): void {
+  if (!existsSync(path)) {
+    mkdirSync(path, { recursive: true });
   }
 }
 
@@ -32,7 +29,7 @@ export class AgoraStore {
   private db: Database.Database;
 
   constructor(dbPath: string = DB_PATH) {
-    ensureAgoraDir();
+    ensureDir(dirname(dbPath));
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.pragma('foreign_keys = ON');
@@ -257,7 +254,7 @@ export class CASCache {
   private casDir: string;
 
   constructor(casDir: string = CAS_DIR) {
-    ensureAgoraDir();
+    ensureDir(casDir);
     this.casDir = casDir;
   }
 
@@ -309,6 +306,32 @@ export class CASCache {
   }
 }
 
-// Export singleton instances for convenience
-export const store = new AgoraStore();
-export const cas = new CASCache();
+let defaultStoreInstance: AgoraStore | undefined;
+let defaultCasInstance: CASCache | undefined;
+
+export function getDefaultStore(): AgoraStore {
+  defaultStoreInstance ??= new AgoraStore();
+  return defaultStoreInstance;
+}
+
+export function getDefaultCas(): CASCache {
+  defaultCasInstance ??= new CASCache();
+  return defaultCasInstance;
+}
+
+// Lazy compatibility exports. Importing src/store must not create ~/.agora.
+export const store = new Proxy({} as AgoraStore, {
+  get(_target, property, receiver) {
+    const target = getDefaultStore();
+    const value = Reflect.get(target, property, receiver);
+    return typeof value === 'function' ? value.bind(target) : value;
+  }
+});
+
+export const cas = new Proxy({} as CASCache, {
+  get(_target, property, receiver) {
+    const target = getDefaultCas();
+    const value = Reflect.get(target, property, receiver);
+    return typeof value === 'function' ? value.bind(target) : value;
+  }
+});

@@ -56,8 +56,9 @@ One `ToolAdapter` per agent tool (opencode, Claude Code, Cursor, Windsurf) norma
 config into a single `ConfiguredServer` shape. `agora installed` / `doctor [--probe]` read across
 all of them; `agora.toml` is the portable, declarative profile; `plan`/`apply` (`sync` =
 `plan && apply`) reconcile it into real config files surgically — every unrelated key is
-preserved, writes are atomic (`src/atomic-write.ts`). Planned: a committed `agora.lock` as machine
-truth (brief §5.5), and `agora serve` exposing Agora itself as an MCP server (brief §8).
+preserved, writes are atomic (`src/atomic-write.ts`). S1 adds a committed `agora.lock` schema as
+machine truth (brief §5.5) and a manifest-backed `agora lock verify`; planned: the full drift
+producer in S3 and `agora serve` exposing Agora itself as an MCP server (brief §8).
 
 ## Supporting surfaces
 
@@ -109,6 +110,9 @@ truth (brief §5.5), and `agora serve` exposing Agora itself as an MCP server (b
 ```
 src/stack/            cross-harness stack manager — adapters, manifest, plan/apply, doctor, probe
                       → target: src/hosts/ (brief §4)
+src/model/            v2 zod schemas, purl helpers, JCS/SHA-256 hashing
+schemas/              generated JSON Schema output from src/model/
+src/store/            SQLite store + content-addressed blob cache
 src/federation/       federated catalog clients (official registry, Glama, GitHub, …)
                       → target: src/federation/adapters/ + sync.ts
 src/acquire.ts        capability-acquisition gateway (resolve → scan-gate → write)
@@ -124,8 +128,7 @@ src/data.ts           curated MCP servers, workflows, tutorials — the offline-
 packages/opencode-agora/  thin npm entry re-exporting agora-hub/opencode
 ```
 
-Not yet present, per the brief §4 target tree: `src/model/` (zod schemas), `src/evidence/`,
-`src/policy/`, `src/serve/`, `src/store/` (SQLite + CAS), `workers/api/` (Cloudflare Worker),
-`schemas/` (generated JSON Schema). These land phase by phase — see
+Not yet present, per the brief §4 target tree: `src/evidence/`, `src/policy/`, `src/serve/`, and
+`workers/api/` (Cloudflare Worker). `src/model/`, `src/store/`, and `schemas/` now exist as S1
+foundations but still need integration hardening before the S1 gate is complete — see
 [`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_PLAN.md).
-</content>

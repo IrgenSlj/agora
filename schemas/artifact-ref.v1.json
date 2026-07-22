@@ -8,7 +8,10 @@
     },
     "kind": {
       "type": "string",
-      "enum": ["mcp-server", "agent-skill"]
+      "enum": [
+        "mcp-server",
+        "agent-skill"
+      ]
     },
     "display_name": {
       "type": "string",
@@ -26,7 +29,10 @@
           "description": "provenance chain ties publisher to source (D2: evidence over scores)"
         }
       },
-      "required": ["namespace", "identity_verified"],
+      "required": [
+        "namespace",
+        "identity_verified"
+      ],
       "additionalProperties": false
     },
     "sources": {
@@ -36,7 +42,13 @@
         "properties": {
           "adapter": {
             "type": "string",
-            "enum": ["official", "glama", "pulsemcp", "skills-github", "manual"]
+            "enum": [
+              "official",
+              "glama",
+              "pulsemcp",
+              "skills-github",
+              "manual"
+            ]
           },
           "upstream_id": {
             "type": "string",
@@ -54,12 +66,23 @@
             "description": "ISO timestamp when this source first reported the artifact"
           }
         },
-        "required": ["adapter", "upstream_id", "url", "first_seen"],
+        "required": [
+          "adapter",
+          "upstream_id",
+          "url",
+          "first_seen"
+        ],
         "additionalProperties": false
       },
       "description": "Which upstream registries know this artifact"
     }
   },
-  "required": ["purl", "kind", "display_name", "publisher", "sources"],
+  "required": [
+    "purl",
+    "kind",
+    "display_name",
+    "publisher",
+    "sources"
+  ],
   "additionalProperties": false
 }

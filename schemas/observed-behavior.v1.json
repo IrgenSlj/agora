@@ -31,11 +31,19 @@
           },
           "during": {
             "type": "string",
-            "enum": ["startup", "handshake", "tool-call"],
+            "enum": [
+              "startup",
+              "handshake",
+              "tool-call"
+            ],
             "description": "Phase when contact occurred"
           }
         },
-        "required": ["host", "port", "during"],
+        "required": [
+          "host",
+          "port",
+          "during"
+        ],
         "additionalProperties": false,
         "description": "A network connection observed during vetting"
       },

@@ -6,7 +6,10 @@ third-party assumptions diverge from build-time reality, we log a **Decision Ame
 the brief's §14 and an entry in `docs/OPEN_QUESTIONS.md`, then take the smallest adaptation.
 
 **Status:** S0 complete — toolchain migrated, README/docs rewritten, CI matrix expanded,
-user-facing "marketplace" copy stripped, biome migrated. S1 (data model & lockfile) in progress.
+user-facing commerce/account framing stripped, biome migrated. S1 (data model & lockfile) in
+progress: model schemas, generated schemas, schema freshness tests, purl helpers, JCS/SHA-256
+helpers, SQLite/CAS store, and manifest-backed `agora lock verify` are present; remaining S1 work is
+integration hardening and exit-code/copy cleanup across legacy surfaces.
 
 ---
 
@@ -104,8 +107,8 @@ docs re-pointed at the trust-plane thesis.
 **Work items**
 1. **[opus]** Rewrite `README.md` to Section-1 positioning: "trust plane for agentic tooling",
    "customs office over federated registries", "evidence not scores", host-neutral (OpenCode = 1 of
-   4). Kill commerce/three-rings framing. Also rewrite `AGENTS.md` + `ROADMAP.md` headers (they still
-   say "system manager / three rings") and `docs/ARCHITECTURE.md` intro.
+   4). Kill commerce/three-rings framing. Keep `AGENTS.md`, `ROADMAP.md`, and
+   `docs/ARCHITECTURE.md` aligned to that identity.
 2. **[sonnet]** Toolchain migration (X1):
    - Add `vitest` + `vitest.config.ts`; codemod all **71** test files `from 'bun:test'` → `from 'vitest'`;
      verify hermetic/no-network still holds; swap `"test": "vitest run"`.
@@ -382,5 +385,3 @@ evidence summaries; `request_install` never mutates state.
    a flag? (Brief §D7 names only official/glama/pulsemcp + skills-github.)
 3. **`agora today` (news)** — brief §3 keeps it read-only, zero investment. Confirm we keep the
    current news sources as-is (just frozen), not trimmed.
-</content>
-</invoke>

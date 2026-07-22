@@ -41,7 +41,11 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["critical", "high", "advisory"]
+            "enum": [
+              "critical",
+              "high",
+              "advisory"
+            ]
           },
           "refs": {
             "type": "array",
@@ -58,7 +62,14 @@
             "description": "ISO timestamp when added to the feed"
           }
         },
-        "required": ["id", "purl_pattern", "reason", "severity", "refs", "added_at"],
+        "required": [
+          "id",
+          "purl_pattern",
+          "reason",
+          "severity",
+          "refs",
+          "added_at"
+        ],
         "additionalProperties": false,
         "description": "A single revocation entry (AGORA_BRIEF_v2.md §5.6)"
       },
@@ -69,7 +80,13 @@
       "description": "Base64-encoded ed25519 signature over JCS(feed sans signature)"
     }
   },
-  "required": ["feed_version", "generated_at", "key_id", "entries", "signature"],
+  "required": [
+    "feed_version",
+    "generated_at",
+    "key_id",
+    "entries",
+    "signature"
+  ],
   "additionalProperties": false,
   "description": "Signed revocation feed (AGORA_BRIEF_v2.md §5.6)"
 }

@@ -830,7 +830,7 @@ describe('TTY gate — no-command path', () => {
     const out = stdout.join('');
 
     expect(code).toBe(0);
-    expect(out).toContain('agora · the system manager for your agentic stack');
+    expect(out).toContain('agora · the trust plane for agentic tooling');
   });
 });
 

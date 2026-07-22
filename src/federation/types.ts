@@ -3,7 +3,7 @@
  *
  * Every upstream registry is an *upstream source* Agora federates; the effective
  * catalog is the union of all of them. Only `official` is required — every other
- * source degrades to "unreachable" without breaking Ring 1 (brief §5f).
+ * source degrades to "unreachable" without breaking local-first search.
  *
  * External-API reality verified 2026-07-03 (see docs/OPEN_QUESTIONS.md OQ-3):
  *   - official  registry.modelcontextprotocol.io — required, no auth for reads

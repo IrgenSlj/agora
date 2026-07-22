@@ -1,7 +1,7 @@
 {
   "name": "agora-hub",
   "version": "0.6.0",
-  "description": "The system manager for your agentic stack — a local-first terminal app that manages, watches, and gates your MCP servers, skills, and instruction files.",
+  "description": "The trust plane for agentic tooling — local-first federation, evidence, policy, and stack management for MCP servers and Agent Skills.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -67,6 +67,7 @@
     "@clack/prompts": "^1.4.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "better-sqlite3": "^13.0.1",
+    "canonicalize": "^3.0.0",
     "packageurl-js": "^2.0.1",
     "smol-toml": "^1.6.1",
     "yargs": "18",

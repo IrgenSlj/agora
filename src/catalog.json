@@ -1333,30 +1333,29 @@
       ]
     },
     {
-      "id": "tut-agora-auth",
-      "title": "Agora Auth & Login",
-      "description": "Authenticate with the Agora API using the device-code login flow",
+      "id": "tut-trust-gate",
+      "title": "Understand the Trust Gate",
+      "description": "Read Agora gate output correctly before installing an MCP server",
       "level": "beginner",
       "duration": "10 min",
       "steps": [
         {
-          "title": "Why Authenticate?",
-          "content": "Some Agora features require authentication: publishing packages, posting discussions, submitting reviews, and viewing community profiles. The device-code flow lets you log in via your browser without exposing tokens."
+          "title": "What the Gate Means",
+          "content": "Agora's live gate checks known red flags before a write: description-injection patterns, declared permissions, registry status, package reachability, and drift when a probe baseline exists. A clean result means no known red flags, not safe."
         },
         {
-          "title": "Device-Code Login",
-          "content": "Run `agora auth login --api-url <your-api-url>`. This opens a browser where you authorize via GitHub. The CLI polls for the token and stores it locally. No token ever appears in your terminal history.",
-          "code": "agora auth login --api-url https://api.agora.example.com"
+          "title": "Preview Before Writing",
+          "content": "Use `agora acquire <id-or-query> --dry-run --json` to resolve a package, build the install plan, and inspect the gate verdict without changing any host config.",
+          "code": "agora acquire mcp-postgres --dry-run --json"
         },
         {
-          "title": "Check Your Status",
-          "content": "Use `agora auth status` to see if you are logged in. The token is displayed masked (e.g. \"ghp_...cdef\"). Use `agora auth logout` to clear stored credentials.",
-          "code": "agora auth status --json"
+          "title": "Handle Warnings",
+          "content": "Warnings require explicit acceptance. Read the checks first; only re-run with `--accept-warnings` when the warning is acceptable for the project.",
+          "code": "agora acquire mcp-postgres --accept-warnings --json"
         },
         {
-          "title": "Headless / CI Login",
-          "content": "For automation, pass a token directly via --token or the AGORA_TOKEN environment variable. This skips the browser flow and stores the credential immediately.",
-          "code": "agora auth login --token $AGORA_TOKEN --api-url https://api.agora.example.com"
+          "title": "Treat Failures as Stop Signs",
+          "content": "A hard fail blocks the write and exits non-zero. Do not report a passing gate as a safety guarantee, and do not look for bypass flags around failed checks."
         }
       ]
     },
@@ -1388,45 +1387,34 @@
         },
         {
           "title": "Submit a Pull Request",
-          "content": "After adding your entries to data.ts, run the tests with `bun test`, build with `npm run build`, and submit a PR on GitHub. See CONTRIBUTING.md for the full contribution guide."
+          "content": "After adding your entries to data.ts, run `bun run test`, `bun run typecheck`, and `bun run build`, then submit a PR on GitHub. See CONTRIBUTING.md for the full contribution guide."
         }
       ]
     },
     {
-      "id": "tut-deploy-backend",
-      "title": "Deploy the Agora Backend",
-      "description": "Self-host the Agora API on Cloudflare Workers with D1",
+      "id": "tut-lock-verify",
+      "title": "Verify an Agora Lockfile",
+      "description": "Use agora.lock and the local store to catch manifest drift",
       "level": "advanced",
-      "duration": "30 min",
+      "duration": "15 min",
       "steps": [
         {
-          "title": "Prerequisites",
-          "content": "To deploy the backend you need: a Cloudflare account, the Wrangler CLI installed, and Node.js 18+. The backend is a Cloudflare Workers app using Hono and D1 (Cloudflare's serverless SQLite)."
+          "title": "Know the Split",
+          "content": "`agora.toml` is human intent. `agora.lock` is machine truth: exact artifact identity, hashes, policy verdicts, and where the artifact is synced."
         },
         {
-          "title": "Set Up D1 Database",
-          "content": "Create a D1 database and apply the schema. Note the database ID for the wrangler.toml configuration.",
-          "code": "wrangler login\nwrangler d1 create agora\nwrangler d1 execute agora --file=backend/schema.sql"
+          "title": "Verify the Lock",
+          "content": "Run `agora lock verify` from a project with an `agora.lock`. The command compares the lockfile's approved hashes against the current manifest in the local SQLite store.",
+          "code": "agora lock verify --json"
         },
         {
-          "title": "Configure Secrets",
-          "content": "Set the required secrets for GitHub OAuth and JWT signing. Create a GitHub OAuth App first at https://github.com/settings/developers.",
-          "code": "wrangler secret put GITHUB_CLIENT_ID\nwrangler secret put GITHUB_CLIENT_SECRET\nwrangler secret put AUTH_SECRET"
+          "title": "Read Drift Output",
+          "content": "Any manifest or per-tool hash mismatch exits 1 and prints the changed artifact. Treat that as a quarantine signal until the diff is reviewed."
         },
         {
-          "title": "Update wrangler.toml",
-          "content": "Edit backend/wrangler.toml with your D1 database ID from step 2. The binding name must stay as \"DB\" to match the TypeScript bindings.",
-          "code": "[[d1_databases]]\nbinding = \"DB\"\ndatabase_name = \"agora\"\ndatabase_id = \"<your-database-id-here>\""
-        },
-        {
-          "title": "Deploy",
-          "content": "Run the deploy command from the backend directory. After deployment, use the API URL with your CLI: `agora auth login --api-url https://your-worker.example.com`",
-          "code": "cd backend\nnpm run deploy"
-        },
-        {
-          "title": "Local Development with Docker",
-          "content": "For local development without deploying, use Docker Compose. It runs wrangler with a local D1 SQLite database so you can iterate on the API without a Cloudflare account.",
-          "code": "docker compose up --build\n# API available at http://localhost:8787\ncurl http://localhost:8787/health"
+          "title": "Use a Custom Store in CI",
+          "content": "Automation can point verification at an isolated SQLite store with `--store <path>` or `AGORA_DB_PATH`.",
+          "code": "agora lock verify --store .agora/agora.db --json"
         }
       ]
     }

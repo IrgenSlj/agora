@@ -11,7 +11,10 @@
       "description": "Project identifier (e.g. directory path or name)"
     }
   },
-  "required": ["type", "id"],
+  "required": [
+    "type",
+    "id"
+  ],
   "additionalProperties": false,
   "description": "Cedar Project entity — the principal in policy evaluation"
 }

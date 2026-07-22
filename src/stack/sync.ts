@@ -469,7 +469,7 @@ export async function applyInstructionsSync(
 // resolved instruction text AS the scanned description — a poisoned
 // CLAUDE.md/AGENTS.md snippet is exactly what checkDescriptionInjection is
 // built to catch). Any `fail` blocks the whole sync before anything is
-// written (exit 3 at the CLI layer).
+// written (exit 1 at the CLI layer under the v2 contract).
 
 export interface GateEntry {
   name: string;

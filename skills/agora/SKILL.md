@@ -1,12 +1,12 @@
 ---
 name: agora
-description: Operate the agora CLI (npm agora-hub) — the local-first system manager for an agentic stack of MCP servers, skills, and instruction files. Use this skill whenever a task needs to search or browse MCP servers, inspect or reconcile a user's MCP configuration across harnesses (OpenCode, Claude Code, Cursor, Windsurf), or safely acquire a capability the current agent is missing. Works in any harness with the agora binary on PATH, or via `npx -y agora-hub` when it isn't installed.
+description: Operate the agora CLI (npm agora-hub) — the local-first trust plane for MCP servers, Agent Skills, and agent-tool stack management. Use this skill whenever a task needs to search or browse MCP servers, inspect or reconcile a user's MCP configuration across hosts (OpenCode, Claude Code, Cursor, Windsurf), or safely acquire a capability the current agent is missing. Works in any harness with the agora binary on PATH, or via `npx -y agora-hub` when it isn't installed.
 license: MIT
 ---
 
 # Operating Agora
 
-Agora is a package manager for an agentic stack, not a chat assistant — every command is
+Agora is a trust plane and stack manager, not a chat assistant — every command is
 scriptable, every write is gated, and every important command supports `--json` for machine
 consumption. Treat it the way you'd treat `git` or `npm`: read state, plan a change, apply it,
 check the exit code.
@@ -20,8 +20,8 @@ If `agora` isn't on `PATH`, run it as `npx -y agora-hub <command>` — no local 
 2. **Plan before you apply.** Commands that write configuration (`sync`, `apply`, `acquire`) have a
    read-only counterpart or dry-run mode that shows exactly what would change. Run that first,
    especially the first time you touch a machine you don't have full context on.
-3. **Read the exit code, not just stdout.** Agora's exit codes are part of its contract — a `2` or
-   `3` means "stop and look," not "something silently succeeded."
+3. **Read the exit code, not just stdout.** Agora's exit codes are part of its contract — a non-zero
+   code means "stop and look," not "something silently succeeded."
 4. **A clean scan means "no known red flags," not "safe."** The trust gate is static heuristics
    plus live-probe diffing (permission checks, registry status, description-injection patterns,
    annotation-hint checks) — never a sandbox, never a formal verification. Don't tell a user
@@ -34,13 +34,14 @@ Most Agora commands that read or write state share one exit-code contract:
 | Code | Meaning | Seen on |
 |---|---|---|
 | `0` | Ok — no changes needed / gate passed / write succeeded | all commands |
-| `1` | Usage or runtime error | all commands |
-| `2` | Plan has pending changes (nothing written yet), or the trust gate warned and needs explicit acceptance | `plan`, `acquire`, `scan` |
-| `3` | Trust gate hard-failed — nothing was written | `acquire`, `scan`, `plan --from`, `apply --from`, `sync --from` |
+| `1` | Policy forbid / drift / revocation hit | gated writes, `scan`, `lock verify` |
+| `2` | Usage error | all commands |
+| `3` | Network error | federation / refresh commands |
+| `4` | Sandbox unavailable | `vet` once S6 lands |
 
 A few commands intentionally don't use the full range: `agora doctor` is informational (exit `0`
-unless `--strict` is passed, then `1` on any server error) and `agora integrate` is `0`/`1` only
-(there's no trust gate to warn or fail — it just writes a launcher entry).
+unless `--strict` is passed, then `1` on any server error) and `agora integrate` is `0`/`1` today
+(there's no trust gate to warn or fail — it writes the Agora launcher entry through the stack manager).
 
 ## Everyday commands
 
@@ -61,7 +62,7 @@ Agora's stack manager follows Terraform semantics: **`plan` never writes, `apply
 exactly what `plan` showed.**
 
 ```bash
-agora plan   [--tool <id>] [--scope project|user] [--prune] [--json]   # read-only diff, exit 2 if changes pending
+agora plan   [--tool <id>] [--scope project|user] [--prune] [--json]   # read-only diff, exits 0; output shows changes
 agora apply  [--tool <id>] [--scope project|user] [--prune] [--json]   # executes the plan, exit 0 on success
 agora sync   [--write --yes] ...                                        # continuity alias: plan && apply
 ```
@@ -74,7 +75,7 @@ especially before touching a shared or production machine.
 
 `--from <git-url|gist|path>` previews or applies *someone else's* profile. Every entry in a remote
 profile runs through the same trust gate `acquire` uses before anything is written — a hard `fail`
-exits `3` with nothing written, no exceptions.
+exits `1` with nothing written, no exceptions.
 
 ## When to reach for `acquire`: the gap → acquire → gate → confirm loop
 

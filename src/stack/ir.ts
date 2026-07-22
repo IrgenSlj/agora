@@ -1,8 +1,7 @@
 /**
- * Ring 1.5 — a small typed IR for skills/rules so translation between harness
- * dialects becomes a compile step (brief D9 / P3). TYPES + PARSER SIGNATURES
- * ONLY until Ring 1 (server + instruction-file sync) is stable; implementations
- * are deliberately deferred.
+ * Typed IR for skills/rules so translation between host dialects becomes a
+ * compile step. This is a legacy precursor to the v2 `agent-skill` artifact
+ * model; parser/serializer implementations stay deferred until S1/S2 settle.
  *
  * Dialects: Claude Code skill (SKILL.md + frontmatter), OpenCode skill, Cursor
  * rule (.cursor/rules/*.mdc), and plain AGENTS.md / CLAUDE.md instruction files.
@@ -35,7 +34,7 @@ export interface SkillIR {
   origin?: SkillDialect;
 }
 
-/** Parse a dialect's on-disk artifact into the IR. (Impl deferred — Ring 1.5.) */
+/** Parse a dialect's on-disk artifact into the IR. (Implementation deferred.) */
 export type SkillParser = (raw: string, path?: string) => SkillIR;
 
 /** Serialize the IR into a target dialect's on-disk form. (Impl deferred.) */

@@ -1,110 +1,83 @@
 # Contributing
 
-Thanks for thinking about it. `agora` is a standalone local-first CLI — no hosted backend. Most
-contributions land in the CLI handlers (`src/cli/commands/*.ts`), the TUI pages
-(`src/cli/pages/*.ts`), the stack manager (`src/stack/`), the federated catalog
-(`src/federation/`), or the trust gate (`src/scan.ts`, `src/acquire.ts`).
+`agora` is the local-first trust plane for agentic tooling. It federates upstream registries,
+collects evidence, gates installs through policy, and manages MCP servers and Agent Skills across
+OpenCode, Claude Code, Cursor, and Windsurf. There is no hosted backend dependency in the core.
 
-## Quick start
+Before structural changes, read [`README.md`](./README.md), [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md),
+and [`docs/V2_EXECUTION_PLAN.md`](./docs/V2_EXECUTION_PLAN.md).
+
+## Quick Start
 
 ```bash
 git clone https://github.com/IrgenSlj/agora.git
 cd agora
 bun install
-bun test            # hermetic, no network
-bun run typecheck   # tsc on src + scripts + test
-bun run build       # also gates on noUnusedLocals — run before pushing
-bun src/cli.ts <cmd>  # run from source, no build needed
+bun run test        # vitest, hermetic / no network
+bun run lint        # biome
+bun run typecheck   # tsc
+bun run build       # tsc + catalog copy + executable dist/cli.js
+bun src/cli.ts <cmd>
 ```
+
+Run `bun run test && bun run typecheck && bun run build` before opening a PR. The release gate also
+requires `bun run lint`.
 
 ## Workflow
 
-1. Branch off `main`: `git checkout -b feat/short-name`
-2. Make the change. Add tests where behavior is non-trivial.
-3. `bun test && bun run typecheck && bun run build` all clean
-4. Conventional commits: `feat: …`, `fix: …`, `refactor: …`, `docs: …`, `test: …`, `chore: …`. PR titles should be the same.
-5. Push and open a PR. Keep PRs focused — one feature or fix per PR.
+External contributions should use focused branches and PRs. The owner execution plan currently lands
+coherent chunks directly on `main`; phase gates in `docs/V2_EXECUTION_PLAN.md` still decide when the
+project is ready to move forward.
 
-CI runs format-check + lint + typecheck + tests on push and PR.
+For every behavior change:
 
-## Adding an offline-cache catalog entry
+1. Keep the edit scoped to the owning module.
+2. Add focused tests proportional to the blast radius.
+3. Preserve `--json` and stable exit codes on new commands.
+4. Use plan/apply or dry-run separation for writes.
+5. Keep terminal output honest: unreachable sources and unknown evidence must be reported as such.
 
-`src/data.ts` is the bundled offline cache — the fallback Agora falls back to when a federated
-registry source is unreachable or unconfigured, not the primary catalog. Each MCP server entry has
-this shape:
+## Code Style
 
-```ts
-{
-  id: 'mcp-foo',
-  name: '@vendor/mcp-foo',
-  description: 'One-line summary.',
-  author: 'Vendor',
-  version: '1.0.0',
-  category: 'mcp',
-  tags: ['foo', 'bar'],
-  stars: 0,
-  installs: 0,
-  npmPackage: '@vendor/mcp-foo',
-  repository: 'https://github.com/vendor/mcp-foo',
-  createdAt: '2026-05-18',
-  permissions: { fs: ['./**/*'], net: ['api.foo.com'] }   // if applicable
-}
+- TypeScript strict mode, ESM, Node >= 20.
+- Tests use Vitest, lint/format use Biome.
+- Prefer repo-local helper APIs and existing module patterns.
+- Do not add hosted-backend dependencies to core flows.
+- Do not put credentials in `agora.toml`.
+- Use `src/atomic-write.ts` for config/state writes that touch user files.
+- No opaque numeric trust scores. Verdicts come from evidence and policy.
+
+## Project Layout
+
+```text
+src/model/           v2 zod wire/disk schemas, purl helpers, JCS/SHA-256 hashing
+schemas/             generated JSON Schema artifacts
+src/store/           SQLite store + CAS blob cache
+src/federation/      federated catalog sources; target is adapters + sync by purl
+src/stack/           stack manager: agora.toml, plan/apply, host adapters, doctor
+src/scan.ts          live heuristic gate, being replaced by evidence + Cedar
+src/acquire.ts       resolve -> gate -> write acquisition path
+src/cli/             CLI, shell, TUI, command metadata
+src/plugin/          thin OpenCode / Claude Code plugin tools and hooks
+src/news/            read-only news feed, frozen except maintenance
+src/marketplace.ts   legacy catalog/install-planner barrel, superseded by S1/S2
+test/                Vitest suite
 ```
 
-Every `npmPackage` is verified against the live registry by the test suite. Place new entries in
-alphabetical order within their category. Run `bun test test/data.test.ts` to confirm.
+## Adding Commands
 
-## Adding a CLI command
+1. Add `src/cli/commands/<name>.ts`.
+2. Wire dispatch in `src/cli/app.ts`.
+3. Add command metadata under `src/cli/commands-meta/`.
+4. Support `--json`.
+5. Return v2 exit codes: `0` ok, `1` policy forbid / drift / revocation hit, `2` usage, `3`
+   network, `4` sandbox unavailable.
+6. Add tests.
 
-1. Create `src/cli/commands/<name>.ts` exporting `commandName: CommandHandler` (see `today.ts` or
-   `share.ts` as compact references).
-2. Wire dispatch in `src/cli/app.ts` (look for the `cmd` object — alphabetical-ish).
-3. Register metadata in `src/cli/commands-meta.ts` so completions, `/abc` shortcuts, and
-   `agora help <name>` pick it up. Pick the right `group` (`Catalog` / `Setup` / `Library` /
-   `Learn` / `Stack`).
-4. Add tests in `test/cli.test.ts` (or a new `test/<name>.test.ts` if substantial). Use the
-   `runCli` + `createIo` harness; pass `fetcher` for HTTP-touching commands.
-5. If the command writes to a config file, use the surgical-write pattern (`src/atomic-write.ts`,
-   preserve unrelated keys) and support `--json` + a stable exit code.
+If the command writes anything, preserve unrelated keys and write atomically.
 
-## Code style
+## Help Wanted
 
-- TypeScript strict mode, ESLint + Prettier (2-space indent, single quotes, semicolons, 100 col)
-- No emojis in output. Project policy.
-- No superfluous comments. Comment only the *why*, not the *what*. Function names + types do the documentation.
-- No defensive `try/catch` around things that can't fail.
-- Errors at boundaries (user input, external APIs), not at internal call sites.
-- Prefer `--json` output for every new command so scripts and agents can consume it.
-
-## Project layout
-
-```
-src/cli/              command dispatch, shell, prompter, TUI runner
-src/cli/commands/     one file per top-level CLI command
-src/cli/pages/        full-screen TUI pages (home, search, item, stack, news, settings, acquire)
-src/stack/            cross-harness stack manager — adapters, manifest, plan/apply, doctor
-src/federation/       federated catalog clients (official registry, Glama, GitHub, HuggingFace, …)
-src/marketplace.ts    legacy catalog + live hub merge + install planner — being superseded by the
-                      v2 `Artifact` model (`src/model/`) and federation catalog (brief §5, §13 S1/S2)
-src/hubs/             GitHub + HuggingFace connectors + AI README enrichment
-src/news/             scoring, cache, per-source adapters (read-only, frozen)
-src/scan.ts           the trust gate — injection/permission/drift heuristics
-src/state.ts          local state, saves, auth (atomic 0o600 writes)
-src/atomic-write.ts   shared atomic + 0o600 file write helper
-src/data.ts           offline-cache fallback: curated MCP servers, workflows, tutorials, prompts
-src/types.ts          shared legacy types — superseded by the v2 `Artifact` model (see
-                      `AGORA_BRIEF_v2.md` §5)
-test/                 bun:test suite
-```
-
-## Help wanted
-
-See [ROADMAP.md](./ROADMAP.md) for what's open and which work packages are next. Some specific asks:
-
-- Add an offline-cache catalog entry (lowest-friction first PR).
-- Wire a runtime sandbox for declared permissions (an open decision — see
-  [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md)).
-- Land a federation source adapter (Smithery, Glama, GitHub, HuggingFace) behind the
-  `RegistrySource` contract.
-
-Questions? Open an issue with the `question` label.
+The current scheduled work is S1/S2 from [`docs/V2_EXECUTION_PLAN.md`](./docs/V2_EXECUTION_PLAN.md):
+finish the lockfile/store contract, complete schema snapshots, migrate federation to purl-first
+adapters, and continue retiring legacy account/catalog-era surfaces.

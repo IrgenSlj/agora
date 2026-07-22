@@ -14,12 +14,17 @@
           "description": "SHA-256 hash of the artifact"
         }
       },
-      "required": ["sha256"],
+      "required": [
+        "sha256"
+      ],
       "additionalProperties": false,
       "description": "Content hash"
     }
   },
-  "required": ["name", "digest"],
+  "required": [
+    "name",
+    "digest"
+  ],
   "additionalProperties": false,
   "description": "Subject of an in-toto Statement"
 }

@@ -143,9 +143,9 @@ export const COMMANDS: CommandMeta[] = [
       'whether project or user config files are targeted (default project). --from <git-url|gist|path> ' +
       "clones someone else's profile: it fetches agora.toml plus any referenced instruction files, then " +
       'runs the scan gate (the same `scanItem` trust gate used by `agora acquire`) on every mcp/instruction ' +
-      'entry BEFORE writing anything — a hard fail refuses the whole sync (exit 3). ' +
-      'Exit codes: 0 ok, 1 error, 3 scan-gate blocked (--from only). --write --yes always returns 0 on ' +
-      'success; dry-run also returns 0 (see `agora plan` for the drift-signaling exit code 2).',
+      'entry BEFORE writing anything — a hard fail refuses the whole sync (exit 1). ' +
+      'Exit codes: 0 ok, 1 policy forbid / gate blocked, 2 usage error. --write --yes returns 0 on ' +
+      'success; dry-run also returns 0 and reports pending changes in the output.',
     flags: [
       {
         flag: '--from',
@@ -192,9 +192,9 @@ export const COMMANDS: CommandMeta[] = [
       'and managed instruction artifacts (CLAUDE.md, AGENTS.md, .cursor/rules, OpenCode instructions) — ' +
       'across every detected agent tool, without writing anything (Terraform-style plan/apply split, P3). ' +
       "--from <git-url|gist|path> previews someone else's profile: it fetches agora.toml plus any " +
-      'referenced instruction files and runs the scan gate on every entry first — a hard fail exits 3 ' +
-      'before any diff is even computed. Exit codes: 0 no changes pending, 2 changes pending (run ' +
-      '`agora apply`), 1 error, 3 scan-gate blocked (--from only).',
+      'referenced instruction files and runs the scan gate on every entry first — a hard fail exits 1 ' +
+      'before any diff is even computed. Exit codes: 0 ok (the output communicates changes), ' +
+      '1 policy forbid / gate blocked, 2 usage error.',
     flags: [
       {
         flag: '--from',
@@ -230,8 +230,8 @@ export const COMMANDS: CommandMeta[] = [
       '(P3). Surgical, atomic writes only: every adapter preserves unrelated keys/files exactly as ' +
       "writeServers already does. --from <git-url|gist|path> applies someone else's profile directly: " +
       'it fetches agora.toml plus any referenced instruction files and runs the scan gate on every entry ' +
-      'first — a hard fail refuses to write anything (exit 3). Exit codes: 0 applied, 1 error, ' +
-      '3 scan-gate blocked (--from only).',
+      'first — a hard fail refuses to write anything (exit 1). Exit codes: 0 applied, ' +
+      '1 policy forbid / gate blocked / apply error, 2 usage error.',
     flags: [
       {
         flag: '--from',
@@ -293,12 +293,17 @@ export const COMMANDS: CommandMeta[] = [
     name: 'lock',
     group: 'Stack',
     summary: 'Manage the lockfile (agora.lock) — verify integrity and detect drift',
-    usage: 'agora lock verify [--json]',
+    usage: 'agora lock verify [--store <path>] [--json]',
     details:
       'Recomputes all hashes in the lockfile (manifest_sha256, per-tool description and schema hashes) ' +
-      'and compares them against the stored values. ANY mismatch indicates drift — the artifact may have ' +
-      'been modified after installation (rug-pull detection, §5.5). Exits 1 on drift, 0 on clean verification.',
+      'and compares them against the current manifest in the local SQLite store. ANY mismatch indicates ' +
+      'drift — the artifact may have been modified after installation (rug-pull detection, §5.5). ' +
+      'Exits 1 on drift, 0 on clean verification.',
     flags: [
+      {
+        flag: '--store',
+        description: 'Path to the Agora SQLite store (default: ~/.agora/agora.db)'
+      },
       {
         flag: '--json',
         description: 'Output { ok, lockfile_version, generated_by, artifacts } as JSON'

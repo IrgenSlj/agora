@@ -4,7 +4,10 @@
   "properties": {
     "decision": {
       "type": "string",
-      "enum": ["Allow", "Deny"]
+      "enum": [
+        "Allow",
+        "Deny"
+      ]
     },
     "determining_policies": {
       "type": "array",
@@ -14,7 +17,10 @@
       "description": "The Cedar policies that determined this decision"
     }
   },
-  "required": ["decision", "determining_policies"],
+  "required": [
+    "decision",
+    "determining_policies"
+  ],
   "additionalProperties": false,
   "description": "Output of Cedar policy evaluation"
 }

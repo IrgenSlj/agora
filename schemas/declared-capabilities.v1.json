@@ -29,7 +29,13 @@
       "description": "Environment variable names requested"
     }
   },
-  "required": ["fs_read", "fs_write", "net_egress", "exec", "credentials"],
+  "required": [
+    "fs_read",
+    "fs_write",
+    "net_egress",
+    "exec",
+    "credentials"
+  ],
   "additionalProperties": false,
   "description": "Coarse capability declarations for policy evaluation"
 }

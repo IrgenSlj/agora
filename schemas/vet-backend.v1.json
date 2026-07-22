@@ -1,5 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "string",
-  "enum": ["docker", "bwrap", "sandbox-exec"]
+  "enum": [
+    "docker",
+    "bwrap",
+    "sandbox-exec"
+  ]
 }

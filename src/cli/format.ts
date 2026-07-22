@@ -224,14 +224,13 @@ export function welcome(color: boolean, trueColor: boolean, theme: Theme, versio
   if (!color) {
     return [
       '',
-      `agora · the system manager for your agentic stack · v${version}`,
+      `agora · the trust plane for agentic tooling · v${version}`,
       '',
       '  Search    agora search <query>',
       '  Browse    agora trending · agora browse <id>',
       '  Learn     agora tutorials · agora tutorial <id>',
       '  Install   agora install <id> [--write]',
       '  Setup     agora init [--mcp] · agora use <workflow>',
-      '  Auth      agora login [--api-url <url>]',
       ''
     ].join('\n');
   }
@@ -239,7 +238,7 @@ export function welcome(color: boolean, trueColor: boolean, theme: Theme, versio
   const box = renderBox(
     'Welcome to Agora',
     [
-      'the system manager for your agentic stack - type a command, bash or chat:',
+      'the trust plane for agentic tooling - type a command, bash or chat:',
       `v${version} · run \`agora help\` to get started`
     ],
     { color, trueColor }
@@ -249,8 +248,7 @@ export function welcome(color: boolean, trueColor: boolean, theme: Theme, versio
     `${theme.muted('Browse')}    agora trending · agora browse <id>`,
     `${theme.muted('Learn')}     agora tutorials · agora tutorial <id>`,
     `${theme.muted('Install')}   agora install <id> [--write]`,
-    `${theme.muted('Setup')}     agora init [--mcp] · agora use <workflow>`,
-    `${theme.muted('Auth')}      agora login [--api-url <url>]`
+    `${theme.muted('Setup')}     agora init [--mcp] · agora use <workflow>`
   ].join('\n');
   return `\n${banner}\n\n${box}\n\n${hint}\n`;
 }
@@ -264,7 +262,7 @@ export function usage(theme: Theme, version: string): string {
   const groups = ['Catalog', 'Setup', 'Stack', 'Library', 'Learn'] as const;
 
   const lines: string[] = [
-    `${theme.accent('agora')}${theme.dim(` · the system manager for your agentic stack · v${version}`)}`,
+    `${theme.accent('agora')}${theme.dim(` · the trust plane for agentic tooling · v${version}`)}`,
     ''
   ];
 

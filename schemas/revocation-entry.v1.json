@@ -20,7 +20,11 @@
     },
     "severity": {
       "type": "string",
-      "enum": ["critical", "high", "advisory"]
+      "enum": [
+        "critical",
+        "high",
+        "advisory"
+      ]
     },
     "refs": {
       "type": "array",
@@ -37,7 +41,14 @@
       "description": "ISO timestamp when added to the feed"
     }
   },
-  "required": ["id", "purl_pattern", "reason", "severity", "refs", "added_at"],
+  "required": [
+    "id",
+    "purl_pattern",
+    "reason",
+    "severity",
+    "refs",
+    "added_at"
+  ],
   "additionalProperties": false,
   "description": "A single revocation entry (AGORA_BRIEF_v2.md §5.6)"
 }

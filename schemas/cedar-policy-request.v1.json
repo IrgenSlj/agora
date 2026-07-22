@@ -14,13 +14,20 @@
           "description": "Project identifier (e.g. directory path or name)"
         }
       },
-      "required": ["type", "id"],
+      "required": [
+        "type",
+        "id"
+      ],
       "additionalProperties": false,
       "description": "Cedar Project entity — the principal in policy evaluation"
     },
     "action": {
       "type": "string",
-      "enum": ["Install", "Sync", "Serve"]
+      "enum": [
+        "Install",
+        "Sync",
+        "Serve"
+      ]
     },
     "resource": {
       "type": "object",
@@ -50,7 +57,10 @@
                   "type": "boolean"
                 }
               },
-              "required": ["namespace", "identity_verified"],
+              "required": [
+                "namespace",
+                "identity_verified"
+              ],
               "additionalProperties": false,
               "description": "Cedar Publisher entity attributes"
             },
@@ -105,7 +115,11 @@
           "description": "Cedar Artifact entity attributes (AGORA_BRIEF_v2.md §7.1)"
         }
       },
-      "required": ["type", "id", "attributes"],
+      "required": [
+        "type",
+        "id",
+        "attributes"
+      ],
       "additionalProperties": false,
       "description": "Cedar Artifact entity — the resource in policy evaluation"
     },
@@ -118,7 +132,11 @@
       "additionalProperties": {}
     }
   },
-  "required": ["principal", "action", "resource"],
+  "required": [
+    "principal",
+    "action",
+    "resource"
+  ],
   "additionalProperties": false,
   "description": "Input to Cedar policy evaluation"
 }

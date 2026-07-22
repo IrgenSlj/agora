@@ -1,7 +1,7 @@
 {
   "name": "opencode-agora",
   "version": "0.6.0",
-  "description": "OpenCode plugin entry for Agora — the system manager for your agentic stack. Re-exports agora-hub/opencode. CLI users: npm i -g agora-hub.",
+  "description": "OpenCode plugin entry for Agora — the trust plane for agentic tooling. Re-exports agora-hub/opencode. CLI users: npm i -g agora-hub.",
   "type": "module",
   "main": "index.mjs",
   "exports": {

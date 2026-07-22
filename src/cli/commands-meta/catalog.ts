@@ -176,7 +176,7 @@ export const COMMANDS: CommandMeta[] = [
       'when the scan has no failures. Warnings require --accept-warnings; --dry-run prints the plan and ' +
       'scan without writing. With --save, the scan verdict and description-drift baseline are recorded ' +
       'alongside agora.toml under a namespaced trust key so a later re-acquire or a cloned profile can ' +
-      'detect drift. Exit codes: 0 ok, 1 usage/error, 2 warn (not accepted), 3 scan fail. ' +
+      'detect drift. Exit codes: 0 ok/dry-run, 1 policy forbid / scan fail, 2 usage or missing confirmation. ' +
       'Honest limits: the gate is static heuristics plus live-probe diffing — pattern checks, manifest ' +
       'diffs, registry status, tool-annotation-hint checks. It is not a sandbox and does not execute or ' +
       'formally verify server code. A clean scan means "no known red flags," not "safe."',
@@ -212,7 +212,7 @@ export const COMMANDS: CommandMeta[] = [
     usage: 'agora scan <id> [--type package|workflow] [--json]',
     details:
       'Runs the same trust gate `agora acquire` enforces before writing config, against the bundled ' +
-      'catalog. Exit codes: 0 pass, 1 usage/error, 2 warn, 3 fail — both --json and the table honor them. ' +
+      'catalog. Exit codes: 0 pass/ok, 1 policy forbid / scan fail, 2 usage error — both --json and the table honor them. ' +
       'Honest limits: this is static heuristics plus live-probe diffing (injection-pattern checks, ' +
       'permission-manifest diffs, registry status, tool-annotation-hint checks) — never a sandbox. It ' +
       'does not execute or formally verify server code. "pass" means no known red flags, not "safe."',
