@@ -9,17 +9,25 @@
  *   - official  registry.modelcontextprotocol.io — required, no auth for reads
  *   - smithery  api.smithery.ai — the reliable per-server tool-schema source
  *   - glama     glama.ai/api/mcp — NO tool schemas / annotation hints in practice
+ *   - pulsemcp partner-gated sub-registry API; optional env-keyed source
  *   - github    reuse src/hubs/github.ts as the long-tail source
  *   - huggingface reuse src/hubs/huggingface.ts
  *   - local     bundled data.ts / on-disk cache (offline fallback)
- * PulseMCP and mcp.so have no self-serve public API — deliberately absent.
+ * mcp.so has no self-serve public API — deliberately absent.
  */
 
 import type { MarketplaceItem } from '../marketplace/types.js';
 import type { FetchLike } from '../retry.js';
 
 /** The upstream registries Agora federates. `local` = bundled/offline cache. */
-export type SourceId = 'official' | 'smithery' | 'glama' | 'github' | 'huggingface' | 'local';
+export type SourceId =
+  | 'official'
+  | 'glama'
+  | 'pulsemcp'
+  | 'smithery'
+  | 'github'
+  | 'huggingface'
+  | 'local';
 
 /**
  * Official-registry lifecycle status, from

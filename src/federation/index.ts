@@ -10,6 +10,7 @@ import { glamaSource } from './sources/glama.js';
 import { huggingfaceSource } from './sources/huggingface.js';
 import { localSource } from './sources/local.js';
 import { officialSource } from './sources/official.js';
+import { pulseMcpSource } from './sources/pulsemcp.js';
 import { smitherySource } from './sources/smithery.js';
 import type {
   FederatedItem,
@@ -24,15 +25,16 @@ import type {
 /**
  * Upstream registries Agora federates, in preference order (used to order
  * merged provenance and to pick which item's metadata wins a merge). P1
- * shipped `official` + `local`; P1+ adds smithery/glama/github/huggingface —
+ * shipped `official` + `local`; P1+ adds smithery/glama/github/huggingface; S2 adds pulsemcp —
  * see docs/OPEN_QUESTIONS.md OQ-3 for the verified endpoint shapes. Adding
  * one is "implement RegistrySource, push it into this array": federatedSearch/
  * federatedFetchItem stay generic.
  */
 export const SOURCES: RegistrySource[] = [
   officialSource,
-  smitherySource,
   glamaSource,
+  pulseMcpSource,
+  smitherySource,
   githubSource,
   huggingfaceSource,
   localSource

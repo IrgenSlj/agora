@@ -37,14 +37,15 @@ import {
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
-// P1+ registers smithery/glama/github/huggingface as real RegistrySources
-// (src/federation/index.ts SOURCES) — this allow-list has to grow with them
+// P1+ registers glama/smithery/github/huggingface as real RegistrySources and
+// S2 adds optional PulseMCP. This allow-list has to grow with SOURCES
 // or `--source smithery` etc. would 404 at the CLI layer despite the source
 // being fully wired and reachable via federatedSearch().
 const SEARCHABLE_SOURCE_IDS: SourceId[] = [
   'official',
-  'smithery',
   'glama',
+  'pulsemcp',
+  'smithery',
   'github',
   'huggingface',
   'local'
@@ -176,7 +177,7 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
   if (sourceFlag && sourceFlag !== 'all' && !isSourceId(sourceFlag)) {
     return usageError(
       io,
-      `Unknown --source "${sourceFlag}". Use official, smithery, glama, github, huggingface, local, or all.`
+      `Unknown --source "${sourceFlag}". Use official, glama, pulsemcp, smithery, github, huggingface, local, or all.`
     );
   }
   const source = sourceFlag && sourceFlag !== 'all' ? (sourceFlag as SourceId) : undefined;

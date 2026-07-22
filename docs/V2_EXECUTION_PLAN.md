@@ -169,7 +169,7 @@ on the macOS+Linux matrix — pin a version with prebuilds.
 
 ---
 
-### S2 — Federation (1 wk)
+### S2 — Federation (1 wk) — started
 
 **Objective:** official (canonical) + glama + pulsemcp adapters, dedupe-by-purl + precedence,
 `agora search/info` from local sync, worker `/v1/catalog` + cron.
@@ -178,9 +178,9 @@ on the macOS+Linux matrix — pin a version with prebuilds.
 1. **[sonnet]** `federation/sources → federation/adapters`; keep official/glama/local; **add**
    `pulsemcp.ts` + `skills-github.ts`; retire smithery/huggingface as non-canonical (behind a flag,
    degrade honestly). Each adapter → normalized `ArtifactRef` (S1 model).
-   - ⚠️ **PulseMCP reality-check** (memory OQ-3, 2026-07): PulseMCP was found *partner-gated / no
-     self-serve API*. **Verify live first**; if still gated, ship the adapter as a stub that degrades
-     honestly (no results, not a crash) and log a DA + `docs/OPEN_QUESTIONS.md` entry — do not fake it.
+   - ✅ **PulseMCP reality-check** (2026-07-22): v0.1 docs exist, but access is still partner-gated
+     (`X-API-Key` + `X-Tenant-ID`; live unauthenticated call returns 401). Shipped as an optional
+     env-keyed source, disabled by default and cacheable/offline-first when credentials are present.
 2. **[opus]** `federation/sync.ts`: dedupe **by purl**, precedence official > glama > pulsemcp,
    incremental sync into SQLite.
 3. **[sonnet]** Rewire `agora search` + new `agora info <purl>` to read from local sync (offline-first).

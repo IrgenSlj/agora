@@ -52,9 +52,14 @@ describe('agora search --json — federated shape', () => {
         'huggingface',
         'local',
         'official',
+        'pulsemcp',
         'smithery'
       ]);
-      expect(payload.statuses.every((s: { state: string }) => s.state === 'ok')).toBe(true);
+      expect(
+        payload.statuses.every((s: { source: string; state: string }) =>
+          s.source === 'pulsemcp' ? s.state === 'offline' : s.state === 'ok'
+        )
+      ).toBe(true);
       expect(payload.count).toBe(payload.items.length);
       expect(payload.items.length).toBeGreaterThan(0);
 

@@ -10,6 +10,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
 - `agora update` checks pinned npm versions for configured MCP servers across supported agent tools,
   reports `updatable`, `up-to-date`, `tracks-latest`, or `unknown`, and applies pin bumps only with
   `--write --yes` while preserving unrelated config keys.
+- Added optional PulseMCP federation source support, disabled unless partner API credentials are
+  present in `AGORA_PULSEMCP_*` or `PULSEMCP_*` environment variables.
 
 ### V2 direction refresh
 - Updated front-door project copy to the locked identity: Agora is **the trust plane for agentic

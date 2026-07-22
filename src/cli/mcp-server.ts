@@ -43,9 +43,8 @@ const AGENT_TOOL_IDS: [AgentToolId, ...AgentToolId[]] = [
   'windsurf'
 ];
 
-// The sources actually wired into federation (SOURCES is the single source
-// of truth in src/federation/index.ts) — not the full SourceId union, which
-// also names sources not implemented yet (smithery/glama/github/huggingface).
+// The sources actually wired into federation. SOURCES is the single source of
+// truth in src/federation/index.ts; keep MCP enum exposure in lockstep with it.
 const SOURCE_IDS = SOURCES.map((s) => s.id) as [SourceId, ...SourceId[]];
 
 function jsonContent(value: unknown): { content: [{ type: 'text'; text: string }] } {

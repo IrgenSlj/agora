@@ -239,8 +239,9 @@ function verdictGlyph(v: Verdict, theme: Theme): string {
 
 const PROV_LABEL: Record<Provenance, string> = {
   official: 'official',
-  smithery: 'smithery',
   glama: 'glama',
+  pulsemcp: 'pulse',
+  smithery: 'smithery',
   github: 'github',
   huggingface: 'hf',
   local: 'local'

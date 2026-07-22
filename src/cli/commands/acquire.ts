@@ -8,8 +8,9 @@ import type { CommandHandler } from './types.js';
 const AGENT_TOOLS = new Set<AgentToolId>(['opencode', 'claude-code', 'cursor', 'windsurf']);
 const SOURCE_IDS = new Set<SourceId>([
   'official',
-  'smithery',
   'glama',
+  'pulsemcp',
+  'smithery',
   'github',
   'huggingface',
   'local'

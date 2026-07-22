@@ -11,8 +11,9 @@ import { createStyler } from '../../src/ui.js';
 const ANSI_RE = /\x1b\[[0-9;]*m/g;
 const strip = (s: string): string => s.replace(ANSI_RE, '');
 
-// `acquire()` fans out to 6 federation sources (official/smithery/glama/
-// github/huggingface/local) plus the scan gate's own repo/npm reachability
+// `acquire()` fans out to the wired federation sources
+// (official/glama/pulsemcp/smithery/github/huggingface/local) plus the scan
+// gate's own repo/npm reachability
 // checks — ALL of them share the one `fetcher` DI seam threaded through
 // AcquireInput/ScanOptions. A single stubbed fetcher keeps every test in this
 // file hermetic (no live network, never hangs). `npmFail` lets one test force

@@ -23,7 +23,7 @@ Framed in UI as "Claude (advanced — bring your own API key)", not "connect you
 `Provider` interface identical so the auth mechanism can swap to subscription later if Anthropic opens it.
 Current model IDs: `claude-opus-4-8`, `claude-sonnet-5`, `claude-haiku-4-5`, `claude-fable-5`.
 
-## OQ-3 — Federation sources (P1 / P1+): PulseMCP dropped, Glama has no tool schemas
+## OQ-3 — Federation sources (P1 / P1+): PulseMCP gated, Glama has no tool schemas
 
 Verified live 2026-07-03 against each API; re-verified live 2026-07-04 while building the P1+
 `RegistrySource` implementations (`src/federation/sources/{smithery,glama,github,huggingface}.ts`) —
@@ -56,9 +56,13 @@ discipline as the official source.
   `scavio-ai/arcade-scavio`); `hosting:remote-capable` / `hosting:local-only` / `hosting:hybrid` is
   present on nearly every server. Neither attribute has a dedicated field on `MarketplaceItem` — folded
   into `Provenance.verified` (official) and `tags` (hosting) respectively.
-- **PulseMCP** — **CORRECTION to brief: no self-serve public API.** Legacy `v0beta` is mid-sunset (returns
-  410 for ~50% of calls now, 100% dead Sept 2026); new `v0.1` is partner-gated (`X-API-Key` + `X-Tenant-ID`,
-  no signup). Drop from the self-serve federation path. (It only wraps the official registry anyway.)
+- **PulseMCP** — **CORRECTION to brief: no self-serve public API, but a documented partner API exists.**
+  Re-verified 2026-07-22: `https://www.pulsemcp.com/api/docs/v0.1` documents `GET /v0.1/servers`
+  and detail endpoints, but the integration is private/B2B and requires `X-API-Key` + `X-Tenant-ID`;
+  an unauthenticated live call to `https://api.pulsemcp.com/v0.1/servers?limit=1` returns HTTP 401
+  `{"code":"unauthorized","details":{"header":"X-API-Key"}}`. Ship it as an optional, env-keyed
+  source (`AGORA_PULSEMCP_API_KEY`/`PULSEMCP_API_KEY` plus
+  `AGORA_PULSEMCP_TENANT_ID`/`PULSEMCP_TENANT_ID`), disabled by default and never in the critical path.
 - **mcp.so** — confirmed no public API (brief agreed). Skip.
 - **GitHub / Hugging Face** — no new API surface: `src/federation/sources/github.ts` and
   `huggingface.ts` wrap the already-shipped `src/hubs/github.ts` (`searchGithub`) and
@@ -71,12 +75,12 @@ discipline as the official source.
   both does one dedicated single-item GET (`GET /repos/{owner}/{repo}` for GitHub, tries
   `models`/`datasets`/`spaces` in order for Hugging Face) rather than reusing the crawl.
 
-**Adaptation:** P1 shipped `official` + `local`; P1+ (this pass) adds `smithery` · `glama` · `github`
-(reuse `src/hubs/github.ts`) · `huggingface` (reuse `src/hubs/huggingface.ts`) — all four landed, none
-were skipped. `SOURCES` preference order (`src/federation/index.ts`):
-`official, smithery, glama, github, huggingface, local`. Annotation hints for the gate come from the
-**Smithery detail endpoint** when upstream populates them (mapped defensively; not observed live as of
-2026-07-04 — see correction above), never Glama.
+**Adaptation:** P1 shipped `official` + `local`; P1+ adds `smithery` · `glama` · `github`
+(reuse `src/hubs/github.ts`) · `huggingface` (reuse `src/hubs/huggingface.ts`). S2 adds optional
+`pulsemcp` with credential gating. `SOURCES` preference order (`src/federation/index.ts`):
+`official, glama, pulsemcp, smithery, github, huggingface, local`. Annotation hints for the gate come
+from the **Smithery detail endpoint** when upstream populates them (mapped defensively; not observed
+live as of 2026-07-04 — see correction above), never Glama.
 
 ## OQ-2 — Claude Code plugin/marketplace format (P6): confirmed
 
