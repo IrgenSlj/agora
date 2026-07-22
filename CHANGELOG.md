@@ -35,6 +35,9 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   `descriptionDigest` path now delegates to that evidence contract.
 - Added `src/evidence/diff.ts` for per-tool schema drift and wired the existing stack
   `diffToolDescriptions` helper through it without changing the stack-facing API.
+- Added `src/evidence/enrich.ts` for deterministic, offline tool-description poisoning checks
+  (imperative-to-model phrases, zero-width unicode, HTML comments, large base64-looking blobs, and
+  cross-tool shadowing), surfaced through scan as `tool_description_poisoning`.
 - Added the initial Cloudflare Worker catalog API scaffold under `workers/api/` with Hono routes for
   `GET /v1/health` and paginated `GET /v1/catalog`, a D1 schema, Wrangler config, and a fake-D1 test
   harness. The worker now includes a 6-hour cron trigger and a minimal official-registry sync into D1.

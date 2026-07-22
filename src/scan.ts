@@ -1,3 +1,7 @@
+import {
+  detectDescriptionPoisoning,
+  formatDescriptionPoisoningSignals
+} from './evidence/enrich.js';
 import type { FederatedTool, OfficialStatus } from './federation/types.js';
 import type { FetchLike } from './live.js';
 import type { MarketplaceItem, PackageMarketplaceItem } from './marketplace.js';
@@ -251,6 +255,31 @@ function checkObservedPermissions(
   };
 }
 
+// ── tool_description_poisoning (S3: deterministic enrichment heuristics) ──
+// Optional/offline-safe: skipped without tool schemas. This is prompt-poisoning
+// evidence, not a final safety verdict; policy can later choose whether these
+// warn-level findings should block an artifact for a given project.
+function checkToolDescriptionPoisoning(
+  tools: ReadonlyArray<{ name: string; description?: string; inputSchema?: unknown }> | undefined
+): ScanCheck | null {
+  if (!tools || tools.length === 0) return null;
+  const signals = detectDescriptionPoisoning(tools);
+  if (signals.length === 0) {
+    return {
+      name: 'tool_description_poisoning',
+      label: 'Tool description poisoning',
+      status: 'pass',
+      message: 'no suspicious tool-description patterns'
+    };
+  }
+  return {
+    name: 'tool_description_poisoning',
+    label: 'Tool description poisoning',
+    status: 'warn',
+    message: formatDescriptionPoisoningSignals(signals)
+  };
+}
+
 // ── description_drift (P2: rug-pull baseline diff, inside the gate) ────────
 // Optional/offline-safe: skipped without both a previous baseline and current
 // tool schemas to diff. `agora doctor --probe` already surfaces drift for
@@ -495,7 +524,11 @@ async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Pro
   );
   if (observedCheck) checks.push(observedCheck);
 
-  // 10. description_drift (P2, optional/offline-safe)
+  // 10. tool_description_poisoning (S3, optional/offline-safe)
+  const poisoningCheck = checkToolDescriptionPoisoning(opts.observedTools ?? opts.tools);
+  if (poisoningCheck) checks.push(poisoningCheck);
+
+  // 11. description_drift (P2/S3, optional/offline-safe)
   const driftCheck = checkDescriptionDrift(opts.previousDigest, opts.observedTools ?? opts.tools);
   if (driftCheck) checks.push(driftCheck);
 

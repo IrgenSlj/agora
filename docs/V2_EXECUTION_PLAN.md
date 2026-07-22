@@ -244,6 +244,10 @@ sync; adapter contract tests green.
 3. **[sonnet]** `evidence/enrich.ts` deterministic poisoning heuristics (regex/AST): imperative-to-model
    phrases, zero-width unicode, HTML comments, base64 >128 chars, cross-tool shadowing. LLM pass
    optional/keyed. (Repurpose `src/curator/` + `src/hubs/enrichment.ts`.)
+   - ✅ **Started:** `src/evidence/enrich.ts` now runs the deterministic, offline-only tool-description
+     poisoning checks from brief §6.3 (imperative-to-model phrases, zero-width unicode, HTML comments,
+     base64-looking blobs over 128 chars, and cross-tool shadowing), and `scanItem` surfaces those
+     findings as the `tool_description_poisoning` gate check whenever tool schemas are available.
 
 **New deps:** `sigstore`. **Risk:** sigstore verify needs network (Rekor) — must degrade to
 `verified:unknown` offline, never hard-fail; keyless is verify-only here (we don't sign until S6).
