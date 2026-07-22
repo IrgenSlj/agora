@@ -136,7 +136,9 @@ export const commandChat: CommandHandler = async (parsed, io, style) => {
         persistChatSession(dataDir, sessionId);
         if (!rawJson) {
           process.stdout.write(
-            style.dim(`Session: ${sessionId.slice(0, 24)}…  Continue: agora chat --session ${sessionId} "..."`) + '\n'
+            style.dim(
+              `Session: ${sessionId.slice(0, 24)}…  Continue: agora chat --session ${sessionId} "..."`
+            ) + '\n'
           );
         }
       }

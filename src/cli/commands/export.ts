@@ -79,7 +79,11 @@ export const commandExport: CommandHandler = async (parsed, io, style) => {
   const flagFormat = stringFlag(parsed, 'format', 'f');
   let positional = parsed.args;
   let format = (flagFormat || 'json') as ExportFormat;
-  if (!flagFormat && positional.length > 0 && validFormats.includes(positional[0] as ExportFormat)) {
+  if (
+    !flagFormat &&
+    positional.length > 0 &&
+    validFormats.includes(positional[0] as ExportFormat)
+  ) {
     format = positional[0] as ExportFormat;
     positional = positional.slice(1);
   }

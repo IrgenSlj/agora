@@ -6,6 +6,11 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardening._
 
+### Added
+- `agora update` checks pinned npm versions for configured MCP servers across supported agent tools,
+  reports `updatable`, `up-to-date`, `tracks-latest`, or `unknown`, and applies pin bumps only with
+  `--write --yes` while preserving unrelated config keys.
+
 ### V2 direction refresh
 - Updated front-door project copy to the locked identity: Agora is **the trust plane for agentic
   tooling**, not the older system-manager/plaza framing.

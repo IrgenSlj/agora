@@ -19,8 +19,7 @@ function buildSteps(signedIn: boolean, username: string): WelcomeStep[] {
     : {
         title: 'Sign in (optional)',
         commands: ['agora auth login --api-url <your-agora-backend>'],
-        effect:
-          'optional: connect a self-hosted legacy Agora backend for cross-device bookmarks'
+        effect: 'optional: connect a self-hosted legacy Agora backend for cross-device bookmarks'
       };
 
   return [

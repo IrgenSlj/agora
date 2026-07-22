@@ -67,6 +67,44 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'update',
+    group: 'Stack',
+    summary: 'Check and apply npm version bumps for installed MCP servers',
+    usage: 'agora update [server] [--tool <id>] [--scope project|user] [--write --yes] [--json]',
+    details:
+      'Reads configured MCP servers across supported agent tools, resolves each pinned npm ' +
+      'package in local server commands, and reports whether a newer npm version is available. ' +
+      'Servers using a dist-tag, an unpinned package, a remote URL, or an unresolvable command are ' +
+      'reported without writing anything. By default this is a dry-run; pass --write --yes to apply ' +
+      'version bumps to the selected scope while preserving unrelated config keys.',
+    flags: [
+      {
+        flag: '--tool',
+        description: 'Filter to a single tool: opencode, claude-code, cursor, or windsurf'
+      },
+      {
+        flag: '--scope',
+        description: 'Config scope to write: project (default) or user'
+      },
+      {
+        flag: '--write',
+        description: 'Enable write mode (must be combined with --yes)'
+      },
+      {
+        flag: '--yes',
+        description: 'Confirm write (required when --write is set)'
+      },
+      { flag: '--json', description: 'Output { mode, entries, summary } as JSON' }
+    ],
+    examples: [
+      'agora update',
+      'agora update --json',
+      'agora update my-server',
+      'agora update --tool opencode',
+      'agora update --write --yes'
+    ]
+  },
+  {
     name: 'doctor',
     group: 'Stack',
     summary: 'Health-check configured MCP servers across all agent tools',

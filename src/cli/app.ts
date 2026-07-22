@@ -27,6 +27,7 @@ import * as syncModule from './commands/sync.js';
 import * as todayModule from './commands/today.js';
 import * as tryModule from './commands/try.js';
 import type { CommandMap } from './commands/types.js';
+import * as updateModule from './commands/update.js';
 import * as watchModule from './commands/watch.js';
 import * as welcomeModule from './commands/welcome.js';
 import { COMMANDS, renderManual } from './commands-meta.js';
@@ -179,6 +180,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       sync: syncModule.commandSync,
       plan: planModule.commandPlan,
       apply: applyModule.commandApply,
+      update: updateModule.commandUpdate,
       author: marketplace.commandAuthor,
       try: tryModule.commandTry,
       capabilities: capabilitiesModule.commandCapabilities,
