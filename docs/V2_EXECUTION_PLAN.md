@@ -246,6 +246,9 @@ sync; adapter contract tests green.
      while hosts without a disabled representation have the drifted entry removed. The printed
      `description-drift` detail remains the per-tool diff, and drift exits `1` per the brief §9
      contract.
+   - ✅ **Started:** `agora sync` now checks local capability-cache drift/quarantine state before
+     planning or applying host writes, blocks with exit `1`, and prints the cached per-tool diff so a
+     quarantined server cannot be silently reintroduced from `agora.toml`.
 3. **[sonnet]** `evidence/enrich.ts` deterministic poisoning heuristics (regex/AST): imperative-to-model
    phrases, zero-width unicode, HTML comments, base64 >128 chars, cross-tool shadowing. LLM pass
    optional/keyed. (Repurpose `src/curator/` + `src/hubs/enrichment.ts`.)

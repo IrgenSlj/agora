@@ -188,7 +188,9 @@ export const COMMANDS: CommandMeta[] = [
       "clones someone else's profile: it fetches agora.toml plus any referenced instruction files, then " +
       'runs the scan gate (the same `scanItem` trust gate used by `agora acquire`) on every mcp/instruction ' +
       'entry BEFORE writing anything — a hard fail refuses the whole sync (exit 1). ' +
-      'Exit codes: 0 ok, 1 policy forbid / gate blocked, 2 usage error. --write --yes returns 0 on ' +
+      'Local capability-cache drift/quarantine state also blocks sync before any host write (exit 1), ' +
+      'so a quarantined server is never silently reintroduced from agora.toml. ' +
+      'Exit codes: 0 ok, 1 policy forbid / gate blocked / drift blocked, 2 usage error. --write --yes returns 0 on ' +
       'success; dry-run also returns 0 and reports pending changes in the output.',
     flags: [
       {

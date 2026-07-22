@@ -101,7 +101,8 @@ producer in S3 and `agora serve` exposing Agora itself as an MCP server (brief �
 - **Description-drift detection** — `descriptionDigest` (canonical SHA-256 of sorted tool names +
   descriptions + input schemas) computed per server on probe; re-probe detects drift with a
   per-tool diff, preserves the approved baseline, records live drift/quarantine metadata, and rewrites
-  affected host configs by disabling/removing the drifted entry.
+  affected host configs by disabling/removing the drifted entry. `agora sync` consults that local
+  state before writing so a quarantined server is not reintroduced from `agora.toml`.
 - **Description-poisoning heuristic scan** (`src/evidence/enrich.ts`, surfaced by `src/scan.ts`) —
   checks tool descriptions for imperative-to-model phrases, zero-width unicode, HTML comments, large
   base64-looking blobs, and cross-tool shadowing. Status `warn` to avoid false positives.

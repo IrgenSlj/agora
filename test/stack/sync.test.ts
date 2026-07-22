@@ -11,8 +11,13 @@ import { claudeCodeAdapter } from '../../src/stack/adapters/claude-code';
 import { cursorAdapter } from '../../src/stack/adapters/cursor';
 import { opencodeAdapter } from '../../src/stack/adapters/opencode';
 import { windsurfAdapter } from '../../src/stack/adapters/windsurf';
+import {
+  capabilityKey,
+  descriptionDigest,
+  writeCapabilityCache
+} from '../../src/stack/capability-cache';
 import type { StackManifest } from '../../src/stack/manifest';
-import { applySync, planSync } from '../../src/stack/sync';
+import { applySync, findSyncDriftBlocks, planSync } from '../../src/stack/sync';
 
 // ── Harness ───────────────────────────────────────────────────────────────────
 
@@ -414,6 +419,108 @@ describe('disabled-on-unsupported-tool', () => {
     } finally {
       rmSync(cwd, { recursive: true, force: true });
       rmSync(home, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── drift/quarantine preflight ───────────────────────────────────────────────
+
+describe('sync drift preflight', () => {
+  test('findSyncDriftBlocks reports quarantined cached capabilities', () => {
+    const dataDir = makeTmp('agora-sync-drift-cache-');
+    try {
+      const command = ['node', 'server.js'];
+      const baselineTools = [{ name: 'echo', description: 'old description' }];
+      const liveTools = [{ name: 'echo', description: 'new description' }];
+      const manifest: StackManifest = {
+        mcp: {
+          pg: {
+            command,
+            descriptionDigest: descriptionDigest(baselineTools)
+          }
+        }
+      };
+      writeCapabilityCache(dataDir, [
+        {
+          key: capabilityKey('pg', command),
+          name: 'pg',
+          command,
+          tools: baselineTools,
+          ok: true,
+          probedAt: new Date().toISOString(),
+          descriptionDigest: descriptionDigest(baselineTools),
+          liveDescriptionDigest: descriptionDigest(liveTools),
+          liveTools,
+          driftDetectedAt: new Date().toISOString(),
+          state: 'quarantined',
+          quarantineReason: 'description-drift',
+          quarantinedAt: new Date().toISOString()
+        }
+      ]);
+
+      const blocks = findSyncDriftBlocks(manifest, dataDir);
+      expect(blocks).toEqual([
+        expect.objectContaining({
+          name: 'pg',
+          reason: 'quarantined',
+          detail: expect.stringContaining('DRIFT')
+        })
+      ]);
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  test('agora sync blocks quarantined drift before writing host configs', async () => {
+    const cwd = makeTmp('agora-sync-drift-');
+    const home = makeTmp('agora-sync-drift-home-');
+    const dataDir = makeTmp('agora-sync-drift-data-');
+    try {
+      const command = ['node', 'server.js'];
+      const baselineTools = [{ name: 'echo', description: 'old description' }];
+      const liveTools = [{ name: 'echo', description: 'new description' }];
+      const baselineDigest = descriptionDigest(baselineTools);
+      writeManifestToml(
+        cwd,
+        [
+          '[mcp.pg]',
+          'command = ["node", "server.js"]',
+          `description_digest = "${baselineDigest}"`,
+          ''
+        ].join('\n')
+      );
+      const opencodePath = join(cwd, 'opencode.json');
+      const originalConfig = JSON.stringify({ theme: 'nord', mcp: {} }, null, 2);
+      writeFileSync(opencodePath, originalConfig);
+      writeCapabilityCache(dataDir, [
+        {
+          key: capabilityKey('pg', command),
+          name: 'pg',
+          command,
+          tools: baselineTools,
+          ok: true,
+          probedAt: new Date().toISOString(),
+          descriptionDigest: baselineDigest,
+          liveDescriptionDigest: descriptionDigest(liveTools),
+          liveTools,
+          driftDetectedAt: new Date().toISOString(),
+          state: 'quarantined',
+          quarantineReason: 'description-drift',
+          quarantinedAt: new Date().toISOString()
+        }
+      ]);
+
+      const { io, out } = createIo(cwd, home, { AGORA_HOME: dataDir });
+      const code = await runCli(['sync', '--write', '--yes'], io);
+
+      expect(code).toBe(1);
+      expect(out()).toContain('drift blocked');
+      expect(out()).toContain('DRIFT');
+      expect(readFileSync(opencodePath, 'utf8')).toBe(originalConfig);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+      rmSync(dataDir, { recursive: true, force: true });
     }
   });
 });

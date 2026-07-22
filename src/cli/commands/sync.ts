@@ -3,6 +3,7 @@ import { ALL_ADAPTERS, detectTools } from '../../stack/registry.js';
 import {
   applyInstructionsSync,
   applySync,
+  findSyncDriftBlocks,
   gateManifestForSync,
   planInstructionsSync,
   planSync,
@@ -10,7 +11,7 @@ import {
 } from '../../stack/sync.js';
 import type { AgentToolId, StackEnv } from '../../stack/types.js';
 import { ExitCode } from '../exit-codes.js';
-import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
+import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import type { Theme } from '../theme.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
@@ -136,6 +137,26 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
 
   const mcpCount = Object.keys(manifest.mcp).length;
   const instructionsCount = Object.keys(manifest.instructions ?? {}).length;
+  const dataDir = detectDataDir(parsed, io);
+  const driftBlocks = findSyncDriftBlocks(manifest, dataDir);
+  if (driftBlocks.length > 0) {
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { mode: 'drift-blocked', blocked: driftBlocks });
+      return ExitCode.POLICY_FORBID;
+    }
+    writeLine(io.stdout, theme.accent('agora sync — drift blocked'));
+    writeLine(io.stdout);
+    for (const block of driftBlocks) {
+      writeLine(io.stdout, `  mcp "${block.name}":`);
+      writeLine(io.stdout, `    ✗ Description drift — ${block.detail}`);
+    }
+    writeLine(io.stdout);
+    writeLine(
+      io.stdout,
+      theme.muted('Nothing written. Run `agora doctor --probe` to refresh or inspect quarantine.')
+    );
+    return ExitCode.POLICY_FORBID;
+  }
 
   // --from: run the trust gate (the SAME exported scanItem gate from src/scan.ts —
   // never reimplemented here) over every mcp/instruction entry before anything
