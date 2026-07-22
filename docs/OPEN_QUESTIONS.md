@@ -26,7 +26,7 @@ Current model IDs: `claude-opus-4-8`, `claude-sonnet-5`, `claude-haiku-4-5`, `cl
 ## OQ-3 — Federation sources (P1 / P1+): PulseMCP gated, Glama has no tool schemas
 
 Verified live 2026-07-03 against each API; re-verified live 2026-07-04 while building the P1+
-`RegistrySource` implementations (`src/federation/sources/{smithery,glama,github,huggingface}.ts`) —
+`RegistrySource` implementations (`src/federation/adapters/{smithery,glama,github,huggingface}.ts`) —
 every shape below was hit with real `curl` requests immediately before writing its mapper, same
 discipline as the official source.
 
@@ -67,7 +67,7 @@ discipline as the official source.
   source (`AGORA_PULSEMCP_API_KEY`/`PULSEMCP_API_KEY` plus
   `AGORA_PULSEMCP_TENANT_ID`/`PULSEMCP_TENANT_ID`), disabled by default and never in the critical path.
 - **mcp.so** — confirmed no public API (brief agreed). Skip.
-- **GitHub / Hugging Face** — no new API surface: `src/federation/sources/github.ts` and
+- **GitHub / Hugging Face** — no new API surface: `src/federation/adapters/github.ts` and
   `huggingface.ts` wrap the already-shipped `src/hubs/github.ts` (`searchGithub`) and
   `src/hubs/huggingface.ts` (`searchHuggingFace`) 1:1 into `FederatedItem`. Neither underlying function
   takes a free-text query (they always crawl a fixed topic/category list) — the federation wrapper

@@ -10,7 +10,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { detectAgoraDataDir } from '../state.js';
 import { AgoraStore, CASCache } from '../store/index.js';
-import { fetchOfficialPage } from './sources/official.js';
+import { fetchOfficialPage } from './adapters/official.js';
 import { syncFederationItems } from './sync.js';
 import type { FederatedItem, FederationEnv, SourceId } from './types.js';
 

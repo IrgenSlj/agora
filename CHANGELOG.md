@@ -18,6 +18,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   `AGORA_ENABLE_NONCANONICAL_SOURCES`, per-source env flags, or `AGORA_NONCANONICAL_SOURCES`.
 - Added cross-adapter federation contract tests that normalize recorded or hand-modeled upstream
   responses without live network calls.
+- Moved live federation implementations to `src/federation/adapters/` while keeping
+  `src/federation/sources/*` compatibility barrels for existing imports.
 - Added `federation/sync.ts` for purl-keyed SQLite/CAS source-item sync with source precedence
   (`official > glama > pulsemcp`) and prune-time canonical artifact recomputation.
 - Added `agora info <purl>` to inspect normalized artifacts, source references, and cached source-item

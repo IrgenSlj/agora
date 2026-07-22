@@ -1,14 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { githubSource } from '../../src/federation/sources/github';
-import { glamaSource } from '../../src/federation/sources/glama';
-import { huggingfaceSource } from '../../src/federation/sources/huggingface';
-import { localSource } from '../../src/federation/sources/local';
-import { officialSource } from '../../src/federation/sources/official';
-import { pulseMcpSource } from '../../src/federation/sources/pulsemcp';
-import { skillsGithubSource } from '../../src/federation/sources/skills-github';
-import { smitherySource } from '../../src/federation/sources/smithery';
+import { githubSource } from '../../src/federation/adapters/github';
+import { glamaSource } from '../../src/federation/adapters/glama';
+import { huggingfaceSource } from '../../src/federation/adapters/huggingface';
+import { localSource } from '../../src/federation/adapters/local';
+import { officialSource } from '../../src/federation/adapters/official';
+import { pulseMcpSource } from '../../src/federation/adapters/pulsemcp';
+import { skillsGithubSource } from '../../src/federation/adapters/skills-github';
+import { smitherySource } from '../../src/federation/adapters/smithery';
 import type {
   FederatedItem,
   FederationEnv,

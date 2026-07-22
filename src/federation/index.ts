@@ -4,15 +4,15 @@
 // source implementation only ever has to satisfy RegistrySource.
 
 import type { PackageMarketplaceItem } from '../marketplace/types.js';
+import { githubSource } from './adapters/github.js';
+import { glamaSource } from './adapters/glama.js';
+import { huggingfaceSource } from './adapters/huggingface.js';
+import { localSource } from './adapters/local.js';
+import { officialSource } from './adapters/official.js';
+import { pulseMcpSource } from './adapters/pulsemcp.js';
+import { skillsGithubSource } from './adapters/skills-github.js';
+import { smitherySource } from './adapters/smithery.js';
 import { readSourceCache, readSourceStoreCache, resolveCacheDir } from './cache.js';
-import { githubSource } from './sources/github.js';
-import { glamaSource } from './sources/glama.js';
-import { huggingfaceSource } from './sources/huggingface.js';
-import { localSource } from './sources/local.js';
-import { officialSource } from './sources/official.js';
-import { pulseMcpSource } from './sources/pulsemcp.js';
-import { skillsGithubSource } from './sources/skills-github.js';
-import { smitherySource } from './sources/smithery.js';
 import type {
   FederatedItem,
   FederatedSearchOptions,

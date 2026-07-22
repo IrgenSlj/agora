@@ -4,7 +4,7 @@
 // namespaced key following the same reverse-DNS `_meta` convention the
 // official MCP Registry uses for its own extension data
 // (`_meta["io.modelcontextprotocol.registry/official"]`, see
-// docs/OPEN_QUESTIONS.md OQ-3 and src/federation/sources/official.ts). Keeping
+// docs/OPEN_QUESTIONS.md OQ-3 and src/federation/adapters/official.ts). Keeping
 // the same shape convention keeps the door open to Agora acting as a
 // spec-compliant subregistry later without a redesign.
 //

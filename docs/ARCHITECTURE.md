@@ -29,8 +29,8 @@ Adapters behind a `RegistrySource`/`FederatedItem` contract normalize results fr
 registries (the official MCP Registry, Glama, GitHub, and non-canonical opt-in sources such as
 Smithery/Hugging Face), deduped and merged into one search. `agora search`/`refresh` read from this.
 Target shape (brief §4): `src/federation/adapters/`
-with per-source files plus `sync.ts` doing dedupe-by-purl and precedence — today's
-`src/federation/sources/` + `index.ts` are the pre-migration form of this.
+with per-source files plus `sync.ts` doing dedupe-by-purl and precedence. The old
+`src/federation/sources/` paths are compatibility barrels over the adapter implementations.
 
 ### Verify — evidence (`src/evidence/`) — planned, heuristic precursor live today
 

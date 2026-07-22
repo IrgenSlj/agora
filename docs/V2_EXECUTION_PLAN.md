@@ -78,7 +78,7 @@ S0 hygiene/identity ─┬─▶ S1 model/lockfile ─┬─▶ S2 federation �
 | v2 target (brief §4) | Today | Action |
 |---|---|---|
 | `src/model/` | scattered `src/types.ts`, `src/federation/types.ts`, `src/marketplace/types.ts` | **new** — consolidate into zod schemas (S1) |
-| `src/federation/adapters/` | `src/federation/sources/{official,glama,github,huggingface,smithery,local}.ts` | rename `sources→adapters`; **keep** official/glama/local, **add** pulsemcp + skills-github, **retire** smithery/huggingface (or demote to non-canonical) (S2) |
+| `src/federation/adapters/` | live under `src/federation/adapters/`; `src/federation/sources/*` barrels preserve old imports | **done for S2** — official/glama/local kept, pulsemcp + skills-github added, smithery/huggingface demoted to non-canonical opt-in |
 | `src/federation/sync.ts` | `src/federation/index.ts` (`federatedSearch`, dedupe) | refactor: dedupe **by purl**, precedence, incremental sync (S2) |
 | `src/evidence/` | `src/scan.ts`, `src/curator/`, `src/hubs/enrichment.ts` | **new plane**; repurpose curator LLM → `evidence/enrich.ts` (S3/S6) |
 | `src/policy/` | (none — `src/scan.ts` is heuristic gate) | **new plane**, Cedar (S5) |
@@ -178,6 +178,9 @@ on the macOS+Linux matrix — pin a version with prebuilds.
 1. **[sonnet]** `federation/sources → federation/adapters`; keep official/glama/local; **add**
    `pulsemcp.ts` + `skills-github.ts`; retire smithery/huggingface as non-canonical (behind a flag,
    degrade honestly). Each adapter → normalized `ArtifactRef` (S1 model).
+   - ✅ **Physical rename:** live implementations now sit under `src/federation/adapters/`;
+     `src/federation/sources/*` remains as compatibility re-export barrels so existing imports keep
+     working during the S2 transition.
    - ✅ **PulseMCP reality-check** (2026-07-22): v0.1 docs exist, but access is still partner-gated
      (`X-API-Key` + `X-Tenant-ID`; live unauthenticated call returns 401). Shipped as an optional
      env-keyed source, disabled by default and cacheable/offline-first when credentials are present.
