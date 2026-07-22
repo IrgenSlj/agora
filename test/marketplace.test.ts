@@ -13,7 +13,6 @@ import {
   buildOpenCodeConfig,
   clearMarketplaceItemsCache,
   createInstallPlan,
-  describePermissionGlob,
   extractPostInstallHint,
   findMarketplaceItem,
   findTutorial,
@@ -33,6 +32,7 @@ import {
   starCountLabel,
   trendScore
 } from '../src/marketplace';
+import { describePermissionGlob } from '../src/marketplace/permissions';
 
 // ── searchMarketplaceItems ──────────────────────────────────────────────────
 

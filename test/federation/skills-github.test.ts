@@ -2,7 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   SKILLS_GITHUB_TOPICS,
   skillsGithubSource
-} from '../../src/federation/sources/skills-github';
+} from '../../src/federation/adapters/skills-github';
 import type { RawGithubRepo } from '../../src/hubs/quality';
 import type { FetchLike } from '../../src/retry';
 

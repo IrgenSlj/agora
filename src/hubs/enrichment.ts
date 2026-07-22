@@ -49,7 +49,9 @@ export function setEnrichment(store: EnrichmentStore, entry: EnrichmentEntry): E
   return { ...store, [`${entry.repoId}@${entry.commitSha}`]: entry };
 }
 
-export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
+import type { FetchLike } from '../live/types.js';
+
+export type { FetchLike };
 
 export async function fetchRepoMetadata(
   repoId: string,

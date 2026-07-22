@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { OFFICIAL_BASE_URL, officialSource } from '../../src/federation/sources/official';
+import { OFFICIAL_BASE_URL, officialSource } from '../../src/federation/adapters/official';
 import type { FetchLike } from '../../src/retry';
 
 const FIXTURES_DIR = join(import.meta.dirname, '../fixtures/federation');

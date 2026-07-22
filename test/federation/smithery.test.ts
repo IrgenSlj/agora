@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { SMITHERY_BASE_URL, smitherySource } from '../../src/federation/sources/smithery';
+import { SMITHERY_BASE_URL, smitherySource } from '../../src/federation/adapters/smithery';
 import type { FetchLike } from '../../src/retry';
 
 const FIXTURES_DIR = join(import.meta.dirname, '../fixtures/federation');

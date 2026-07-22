@@ -1,7 +1,7 @@
+import type { FetchLike } from '../live/types.js';
 import type { ProvenanceVerification } from '../model/attestation.js';
 import { ProvenanceVerification as ProvenanceVerificationSchema } from '../model/attestation.js';
 import { parsePurl } from '../model/purl.js';
-import type { FetchLike } from '../retry.js';
 
 export const PROVENANCE_PREDICATE_TYPE =
   'https://agora-hub.dev/attestations/provenance-verification/v1';
@@ -155,7 +155,9 @@ function subjectMatches(statement: Record<string, unknown>, purl: string): boole
 function normalizeGitRepository(value: string | undefined): string | undefined {
   if (!value) return undefined;
   const withoutGitScheme = value.replace(/^git\+/, '');
-  const match = withoutGitScheme.match(/^(https:\/\/github\.com\/[^/@]+\/[^/@]+?)(?:\.git)?(?:@.*)?$/i);
+  const match = withoutGitScheme.match(
+    /^(https:\/\/github\.com\/[^/@]+\/[^/@]+?)(?:\.git)?(?:@.*)?$/i
+  );
   if (match?.[1]) return match[1];
   return withoutGitScheme.replace(/\.git$/, '');
 }
@@ -216,7 +218,8 @@ export function extractProvenanceVerification(
 ): ProvenanceVerification {
   const predicate = asRecord(statement.predicate) ?? {};
   const runDetails = asRecord(predicate.runDetails);
-  const builder = stringValue(asRecord(runDetails?.builder)?.id) ?? stringValue(asRecord(predicate.builder)?.id);
+  const builder =
+    stringValue(asRecord(runDetails?.builder)?.id) ?? stringValue(asRecord(predicate.builder)?.id);
   const sourceRepo = firstResolvedRepository(predicate);
   const commit = firstResolvedGitCommit(predicate);
   const rekorIndex = rekorLogIndex(bundle);

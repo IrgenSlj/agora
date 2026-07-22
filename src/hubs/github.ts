@@ -18,7 +18,9 @@ export const TOPICS = [
 
 const PER_TOPIC = 30;
 
-export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
+import type { FetchLike } from '../live/types.js';
+
+export type { FetchLike };
 
 export interface GithubSearchOptions {
   fetcher?: FetchLike;

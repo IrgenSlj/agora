@@ -471,20 +471,3 @@ export function getDefaultCas(): CASCache {
   defaultCasInstance ??= new CASCache();
   return defaultCasInstance;
 }
-
-// Lazy compatibility exports. Importing src/store must not create ~/.agora.
-export const store = new Proxy({} as AgoraStore, {
-  get(_target, property, receiver) {
-    const target = getDefaultStore();
-    const value = Reflect.get(target, property, receiver);
-    return typeof value === 'function' ? value.bind(target) : value;
-  }
-});
-
-export const cas = new Proxy({} as CASCache, {
-  get(_target, property, receiver) {
-    const target = getDefaultCas();
-    const value = Reflect.get(target, property, receiver);
-    return typeof value === 'function' ? value.bind(target) : value;
-  }
-});

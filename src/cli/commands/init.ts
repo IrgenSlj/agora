@@ -269,7 +269,7 @@ export const commandInit: CommandHandler = async (parsed, io, style) => {
 
     writeLine(io.stdout, '\n✓ Agora initialized! Restart OpenCode to pick up the changes.');
     writeLine(io.stdout, '  Plugin "opencode-agora" is now registered in your config.');
-    writeLine(io.stdout, '  Type \`/agora\` in OpenCode to use catalog tools.');
+    writeLine(io.stdout, '  Type `/agora` in OpenCode to use catalog tools.');
     writeLine(io.stdout, `  ${plan.servers.length} MCP servers configured.`);
     if (withMcp)
       writeLine(

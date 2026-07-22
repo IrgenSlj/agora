@@ -27,7 +27,6 @@ import { detectAgoraDataDir } from './state.js';
 import type { Discussion, Tutorial } from './types.js';
 
 export {
-  describePermissionGlob,
   hasPermissions,
   renderPermissionLines
 } from './marketplace/permissions.js';

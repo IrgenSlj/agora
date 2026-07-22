@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { GLAMA_BASE_URL, glamaSource, mapGlamaServer } from '../../src/federation/sources/glama';
+import { GLAMA_BASE_URL, glamaSource, mapGlamaServer } from '../../src/federation/adapters/glama';
 import type { FetchLike } from '../../src/retry';
 
 const FIXTURES_DIR = join(import.meta.dirname, '../fixtures/federation');

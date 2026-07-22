@@ -2,77 +2,82 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
-## [Unreleased]
+## [0.6.1] - 2026-07-22 — evidence pipeline, federation expansion, and quarantine hardening
 
-_Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardening._
+Consolidates the S2/S3 evidence modules, multi-source federation, drift quarantine system, and the
+first Cloudflare Worker scaffold. The trust gate now has real provenance verification, schema hashing,
+tool-description poisoning checks, and per-tool drift detection — all wired through the existing
+`scanItem` path so the TUI and MCP surfaces stay unchanged.
 
-### Added
-- `agora update` checks pinned npm versions for configured MCP servers across supported agent tools,
-  reports `updatable`, `up-to-date`, `tracks-latest`, or `unknown`, and applies pin bumps only with
-  `--write --yes` while preserving unrelated config keys.
-- Added optional PulseMCP federation source support, disabled unless partner API credentials are
-  present in `AGORA_PULSEMCP_*` or `PULSEMCP_*` environment variables.
-- Added `skills-github` as a federated GitHub-hosted Agent Skills source using skill-focused repository
+### Evidence & trust gate (S3)
+- **Schema hashing** (`src/evidence/schemahash.ts`) — JCS/SHA-256 hashing of MCP `tools/list` output
+  and normalized description extraction. The stack's `descriptionDigest` path now delegates to this
+  evidence contract.
+- **Schema drift** (`src/evidence/diff.ts`) — per-tool schema diff and the existing
+  `diffToolDescriptions` helper wired through it without changing the stack-facing API.
+- **Tool-description poisoning** (`src/evidence/enrich.ts`) — deterministic, offline checks for
+  imperative-to-model phrases, zero-width unicode, HTML comments, large base64-looking blobs, and
+  cross-tool shadowing; surfaced through scan as `tool_description_poisoning`.
+- **Provenance verification** (`src/evidence/provenance.ts`) — Sigstore/npm/GitHub attestation
+  verification and in-toto statement parsing for MCP server provenance claims.
+- **Quarantine system** — `agora doctor --probe` now quarantines description/schema drift by
+  preserving the approved capability-cache baseline, recording live drift metadata, and
+  disabling/removing the affected host config entry with a per-tool diff and exit code `1`.
+  `agora sync` blocks before any host write when the local capability cache marks an MCP entry as
+  drifted or quarantined. `agora update` refuses npm lookup and host writes for quarantined servers.
+
+### Federation expansion
+- **PulseMCP** — optional federation source, disabled unless partner API credentials are present in
+  `AGORA_PULSEMCP_*` or `PULSEMCP_*` environment variables.
+- **Skills-github** — federated GitHub-hosted Agent Skills source using skill-focused repository
   topics and `category: skill` catalog mapping.
-- Moved Smithery and Hugging Face to non-canonical opt-in federation sources via
+- **Non-canonical sources** — Smithery and Hugging Face moved to opt-in federation sources via
   `AGORA_ENABLE_NONCANONICAL_SOURCES`, per-source env flags, or `AGORA_NONCANONICAL_SOURCES`.
-- Added cross-adapter federation contract tests that normalize recorded or hand-modeled upstream
+- **Adapter architecture** — live federation implementations moved to `src/federation/adapters/`
+  with `src/federation/sources/*` compatibility barrels for existing imports.
+- **Cross-adapter contract tests** — hermetic tests normalizing recorded or hand-modeled upstream
   responses without live network calls.
-- Moved live federation implementations to `src/federation/adapters/` while keeping
-  `src/federation/sources/*` compatibility barrels for existing imports.
-- Added `federation/sync.ts` for purl-keyed SQLite/CAS source-item sync with source precedence
+
+### Federation sync & offline (S2)
+- **SQLite/CAS sync** (`federation/sync.ts`) — purl-keyed source-item sync with source precedence
   (`official > glama > pulsemcp`) and prune-time canonical artifact recomputation.
-- Added `agora info <purl>` to inspect normalized artifacts, source references, and cached source-item
+- **`agora info <purl>`** — inspect normalized artifacts, source references, and cached source-item
   summaries from the local SQLite/CAS sync store without contacting upstream registries.
-- `agora search --offline` now forces federation into local sync/cache mode, including SQLite/CAS
+- **`agora search --offline`** — forces federation into local sync/cache mode, including SQLite/CAS
   source-index fallback when JSONL compatibility files are absent.
-- Added an S2 gate test proving `agora search filesystem --offline` returns a merged official+local
-  result after one refresh with only the SQLite/CAS source index available.
-- `agora search` now accepts the v2 artifact-kind filter `--kind mcp-server|agent-skill`, mapped onto
+- **Artifact kind filter** — `agora search` now accepts `--kind mcp-server|agent-skill`, mapped onto
   existing catalog categories for compatibility.
-- Added the first S3 evidence module, `src/evidence/schemahash.ts`, for JCS/SHA-256 hashing of
-  MCP `tools/list` output and normalized description extraction. The existing stack
-  `descriptionDigest` path now delegates to that evidence contract.
-- Added `src/evidence/diff.ts` for per-tool schema drift and wired the existing stack
-  `diffToolDescriptions` helper through it without changing the stack-facing API.
-- `agora doctor --probe` now quarantines description/schema drift by preserving the approved
-  capability-cache baseline, recording live drift metadata, and disabling/removing the affected host
-  config entry with a printed per-tool diff and exit code `1`.
-- `agora sync` now blocks before any host write when the local capability cache marks a manifest MCP
-  entry as drifted or quarantined, preventing `agora.toml` from reintroducing a quarantined server.
-- `agora update` now refuses npm lookup and host writes when the selected configured server is marked
-  drifted or quarantined in the local capability cache, including disabled quarantine entries.
-- Added `src/evidence/enrich.ts` for deterministic, offline tool-description poisoning checks
-  (imperative-to-model phrases, zero-width unicode, HTML comments, large base64-looking blobs, and
-  cross-tool shadowing), surfaced through scan as `tool_description_poisoning`.
-- Added the initial Cloudflare Worker catalog API scaffold under `workers/api/` with Hono routes for
-  `GET /v1/health` and paginated `GET /v1/catalog`, a D1 schema, Wrangler config, and a fake-D1 test
-  harness. The worker now includes a 6-hour cron trigger and a minimal official-registry sync into D1.
-
-### V2 direction refresh
-- Updated front-door project copy to the locked identity: Agora is **the trust plane for agentic
-  tooling**, not the older system-manager/plaza framing.
-- Rewrote `SECURITY.md` and `CONTRIBUTING.md` around the v2 local-first trust-plane model,
-  vitest/biome toolchain, stable exit codes, and no hosted auth backend dependency.
-- Refreshed roadmap/architecture/status docs for the current S1 state: model schemas, generated JSON
-  Schema, schema registry/snapshot coverage, purl helpers, SQLite/CAS store, JCS/SHA-256 helpers,
-  and manifest-backed `lock verify`.
-
-### S1 — data model & lockfile
-- Added RFC-8785/JCS SHA-256 helpers via `canonicalize` for declared manifest, JSON schema, and text
-  hashing.
-- `agora lock verify` now compares `agora.lock` entries against the current manifest in the local
-  SQLite store and exits `1` on manifest/tool drift.
-- Added a deterministic `agora.lock` parser/serializer and byte-identical round-trip coverage for
-  the S1 lockfile gate.
-- Core CLI command paths now use the brief §9 exit-code contract: `1` for policy/drift failures,
-  `2` for usage, `3` for network failure, and `4` reserved for sandbox unavailability.
 - `agora refresh` now mirrors official registry source items into the SQLite store with CAS-backed
   item blobs, while keeping the JSONL federation cache as the compatibility read path.
 - Federated offline fallback now reads refreshed SQLite/CAS source items before falling back to the
   older JSONL cache.
-- Added model contract tests for generated schema freshness, deterministic JCS hashing, purl helpers,
-  and focused lock verifier tests for clean verification and drift detection.
+
+### Data model & lockfile (S1)
+- **JCS SHA-256 helpers** — RFC-8785/JCS canonicalization via `canonicalize` for declared manifest,
+  JSON schema, and text hashing.
+- **`agora lock verify`** — compares `agora.lock` entries against the current manifest in the local
+  SQLite store and exits `1` on manifest/tool drift.
+- **Lockfile round-trip** — deterministic `agora.lock` parser/serializer with byte-identical
+  round-trip coverage.
+- **Exit-code contract** — core CLI command paths now use the brief §9 contract: `1` for
+  policy/drift failures, `2` for usage, `3` for network failure, `4` reserved for sandbox.
+
+### Commands
+- **`agora update`** — checks pinned npm versions for configured MCP servers across supported agent
+  tools, reports `updatable`/`up-to-date`/`tracks-latest`/`unknown`, and applies pin bumps only with
+  `--write --yes` while preserving unrelated config keys.
+
+### Cloudflare Worker
+- **Catalog API scaffold** (`workers/api/`) — Hono routes for `GET /v1/health` and paginated
+  `GET /v1/catalog`, a D1 schema, Wrangler config, and a fake-D1 test harness. Includes a 6-hour
+  cron trigger and a minimal official-registry sync into D1.
+
+### V2 direction refresh
+- Updated front-door project copy to the locked identity: Agora is **the trust plane for agentic
+  tooling**.
+- Rewrote `SECURITY.md` and `CONTRIBUTING.md` around the v2 local-first trust-plane model,
+  vitest/biome toolchain, stable exit codes, and no hosted auth backend dependency.
+- Refreshed roadmap/architecture/status docs for the current S1 state.
 
 ### Fixed
 - `agora chat` no longer hardcodes dim ANSI escape sequences for token and session footer output;
@@ -84,44 +89,9 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
 - `agora welcome` no longer points at placeholder hosted-backend URLs; sign-in is framed as optional
   legacy live-API setup, and the first catalog action includes `agora trending`.
 
-### TUI-2 — Search page + Item detail + marketplace→catalog rename
-- **Vocabulary rename** (the design brief bans "marketplace" in the UI): the TUI `PageId` `marketplace`
-  → `search` (`pages/marketplace.ts` → `pages/search.ts`), the CLI command group `Marketplace` →
-  `Catalog` (`commands-meta/marketplace.ts` → `catalog.ts`), the shell alias `/market`/`/marketplace`
-  → `/catalog`, and every remaining user-facing "marketplace" string (welcome banner, menu, `use`/
-  `completions` help, the bookmarks/`today` section header). Internal identifiers (`MarketplaceItem`,
-  `searchMarketplaceItems`, `src/marketplace.ts`) are unchanged — they have no user-facing surface.
-- **Search page** (`src/cli/pages/search.ts`) — wired to live `federatedSearch`: progressive per-source
-  results with honest per-source status and official-first `provenanceBadges` on each merged item.
-- **Item detail page** (`src/cli/pages/item.ts`) — resolves via `federatedFetchItem` + `scanItem` with
-  the `trustPanel` as centerpiece; `a` launches the Acquire flow pre-seeded. Hermetic tests (DI fetcher).
+## [Unreleased]
 
-### TUI-1 — Acquire flow
-- **New `src/cli/pages/acquire.ts`** — the Acquire flow (RESOLVE → PLAN → GATE → APPLY) wired to the
-  real `acquire()` gateway. A single dry-run `acquire()` call resolves the item over federation, builds
-  the install plan, and runs the trust gate scan in one round-trip; a second, explicit `acquire()` call
-  is the only one that ever writes (on confirm, and `--accept-warnings`-equivalent confirm on `warn`).
-  `fail` never reaches an apply prompt. Reuses the TUI-0 trust component grammar as-is
-  (`provenanceBadges`, `planDiff`, `verdictBanner`, `trustPanel`) plus `pageHeader`/`rule`/`kvRow`/
-  `spinnerFrame`/`bp` from the Stack-page vocabulary; no trust component was modified.
-- **Satellite page, not a tab** — added `'acquire'` to `PageId` and registered it in `tui.ts`'s
-  `getPage()`, but deliberately left it out of `PAGE_ORDER`: it's reached via a new `a` hotkey from
-  Stack/Marketplace (pre-seeded with the selected item's id via a small `seedAcquire()` module seed,
-  since page switches carry no payload), not a primary 1-5 tab — so the existing five-tab header, `1-5`
-  shortcut, and Tab-cycle order are unchanged.
-- Added `PageAction` kinds `plan` (a PLAN-stage note, e.g. "not installable") and `gate` (a GATE-stage
-  verdict summary) for the status bar; `tui.ts`'s `applyAction` routes both into the existing status
-  line. Additive — no existing `PageAction` kind changed shape.
-- Exported two small existing internals for reuse by the page: `writeLocationFor` (`src/acquire.ts` —
-  read-only "where would this write" resolution, needed to show the PLAN stage's target file before any
-  write happens) and `observedCapabilities` (`src/scan.ts` — the declared-vs-observed permission
-  heuristic already computed for the `observed_permissions` scan check, reused directly for the trust
-  panel's per-category rows instead of re-parsing that check's message text).
-- Golden/interaction tests (`test/cli/acquire-page.test.ts`, hermetic — one DI'd `fetcher` stubs the
-  full 6-source federation fan-out and the scan gate's repo/npm checks, so nothing hits the network):
-  render at 60/90/130 cols in color and NO_COLOR; FAIL shows the `═` double rule and never offers apply
-  (`y` is a no-op, no write); WARN/PASS renders the apply hint and a real (tmp-dir-isolated) `acquire()`
-  write on `y`; not-found renders cleanly; `Esc` returns to the launching page.
+_Next (see [`ROADMAP.md`](./ROADMAP.md)): TUI-1 acquire flow, TUI-2 search + item detail._
 
 ## [0.6.0] - 2026-07-04 — the pivot: from terminal marketplace to agentic stack manager
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { localSource } from '../../src/federation/sources/local';
+import { localSource } from '../../src/federation/adapters/local';
 
 describe('localSource — the always-works offline source', () => {
   test('is always enabled (no network, no config)', () => {

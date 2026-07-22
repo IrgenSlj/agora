@@ -17,8 +17,8 @@
  * mcp.so has no self-serve public API — deliberately absent.
  */
 
+import type { FetchLike } from '../live/types.js';
 import type { MarketplaceItem } from '../marketplace/types.js';
-import type { FetchLike } from '../retry.js';
 
 /** The upstream registries Agora federates. `local` = bundled/offline cache. */
 export type SourceId =

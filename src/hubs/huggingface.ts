@@ -1,7 +1,8 @@
+import type { FetchLike } from '../live/types.js';
 import { fetchWithRetry } from '../retry.js';
 import type { HubItem } from './types.js';
 
-export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
+export type { FetchLike };
 
 export interface HfSearchOptions {
   fetcher?: FetchLike;

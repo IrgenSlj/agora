@@ -3,7 +3,7 @@ import {
   fetchPulseMcpPage,
   PULSEMCP_BASE_URL,
   pulseMcpSource
-} from '../../src/federation/sources/pulsemcp';
+} from '../../src/federation/adapters/pulsemcp';
 import type { FetchLike } from '../../src/retry';
 
 const AUTH_ENV = {

@@ -1,6 +1,6 @@
 {
   "name": "agora-hub",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "The trust plane for agentic tooling — local-first federation, evidence, policy, and stack management for MCP servers and Agent Skills.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

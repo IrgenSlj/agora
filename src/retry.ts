@@ -51,7 +51,9 @@ export async function withRetry<T>(
   throw lastError;
 }
 
-export type FetchLike = (input: string | URL, init?: RequestInit) => Promise<Response>;
+import type { FetchLike } from './live/types.js';
+
+export type { FetchLike };
 
 export interface FetchWithRetryOptions extends RetryOptions {
   fetcher?: FetchLike;
