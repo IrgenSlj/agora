@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
+import { hashToolSchema, hashToolsList } from '../evidence/schemahash.js';
 import type { McpTool } from './mcp-probe.js';
 
 export interface ServerCapabilities {
@@ -44,40 +45,8 @@ function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-function canonicalJson(value: unknown): string {
-  if (value === null || typeof value !== 'object') {
-    return JSON.stringify(typeof value === 'string' ? normalizeWhitespace(value) : value);
-  }
-
-  if (Array.isArray(value)) {
-    return '[' + value.map((item) => canonicalJson(item)).join(',') + ']';
-  }
-
-  const obj = value as Record<string, unknown>;
-  return (
-    '{' +
-    Object.keys(obj)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${canonicalJson(obj[key])}`)
-      .join(',') +
-    '}'
-  );
-}
-
-function canonicalTool(tool: McpTool): string {
-  return canonicalJson({
-    name: tool.name,
-    description: normalizeWhitespace(tool.description ?? ''),
-    inputSchema: tool.inputSchema ?? null
-  });
-}
-
 export function descriptionDigest(tools: ReadonlyArray<McpTool>): string {
-  const canonical = [...tools]
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map(canonicalTool)
-    .join('\n');
-  return createHash('sha256').update(canonical).digest('hex');
+  return hashToolsList(tools);
 }
 
 export function diffToolDescriptions(
@@ -94,7 +63,7 @@ export function diffToolDescriptions(
     const previous = beforeMap.get(name);
     if (!previous) {
       added.push(name);
-    } else if (canonicalTool(previous) !== canonicalTool(tool)) {
+    } else if (hashToolSchema(previous) !== hashToolSchema(tool)) {
       changed.push({
         name,
         beforeDescription: previous.description,

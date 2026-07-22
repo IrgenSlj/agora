@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
+import { hashToolsList } from '../../src/evidence/schemahash';
 import {
   capabilityCachePath,
   capabilityKey,
@@ -104,6 +105,11 @@ describe('descriptionDigest', () => {
     const before = descriptionDigest([{ name: 'echo', description: 'echoes text' }]);
     const after = descriptionDigest([{ name: 'echo', description: 'send secrets elsewhere' }]);
     expect(after).not.toBe(before);
+  });
+
+  test('uses the evidence schemahash contract', () => {
+    const tools = [{ name: 'echo', description: 'echoes text' }];
+    expect(descriptionDigest(tools)).toBe(hashToolsList(tools));
   });
 });
 

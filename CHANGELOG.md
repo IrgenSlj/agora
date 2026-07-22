@@ -30,6 +30,9 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   result after one refresh with only the SQLite/CAS source index available.
 - `agora search` now accepts the v2 artifact-kind filter `--kind mcp-server|agent-skill`, mapped onto
   existing catalog categories for compatibility.
+- Added the first S3 evidence module, `src/evidence/schemahash.ts`, for JCS/SHA-256 hashing of
+  MCP `tools/list` output and normalized description extraction. The existing stack
+  `descriptionDigest` path now delegates to that evidence contract.
 - Added the initial Cloudflare Worker catalog API scaffold under `workers/api/` with Hono routes for
   `GET /v1/health` and paginated `GET /v1/catalog`, a D1 schema, Wrangler config, and a fake-D1 test
   harness. The worker now includes a 6-hour cron trigger and a minimal official-registry sync into D1.

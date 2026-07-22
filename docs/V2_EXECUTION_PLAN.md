@@ -236,6 +236,9 @@ sync; adapter contract tests green.
 2. **[sonnet]** `evidence/schemahash.ts` (JCS+sha256 of `tools/list`, description extraction) +
    `evidence/diff.ts` (manifest & per-tool drift). Wire the **drift rule** (§5.5) into `sync`,
    `update`, `doctor`: mismatch → `quarantined` state + host-config rewrite + printed diff.
+   - ✅ **Started:** `src/evidence/schemahash.ts` now canonicalizes MCP `tools/list` data with
+     JCS/SHA-256, extracts normalized descriptions, and backs the existing stack
+     `descriptionDigest` path used by scan/doctor/acquire.
 3. **[sonnet]** `evidence/enrich.ts` deterministic poisoning heuristics (regex/AST): imperative-to-model
    phrases, zero-width unicode, HTML comments, base64 >128 chars, cross-tool shadowing. LLM pass
    optional/keyed. (Repurpose `src/curator/` + `src/hubs/enrichment.ts`.)
