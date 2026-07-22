@@ -6,13 +6,13 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Catalog',
     summary: 'Search the federated catalog for MCP servers, packages, and workflows',
     usage:
-      'agora search <query> [--source official|glama|pulsemcp|skills-github|smithery|github|huggingface|local|all] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
+      'agora search <query> [--source official|glama|pulsemcp|skills-github|smithery|github|huggingface|local|all] [--kind mcp-server|agent-skill] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
     details:
       'Federates the official MCP Registry, Glama, PulseMCP, GitHub Skills, Smithery, GitHub, and Hugging Face with the ' +
       'bundled local catalog, deduping matches found across sources (each result keeps its ' +
       'provenance). An unreachable source degrades honestly instead of failing the whole search — ' +
       'local always works offline. ' +
-      'Use --category to filter by kind, --source to restrict to one upstream, and --offline to ' +
+      'Use --kind for v2 artifact kinds, --category for legacy catalog categories, --source to restrict to one upstream, and --offline to ' +
       'read only local sync/cache data. ' +
       'Add --api to query a self-hosted Agora API instead (unrelated to federation).',
     flags: [
@@ -21,6 +21,7 @@ export const COMMANDS: CommandMeta[] = [
         description:
           'Restrict to one upstream: official, glama, pulsemcp, skills-github, smithery, github, huggingface, local, or all (default all)'
       },
+      { flag: '--kind', description: 'Filter by v2 artifact kind: mcp-server or agent-skill' },
       { flag: '--category, -c', description: 'Filter by category: mcp, prompt, workflow, skill' },
       { flag: '--limit, -n', description: 'Maximum number of results (default 10)' },
       { flag: '--offline', description: 'Read local sync/cache data without contacting upstreams' },

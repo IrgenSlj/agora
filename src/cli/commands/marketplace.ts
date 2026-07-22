@@ -65,6 +65,13 @@ function matchesFederatedCategory(item: FederatedItem, category: string): boolea
   return category === 'package' && item.kind === 'package';
 }
 
+function categoryFromKind(kind: string | undefined): string | undefined {
+  if (!kind) return undefined;
+  if (kind === 'mcp-server') return 'mcp';
+  if (kind === 'agent-skill') return 'skill';
+  return undefined;
+}
+
 function federationEnvFor(
   parsed: Parameters<CommandHandler>[0],
   io: Parameters<CommandHandler>[1]
@@ -142,7 +149,12 @@ function statusSummary(statuses: SourceStatus[]): string {
 
 export const commandSearch: CommandHandler = async (parsed, io, style) => {
   const query = parsed.args.join(' ');
-  const category = stringFlag(parsed, 'category', 'c') || 'all';
+  const kind = stringFlag(parsed, 'kind');
+  const kindCategory = categoryFromKind(kind);
+  if (kind && !kindCategory) {
+    return usageError(io, `Unknown --kind "${kind}". Use mcp-server or agent-skill.`);
+  }
+  const category = stringFlag(parsed, 'category', 'c') || kindCategory || 'all';
   const sortBy = stringFlag(parsed, 'sort', 's') || 'relevance';
   const sortOrder = (stringFlag(parsed, 'order', 'o') || 'desc') as 'asc' | 'desc';
   const table = Boolean(parsed.flags.table);

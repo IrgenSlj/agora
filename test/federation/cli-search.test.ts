@@ -178,6 +178,52 @@ describe('agora search --json — federated shape', () => {
       rmSync(dataDir, { recursive: true, force: true });
     }
   });
+
+  test('--kind agent-skill maps to the skill category filter', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'agora-federation-cli-'));
+    try {
+      const { io, stdout } = createIo(
+        async () =>
+          new Response(
+            JSON.stringify({
+              items: [
+                {
+                  id: 1,
+                  full_name: 'owner/reviewer-skill',
+                  name: 'reviewer-skill',
+                  owner: { login: 'owner' },
+                  description: 'A valid agent skill repository',
+                  html_url: 'https://github.com/owner/reviewer-skill',
+                  stargazers_count: 100,
+                  forks_count: 10,
+                  pushed_at: '2026-04-01T00:00:00Z',
+                  created_at: '2025-01-01T00:00:00Z',
+                  archived: false,
+                  license: { spdx_id: 'MIT' },
+                  topics: ['agent-skill'],
+                  default_branch: 'main'
+                }
+              ]
+            }),
+            { status: 200 }
+          ),
+        dataDir
+      );
+
+      const code = await runCli(
+        ['search', 'reviewer', '--source', 'skills-github', '--kind', 'agent-skill', '--json'],
+        io
+      );
+      const payload = JSON.parse(stdout.join(''));
+
+      expect(code).toBe(0);
+      expect(payload.category).toBe('skill');
+      expect(payload.items).toHaveLength(1);
+      expect(payload.items[0].category).toBe('skill');
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('agora refresh', () => {
