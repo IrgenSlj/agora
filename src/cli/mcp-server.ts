@@ -71,7 +71,7 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
     'agora_search',
     {
       description:
-        'Search the federated MCP catalog (official MCP Registry + local bundled catalog, ' +
+        'Search the multi-source MCP catalog (official MCP Registry + local bundled catalog, ' +
         'deduped across sources) for MCP servers and workflows. Mirrors `agora search --json`.',
       inputSchema: z.object({
         query: z.string().describe('Search keywords'),
@@ -103,7 +103,7 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
       description:
         'Full merged catalog item detail, including trust-panel data: a fresh scan-gate ' +
         'verdict, official-registry status, and any trust record from a prior `agora_acquire`. ' +
-        'Resolves against the same federation the CLI `agora browse` uses.',
+        'Resolves against the same catalog sources the CLI `agora browse` uses.',
       inputSchema: z.object({
         id: z.string().describe('Item id or ref, e.g. mcp-github or io.github.user/server'),
         source: z

@@ -12,14 +12,8 @@ execution plan and current status, see [`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_P
 Skills come from, observes what they actually do, enforces user-defined policy over both, and
 manages them across every host (OpenCode, Claude Code, Cursor, Windsurf).
 
-It is a **customs office over federated registries**, never a competing catalog: it does not grow
-its own catalog, it federates upstream registries (the official MCP Registry as canonical, then
-Glama, PulseMCP, + skills sources) so its effective catalog is the union of all of them. It deals
-in **evidence** — verifiable, inspectable attestations — never opaque numeric "trust scores." It
-is host-neutral (OpenCode is one integration among four, not the identity) and local-first with no
-hosted backend it depends on.
-
-## The four planes
+It is a **customs office over multi-source registries**, never a competing catalog: it does not grow
+its own catalog, it searches upstream registries (the official MCP Registry as canonical, then Glama, PulseMCP, + skills sources) so its effective catalog is the union of all of them. It deals in **evidence** — verifiable, inspectable attestations — never opaque numeric "trust scores." It is host-neutral (OpenCode is one integration among four, not the identity) and local-first with no hosted backend it depends on. ## The four planes
 
 Everything in the codebase serves one of four planes:
 
@@ -80,7 +74,7 @@ producer in S3 and `agora serve` exposing Agora itself as an MCP server (brief �
 
 - **Local-first, no hosted backend.** Every core feature works offline against an on-disk cache —
   degraded, never broken. If a source is unreachable, it says so; it never fabricates counts.
-- **A customs office, not a registry.** Agora never competes on catalog size; federating existing
+- **A customs office, not a registry.** Agora never competes on catalog size; searching existing
   registries means its effective catalog is everyone's combined.
 - **Evidence, not scores.** Every verdict is policy evaluated over verifiable attestations — no
   opaque numeric trust score exists anywhere in the product.

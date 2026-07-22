@@ -1,6 +1,6 @@
 # Contributing
 
-`agora` is the local-first trust plane for agentic tooling. It federates upstream registries,
+`agora` is the local-first trust plane for agentic tooling. It searches multiple upstream registries,
 collects evidence, gates installs through policy, and manages MCP servers and Agent Skills across
 OpenCode, Claude Code, Cursor, and Windsurf. There is no hosted backend dependency in the core.
 

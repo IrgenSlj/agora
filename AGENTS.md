@@ -9,7 +9,7 @@ phase-by-phase build plan — read all three before making structural changes.
 
 ## The four planes
 
-- **Federate** (`src/federation/`) — one search across federated upstream registries (official
+- **Federate** (`src/federation/`) — one search across multi-source upstream registries (official
   MCP Registry as canonical, then Glama, PulseMCP, + skills sources). Agora never competes on
   catalog size; its effective catalog is everyone's, deduped by purl.
 - **Verify** (`src/evidence/`, planned) — provenance verification (Sigstore / npm & GitHub

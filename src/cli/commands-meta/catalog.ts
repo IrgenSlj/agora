@@ -4,11 +4,11 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'search',
     group: 'Catalog',
-    summary: 'Search the federated catalog for MCP servers, packages, and workflows',
+    summary: 'Search the multi-source catalog for MCP servers, packages, and workflows',
     usage:
       'agora search <query> [--source official|glama|pulsemcp|skills-github|smithery|github|huggingface|local|all] [--kind mcp-server|agent-skill] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
     details:
-      'Federates the official MCP Registry, Glama, PulseMCP, GitHub Skills, GitHub, and the bundled local catalog. ' +
+      'Searches the official MCP Registry, Glama, PulseMCP, GitHub Skills, GitHub, and the bundled local catalog. ' +
       'Smithery and Hugging Face are non-canonical opt-in sources; set AGORA_ENABLE_NONCANONICAL_SOURCES=1, ' +
       'AGORA_ENABLE_SMITHERY=1, AGORA_ENABLE_HUGGINGFACE=1, or AGORA_NONCANONICAL_SOURCES=smithery,huggingface to enable them. ' +
       'Dedupes matches found across sources (each result keeps its ' +
@@ -16,7 +16,7 @@ export const COMMANDS: CommandMeta[] = [
       'local always works offline. ' +
       'Use --kind for v2 artifact kinds, --category for legacy catalog categories, --source to restrict to one upstream, and --offline to ' +
       'read only local sync/cache data. ' +
-      'Add --api to query a self-hosted Agora API instead (unrelated to federation).',
+      'Add --api to query a self-hosted Agora API instead.',
     flags: [
       {
         flag: '--source',
@@ -55,7 +55,7 @@ export const COMMANDS: CommandMeta[] = [
     summary: 'Inspect a synced artifact by purl from the local store',
     usage: 'agora info <purl> [--store <path>] [--json]',
     details:
-      'Reads the local SQLite/CAS federation sync store, showing the normalized artifact row, ' +
+      'Reads the local SQLite/CAS sync store, showing the normalized artifact row, ' +
       'source references, and cached source-item summaries without contacting upstream registries. ' +
       'Run agora refresh first to populate the local store.',
     flags: [
@@ -194,7 +194,7 @@ export const COMMANDS: CommandMeta[] = [
     usage:
       'agora acquire <id|query> [--tool opencode|claude-code|cursor|windsurf] [--source official|smithery|glama|github|huggingface|local] [--accept-warnings] [--save] [--dry-run] [--json]',
     details:
-      'Resolves an item id or capability query — against the federated catalog (official MCP Registry ' +
+      'Resolves an item id or capability query — against the multi-source catalog (official MCP Registry ' +
       'first, then the bundled offline catalog) as well as the bundled catalog directly — creates an ' +
       'install plan, runs the pre-install scan gate, and writes the MCP server to the target config only ' +
       'when the scan has no failures. Warnings require --accept-warnings; --dry-run prints the plan and ' +
@@ -212,7 +212,7 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--config', description: 'Explicit config path for the target tool' },
       {
         flag: '--source',
-        description: 'Restrict federation resolution to one upstream source'
+        description: 'Restrict resolution to one upstream source'
       },
       {
         flag: '--accept-warnings',
@@ -260,7 +260,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'refresh',
     group: 'Catalog',
-    summary: 'Incrementally sync the official MCP registry into the local federation cache.',
+    summary: 'Incrementally sync the official MCP registry into the local sync cache.',
     usage: 'agora refresh [--source official] [--store <path>] [--json]',
     details:
       "Fetches servers added/changed since the last sync via the official registry's " +

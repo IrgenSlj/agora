@@ -303,7 +303,7 @@ export const acquirePage: Page = {
         ' ' +
           spinnerFrame(state.tick, theme) +
           '  ' +
-          theme.dim('Resolving ' + state.target + ' via federation…')
+          theme.dim('Resolving ' + state.target + '…')
       );
       return frame(lines, width, height);
     }

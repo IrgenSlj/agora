@@ -36,7 +36,7 @@ Most Agora commands that read or write state share one exit-code contract:
 | `0` | Ok — no changes needed / gate passed / write succeeded | all commands |
 | `1` | Policy forbid / drift / revocation hit | gated writes, `scan`, `lock verify` |
 | `2` | Usage error | all commands |
-| `3` | Network error | federation / refresh commands |
+| `3` | Network error | search / refresh commands |
 | `4` | Sandbox unavailable | `vet` once S6 lands |
 
 A few commands intentionally don't use the full range: `agora doctor` is informational (exit `0`
@@ -46,7 +46,7 @@ unless `--strict` is passed, then `1` on any server error) and `agora integrate`
 ## Everyday commands
 
 ```bash
-agora search <query> [--source official|local] [--json]     # federated catalog search
+agora search <query> [--source official|local] [--json]     # multi-source catalog search
 agora browse <id> [--json]                                    # full item detail
 agora doctor [--tool <id>] [--probe] [--strict] [--json]       # health-check the configured stack
 agora capabilities [query] [--json]                            # search tools your servers expose

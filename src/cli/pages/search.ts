@@ -222,7 +222,7 @@ export const searchPage: Page = {
     // ── query / filter input row ────────────────────────────────────────────
     if (state.filtering) {
       lines.push(' ' + theme.accent('search ▸') + ' ' + state.draft + theme.dim('▏'));
-      lines.push(' ' + theme.dim('Enter to search the federation, Esc to cancel.'));
+      lines.push(' ' + theme.dim('Enter to search the catalog, Esc to cancel.'));
     } else {
       lines.push(
         ' ' +
@@ -238,7 +238,7 @@ export const searchPage: Page = {
     if (state.loading) {
       state.tick++;
       lines.push(
-        ' ' + spinnerFrame(state.tick, theme) + '  ' + theme.dim('searching the federation…')
+        ' ' + spinnerFrame(state.tick, theme) + '  ' + theme.dim('searching the catalog…')
       );
     } else if (state.statuses.length > 0) {
       lines.push(' ' + state.statuses.map((s) => sourceStatusChip(s, theme)).join('   '));

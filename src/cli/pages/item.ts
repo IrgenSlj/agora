@@ -158,7 +158,7 @@ export const itemPage: Page = {
         ' ' +
           spinnerFrame(state.tick, theme) +
           '  ' +
-          theme.dim('Resolving ' + (state.id ?? '') + ' via federation…')
+          theme.dim('Resolving ' + (state.id ?? '') + '…')
       );
       return frame(lines, width, height);
     }

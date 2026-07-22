@@ -84,7 +84,7 @@ export const COMMANDS: CommandMeta[] = [
       'Opens the keyboard-driven TUI with five pages, switched by 1-5 or Tab. ' +
       'j/k navigates, Enter drills in, Esc backs out, ? toggles help, q quits. ' +
       'Pages: Home (recommendation engine), Stack (your MCP servers across every ' +
-      'harness — health, drift, probe), Search (federated catalog + gated ' +
+      'harness — health, drift, probe), Search (multi-source catalog + gated ' +
       'acquire), News (ranked feed), Settings (display, local preferences, sources).',
     examples: ['agora tui']
   },

@@ -14,7 +14,7 @@ Registries answer *what exists*. Nobody answers, at the moment you install and r
 only question that matters: **should THIS artifact be trusted, by THIS project, under THIS policy —
 and what happens when that answer changes tomorrow?** That is Agora.
 
-Agora is a **customs office over federated registries**, not a competing catalog. It deals in
+Agora is a **customs office over multi-source registries**, not a competing catalog. It deals in
 **evidence** — verifiable, inspectable attestations — never opaque numeric "trust scores." It is
 host-neutral and local-first: no accounts, no hosted backend you depend on, `--json` on every command.
 
@@ -42,7 +42,7 @@ server — zero-install command `npx -y agora-hub mcp`. From source (requires [b
 Agora is organized as four planes over your agent stack (see [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md)
 for the full specification):
 
-- **Federate** — one search across federated upstream registries (the official MCP Registry as
+- **Federate** — one search across multi-source upstream registries (the official MCP Registry as
   canonical, then Glama, PulseMCP, + skills). Agora never competes on catalog size; its effective
   catalog is everyone's, deduped by [purl](https://github.com/package-url/purl-spec). Smithery and
   Hugging Face are available as non-canonical opt-in research sources.
@@ -79,7 +79,7 @@ unreachable, it says so.
 
 ```bash
 agora doctor                     # one table of every MCP server across all your hosts + drift
-agora search postgres            # federated catalog search across upstream registries
+agora search postgres            # multi-source catalog search across upstream registries
 agora acquire mcp-postgres       # resolve → gate → write config (the customs office)
 agora plan                       # Terraform-style diff of your stack vs. agora.toml (no writes)
 agora apply                      # reconcile host configs to match the profile
@@ -93,7 +93,7 @@ unrelated key and write atomically. No credentials ever live in `agora.toml`.
 
 ## Positioning
 
-- **A customs office, not a registry.** Agora federates existing registries; it never competes on
+- **A customs office, not a registry.** Agora searches existing registries; it never competes on
   catalog size.
 - **Evidence, not scores.** Every verdict is policy evaluated over verifiable attestations — no opaque
   numeric trust score exists anywhere in the product.
