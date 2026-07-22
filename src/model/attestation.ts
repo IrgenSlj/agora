@@ -87,6 +87,7 @@ export const ProvenanceVerification = z
       .enum([
         'provenance-verified',
         'no-provenance',
+        'verification-skipped',
         'publisher-mismatch',
         'network-error',
         'verification-failed'
