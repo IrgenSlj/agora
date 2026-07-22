@@ -23,6 +23,12 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
 - Added model contract tests for generated schema freshness, deterministic JCS hashing, purl helpers,
   and focused lock verifier tests for clean verification and drift detection.
 
+### Fixed
+- `agora chat` no longer hardcodes dim ANSI escape sequences for token and session footer output;
+  those lines now route through the active terminal styler.
+- `agora export json|csv|markdown|table` now treats a leading format word as the output format, while
+  `--format` still wins. Empty export results now name the query and suggest a broader export.
+
 ### TUI-2 — Search page + Item detail + marketplace→catalog rename
 - **Vocabulary rename** (the design brief bans "marketplace" in the UI): the TUI `PageId` `marketplace`
   → `search` (`pages/marketplace.ts` → `pages/search.ts`), the CLI command group `Marketplace` →

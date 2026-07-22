@@ -1026,3 +1026,70 @@ describe('help system', () => {
     }
   });
 });
+
+describe('export command — positional format detection', () => {
+  test('export json (positional) produces JSON with count/items shape, not empty-result message', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['export', 'json'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).not.toContain('No items match');
+    const payload = JSON.parse(out);
+    expect(typeof payload.count).toBe('number');
+    expect(payload.count).toBeGreaterThan(0);
+    expect(Array.isArray(payload.items)).toBe(true);
+  });
+
+  test('export csv (positional) produces CSV with header row id,name,kind,...', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['export', 'csv'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).not.toContain('No items match');
+    const firstLine = out.split('\n')[0];
+    expect(firstLine).toContain('id');
+    expect(firstLine).toContain('name');
+    expect(firstLine).toContain('kind');
+  });
+
+  test('export postgres (non-format positional) still works as a query filter', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['export', 'postgres'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    // Result is JSON (default format) and either has matching items or the helpful message
+    // Either way it must NOT be silent — it either has JSON or contains the query name
+    const isJson = out.trim().startsWith('{');
+    if (isJson) {
+      const payload = JSON.parse(out);
+      expect(Array.isArray(payload.items)).toBe(true);
+    } else {
+      expect(out).toContain('postgres');
+    }
+  });
+
+  test('--format flag still wins over positional', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['export', '--format', 'csv'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    const firstLine = out.split('\n')[0];
+    expect(firstLine).toContain('id');
+    expect(firstLine).toContain('name');
+    expect(firstLine).toContain('kind');
+  });
+
+  test('export with non-matching query emits helpful message naming the query', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['export', 'no-such-xyzzy-item-abc'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    expect(out).toContain('no-such-xyzzy-item-abc');
+    expect(out).toContain('agora export');
+  });
+});

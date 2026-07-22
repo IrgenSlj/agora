@@ -75,12 +75,18 @@ function toTable(items: MarketplaceItem[], _style: unknown): string {
 }
 
 export const commandExport: CommandHandler = async (parsed, io, style) => {
-  const format = (stringFlag(parsed, 'format', 'f') || 'json') as ExportFormat;
-  const query = parsed.args.join(' ');
+  const validFormats: ExportFormat[] = ['json', 'csv', 'markdown', 'table'];
+  const flagFormat = stringFlag(parsed, 'format', 'f');
+  let positional = parsed.args;
+  let format = (flagFormat || 'json') as ExportFormat;
+  if (!flagFormat && positional.length > 0 && validFormats.includes(positional[0] as ExportFormat)) {
+    format = positional[0] as ExportFormat;
+    positional = positional.slice(1);
+  }
+  const query = positional.join(' ');
   const category = stringFlag(parsed, 'category', 'c') || 'all';
   const limit = numberFlag(parsed, 'limit', 'n') || 0;
 
-  const validFormats: ExportFormat[] = ['json', 'csv', 'markdown', 'table'];
   if (!validFormats.includes(format)) {
     return usageError(io, `Unknown format "${format}". Use --format json|csv|markdown|table`);
   }
@@ -112,7 +118,12 @@ export const commandExport: CommandHandler = async (parsed, io, style) => {
   }
 
   if (items.length === 0) {
-    writeLine(io.stdout, 'No items match the export criteria.');
+    writeLine(
+      io.stdout,
+      query
+        ? `No items match "${query}". Try a broader query, drop --category, or run \`agora export\` to export everything.`
+        : 'No items match the export criteria.'
+    );
     return 0;
   }
 
