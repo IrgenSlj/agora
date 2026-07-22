@@ -206,6 +206,9 @@ on the macOS+Linux matrix — pin a version with prebuilds.
      `GET /v1/catalog`, D1 schema, Wrangler config placeholder, a 6-hour cron trigger, minimal
      official-registry sync into D1, and a fake-D1 unit test harness.
 5. **[sonnet]** Adapter **contract tests** against recorded upstream responses (no live calls in CI).
+   - ✅ **Started:** `test/federation/adapter-contract.test.ts` now runs the shared
+     `RegistrySource` contract across official, Glama, PulseMCP, skills-github, Smithery, GitHub,
+     Hugging Face, and local using recorded or hand-modeled fixture responses only.
 
 **New deps:** `hono`, `wrangler` (dev), `@cloudflare/workers-types` (dev).
 
