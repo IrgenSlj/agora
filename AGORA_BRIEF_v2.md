@@ -584,7 +584,8 @@ delegate where possible.**
   churn. `engines.node` bumped to `>=20`.
 - **DA-3 (2026-07-06) — exit-code contract migration (§9).** The pre-v2 `2=plan-changes /
   3=scan-fail` codes are remapped to §9's `1/2/3/4` during S1; the mapping is documented for agent
-  integrations.
+  integrations. Implementation note (2026-07-22): core CLI command paths now use the shared
+  `ExitCode` constants for policy/drift, usage, network, and sandbox categories.
 - **DA-4 (2026-07-06) — everything on `main`, push often** (owner directive) overrides the brief's
   one-PR-per-phase process (§0/§13). Phase gates remain as readiness checkpoints; `main` is kept green
   at every push.

@@ -5,6 +5,7 @@ import {
   normalizeOpencodeModel,
   spawnOpencode
 } from '../../opencode-exec.js';
+import { ExitCode } from '../exit-codes.js';
 import {
   detectDataDir,
   extractSessionId,
@@ -38,13 +39,13 @@ export const commandChat: CommandHandler = async (parsed, io, style) => {
       const message = err instanceof Error ? err.message : String(err);
       writeLine(io.stderr, `Failed to run opencode: ${message}`);
       writeLine(io.stderr, 'Is opencode installed and in your PATH?');
-      return 1;
+      return ExitCode.USAGE;
     }
     return new Promise((resolve) => {
       child.on('close', (code) => resolve(code ?? 0));
       child.on('error', (err) => {
         writeLine(io.stderr, `Failed to run opencode: ${err.message}`);
-        resolve(1);
+        resolve(ExitCode.USAGE);
       });
     });
   }
@@ -83,7 +84,7 @@ export const commandChat: CommandHandler = async (parsed, io, style) => {
       const message = err instanceof Error ? err.message : String(err);
       writeLine(io.stderr, `Failed to run opencode: ${message}`);
       writeLine(io.stderr, 'Is opencode installed and in your PATH?');
-      resolve(1);
+      resolve(ExitCode.USAGE);
       return;
     }
 

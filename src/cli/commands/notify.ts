@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { ExitCode } from '../exit-codes.js';
 import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
@@ -56,7 +57,7 @@ export const commandNotify: CommandHandler = async (parsed, io, style) => {
     } else {
       writeLine(io.stderr, `Desktop notifications not supported on ${platform}`);
       writeLine(io.stderr, `Message: ${title}: ${message}`);
-      return 1;
+      return ExitCode.USAGE;
     }
     writeLine(io.stdout, style.dim(`Notification sent: ${title}`));
   } catch (err: any) {

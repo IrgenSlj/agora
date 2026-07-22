@@ -193,7 +193,7 @@ describe('CLI commands', () => {
         io
       );
 
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       const out = stdout.join('');
       expect(out).toContain('Permissions');
       expect(out).toContain('fs');
@@ -870,6 +870,14 @@ describe('help system', () => {
 
     expect(code).toBe(2);
     expect(stderr.join('')).toContain('Unknown command: bogus');
+  });
+
+  test('agora completions unknown shell exits 2', async () => {
+    const { io, stderr } = createIo();
+    const code = await runCli(['completions', 'powershell'], io);
+
+    expect(code).toBe(2);
+    expect(stderr.join('')).toContain('Unknown shell: powershell');
   });
 
   test('agora share emits a markdown snippet', async () => {

@@ -85,7 +85,8 @@ producer in S3 and `agora serve` exposing Agora itself as an MCP server (brief �
   opaque numeric trust score exists anywhere in the product.
 - **Agent-operable.** `--json` on every command and stable exit codes (brief §9, supersedes the
   old `0/1/2/3` plan/scan mapping): `0` ok · `1` policy forbid / drift / revocation hit · `2`
-  usage · `3` network · `4` sandbox unavailable — Agora is meant to be driven by agents as a
+  usage · `3` network · `4` sandbox unavailable. Core CLI paths route through this shared
+  contract — Agora is meant to be driven by agents as a
   first-class citizen, not just humans.
 - **The plugin stays thin.** No gate-bypassing write inside an LLM tool call.
 - **Graceful terminal degradation.** Colour, gradients, and the banner degrade cleanly under

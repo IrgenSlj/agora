@@ -2,6 +2,7 @@ import { buildOpenCodeConfig, findMarketplaceItem } from '../../marketplace.js';
 import { type ScanResult, scanItem } from '../../scan.js';
 import { capabilityKey, upsertCapabilities } from '../../stack/capability-cache.js';
 import { type McpProbeResult, probeMcpServer } from '../../stack/mcp-probe.js';
+import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, numberFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { status } from '../pages/components.js';
 import { cliTheme } from '../theme.js';
@@ -82,8 +83,8 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
       probe
     });
 
-    if (scanResult && scanResult.summary.fail > 0) return 1;
-    return probe.ok ? 0 : 1;
+    if (scanResult && scanResult.summary.fail > 0) return ExitCode.POLICY_FORBID;
+    return probe.ok ? ExitCode.OK : ExitCode.POLICY_FORBID;
   }
 
   // Human output
@@ -109,7 +110,7 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
         io.stderr,
         `${theme.error('Refusing try-run')} — ${fail} scan check(s) failed. Re-run with --skip-scan to override.`
       );
-      return 1;
+      return ExitCode.POLICY_FORBID;
     }
   }
 
@@ -164,7 +165,7 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
       io.stdout,
       theme.dim('Nothing was saved. To keep this server: agora install ' + id + ' --write --save')
     );
-    return 0;
+    return ExitCode.OK;
   }
 
   // Probe failed
@@ -181,5 +182,5 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
       writeLine(io.stdout, theme.dim(`    ${l}`));
     }
   }
-  return 1;
+  return ExitCode.POLICY_FORBID;
 };

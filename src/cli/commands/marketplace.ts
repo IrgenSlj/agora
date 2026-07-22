@@ -20,6 +20,7 @@ import {
   similarItems,
   sortMarketplaceItems
 } from '../../marketplace.js';
+import { ExitCode } from '../exit-codes.js';
 import { formatItemDetail, formatItemList, formatItemTable, header } from '../format.js';
 import {
   detectDataDir,
@@ -481,7 +482,7 @@ export const commandCompare: CommandHandler = async (parsed, io, style) => {
     const item = await findMarketplaceSource({ ...(await sourceOptions(parsed, io)), id, type });
     if (!item.data) {
       writeLine(io.stderr, `Item not found: ${id}`);
-      return 1;
+      return ExitCode.USAGE;
     }
     items.push(item.data);
   }

@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { refreshOfficialCache } from '../../federation/cache.js';
 import type { FederationEnv } from '../../federation/types.js';
+import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
@@ -25,7 +26,7 @@ export const commandRefresh: CommandHandler = async (parsed, io, style) => {
 
   if (parsed.flags.json) {
     writeJson(io.stdout, result);
-    return result.error ? 1 : 0;
+    return result.error ? ExitCode.NETWORK : ExitCode.OK;
   }
 
   if (result.error) {
@@ -34,7 +35,7 @@ export const commandRefresh: CommandHandler = async (parsed, io, style) => {
       io.stdout,
       `Partial sync — +${result.added} added, ~${result.updated} updated, -${result.pruned} pruned (cache now has ${result.total})`
     );
-    return 1;
+    return ExitCode.NETWORK;
   }
 
   writeLine(
@@ -42,5 +43,5 @@ export const commandRefresh: CommandHandler = async (parsed, io, style) => {
     `official: +${result.added} added, ~${result.updated} updated, -${result.pruned} pruned (cache now has ${result.total})`
   );
   writeLine(io.stdout, style.dim(`synced at ${result.syncedAt}`));
-  return 0;
+  return ExitCode.OK;
 };

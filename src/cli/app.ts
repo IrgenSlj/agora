@@ -255,7 +255,7 @@ export async function commandCompletions(
   const output = generateCompletions(shell);
   if (output.startsWith('Unknown shell')) {
     writeLine(io.stderr, output);
-    return 1;
+    return ExitCode.USAGE;
   }
   writeLine(io.stdout, output);
   return 0;

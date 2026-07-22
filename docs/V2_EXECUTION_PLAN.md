@@ -8,8 +8,8 @@ the brief's §14 and an entry in `docs/OPEN_QUESTIONS.md`, then take the smalles
 **Status:** S0 complete — toolchain migrated, README/docs rewritten, CI matrix expanded,
 user-facing commerce/account framing stripped, biome migrated. S1 (data model & lockfile) in
 progress: model schemas, generated schemas, schema freshness tests, purl helpers, JCS/SHA-256
-helpers, SQLite/CAS store, and manifest-backed `agora lock verify` are present; remaining S1 work is
-integration hardening and exit-code/copy cleanup across legacy surfaces.
+helpers, SQLite/CAS store, manifest-backed `agora lock verify`, and the brief §9 CLI exit-code
+remap are present; remaining S1 work is integration hardening across legacy surfaces.
 
 ---
 
@@ -35,8 +35,8 @@ integration hardening and exit-code/copy cleanup across legacy surfaces.
 ### Exit-code contract (brief §9, supersedes the old 0/1/2/3)
 
 `0` ok · `1` policy forbid / drift / revocation hit · `2` usage · `3` network · `4` sandbox
-unavailable. Migrating the current `2=plan-has-changes / 3=scan-fail` meanings is an S1 task
-(touches every command + tests) — **DA candidate**, see §7.
+unavailable. The old `2=plan-has-changes / 3=scan-fail` meanings are remapped in S1 and pinned by
+CLI tests — see DA-3 in §7.
 
 ---
 
@@ -155,7 +155,8 @@ issue (no native deps until S1).
    `~/.agora/cas/<sha256>`; migrate `federation/cache.ts` reads. JCS hashing via `canonicalize` +
    SHA-256 (D15) as a shared util.
 5. **[sonnet]** `agora lock verify` (recompute hashes, exit 1 on drift) + round-trip test.
-6. **[sonnet]** Migrate exit-code contract to brief §9 across commands + tests (DA candidate).
+6. **[sonnet]** Migrate exit-code contract to brief §9 across commands + tests (DA-3) — core CLI
+   command paths now use the shared `ExitCode` contract.
 
 **New deps:** `packageurl-js`, `canonicalize`, `better-sqlite3`. **Native-build risk** (better-sqlite3)
 on the macOS+Linux matrix — pin a version with prebuilds.
@@ -361,7 +362,8 @@ evidence summaries; `request_install` never mutates state.
 - **DA-2 — toolchain: keep bun as installer** (X1): adopt vitest+biome per D17 but do **not** switch
   package manager; bun stays the runtime. Rationale: honors D17's named tools with minimal churn.
 - **DA-3 — exit-code migration** (§9): the old `2=plan-changes / 3=scan-fail` contract is remapped to
-  the brief's `1/2/3/4` in S1. Log the mapping so agent integrations update.
+  the brief's `1/2/3/4` in S1. Core CLI paths now route policy/drift failures to `1`, usage to `2`,
+  network failures to `3`, and sandbox unavailability to `4`.
 - **DA-4 — everything on `main`, push often** (owner directive): overrides the brief's
   one-PR-per-phase process. Phase gates remain as readiness checkpoints; `main` stays green per push.
 - **DA-5 — S0 reframes the front door; the entangled legacy code-kill (commerce model + auth) folds

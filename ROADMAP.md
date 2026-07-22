@@ -28,7 +28,7 @@ policy engine, and the agent-facing `agora serve` discovery tools — see the ph
   commerce/account framing, toolchain to vitest+biome, CI matrix. Legacy account/catalog code is
   retired with S1/S2 replacements per DA-5.
 - **S1** — 🔄 Data model & lockfile: zod schemas + JSON Schema export, purl handling, JCS/SHA-256
-  hashing, CAS + SQLite store, `agora lock verify`.
+  hashing, CAS + SQLite store, `agora lock verify`, and the brief §9 exit-code contract.
 - **S2** — Federation: official/Glama/PulseMCP adapters, dedupe-by-purl, worker `/v1/catalog`.
 - **S3** — Provenance & drift: Sigstore verification, schema/description hashing, rug-pull
   drift rule wired into `sync`/`update`/`doctor`.

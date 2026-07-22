@@ -180,4 +180,23 @@ describe('agora refresh', () => {
       rmSync(dataDir, { recursive: true, force: true });
     }
   });
+
+  test('returns the network exit code when the official sync fails', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'agora-federation-cli-'));
+    try {
+      const throwingFetcher: FetchLike = async () => {
+        throw new Error('offline');
+      };
+      const { io, stdout } = createIo(throwingFetcher, dataDir);
+
+      const code = await runCli(['refresh', '--json'], io);
+      const payload = JSON.parse(stdout.join(''));
+
+      expect(code).toBe(3);
+      expect(payload.source).toBe('official');
+      expect(payload.error).toContain('offline');
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  });
 });

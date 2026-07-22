@@ -25,6 +25,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   hashing.
 - `agora lock verify` now compares `agora.lock` entries against the current manifest in the local
   SQLite store and exits `1` on manifest/tool drift.
+- Core CLI command paths now use the brief §9 exit-code contract: `1` for policy/drift failures,
+  `2` for usage, `3` for network failure, and `4` reserved for sandbox unavailability.
 - Added model contract tests for generated schema freshness, deterministic JCS hashing, purl helpers,
   and focused lock verifier tests for clean verification and drift detection.
 

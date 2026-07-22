@@ -34,6 +34,7 @@ import {
   setAuthState,
   writeAgoraState
 } from '../../state.js';
+import { ExitCode } from '../exit-codes.js';
 import { formatDate, formatSavedList, header } from '../format.js';
 import {
   authStatusPayload,
@@ -117,8 +118,8 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
         ? { path: mPathPreview, servers: newServersPreview ?? [] }
         : undefined
     });
-    if (scanResult && scanResult.summary.fail > 0) return 1;
-    return 0;
+    if (scanResult && scanResult.summary.fail > 0) return ExitCode.POLICY_FORBID;
+    return ExitCode.OK;
   }
 
   if (scanResult) {
@@ -141,7 +142,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
         io.stderr,
         `${style.bold('Refusing install')} — ${fail} scan check(s) failed. Re-run with --skip-scan to override.`
       );
-      return 1;
+      return ExitCode.POLICY_FORBID;
     }
   }
 
@@ -154,7 +155,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
           io.stdout,
           style.dim('This package declares permissions. Re-run with --yes to grant and install.')
         );
-        return 1;
+        return ExitCode.USAGE;
       }
       writeLine(io.stdout, 'Granted permissions:');
       for (const line of renderPermissionLines(plan.permissions)) writeLine(io.stdout, line);
@@ -366,9 +367,9 @@ export const commandMcp: CommandHandler = async (_parsed, io, _style) => {
     await runMcpServer();
   } catch (error) {
     writeLine(io.stderr, error instanceof Error ? error.message : String(error));
-    return 1;
+    return ExitCode.USAGE;
   }
-  return 0;
+  return ExitCode.OK;
 };
 
 export const commandSave: CommandHandler = async (parsed, io, style) => {
@@ -458,7 +459,7 @@ export const commandRemove: CommandHandler = async (parsed, io, style) => {
       removed: result.removed,
       id: targetId
     });
-    return result.removed ? 0 : 1;
+    return result.removed ? ExitCode.OK : ExitCode.USAGE;
   }
 
   if (!result.removed) {
