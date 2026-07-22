@@ -194,12 +194,12 @@ describe('agora use', () => {
     }
   });
 
-  test('use with unknown workflow id exits 1 with an error message', async () => {
+  test('use with unknown workflow id exits 2 with an error message', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-use-unknown-'));
     const { io, stderr } = createIo(dir);
     try {
       const code = await runCli(['use', 'wf-does-not-exist'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(stderr.join('')).toContain('Workflow not found');
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -227,7 +227,7 @@ describe('agora use', () => {
       writeFileSync(configPath, 'this is not json', 'utf8');
       const { io, stderr } = createIo(dir);
       const code = await runCli(['use', 'wf-tdd-cycle'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(stderr.join('')).toContain('Config file is not valid JSON');
     } finally {
       rmSync(dir, { recursive: true, force: true });
@@ -254,10 +254,10 @@ describe('agora use', () => {
 // ── unknown command ──────────────────────────────────────────────────────────
 
 describe('unknown command', () => {
-  test('exits 1 with a helpful message', async () => {
+  test('exits 2 with a helpful message', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['totally-unknown-command'], io);
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('Unknown command');
   });
 });
@@ -324,10 +324,10 @@ describe('agora export', () => {
     expect(payload.count).toBeLessThanOrEqual(3);
   });
 
-  test('export with unknown format exits 1', async () => {
+  test('export with unknown format exits 2', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['export', '--format', 'xml'], io);
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('Unknown format');
   });
 });
@@ -487,10 +487,10 @@ describe('agora config doctor', () => {
 // ── agora config diff ─────────────────────────────────────────────────────────
 
 describe('agora config diff', () => {
-  test('config diff with fewer than 2 paths exits 1', async () => {
+  test('config diff with fewer than 2 paths exits 2', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['config', 'diff'], io);
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('requires two paths');
   });
 
@@ -549,10 +549,10 @@ describe('agora config diff', () => {
 // ── agora notify ──────────────────────────────────────────────────────────────
 
 describe('agora notify', () => {
-  test('notify with no message exits 1', async () => {
+  test('notify with no message exits 2', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['notify'], io);
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('requires a message');
   });
 
@@ -579,24 +579,24 @@ describe('agora notify', () => {
 // ── agora watch ───────────────────────────────────────────────────────────────
 
 describe('agora watch', () => {
-  test('watch with no args exits 1', async () => {
+  test('watch with no args exits 2', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['watch'], io);
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('requires a command');
   });
 
-  test('watch with invalid interval exits 1', async () => {
+  test('watch with invalid interval exits 2', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['watch', 'abc', 'agora', 'trending'], io);
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('Invalid interval');
   });
 
-  test('watch with no command after interval exits 1', async () => {
+  test('watch with no command after interval exits 2', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['watch', '5'], io);
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('requires a command');
   });
 });
@@ -615,10 +615,10 @@ describe('agora show alias', () => {
 // ── agora diff (alias) ────────────────────────────────────────────────────────
 
 describe('agora diff alias', () => {
-  test('diff with <2 args exits 1', async () => {
+  test('diff with <2 args exits 2', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['diff'], io);
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('requires two paths');
   });
 });

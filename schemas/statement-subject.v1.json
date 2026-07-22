@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "purl of the artifact"
+    },
+    "digest": {
+      "type": "object",
+      "properties": {
+        "sha256": {
+          "type": "string",
+          "description": "SHA-256 hash of the artifact"
+        }
+      },
+      "required": ["sha256"],
+      "additionalProperties": false,
+      "description": "Content hash"
+    }
+  },
+  "required": ["name", "digest"],
+  "additionalProperties": false,
+  "description": "Subject of an in-toto Statement"
+}

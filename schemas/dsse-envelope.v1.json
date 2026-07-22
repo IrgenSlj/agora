@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "payloadType": {
+      "type": "string",
+      "const": "application/vnd.in-toto+json",
+      "description": "MIME type for in-toto Statements"
+    },
+    "payload": {
+      "type": "string",
+      "description": "Base64-encoded InTotoStatement"
+    },
+    "signatures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "keyid": {
+            "type": "string",
+            "description": "Identifier of the signing key"
+          },
+          "sig": {
+            "type": "string",
+            "description": "Base64-encoded signature"
+          }
+        },
+        "required": ["keyid", "sig"],
+        "additionalProperties": false
+      },
+      "description": "At least one signature"
+    },
+    "tier": {
+      "type": "string",
+      "enum": ["sigstore", "local", "none"],
+      "description": "How this envelope was signed"
+    }
+  },
+  "required": ["payloadType", "payload", "signatures", "tier"],
+  "additionalProperties": false,
+  "description": "DSSE envelope wrapping an in-toto Statement (AGORA_BRIEF_v2.md §5.4)"
+}

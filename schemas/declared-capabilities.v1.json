@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "fs_read": {
+      "type": "boolean",
+      "description": "Can read files from the filesystem"
+    },
+    "fs_write": {
+      "type": "boolean",
+      "description": "Can write files to the filesystem"
+    },
+    "net_egress": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Hostnames contacted, or ['*'] for any"
+    },
+    "exec": {
+      "type": "boolean",
+      "description": "Spawns processes"
+    },
+    "credentials": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Environment variable names requested"
+    }
+  },
+  "required": ["fs_read", "fs_write", "net_egress", "exec", "credentials"],
+  "additionalProperties": false,
+  "description": "Coarse capability declarations for policy evaluation"
+}

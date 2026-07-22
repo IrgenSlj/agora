@@ -1,6 +1,7 @@
 import { type AcquireResult, acquire, renderAcquireResult } from '../../acquire.js';
 import type { SourceId } from '../../federation/types.js';
 import type { AgentToolId } from '../../stack/types.js';
+import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
@@ -25,8 +26,8 @@ function sourceFlag(value: string | undefined): SourceId | undefined {
 }
 
 /**
- * Exit codes (brief P2, agent-operable contract): 0 ok · 1 usage/error ·
- * 2 warn (gate warned, not accepted) · 3 scan fail (hard block).
+ * Exit codes (brief §9): 0 ok · 1 policy forbid (scan blocked) ·
+ * 2 usage (needs confirmation, errors).
  * `dry_run` always exits 0 — it is a preview and never fails by design;
  * its `scan` field still carries the real verdict for `--json` consumers.
  */
@@ -34,13 +35,15 @@ function acquireExitCode(result: AcquireResult): number {
   switch (result.status) {
     case 'installed':
     case 'dry_run':
-      return 0;
+      return ExitCode.OK;
     case 'needs_confirmation':
-      return 2;
+      return ExitCode.USAGE;
     case 'blocked':
-      return result.scan && result.scan.summary.fail > 0 ? 3 : 1;
+      return result.scan && result.scan.summary.fail > 0
+        ? ExitCode.POLICY_FORBID
+        : ExitCode.POLICY_FORBID;
     default:
-      return 1;
+      return ExitCode.POLICY_FORBID;
   }
 }
 

@@ -38,13 +38,13 @@ function writeManifestToml(cwd: string, content: string): void {
 // ── agora plan ────────────────────────────────────────────────────────────────
 
 describe('agora plan', () => {
-  test('missing manifest -> usage error, exit 1', async () => {
+  test('missing manifest -> usage error, exit 2', async () => {
     const cwd = makeTmp('agora-plan-nomanifest-');
     const home = makeTmp('agora-plan-nomanifest-home-');
     try {
       const { io, err } = createIo(cwd, home);
       const code = await runCli(['plan'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(err()).toContain('agora.toml');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -52,7 +52,7 @@ describe('agora plan', () => {
     }
   });
 
-  test('pending changes -> exit 2, never writes', async () => {
+  test('pending changes -> exit 0, never writes', async () => {
     const cwd = makeTmp('agora-plan-pending-');
     const home = makeTmp('agora-plan-pending-home-');
     try {
@@ -63,7 +63,7 @@ describe('agora plan', () => {
 
       const { io, out } = createIo(cwd, home);
       const code = await runCli(['plan', '--tool', 'opencode'], io);
-      expect(code).toBe(2);
+      expect(code).toBe(0);
       expect(out()).toContain('+ pg');
       expect(out()).toContain('Changes pending');
       // plan is pure read-only — file must be untouched
@@ -94,7 +94,7 @@ describe('agora plan', () => {
     }
   });
 
-  test('--json emits { mode: plan, tools, instructions } and still signals drift via exit code', async () => {
+  test('--json emits { mode: plan, tools, instructions } with pending changes', async () => {
     const cwd = makeTmp('agora-plan-json-');
     const home = makeTmp('agora-plan-json-home-');
     try {
@@ -103,7 +103,7 @@ describe('agora plan', () => {
 
       const { io, out } = createIo(cwd, home);
       const code = await runCli(['plan', '--tool', 'opencode', '--json'], io);
-      expect(code).toBe(2);
+      expect(code).toBe(0);
       const payload = JSON.parse(out());
       expect(payload.mode).toBe('plan');
       expect(Array.isArray(payload.tools)).toBe(true);
@@ -126,7 +126,7 @@ describe('agora plan', () => {
 
       const { io, out } = createIo(cwd, home);
       const code = await runCli(['plan', '--tool', 'claude-code'], io);
-      expect(code).toBe(2);
+      expect(code).toBe(0);
       expect(out()).toContain('+ style');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -184,14 +184,14 @@ describe('agora apply', () => {
     }
   });
 
-  test('invalid --tool returns exit 1, nothing written', async () => {
+  test('invalid --tool returns exit 2, nothing written', async () => {
     const cwd = makeTmp('agora-apply-badtool-');
     const home = makeTmp('agora-apply-badtool-home-');
     try {
       writeManifestToml(cwd, '[mcp.pg]\ncommand = ["npx", "pg"]\n');
       const { io, err } = createIo(cwd, home);
       const code = await runCli(['apply', '--tool', 'nonexistent-tool'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(err()).toContain('Unknown tool');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -203,7 +203,7 @@ describe('agora apply', () => {
 // ── sync --from: the scan gate blocks a poisoned profile ──────────────────────
 
 describe('agora sync --from: scan gate blocks a poisoned entry', () => {
-  test('an mcp entry pointing at a nonexistent npm package fails npm_exists -> exit 3, nothing written', async () => {
+  test('an mcp entry pointing at a nonexistent npm package fails npm_exists -> exit 1, nothing written', async () => {
     const cwd = makeTmp('agora-gate-poisoned-');
     const home = makeTmp('agora-gate-poisoned-home-');
     try {
@@ -234,7 +234,7 @@ describe('agora sync --from: scan gate blocks a poisoned entry', () => {
         io
       );
 
-      expect(code).toBe(3);
+      expect(code).toBe(1);
       expect(out()).toContain('gate blocked');
       expect(out()).toContain('evil-server');
 
@@ -262,7 +262,7 @@ describe('agora sync --from: scan gate blocks a poisoned entry', () => {
       (io as any).fetcher = fakeFetcher;
 
       const code = await runCli(['sync', '--from', sharedPath, '--tool', 'opencode', '--json'], io);
-      expect(code).toBe(3);
+      expect(code).toBe(1);
       const payload = JSON.parse(out());
       expect(payload.mode).toBe('gate-blocked');
       expect(Array.isArray(payload.blocked)).toBe(true);
@@ -327,7 +327,7 @@ describe('agora sync --from: scan gate blocks a poisoned entry', () => {
       (io as any).fetcher = fakeFetcher;
 
       const code = await runCli(['plan', '--from', sharedPath, '--tool', 'opencode'], io);
-      expect(code).toBe(3);
+      expect(code).toBe(1);
       expect(out()).toContain('gate blocked');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -354,7 +354,7 @@ describe('agora sync --from: scan gate blocks a poisoned entry', () => {
       (io as any).fetcher = fakeFetcher;
 
       const code = await runCli(['apply', '--from', sharedPath, '--tool', 'opencode'], io);
-      expect(code).toBe(3);
+      expect(code).toBe(1);
       expect(readFileSync(filePath, 'utf8')).toBe(original);
     } finally {
       rmSync(cwd, { recursive: true, force: true });

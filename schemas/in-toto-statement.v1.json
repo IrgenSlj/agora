@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "_type": {
+      "type": "string",
+      "const": "https://in-toto.io/Statement/v1",
+      "description": "in-toto Statement type URI"
+    },
+    "subject": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "purl of the artifact"
+          },
+          "digest": {
+            "type": "object",
+            "properties": {
+              "sha256": {
+                "type": "string",
+                "description": "SHA-256 hash of the artifact"
+              }
+            },
+            "required": ["sha256"],
+            "additionalProperties": false,
+            "description": "Content hash"
+          }
+        },
+        "required": ["name", "digest"],
+        "additionalProperties": false,
+        "description": "Subject of an in-toto Statement"
+      },
+      "description": "Artifacts this statement attests about"
+    },
+    "predicateType": {
+      "type": "string",
+      "enum": [
+        "https://agora-hub.dev/attestations/declared-manifest/v1",
+        "https://agora-hub.dev/attestations/observed-profile/v1",
+        "https://agora-hub.dev/attestations/provenance-verification/v1"
+      ]
+    },
+    "predicate": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {},
+      "description": "The attestation data (DeclaredManifest, ObservedProfile, or provenance result)"
+    }
+  },
+  "required": ["_type", "subject", "predicateType", "predicate"],
+  "additionalProperties": false,
+  "description": "In-toto Statement (AGORA_BRIEF_v2.md §5.4)"
+}

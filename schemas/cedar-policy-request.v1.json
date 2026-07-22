@@ -1,0 +1,124 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "principal": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "Project"
+        },
+        "id": {
+          "type": "string",
+          "description": "Project identifier (e.g. directory path or name)"
+        }
+      },
+      "required": ["type", "id"],
+      "additionalProperties": false,
+      "description": "Cedar Project entity — the principal in policy evaluation"
+    },
+    "action": {
+      "type": "string",
+      "enum": ["Install", "Sync", "Serve"]
+    },
+    "resource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "Artifact"
+        },
+        "id": {
+          "type": "string",
+          "description": "purl of the artifact"
+        },
+        "attributes": {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
+              "description": "Artifact kind (mcp-server or agent-skill)"
+            },
+            "publisher": {
+              "type": "object",
+              "properties": {
+                "namespace": {
+                  "type": "string"
+                },
+                "identity_verified": {
+                  "type": "boolean"
+                }
+              },
+              "required": ["namespace", "identity_verified"],
+              "additionalProperties": false,
+              "description": "Cedar Publisher entity attributes"
+            },
+            "provenance_verified": {
+              "type": "boolean"
+            },
+            "attestation_tier": {
+              "type": "string",
+              "description": "\"sigstore\" | \"local\" | \"none\""
+            },
+            "revoked": {
+              "type": "boolean"
+            },
+            "canary_triggered": {
+              "type": "boolean"
+            },
+            "fs_read": {
+              "type": "boolean"
+            },
+            "fs_write": {
+              "type": "boolean"
+            },
+            "exec": {
+              "type": "boolean"
+            },
+            "net_hosts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Set of contacted hostnames"
+            },
+            "divergence_max": {
+              "type": "string",
+              "description": "\"none\" | \"info\" | \"warn\" | \"critical\""
+            }
+          },
+          "required": [
+            "kind",
+            "publisher",
+            "provenance_verified",
+            "attestation_tier",
+            "revoked",
+            "canary_triggered",
+            "fs_read",
+            "fs_write",
+            "exec",
+            "net_hosts",
+            "divergence_max"
+          ],
+          "additionalProperties": false,
+          "description": "Cedar Artifact entity attributes (AGORA_BRIEF_v2.md §7.1)"
+        }
+      },
+      "required": ["type", "id", "attributes"],
+      "additionalProperties": false,
+      "description": "Cedar Artifact entity — the resource in policy evaluation"
+    },
+    "context": {
+      "description": "Additional context for policy evaluation",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {}
+    }
+  },
+  "required": ["principal", "action", "resource"],
+  "additionalProperties": false,
+  "description": "Input to Cedar policy evaluation"
+}

@@ -1,20 +1,18 @@
 import { findMarketplaceItem } from '../../marketplace.js';
 import { scanItem } from '../../scan.js';
+import { ExitCode } from '../exit-codes.js';
 import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { status } from '../pages/components.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 /**
- * Exit codes (brief P2, agent-operable contract): 0 pass · 1 usage/error ·
- * 2 warn (gate warned) · 3 scan fail (hard block). Applies identically to
- * `--json` and the human-readable render — the gate must be machine-readable
- * either way.
+ * Exit codes (brief §9): 0 pass/ok · 1 policy forbid (scan fail) ·
+ * 2 usage error. Warnings are informational (0).
  */
 function scanExitCode(summary: { pass: number; warn: number; fail: number }): number {
-  if (summary.fail > 0) return 3;
-  if (summary.warn > 0) return 2;
-  return 0;
+  if (summary.fail > 0) return ExitCode.POLICY_FORBID;
+  return ExitCode.OK;
 }
 
 export const commandScan: CommandHandler = async (parsed, io, style) => {

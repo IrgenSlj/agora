@@ -12,7 +12,8 @@
       "**/*.json",
       "**/*.jsonc",
       "!**/dist",
-      "!**/node_modules"
+      "!**/node_modules",
+      "!**/schemas"
     ]
   },
   "formatter": {

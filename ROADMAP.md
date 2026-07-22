@@ -3,7 +3,7 @@
 **Direction: LOCKED** by [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md) — Agora is **the trust plane
 for agentic tooling**. Phase-by-phase execution lives in
 [`docs/V2_EXECUTION_PLAN.md`](./docs/V2_EXECUTION_PLAN.md); that document is the *how*, the brief
-is the *what*. **Current phase: S0 (repo prep).**
+is the *what*. **Current phase: S1 (data model & lockfile).**
 
 Verified external-API corrections live in [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md);
 shipped work is in [`CHANGELOG.md`](./CHANGELOG.md).
@@ -24,9 +24,9 @@ policy engine, and the agent-facing `agora serve` discovery tools — see the ph
 
 ## Phases ahead
 
-- **S0** — Hygiene & identity: rename to `agora-hub`, README/docs rewrite, kill commerce/auth code,
-  toolchain to vitest+biome, CI matrix.
-- **S1** — Data model & lockfile: zod schemas + JSON Schema export, purl handling, CAS + SQLite
+- **S0** — ✅ Hygiene & identity: rename to `agora-hub`, README/docs rewrite, kill commerce/auth
+  code, toolchain to vitest+biome, CI matrix.
+- **S1** — 🔄 Data model & lockfile: zod schemas + JSON Schema export, purl handling, CAS + SQLite
   store, `agora lock verify`.
 - **S2** — Federation: official/Glama/PulseMCP adapters, dedupe-by-purl, worker `/v1/catalog`.
 - **S3** — Provenance & drift: Sigstore verification, schema/description hashing, rug-pull

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "files_read": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Normalized paths of files read (capped at 200)"
+    },
+    "files_written": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Normalized paths of files written"
+    },
+    "hosts_contacted": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "Hostname or IP contacted"
+          },
+          "port": {
+            "type": "number",
+            "description": "Port number"
+          },
+          "during": {
+            "type": "string",
+            "enum": ["startup", "handshake", "tool-call"],
+            "description": "Phase when contact occurred"
+          }
+        },
+        "required": ["host", "port", "during"],
+        "additionalProperties": false,
+        "description": "A network connection observed during vetting"
+      },
+      "description": "Network connections observed"
+    },
+    "processes_spawned": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "argv[0] of spawned processes"
+    },
+    "env_read": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Environment variable names accessed (best effort)"
+    },
+    "canary_triggered": {
+      "type": "boolean",
+      "description": "ANY use of injected canary credentials"
+    }
+  },
+  "required": [
+    "files_read",
+    "files_written",
+    "hosts_contacted",
+    "processes_spawned",
+    "env_read",
+    "canary_triggered"
+  ],
+  "additionalProperties": false,
+  "description": "Raw observations from sandboxed execution"
+}

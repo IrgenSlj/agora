@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "namespace": {
+      "type": "string",
+      "description": "e.g. reverse-DNS from official registry, npm scope, or github owner"
+    },
+    "identity_verified": {
+      "type": "boolean",
+      "description": "provenance chain ties publisher to source (D2: evidence over scores)"
+    }
+  },
+  "required": ["namespace", "identity_verified"],
+  "additionalProperties": false
+}

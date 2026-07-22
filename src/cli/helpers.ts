@@ -12,6 +12,7 @@ import {
   writeAgoraState
 } from '../state.js';
 import type { Tutorial } from '../types.js';
+import { ExitCode } from './exit-codes.js';
 import type { CliIo, OutputStream, ParsedArgs } from './flags.js';
 
 // ── I/O helpers ──────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ export function writeJson(stream: OutputStream, value: unknown): void {
 
 export function usageError(io: CliIo, message: string): number {
   writeLine(io.stderr, message);
-  return 1;
+  return ExitCode.USAGE;
 }
 
 /**

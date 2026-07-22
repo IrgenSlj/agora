@@ -105,7 +105,7 @@ describe('agora search --json — federated shape', () => {
     try {
       const { io, stderr } = createIo(pageFetcher([]), dataDir);
       const code = await runCli(['search', 'postgres', '--source', 'bogus'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(stderr.join('')).toContain('Unknown --source');
     } finally {
       rmSync(dataDir, { recursive: true, force: true });
@@ -174,7 +174,7 @@ describe('agora refresh', () => {
     try {
       const { io, stderr } = createIo(pageFetcher([]), dataDir);
       const code = await runCli(['refresh', '--source', 'local'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(stderr.join('')).toContain('only supports --source official');
     } finally {
       rmSync(dataDir, { recursive: true, force: true });

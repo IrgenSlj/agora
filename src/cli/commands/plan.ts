@@ -1,3 +1,4 @@
+import { ExitCode } from '../exit-codes.js';
 import { writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import {
@@ -13,9 +14,8 @@ import type { CommandHandler } from './types.js';
 /**
  * `agora plan` — pure, read-only diff between agora.toml and the real config
  * files/instruction artifacts of every target tool. NEVER writes anything.
- * Exit codes (agent-operable contract, brief §6.3): 0 no changes pending,
- * 2 changes pending (run `agora apply`), 1 error, 3 scan-gate blocked
- * (only reachable with --from).
+ * Exit codes (brief §9): 0 ok (plan output communicates changes),
+ * 1 policy forbid (gate blocked), 2 usage error.
  */
 export const commandPlan: CommandHandler = async (parsed, io, style) => {
   const theme = cliTheme(style, io);
@@ -31,7 +31,7 @@ export const commandPlan: CommandHandler = async (parsed, io, style) => {
       } else {
         writeLine(io.stdout, formatGateBlocked(gate, theme));
       }
-      return 3;
+      return ExitCode.POLICY_FORBID;
     }
   }
 
@@ -40,7 +40,7 @@ export const commandPlan: CommandHandler = async (parsed, io, style) => {
 
   if (parsed.flags.json) {
     writeJson(io.stdout, { mode: 'plan', tools: plan.servers, instructions: plan.instructions });
-    return hasChanges ? 2 : 0;
+    return ExitCode.OK;
   }
 
   writeLine(io.stdout, formatToolPlans('agora plan — MCP servers', plan.servers, theme));
@@ -50,8 +50,8 @@ export const commandPlan: CommandHandler = async (parsed, io, style) => {
 
   if (hasChanges) {
     writeLine(io.stdout, theme.muted('Changes pending. Run `agora apply` to reconcile.'));
-    return 2;
+  } else {
+    writeLine(io.stdout, theme.muted('No changes. Stack matches agora.toml.'));
   }
-  writeLine(io.stdout, theme.muted('No changes. Stack matches agora.toml.'));
-  return 0;
+  return ExitCode.OK;
 };

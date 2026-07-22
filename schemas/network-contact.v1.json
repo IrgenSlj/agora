@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "host": {
+      "type": "string",
+      "description": "Hostname or IP contacted"
+    },
+    "port": {
+      "type": "number",
+      "description": "Port number"
+    },
+    "during": {
+      "type": "string",
+      "enum": ["startup", "handshake", "tool-call"],
+      "description": "Phase when contact occurred"
+    }
+  },
+  "required": ["host", "port", "during"],
+  "additionalProperties": false,
+  "description": "A network connection observed during vetting"
+}

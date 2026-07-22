@@ -269,7 +269,7 @@ describe('acquire() gate — clean fixture installs with zero false positives', 
 });
 
 describe('acquire CLI — end-to-end through the real federation wiring', () => {
-  test('a raw official-registry "deleted" wire response exits 3 and writes nothing', async () => {
+  test('a raw official-registry "deleted" wire response exits 1 and writes nothing', async () => {
     const dir = tempDir();
     const configPath = join(dir, 'opencode.json');
     const stdout: string[] = [];
@@ -313,7 +313,7 @@ describe('acquire CLI — end-to-end through the real federation wiring', () => 
         io
       );
 
-      expect(code).toBe(3);
+      expect(code).toBe(1);
       expect(existsSync(configPath)).toBe(false);
       const parsed = JSON.parse(stdout.join(''));
       expect(parsed.status).toBe('blocked');

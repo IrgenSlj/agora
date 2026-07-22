@@ -5,8 +5,8 @@ the brief is the *what*. Where they disagree about intent, the brief wins; where
 third-party assumptions diverge from build-time reality, we log a **Decision Amendment (DA)** in
 the brief's §14 and an entry in `docs/OPEN_QUESTIONS.md`, then take the smallest adaptation.
 
-**Status:** S0 code started — toolchain migrated, README/docs rewritten, CI matrix expanded,
-user-facing "marketplace" copy stripped, biome migrated. Updated per session.
+**Status:** S0 complete — toolchain migrated, README/docs rewritten, CI matrix expanded,
+user-facing "marketplace" copy stripped, biome migrated. S1 (data model & lockfile) in progress.
 
 ---
 

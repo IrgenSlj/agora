@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "decision": {
+      "type": "string",
+      "enum": ["Allow", "Deny"]
+    },
+    "determining_policies": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "The Cedar policies that determined this decision"
+    }
+  },
+  "required": ["decision", "determining_policies"],
+  "additionalProperties": false,
+  "description": "Output of Cedar policy evaluation"
+}

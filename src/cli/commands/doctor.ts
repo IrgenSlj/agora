@@ -1,6 +1,7 @@
 import { checkStack } from '../../stack/doctor.js';
 import { ALL_ADAPTERS, detectTools, readAllServers } from '../../stack/registry.js';
 import type { AgentToolId } from '../../stack/types.js';
+import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { status } from '../pages/components.js';
 import { cliTheme } from '../theme.js';
@@ -113,6 +114,6 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
     `${theme.success(`ok: ${ok}`)}  ${theme.warning(`warn: ${warn}`)}  ${theme.error(`error: ${error}`)}`
   );
 
-  if (strict && error > 0) return 1;
-  return 0;
+  if (strict && error > 0) return ExitCode.POLICY_FORBID;
+  return ExitCode.OK;
 };

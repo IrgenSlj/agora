@@ -29,7 +29,7 @@ describe('agora try', () => {
     try {
       const { io, err } = makeIo(cwd);
       const code = await runCli(['try'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(err()).toMatch(/try requires an item id/);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -42,7 +42,7 @@ describe('agora try', () => {
       clearMarketplaceItemsCache();
       const { io, err } = makeIo(cwd);
       const code = await runCli(['try', 'zzz-no-such-item-xyz-999'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(err()).toMatch(/Item not found/);
     } finally {
       rmSync(cwd, { recursive: true, force: true });

@@ -9,6 +9,7 @@ import {
   type ToolSyncPlan
 } from '../../stack/sync.js';
 import type { AgentToolId, StackEnv } from '../../stack/types.js';
+import { ExitCode } from '../exit-codes.js';
 import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import type { Theme } from '../theme.js';
 import { cliTheme } from '../theme.js';
@@ -148,7 +149,7 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
     if (!gate.ok) {
       if (parsed.flags.json) {
         writeJson(io.stdout, { mode: 'gate-blocked', blocked: gate.blocked });
-        return 3;
+        return ExitCode.POLICY_FORBID;
       }
       writeLine(io.stdout, theme.accent('agora sync — scan gate blocked'));
       writeLine(io.stdout);
@@ -160,7 +161,7 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
       }
       writeLine(io.stdout);
       writeLine(io.stdout, theme.muted('Nothing written. Fix the flagged entries and re-run.'));
-      return 3;
+      return ExitCode.POLICY_FORBID;
     }
   }
 

@@ -165,7 +165,7 @@ describe('agora integrate', () => {
     try {
       const { io, err } = createIo(cwd, home);
       const code = await runCli(['integrate', 'not-a-real-harness'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(err()).toContain('Unknown harness');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -179,7 +179,7 @@ describe('agora integrate', () => {
     try {
       const { io, err } = createIo(cwd, home);
       const code = await runCli(['integrate', 'cursor', '--all'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(err()).toContain('not both');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
@@ -193,7 +193,7 @@ describe('agora integrate', () => {
     try {
       const { io, err } = createIo(cwd, home);
       const code = await runCli(['integrate'], io);
-      expect(code).toBe(1);
+      expect(code).toBe(2);
       expect(err()).toContain('--all');
     } finally {
       rmSync(cwd, { recursive: true, force: true });

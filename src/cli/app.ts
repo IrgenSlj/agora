@@ -14,6 +14,7 @@ import * as initModule from './commands/init.js';
 import * as installedModule from './commands/installed.js';
 import * as integrateModule from './commands/integrate.js';
 import * as learn from './commands/learn.js';
+import * as lockModule from './commands/lock.js';
 import * as marketplace from './commands/marketplace.js';
 import * as newsModule from './commands/news.js';
 import * as notifyModule from './commands/notify.js';
@@ -29,6 +30,7 @@ import type { CommandMap } from './commands/types.js';
 import * as watchModule from './commands/watch.js';
 import * as welcomeModule from './commands/welcome.js';
 import { COMMANDS, renderManual } from './commands-meta.js';
+import { ExitCode } from './exit-codes.js';
 import { type CliIo, parseArgs } from './flags.js';
 import { usage, welcome } from './format.js';
 import { isInteractive, writeLine } from './helpers.js';
@@ -181,6 +183,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       try: tryModule.commandTry,
       capabilities: capabilitiesModule.commandCapabilities,
       integrate: integrateModule.commandIntegrate,
+      lock: lockModule.commandLock,
       bookmarks: operations.commandBookmarks,
       welcome: welcomeModule.commandWelcome,
       auth: operations.commandAuth,
@@ -206,7 +209,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
         if (!meta) {
           writeLine(io.stderr, `Unknown command: ${helpTarget}`);
           writeLine(io.stderr, 'Run `agora help` for a list of commands.');
-          return 1;
+          return ExitCode.USAGE;
         }
         writeLine(io.stdout, commandManual(helpTarget));
       } else {
@@ -227,10 +230,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     const suggestion = nearestCommand(parsed.command);
     if (suggestion) writeLine(io.stderr, `Did you mean: ${suggestion}?`);
     writeLine(io.stderr, 'Run agora help for usage.');
-    return 1;
+    return ExitCode.USAGE;
   } catch (error) {
     writeLine(io.stderr, error instanceof Error ? error.message : String(error));
-    return 1;
+    return ExitCode.USAGE;
   }
 }
 

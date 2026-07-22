@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier (e.g. AGR-2026-0007)"
+    },
+    "purl_pattern": {
+      "type": "string",
+      "description": "Purl pattern to match (e.g. pkg:npm/postmark-mcp matches all versions)"
+    },
+    "versions": {
+      "description": "Version range constraint (e.g. <=1.0.16)",
+      "type": "string"
+    },
+    "reason": {
+      "type": "string",
+      "description": "Reason for revocation (e.g. credential-exfiltration)"
+    },
+    "severity": {
+      "type": "string",
+      "enum": ["critical", "high", "advisory"]
+    },
+    "refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      },
+      "description": "Reference URLs (advisories, discussions)"
+    },
+    "added_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+      "description": "ISO timestamp when added to the feed"
+    }
+  },
+  "required": ["id", "purl_pattern", "reason", "severity", "refs", "added_at"],
+  "additionalProperties": false,
+  "description": "A single revocation entry (AGORA_BRIEF_v2.md §5.6)"
+}

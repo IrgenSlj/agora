@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "lockfile_version": {
+      "type": "number",
+      "const": 1,
+      "description": "Lockfile schema version"
+    },
+    "generated_by": {
+      "type": "string",
+      "description": "Agora version that generated this lockfile"
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "purl": {
+            "type": "string",
+            "description": "Package URL — primary key"
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["mcp-server", "agent-skill"]
+          },
+          "integrity": {
+            "type": "object",
+            "properties": {
+              "tarball_sha256": {
+                "type": "string",
+                "description": "SHA-256 hash of the downloaded tarball"
+              },
+              "manifest_sha256": {
+                "type": "string",
+                "description": "JCS hash of the declared manifest"
+              }
+            },
+            "required": ["tarball_sha256", "manifest_sha256"],
+            "additionalProperties": false,
+            "description": "Content integrity hashes"
+          },
+          "provenance": {
+            "type": "object",
+            "properties": {
+              "verified": {
+                "type": "boolean",
+                "description": "Whether provenance was verified"
+              },
+              "builder": {
+                "description": "Builder identity",
+                "type": "string"
+              },
+              "source_repo": {
+                "description": "Source repository",
+                "type": "string"
+              },
+              "rekor_log_index": {
+                "description": "Rekor transparency log entry",
+                "type": "number"
+              }
+            },
+            "required": ["verified"],
+            "additionalProperties": false,
+            "description": "Provenance verification result"
+          },
+          "tools": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Tool name"
+                },
+                "description_sha256": {
+                  "type": "string",
+                  "description": "SHA-256 of tool description"
+                },
+                "input_schema_sha256": {
+                  "type": "string",
+                  "description": "JCS hash of input schema"
+                }
+              },
+              "required": ["name", "description_sha256", "input_schema_sha256"],
+              "additionalProperties": false
+            },
+            "description": "Declared tools with their hashes"
+          },
+          "policy_verdict": {
+            "type": "object",
+            "properties": {
+              "decision": {
+                "type": "string",
+                "enum": ["allow", "forbid"]
+              },
+              "policy_sha256": {
+                "type": "string",
+                "description": "SHA-256 hash of the policy files used for evaluation"
+              },
+              "evaluated_at": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "description": "ISO timestamp of evaluation"
+              },
+              "determining_rule": {
+                "description": "The Cedar rule that determined the verdict",
+                "type": "string"
+              }
+            },
+            "required": ["decision", "policy_sha256", "evaluated_at"],
+            "additionalProperties": false,
+            "description": "Outcome of Cedar policy evaluation for an artifact"
+          },
+          "hosts": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Hosts where this artifact is synced (e.g. claudecode, cursor)"
+          },
+          "state": {
+            "description": "Current state — quarantined if drift or revocation detected",
+            "type": "string",
+            "enum": ["installed", "quarantined"]
+          }
+        },
+        "required": ["purl", "kind", "integrity", "provenance", "tools", "policy_verdict", "hosts"],
+        "additionalProperties": false,
+        "description": "A single artifact entry in the lockfile (AGORA_BRIEF_v2.md §5.5)"
+      },
+      "description": "All installed artifacts"
+    }
+  },
+  "required": ["lockfile_version", "generated_by", "artifacts"],
+  "additionalProperties": false,
+  "description": "Lockfile — machine truth of installed artifacts (AGORA_BRIEF_v2.md §5.5)"
+}

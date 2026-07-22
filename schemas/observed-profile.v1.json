@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "purl": {
+      "type": "string",
+      "description": "Package URL — matches the ArtifactRef"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version"
+    },
+    "vet_level": {
+      "type": "string",
+      "enum": ["L0-offline", "L1-proxied-net"]
+    },
+    "backend": {
+      "type": "string",
+      "enum": ["docker", "bwrap", "sandbox-exec"]
+    },
+    "duration_ms": {
+      "type": "number",
+      "description": "Total vet duration in milliseconds"
+    },
+    "handshake_ok": {
+      "type": "boolean",
+      "description": "Whether MCP initialize + tools/list succeeded"
+    },
+    "tools_listed": {
+      "type": "number",
+      "description": "Number of tools returned by tools/list"
+    },
+    "observed": {
+      "type": "object",
+      "properties": {
+        "files_read": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Normalized paths of files read (capped at 200)"
+        },
+        "files_written": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Normalized paths of files written"
+        },
+        "hosts_contacted": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string",
+                "description": "Hostname or IP contacted"
+              },
+              "port": {
+                "type": "number",
+                "description": "Port number"
+              },
+              "during": {
+                "type": "string",
+                "enum": ["startup", "handshake", "tool-call"],
+                "description": "Phase when contact occurred"
+              }
+            },
+            "required": ["host", "port", "during"],
+            "additionalProperties": false,
+            "description": "A network connection observed during vetting"
+          },
+          "description": "Network connections observed"
+        },
+        "processes_spawned": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "argv[0] of spawned processes"
+        },
+        "env_read": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Environment variable names accessed (best effort)"
+        },
+        "canary_triggered": {
+          "type": "boolean",
+          "description": "ANY use of injected canary credentials"
+        }
+      },
+      "required": [
+        "files_read",
+        "files_written",
+        "hosts_contacted",
+        "processes_spawned",
+        "env_read",
+        "canary_triggered"
+      ],
+      "additionalProperties": false,
+      "description": "Raw observations from sandboxed execution"
+    },
+    "divergence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "undeclared-egress",
+              "undeclared-fs-write",
+              "undeclared-exec",
+              "undeclared-credential-use",
+              "canary-exfiltration"
+            ]
+          },
+          "detail": {
+            "type": "string",
+            "description": "Human-readable description of the divergence"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["info", "warn", "critical"]
+          }
+        },
+        "required": ["kind", "detail", "severity"],
+        "additionalProperties": false,
+        "description": "Computed difference between declared capabilities and observed behavior"
+      },
+      "description": "Differences between declared and observed behavior"
+    }
+  },
+  "required": [
+    "purl",
+    "version",
+    "vet_level",
+    "backend",
+    "duration_ms",
+    "handshake_ok",
+    "tools_listed",
+    "observed",
+    "divergence"
+  ],
+  "additionalProperties": false,
+  "description": "What the artifact actually did during sandboxed execution (AGORA_BRIEF_v2.md §5.3)"
+}

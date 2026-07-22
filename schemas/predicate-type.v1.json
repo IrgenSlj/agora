@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "string",
+  "enum": [
+    "https://agora-hub.dev/attestations/declared-manifest/v1",
+    "https://agora-hub.dev/attestations/observed-profile/v1",
+    "https://agora-hub.dev/attestations/provenance-verification/v1"
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "purl": {
+      "type": "string",
+      "description": "Package URL — matches the ArtifactRef"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version"
+    },
+    "transports": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["stdio", "streamable-http"]
+      },
+      "description": "Supported MCP transports"
+    },
+    "auth_model": {
+      "type": "string",
+      "enum": ["none", "static-key", "oauth2.1", "oidc", "unknown"],
+      "description": "How the artifact authenticates"
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Tool name as reported by the artifact"
+          },
+          "description_sha256": {
+            "type": "string",
+            "description": "SHA-256 hash of the raw description text"
+          },
+          "input_schema_sha256": {
+            "type": "string",
+            "description": "JCS (RFC 8785) hash of the JSON schema for inputs"
+          },
+          "annotations": {
+            "description": "Optional annotations from the artifact",
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "source": {
+            "type": "string",
+            "enum": ["registry", "handshake", "inferred"],
+            "description": "Where this tool declaration came from"
+          }
+        },
+        "required": ["name", "description_sha256", "input_schema_sha256", "source"],
+        "additionalProperties": false,
+        "description": "A declared tool from the artifact's capability manifest"
+      },
+      "description": "Tools declared by the artifact"
+    },
+    "declared_capabilities": {
+      "type": "object",
+      "properties": {
+        "fs_read": {
+          "type": "boolean",
+          "description": "Can read files from the filesystem"
+        },
+        "fs_write": {
+          "type": "boolean",
+          "description": "Can write files to the filesystem"
+        },
+        "net_egress": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Hostnames contacted, or ['*'] for any"
+        },
+        "exec": {
+          "type": "boolean",
+          "description": "Spawns processes"
+        },
+        "credentials": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Environment variable names requested"
+        }
+      },
+      "required": ["fs_read", "fs_write", "net_egress", "exec", "credentials"],
+      "additionalProperties": false,
+      "description": "Coarse capability declarations for policy evaluation"
+    },
+    "manifest_sha256": {
+      "type": "string",
+      "description": "JCS (RFC 8785) hash of everything above — the rug-pull tripwire"
+    }
+  },
+  "required": [
+    "purl",
+    "version",
+    "transports",
+    "auth_model",
+    "tools",
+    "declared_capabilities",
+    "manifest_sha256"
+  ],
+  "additionalProperties": false,
+  "description": "What the artifact declares about itself (AGORA_BRIEF_v2.md §5.2)"
+}

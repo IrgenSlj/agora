@@ -141,7 +141,7 @@ describe('CLI commands', () => {
     const { io, stderr } = createIo();
     const code = await runCli(['browse', 'missing-package'], io);
 
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('Item not found');
   });
 
@@ -864,11 +864,11 @@ describe('help system', () => {
     expect(out).toContain('--write');
   });
 
-  test('agora help bogus exits 1 with error on stderr', async () => {
+  test('agora help bogus exits 2 with error on stderr', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['help', 'bogus'], io);
 
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('Unknown command: bogus');
   });
 
@@ -890,10 +890,10 @@ describe('help system', () => {
     expect(payload.snippet).toContain('Install:');
   });
 
-  test('agora share unknown id exits 1', async () => {
+  test('agora share unknown id exits 2', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['share', 'nope-no-such-thing'], io);
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('Unknown item');
   });
 
@@ -901,7 +901,7 @@ describe('help system', () => {
     const { io, stderr } = createIo();
     const code = await runCli(['serch', 'mcp'], io);
 
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     const err = stderr.join('');
     expect(err).toContain('Unknown command: serch');
     expect(err).toContain('Did you mean: search');
@@ -911,7 +911,7 @@ describe('help system', () => {
     const { io, stderr } = createIo();
     const code = await runCli(['xyzzy'], io);
 
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     const err = stderr.join('');
     expect(err).toContain('Unknown command: xyzzy');
     expect(err).not.toContain('Did you mean');
@@ -946,15 +946,15 @@ describe('help system', () => {
     const { io, stderr } = createIo();
     const code = await runCli(['open'], io);
 
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('open requires an item id');
   });
 
-  test('open unknown id exits 1 with error', async () => {
+  test('open unknown id exits 2 with error', async () => {
     const { io, stderr } = createIo();
     const code = await runCli(['open', 'no-such-item-xyz'], io);
 
-    expect(code).toBe(1);
+    expect(code).toBe(2);
     expect(stderr.join('')).toContain('Unknown item: no-such-item-xyz');
   });
 

@@ -288,5 +288,22 @@ export const COMMANDS: CommandMeta[] = [
       'agora integrate cursor --dry-run',
       'agora integrate --all --json'
     ]
+  },
+  {
+    name: 'lock',
+    group: 'Stack',
+    summary: 'Manage the lockfile (agora.lock) — verify integrity and detect drift',
+    usage: 'agora lock verify [--json]',
+    details:
+      'Recomputes all hashes in the lockfile (manifest_sha256, per-tool description and schema hashes) ' +
+      'and compares them against the stored values. ANY mismatch indicates drift — the artifact may have ' +
+      'been modified after installation (rug-pull detection, §5.5). Exits 1 on drift, 0 on clean verification.',
+    flags: [
+      {
+        flag: '--json',
+        description: 'Output { ok, lockfile_version, generated_by, artifacts } as JSON'
+      }
+    ],
+    examples: ['agora lock verify', 'agora lock verify --json']
   }
 ];

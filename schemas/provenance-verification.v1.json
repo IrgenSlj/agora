@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "verified": {
+      "type": "boolean",
+      "description": "Whether provenance was successfully verified"
+    },
+    "builder": {
+      "description": "Builder identity (e.g. 'github-actions')",
+      "type": "string"
+    },
+    "source_repo": {
+      "description": "Source repository URL",
+      "type": "string"
+    },
+    "commit": {
+      "description": "Git commit hash",
+      "type": "string"
+    },
+    "reason": {
+      "description": "Why verification succeeded or failed",
+      "type": "string",
+      "enum": [
+        "provenance-verified",
+        "no-provenance",
+        "publisher-mismatch",
+        "network-error",
+        "verification-failed"
+      ]
+    },
+    "rekor_log_index": {
+      "description": "Rekor transparency log entry index",
+      "type": "number"
+    }
+  },
+  "required": ["verified"],
+  "additionalProperties": false,
+  "description": "Provenance verification result (AGORA_BRIEF_v2.md §6.1)"
+}

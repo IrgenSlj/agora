@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "namespace": {
+      "type": "string"
+    },
+    "identity_verified": {
+      "type": "boolean"
+    }
+  },
+  "required": ["namespace", "identity_verified"],
+  "additionalProperties": false,
+  "description": "Cedar Publisher entity attributes"
+}

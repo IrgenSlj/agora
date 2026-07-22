@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { findMarketplaceItem } from '../../marketplace.js';
+import { ExitCode } from '../exit-codes.js';
 import { usageError, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
@@ -33,7 +34,7 @@ export const commandOpen: CommandHandler = async (parsed, io, _style) => {
   const item = findMarketplaceItem(id);
   if (!item) {
     writeLine(io.stderr, `Unknown item: ${id}`);
-    return 1;
+    return ExitCode.USAGE;
   }
 
   const url =
@@ -44,7 +45,7 @@ export const commandOpen: CommandHandler = async (parsed, io, _style) => {
 
   if (!url) {
     writeLine(io.stderr, `No URL available for ${id}`);
-    return 1;
+    return ExitCode.USAGE;
   }
 
   if (parsed.flags.json) {
@@ -69,7 +70,7 @@ export const commandShare: CommandHandler = async (parsed, io, _style) => {
   const item = findMarketplaceItem(id);
   if (!item) {
     writeLine(io.stderr, `Unknown item: ${id}`);
-    return 1;
+    return ExitCode.USAGE;
   }
 
   const isPackage = item.kind === 'package';

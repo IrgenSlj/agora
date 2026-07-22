@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "type": {
+      "type": "string",
+      "const": "Project"
+    },
+    "id": {
+      "type": "string",
+      "description": "Project identifier (e.g. directory path or name)"
+    }
+  },
+  "required": ["type", "id"],
+  "additionalProperties": false,
+  "description": "Cedar Project entity — the principal in policy evaluation"
+}
