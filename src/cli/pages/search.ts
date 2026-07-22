@@ -1,7 +1,7 @@
 // src/cli/pages/search.ts
 // The Search page (TUI-2, formerly "Marketplace" — the design brief bans that
 // word in the UI). Wired to `federatedSearch` (src/federation/index.ts): every
-// enabled upstream registry (official/glama/pulsemcp/smithery/github/huggingface) plus
+// enabled upstream registry (official/glama/pulsemcp/skills-github/smithery/github/huggingface) plus
 // the bundled local catalog is queried, deduped, and merged. Per-source
 // results are shown progressively — each source's honest status
 // (ok/unreachable/offline) is rendered alongside the merged, provenance-badged
@@ -51,6 +51,7 @@ const PROV_ORDER: ProvFilter[] = [
   'official',
   'glama',
   'pulsemcp',
+  'skills-github',
   'smithery',
   'github',
   'huggingface',

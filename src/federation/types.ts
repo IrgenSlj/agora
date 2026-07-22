@@ -10,6 +10,7 @@
  *   - smithery  api.smithery.ai — the reliable per-server tool-schema source
  *   - glama     glama.ai/api/mcp — NO tool schemas / annotation hints in practice
  *   - pulsemcp partner-gated sub-registry API; optional env-keyed source
+ *   - skills-github GitHub-hosted Agent Skills discovered by skill topics
  *   - github    reuse src/hubs/github.ts as the long-tail source
  *   - huggingface reuse src/hubs/huggingface.ts
  *   - local     bundled data.ts / on-disk cache (offline fallback)
@@ -24,6 +25,7 @@ export type SourceId =
   | 'official'
   | 'glama'
   | 'pulsemcp'
+  | 'skills-github'
   | 'smithery'
   | 'github'
   | 'huggingface'

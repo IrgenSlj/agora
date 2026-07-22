@@ -241,6 +241,7 @@ const PROV_LABEL: Record<Provenance, string> = {
   official: 'official',
   glama: 'glama',
   pulsemcp: 'pulse',
+  'skills-github': 'skills',
   smithery: 'smithery',
   github: 'github',
   huggingface: 'hf',

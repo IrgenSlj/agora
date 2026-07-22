@@ -181,6 +181,8 @@ on the macOS+Linux matrix — pin a version with prebuilds.
    - ✅ **PulseMCP reality-check** (2026-07-22): v0.1 docs exist, but access is still partner-gated
      (`X-API-Key` + `X-Tenant-ID`; live unauthenticated call returns 401). Shipped as an optional
      env-keyed source, disabled by default and cacheable/offline-first when credentials are present.
+   - ✅ **Skills source:** `skills-github` reuses the GitHub repository crawler with skill-focused
+     topics and maps results as `category: skill` / `agent-skill` sync candidates.
 2. **[opus]** `federation/sync.ts`: dedupe **by purl**, precedence official > glama > pulsemcp,
    incremental sync into SQLite.
    - ✅ **Started:** `syncFederationItems()` now persists source items into CAS/SQLite by purl,

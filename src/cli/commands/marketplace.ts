@@ -48,6 +48,7 @@ const SEARCHABLE_SOURCE_IDS: SourceId[] = [
   'official',
   'glama',
   'pulsemcp',
+  'skills-github',
   'smithery',
   'github',
   'huggingface',
@@ -231,7 +232,7 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
   if (sourceFlag && sourceFlag !== 'all' && !isSourceId(sourceFlag)) {
     return usageError(
       io,
-      `Unknown --source "${sourceFlag}". Use official, glama, pulsemcp, smithery, github, huggingface, local, or all.`
+      `Unknown --source "${sourceFlag}". Use official, glama, pulsemcp, skills-github, smithery, github, huggingface, local, or all.`
     );
   }
   const source = sourceFlag && sourceFlag !== 'all' ? (sourceFlag as SourceId) : undefined;

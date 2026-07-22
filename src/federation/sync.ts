@@ -12,6 +12,7 @@ export const SYNC_SOURCE_PRECEDENCE: SourceId[] = [
   'official',
   'glama',
   'pulsemcp',
+  'skills-github',
   'smithery',
   'github',
   'huggingface',
@@ -155,6 +156,8 @@ function sourceUrlForItem(item: FederatedItem, source: SourceId): string {
       return `https://glama.ai/mcp/servers/${item.id}`;
     case 'pulsemcp':
       return `https://api.pulsemcp.com/v0.1/servers/${encodeURIComponent(item.id)}/versions/latest`;
+    case 'skills-github':
+      return `https://github.com/${item.id.replace(/^skill:/, '')}`;
     case 'smithery':
       return `https://smithery.ai/servers/${item.id}`;
     case 'github':

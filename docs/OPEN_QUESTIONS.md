@@ -77,8 +77,9 @@ discipline as the official source.
 
 **Adaptation:** P1 shipped `official` + `local`; P1+ adds `smithery` · `glama` · `github`
 (reuse `src/hubs/github.ts`) · `huggingface` (reuse `src/hubs/huggingface.ts`). S2 adds optional
-`pulsemcp` with credential gating. `SOURCES` preference order (`src/federation/index.ts`):
-`official, glama, pulsemcp, smithery, github, huggingface, local`. Annotation hints for the gate come
+`pulsemcp` with credential gating. S2 also adds `skills-github` as a GitHub-topic skill source.
+`SOURCES` preference order (`src/federation/index.ts`):
+`official, glama, pulsemcp, skills-github, smithery, github, huggingface, local`. Annotation hints for the gate come
 from the **Smithery detail endpoint** when upstream populates them (mapped defensively; not observed
 live as of 2026-07-04 — see correction above), never Glama.
 

@@ -53,6 +53,7 @@ describe('agora search --json — federated shape', () => {
         'local',
         'official',
         'pulsemcp',
+        'skills-github',
         'smithery'
       ]);
       expect(

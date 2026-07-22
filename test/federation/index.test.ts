@@ -27,11 +27,12 @@ function tempCacheDir(): string {
 }
 
 describe('SOURCES registry — the seam for follow-on sources', () => {
-  test('ships official, glama, pulsemcp, smithery, github, huggingface, local — official first, local last', () => {
+  test('ships official, glama, pulsemcp, skills-github, smithery, github, huggingface, local — official first, local last', () => {
     expect(SOURCES.map((s) => s.id)).toEqual([
       'official',
       'glama',
       'pulsemcp',
+      'skills-github',
       'smithery',
       'github',
       'huggingface',

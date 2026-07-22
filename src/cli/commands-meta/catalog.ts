@@ -6,9 +6,9 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Catalog',
     summary: 'Search the federated catalog for MCP servers, packages, and workflows',
     usage:
-      'agora search <query> [--source official|glama|pulsemcp|smithery|github|huggingface|local|all] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
+      'agora search <query> [--source official|glama|pulsemcp|skills-github|smithery|github|huggingface|local|all] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
     details:
-      'Federates the official MCP Registry, Glama, PulseMCP, Smithery, GitHub, and Hugging Face with the ' +
+      'Federates the official MCP Registry, Glama, PulseMCP, GitHub Skills, Smithery, GitHub, and Hugging Face with the ' +
       'bundled local catalog, deduping matches found across sources (each result keeps its ' +
       'provenance). An unreachable source degrades honestly instead of failing the whole search — ' +
       'local always works offline. ' +
@@ -19,7 +19,7 @@ export const COMMANDS: CommandMeta[] = [
       {
         flag: '--source',
         description:
-          'Restrict to one upstream: official, glama, pulsemcp, smithery, github, huggingface, local, or all (default all)'
+          'Restrict to one upstream: official, glama, pulsemcp, skills-github, smithery, github, huggingface, local, or all (default all)'
       },
       { flag: '--category, -c', description: 'Filter by category: mcp, prompt, workflow, skill' },
       { flag: '--limit, -n', description: 'Maximum number of results (default 10)' },

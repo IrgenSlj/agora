@@ -10,6 +10,7 @@ const SOURCE_IDS = new Set<SourceId>([
   'official',
   'glama',
   'pulsemcp',
+  'skills-github',
   'smithery',
   'github',
   'huggingface',
