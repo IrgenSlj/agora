@@ -64,11 +64,14 @@ function federationEnvFor(
   parsed: Parameters<CommandHandler>[0],
   io: Parameters<CommandHandler>[1]
 ): FederationEnv {
+  const dataDir = detectDataDir(parsed, io);
   return {
     fetcher: io.fetcher,
     env: io.env,
     home: io.env?.HOME,
-    cacheDir: join(detectDataDir(parsed, io), 'federation')
+    cacheDir: join(dataDir, 'federation'),
+    storePath: join(dataDir, 'agora.db'),
+    casDir: join(dataDir, 'cas')
   };
 }
 

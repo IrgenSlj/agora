@@ -31,6 +31,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   `2` for usage, `3` for network failure, and `4` reserved for sandbox unavailability.
 - `agora refresh` now mirrors official registry source items into the SQLite store with CAS-backed
   item blobs, while keeping the JSONL federation cache as the compatibility read path.
+- Federated offline fallback now reads refreshed SQLite/CAS source items before falling back to the
+  older JSONL cache.
 - Added model contract tests for generated schema freshness, deterministic JCS hashing, purl helpers,
   and focused lock verifier tests for clean verification and drift detection.
 

@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
+import { refreshOfficialCache } from '../../src/federation/cache';
 import { federatedFetchItem, federatedSearch, SOURCES } from '../../src/federation/index';
 import type { FetchLike } from '../../src/retry';
 
@@ -140,6 +141,49 @@ describe('federatedSearch() — offline fallback', () => {
       expect(items.some((i) => i.id === 'mcp-github')).toBe(true);
     } finally {
       rmSync(cacheDir, { recursive: true, force: true });
+    }
+  });
+
+  test('official fallback prefers the SQLite/CAS source index when JSONL cache is absent', async () => {
+    const dir = tempCacheDir();
+    try {
+      const fixture = loadFixture('official-search-postgres.json') as { servers: unknown[] };
+      const storePath = join(dir, 'agora.db');
+      const casDir = join(dir, 'cas');
+      const seedCacheDir = join(dir, 'seed-cache');
+      await refreshOfficialCache({
+        fetcher: makeFetcher({
+          servers: fixture.servers,
+          metadata: { count: fixture.servers.length }
+        }),
+        cacheDir: seedCacheDir,
+        storePath,
+        casDir
+      });
+      rmSync(seedCacheDir, { recursive: true, force: true });
+
+      const { items, statuses } = await federatedSearch(
+        'postgres',
+        { source: 'official' },
+        {
+          fetcher: throwingFetcher(),
+          cacheDir: join(dir, 'empty-jsonl-cache'),
+          storePath,
+          casDir
+        }
+      );
+
+      expect(statuses).toEqual([
+        expect.objectContaining({ source: 'official', state: 'unreachable' })
+      ]);
+      expect(
+        items.some((item) => item.id === 'capital.hove/read-only-local-postgres-mcp-server')
+      ).toBe(true);
+      expect(items.every((item) => item.provenance.some((p) => p.source === 'official'))).toBe(
+        true
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 

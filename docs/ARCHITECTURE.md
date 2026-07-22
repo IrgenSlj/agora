@@ -113,7 +113,7 @@ src/stack/            cross-harness stack manager — adapters, manifest, plan/a
                       → target: src/hosts/ (brief §4)
 src/model/            v2 zod schemas, purl helpers, JCS/SHA-256 hashing
 schemas/              generated JSON Schema output from src/model/
-src/store/            SQLite store + content-addressed blob cache; refresh source-item index
+src/store/            SQLite store + content-addressed blob cache; refresh source-item fallback index
 src/federation/       federated catalog clients (official registry, Glama, GitHub, …)
                       → target: src/federation/adapters/ + sync.ts
 src/acquire.ts        capability-acquisition gateway (resolve → scan-gate → write)

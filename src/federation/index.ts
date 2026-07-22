@@ -4,7 +4,7 @@
 // source implementation only ever has to satisfy RegistrySource.
 
 import type { PackageMarketplaceItem } from '../marketplace/types.js';
-import { readSourceCache, resolveCacheDir } from './cache.js';
+import { readSourceCache, readSourceStoreCache, resolveCacheDir } from './cache.js';
 import { githubSource } from './sources/github.js';
 import { glamaSource } from './sources/glama.js';
 import { huggingfaceSource } from './sources/huggingface.js';
@@ -89,15 +89,23 @@ function matchesQueryText(item: FederatedItem, query: string): boolean {
 
 /** Cache → then local (brief): serve a source's last good snapshot when it's down. */
 function cacheFallback(
+  env: FederationEnv,
   cacheDir: string,
   sourceId: SourceId,
   query: string,
   limit?: number
 ): FederatedItem[] {
   try {
-    const cached = readSourceCache(cacheDir, sourceId).filter((item) =>
-      matchesQueryText(item, query)
-    );
+    const storeCached =
+      env.storePath && env.casDir
+        ? readSourceStoreCache(env.storePath, env.casDir, sourceId).filter((item) =>
+            matchesQueryText(item, query)
+          )
+        : [];
+    const cached =
+      storeCached.length > 0
+        ? storeCached
+        : readSourceCache(cacheDir, sourceId).filter((item) => matchesQueryText(item, query));
     return limit ? cached.slice(0, limit) : cached;
   } catch {
     return [];
@@ -119,7 +127,7 @@ async function runSource(
 ): Promise<SourceOutcome> {
   if (!source.isEnabled(env)) {
     return {
-      items: cacheFallback(cacheDir, source.id, query, opts.limit),
+      items: cacheFallback(env, cacheDir, source.id, query, opts.limit),
       status: { source: source.id, state: 'offline', reason: 'disabled' }
     };
   }
@@ -141,7 +149,7 @@ async function runSource(
     const failure = lastError();
     if (items.length === 0 && failure) {
       return {
-        items: cacheFallback(cacheDir, source.id, query, opts.limit),
+        items: cacheFallback(env, cacheDir, source.id, query, opts.limit),
         status: { source: source.id, state: 'unreachable', reason: failure }
       };
     }
@@ -149,7 +157,7 @@ async function runSource(
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     return {
-      items: cacheFallback(cacheDir, source.id, query, opts.limit),
+      items: cacheFallback(env, cacheDir, source.id, query, opts.limit),
       status: { source: source.id, state: 'unreachable', reason }
     };
   } finally {

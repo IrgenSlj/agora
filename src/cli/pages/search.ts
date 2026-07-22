@@ -94,11 +94,14 @@ function envRecord(ctx: PageContext): Record<string, string | undefined> | undef
 
 function federationEnv(ctx: PageContext): FederationEnv {
   const env = envRecord(ctx);
+  const dataDir = detectAgoraDataDir({ cwd: ctx.io.cwd, home: env?.HOME, env });
   return {
     fetcher: ctx.io.fetcher,
     home: env?.HOME,
     env,
-    cacheDir: join(detectAgoraDataDir({ cwd: ctx.io.cwd, home: env?.HOME, env }), 'federation')
+    cacheDir: join(dataDir, 'federation'),
+    storePath: join(dataDir, 'agora.db'),
+    casDir: join(dataDir, 'cas')
   };
 }
 

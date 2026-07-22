@@ -229,6 +229,7 @@ export function readSourceStoreCache(
   casDir: string,
   sourceId: SourceId
 ): FederatedItem[] {
+  if (!existsSync(storePath) || !existsSync(casDir)) return [];
   const store = new AgoraStore(storePath);
   const cas = new CASCache(casDir);
   try {
