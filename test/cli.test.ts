@@ -1093,3 +1093,76 @@ describe('export command — positional format detection', () => {
     expect(out).toContain('agora export');
   });
 });
+
+describe('init --template scaffolding', () => {
+  function isolatedEnv(tmpDir: string): Record<string, string | undefined> {
+    return {
+      ...process.env,
+      HOME: tmpDir,
+      XDG_CONFIG_HOME: join(tmpDir, '.config'),
+      OPENCODE_CONFIG: join(tmpDir, 'opencode.json')
+    };
+  }
+
+  test('scaffolds into empty dir: exit 0, package.json and index.js created', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-init-'));
+    const { io, stdout } = createIo(temp, { env: isolatedEnv(temp) });
+    try {
+      const code = await runCli(['init', '--template', 'node-mcp'], io);
+      expect(code).toBe(0);
+      expect(existsSync(join(temp, 'package.json'))).toBe(true);
+      expect(existsSync(join(temp, 'index.js'))).toBe(true);
+      expect(stdout.join('')).toContain('package.json');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('scaffolds node-mcp: creates project-local opencode.json with my-mcp-server entry', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-init-cfg-'));
+    const { io } = createIo(temp, { env: isolatedEnv(temp) });
+    try {
+      const code = await runCli(['init', '--template', 'node-mcp'], io);
+      expect(code).toBe(0);
+      const configPath = join(temp, 'opencode.json');
+      expect(existsSync(configPath)).toBe(true);
+      const config = JSON.parse(readFileSync(configPath, 'utf8'));
+      expect(config.mcp).toBeDefined();
+      expect(config.mcp['my-mcp-server']).toBeDefined();
+      expect(config.mcp['my-mcp-server'].command).toEqual(['node', 'index.js']);
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('refuses to overwrite when package.json already exists (no --force)', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-init-conflict-'));
+    const sentinel = '{"name":"existing","version":"9.9.9"}';
+    writeFileSync(join(temp, 'package.json'), sentinel, 'utf8');
+    const { io, stderr } = createIo(temp, { env: isolatedEnv(temp) });
+    try {
+      const code = await runCli(['init', '--template', 'node-mcp'], io);
+      expect(code).not.toBe(0);
+      expect(stderr.join('')).toContain('package.json');
+      const still = readFileSync(join(temp, 'package.json'), 'utf8');
+      expect(still).toContain('9.9.9');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('--force overwrites existing files and scaffold succeeds', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-init-force-'));
+    const sentinel = '{"name":"existing","version":"9.9.9"}';
+    writeFileSync(join(temp, 'package.json'), sentinel, 'utf8');
+    const { io } = createIo(temp, { env: isolatedEnv(temp) });
+    try {
+      const code = await runCli(['init', '--template', 'node-mcp', '--force'], io);
+      expect(code).toBe(0);
+      const written = readFileSync(join(temp, 'package.json'), 'utf8');
+      expect(written).toContain('"name": "my-mcp-server"');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+});

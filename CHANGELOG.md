@@ -28,6 +28,10 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   those lines now route through the active terminal styler.
 - `agora export json|csv|markdown|table` now treats a leading format word as the output format, while
   `--format` still wins. Empty export results now name the query and suggest a broader export.
+- `agora init --template` now refuses to overwrite existing scaffold target files unless `--force` is
+  passed, writes scaffold registration to a project-local `opencode.json`, and documents that path.
+- `agora welcome` no longer points at placeholder hosted-backend URLs; sign-in is framed as optional
+  legacy live-API setup, and the first catalog action includes `agora trending`.
 
 ### TUI-2 — Search page + Item detail + marketplace→catalog rename
 - **Vocabulary rename** (the design brief bans "marketplace" in the UI): the TUI `PageId` `marketplace`

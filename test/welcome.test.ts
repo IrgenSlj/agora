@@ -89,9 +89,28 @@ describe('agora welcome', () => {
       const out = stdout.join('');
       expect(out).toContain('agora auth login');
       expect(out).toContain('agora search');
+      expect(out).toContain('agora trending');
       expect(out).toContain('agora news');
       expect(out).toContain('agora completions');
       expect(out).toContain('agora init --template');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('--json steps do not reference non-existent agora marketplace command', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-welcome-nomarket-'));
+    const { io, stdout } = createIo(dir);
+    try {
+      const code = await runCli(['welcome', '--json'], io);
+      expect(code).toBe(0);
+      const raw = stdout.join('');
+      const payload = JSON.parse(raw);
+      const allCommands = (payload.steps as { commands: string[] }[])
+        .flatMap((s) => s.commands)
+        .join('\n');
+      expect(allCommands).not.toContain('agora marketplace');
+      expect(raw).not.toContain('api.agora.example');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
