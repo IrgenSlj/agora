@@ -68,6 +68,7 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "better-sqlite3": "^13.0.1",
     "canonicalize": "^3.0.0",
+    "hono": "^4.12.31",
     "packageurl-js": "^2.0.1",
     "smol-toml": "^1.6.1",
     "yargs": "18",
@@ -75,6 +76,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.2",
+    "@cloudflare/workers-types": "^5.20260722.1",
     "@opencode-ai/plugin": "^1.18.4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/bun": "^1.3.14",
@@ -82,6 +84,7 @@
     "@types/yargs": "^17.0.35",
     "bun-types": "^1.3.14",
     "typescript": "^7.0.2",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.113.0"
   }
 }

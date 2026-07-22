@@ -22,6 +22,9 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   source-index fallback when JSONL compatibility files are absent.
 - `agora search` now accepts the v2 artifact-kind filter `--kind mcp-server|agent-skill`, mapped onto
   existing catalog categories for compatibility.
+- Added the initial Cloudflare Worker catalog API scaffold under `workers/api/` with Hono routes for
+  `GET /v1/health` and paginated `GET /v1/catalog`, a D1 schema, Wrangler config, and a fake-D1 test
+  harness.
 
 ### V2 direction refresh
 - Updated front-door project copy to the locked identity: Agora is **the trust plane for agentic

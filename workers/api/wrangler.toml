@@ -1,0 +1,10 @@
+name = "agora-api"
+main = "src/index.ts"
+compatibility_date = "2026-07-22"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "agora-catalog"
+# Replace after creating the D1 database:
+#   wrangler d1 create agora-catalog
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
