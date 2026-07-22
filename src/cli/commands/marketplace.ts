@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { federatedSearch } from '../../federation/index.js';
 import type {
@@ -20,6 +21,8 @@ import {
   similarItems,
   sortMarketplaceItems
 } from '../../marketplace.js';
+import { isValidPurl } from '../../model/purl.js';
+import { AgoraStore, CASCache } from '../../store/index.js';
 import { ExitCode } from '../exit-codes.js';
 import { formatItemDetail, formatItemList, formatItemTable, header } from '../format.js';
 import {
@@ -74,6 +77,54 @@ function federationEnvFor(
     storePath: join(dataDir, 'agora.db'),
     casDir: join(dataDir, 'cas')
   };
+}
+
+type LocalInfoPayload = {
+  purl: string;
+  artifact: NonNullable<ReturnType<AgoraStore['getArtifact']>>;
+  sources: ReturnType<AgoraStore['getArtifactSources']>;
+  sourceItems: Array<
+    ReturnType<AgoraStore['listSourceItemsByPurl']>[number] & {
+      item?: Pick<FederatedItem, 'id' | 'name' | 'description' | 'provenance'>;
+    }
+  >;
+};
+
+function readLocalInfo(purl: string, storePath: string, casDir: string): LocalInfoPayload | null {
+  if (!existsSync(storePath)) return null;
+  const store = new AgoraStore(storePath);
+  const cas = existsSync(casDir) ? new CASCache(casDir) : undefined;
+
+  try {
+    const artifact = store.getArtifact(purl);
+    if (!artifact) return null;
+    const sourceItems = store.listSourceItemsByPurl(purl).map((row) => {
+      const blob = cas?.get(row.item_sha256);
+      if (!blob) return row;
+      try {
+        const item = JSON.parse(blob.toString('utf8')) as FederatedItem;
+        return {
+          ...row,
+          item: {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            provenance: item.provenance
+          }
+        };
+      } catch {
+        return row;
+      }
+    });
+    return {
+      purl,
+      artifact,
+      sources: store.getArtifactSources(purl),
+      sourceItems
+    };
+  } finally {
+    store.close();
+  }
 }
 
 function statusSummary(statuses: SourceStatus[]): string {
@@ -265,6 +316,62 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
     timestamp: new Date().toISOString(),
     results: totalMatches
   });
+  return 0;
+};
+
+export const commandInfo: CommandHandler = async (parsed, io, style) => {
+  const purl = parsed.args[0];
+  if (!purl) return usageError(io, 'info requires a purl');
+  if (!isValidPurl(purl)) return usageError(io, `Invalid purl: ${purl}`);
+
+  const dataDir = detectDataDir(parsed, io);
+  const storePath = stringFlag(parsed, 'store') || join(dataDir, 'agora.db');
+  const casDir = stringFlag(parsed, 'casDir') || join(dataDir, 'cas');
+  const payload = readLocalInfo(purl, storePath, casDir);
+
+  if (!payload) {
+    writeLine(
+      io.stderr,
+      `Artifact not found in local sync: ${purl}. Run \`agora refresh\` to populate the local store.`
+    );
+    return ExitCode.USAGE;
+  }
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, payload);
+    return 0;
+  }
+
+  const theme = cliTheme(style, io);
+  writeLine(io.stdout, header('agora info', [purl, 'local sync'], theme));
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, `${style.dim('kind')}       ${payload.artifact.kind}`);
+  writeLine(io.stdout, `${style.dim('name')}       ${theme.accent(payload.artifact.display_name)}`);
+  writeLine(io.stdout, `${style.dim('publisher')}  ${payload.artifact.publisher_namespace}`);
+  writeLine(
+    io.stdout,
+    `${style.dim('verified')}   ${payload.artifact.publisher_identity_verified ? 'yes' : 'no'}`
+  );
+
+  if (payload.sources.length > 0) {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, style.dim('sources'));
+    for (const source of payload.sources) {
+      writeLine(io.stdout, `  ${source.adapter.padEnd(10)} ${source.upstream_id}`);
+      writeLine(io.stdout, `  ${style.dim(source.url)}`);
+    }
+  }
+
+  if (payload.sourceItems.length > 0) {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, style.dim('source items'));
+    for (const row of payload.sourceItems) {
+      const label = row.item ? `${row.item.name} (${row.item.id})` : row.upstream_id;
+      writeLine(io.stdout, `  ${row.source.padEnd(10)} ${label}`);
+      writeLine(io.stdout, `  ${style.dim(`fetched ${row.fetched_at} · ${row.item_sha256}`)}`);
+    }
+  }
+
   return 0;
 };
 

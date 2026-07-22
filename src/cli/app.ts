@@ -126,6 +126,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   try {
     const cmd: CommandMap = {
       search: marketplace.commandSearch,
+      info: marketplace.commandInfo,
       browse: marketplace.commandBrowse,
       trending: marketplace.commandTrending,
       workflows: marketplace.commandWorkflows,

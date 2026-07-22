@@ -187,6 +187,8 @@ on the macOS+Linux matrix — pin a version with prebuilds.
      recomputes canonical artifact metadata by source precedence, and falls back to the next source
      when the preferred source is pruned. `refreshOfficialCache()` uses this shared path.
 3. **[sonnet]** Rewire `agora search` + new `agora info <purl>` to read from local sync (offline-first).
+   - ✅ **Started:** `agora info <purl>` reads the local SQLite/CAS sync store directly and returns
+     normalized artifact metadata plus source references/source-item summaries with `--json`.
 4. **[opus/you]** `workers/api/` hono app: `GET /v1/catalog?cursor=` from D1, cron sync every 6h,
    `GET /v1/health`. **[you]** create Cloudflare account + `wrangler` project + D1/KV; I author the code
    + `wrangler.toml` and a local `miniflare` test harness.

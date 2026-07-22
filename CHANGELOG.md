@@ -14,6 +14,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   present in `AGORA_PULSEMCP_*` or `PULSEMCP_*` environment variables.
 - Added `federation/sync.ts` for purl-keyed SQLite/CAS source-item sync with source precedence
   (`official > glama > pulsemcp`) and prune-time canonical artifact recomputation.
+- Added `agora info <purl>` to inspect normalized artifacts, source references, and cached source-item
+  summaries from the local SQLite/CAS sync store without contacting upstream registries.
 
 ### V2 direction refresh
 - Updated front-door project copy to the locked identity: Agora is **the trust plane for agentic

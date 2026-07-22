@@ -45,6 +45,25 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora browse mcp-github', 'agora browse mcp-github --type package']
   },
   {
+    name: 'info',
+    group: 'Catalog',
+    summary: 'Inspect a synced artifact by purl from the local store',
+    usage: 'agora info <purl> [--store <path>] [--json]',
+    details:
+      'Reads the local SQLite/CAS federation sync store, showing the normalized artifact row, ' +
+      'source references, and cached source-item summaries without contacting upstream registries. ' +
+      'Run agora refresh first to populate the local store.',
+    flags: [
+      { flag: '--store', description: 'SQLite store path (default AGORA_HOME/agora.db)' },
+      { flag: '--cas-dir', description: 'CAS blob directory (default next to the store)' },
+      { flag: '--json', description: 'Output artifact, sources, and source items as JSON' }
+    ],
+    examples: [
+      'agora info pkg:npm/@modelcontextprotocol/server-filesystem@2026.1.0',
+      'agora info pkg:npm/@modelcontextprotocol/server-filesystem@2026.1.0 --json'
+    ]
+  },
+  {
     name: 'trending',
     group: 'Catalog',
     summary: 'Show trending packages and workflows',
