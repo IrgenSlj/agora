@@ -8,8 +8,9 @@ the brief's §14 and an entry in `docs/OPEN_QUESTIONS.md`, then take the smalles
 **Status:** S0 complete — toolchain migrated, README/docs rewritten, CI matrix expanded,
 user-facing commerce/account framing stripped, biome migrated. S1 (data model & lockfile) in
 progress: model schemas, generated schemas, schema freshness tests, purl helpers, JCS/SHA-256
-helpers, SQLite/CAS store, manifest-backed `agora lock verify`, and the brief §9 CLI exit-code
-remap are present; remaining S1 work is integration hardening across legacy surfaces.
+helpers, SQLite/CAS store, manifest-backed `agora lock verify`, the brief §9 CLI exit-code remap,
+and refresh-backed source-item indexing are present; remaining S1 work is integration hardening
+across legacy surfaces.
 
 ---
 
@@ -152,7 +153,8 @@ issue (no native deps until S1).
    `build`; snapshot-test the output.
 3. **[sonnet]** purl via `packageurl-js` (parse/build/validate) — helpers + tests over the §5.1 examples.
 4. **[sonnet]** `src/store/`: `better-sqlite3` at `~/.agora/agora.db` (schema migrations), CAS at
-   `~/.agora/cas/<sha256>`; migrate `federation/cache.ts` reads. JCS hashing via `canonicalize` +
+   `~/.agora/cas/<sha256>`; `agora refresh` now mirrors official source items into SQLite + CAS
+   while the JSONL cache remains the compatibility read path. JCS hashing via `canonicalize` +
    SHA-256 (D15) as a shared util.
 5. **[sonnet]** `agora lock verify` (recompute hashes, exit 1 on drift) + round-trip test.
 6. **[sonnet]** Migrate exit-code contract to brief §9 across commands + tests (DA-3) — core CLI

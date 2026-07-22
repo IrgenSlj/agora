@@ -237,7 +237,7 @@ export const COMMANDS: CommandMeta[] = [
     name: 'refresh',
     group: 'Catalog',
     summary: 'Incrementally sync the official MCP registry into the local federation cache.',
-    usage: 'agora refresh [--source official] [--json]',
+    usage: 'agora refresh [--source official] [--store <path>] [--json]',
     details:
       "Fetches servers added/changed since the last sync via the official registry's " +
       "`updated_since` filter, and prunes any it has tombstoned as deleted. Powers `agora search`'s " +
@@ -247,9 +247,14 @@ export const COMMANDS: CommandMeta[] = [
         flag: '--source',
         description: 'Source to refresh (default: official; the only supported value today)'
       },
+      {
+        flag: '--store',
+        description:
+          'SQLite store path for the refreshed source index (default: <data-dir>/agora.db)'
+      },
       { flag: '--json', description: 'Output result as JSON' }
     ],
-    examples: ['agora refresh', 'agora refresh --json']
+    examples: ['agora refresh', 'agora refresh --store ~/.agora/agora.db --json']
   },
   {
     name: 'news',

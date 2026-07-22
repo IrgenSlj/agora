@@ -132,8 +132,12 @@ export interface FederationEnv {
   fetcher?: FetchLike;
   home?: string;
   env?: Record<string, string | undefined>;
-  /** Content-addressed cache dir override; defaults under AGORA_HOME. */
+  /** Federation JSONL cache dir override; defaults under AGORA_HOME. */
   cacheDir?: string;
+  /** SQLite store override for refreshed source-item indexes. */
+  storePath?: string;
+  /** CAS blob directory override for refreshed source-item payloads. */
+  casDir?: string;
 }
 
 /**

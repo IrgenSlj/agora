@@ -61,6 +61,17 @@ export class AgoraStore {
         FOREIGN KEY (purl) REFERENCES artifacts(purl) ON DELETE CASCADE
       );
 
+      CREATE TABLE IF NOT EXISTS source_items (
+        source TEXT NOT NULL,
+        upstream_id TEXT NOT NULL,
+        purl TEXT,
+        item_sha256 TEXT NOT NULL,
+        fetched_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        PRIMARY KEY (source, upstream_id),
+        FOREIGN KEY (purl) REFERENCES artifacts(purl) ON DELETE SET NULL
+      );
+
       CREATE TABLE IF NOT EXISTS manifests (
         purl TEXT NOT NULL,
         version TEXT NOT NULL,
@@ -91,6 +102,7 @@ export class AgoraStore {
 
       CREATE INDEX IF NOT EXISTS idx_attestations_purl ON attestations(purl);
       CREATE INDEX IF NOT EXISTS idx_attestations_predicate ON attestations(predicate_type);
+      CREATE INDEX IF NOT EXISTS idx_source_items_purl ON source_items(purl);
     `);
   }
 
@@ -147,6 +159,122 @@ export class AgoraStore {
       ...row,
       publisher_identity_verified: row.publisher_identity_verified === 1
     };
+  }
+
+  /**
+   * Store a source reference for an artifact without changing first_seen on refresh.
+   */
+  upsertArtifactSource(source: {
+    purl: string;
+    adapter: string;
+    upstream_id: string;
+    url: string;
+    first_seen: string;
+  }): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO artifact_sources (purl, adapter, upstream_id, url, first_seen)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(purl, adapter) DO UPDATE SET
+        upstream_id = excluded.upstream_id,
+        url = excluded.url
+    `);
+    stmt.run(source.purl, source.adapter, source.upstream_id, source.url, source.first_seen);
+  }
+
+  /**
+   * Get source references for an artifact.
+   */
+  getArtifactSources(purl: string): Array<{
+    purl: string;
+    adapter: string;
+    upstream_id: string;
+    url: string;
+    first_seen: string;
+  }> {
+    const stmt = this.db.prepare(
+      'SELECT purl, adapter, upstream_id, url, first_seen FROM artifact_sources WHERE purl = ? ORDER BY adapter'
+    );
+    return stmt.all(purl) as Array<{
+      purl: string;
+      adapter: string;
+      upstream_id: string;
+      url: string;
+      first_seen: string;
+    }>;
+  }
+
+  /**
+   * Remove a source reference and prune the artifact if it no longer has sources.
+   */
+  deleteArtifactSource(purl: string, adapter: string): void {
+    const deleteSource = this.db.prepare(
+      'DELETE FROM artifact_sources WHERE purl = ? AND adapter = ?'
+    );
+    const deleteOrphan = this.db.prepare(`
+      DELETE FROM artifacts
+      WHERE purl = ?
+        AND NOT EXISTS (SELECT 1 FROM artifact_sources WHERE purl = ?)
+    `);
+    const tx = this.db.transaction(() => {
+      deleteSource.run(purl, adapter);
+      deleteOrphan.run(purl, purl);
+    });
+    tx();
+  }
+
+  /**
+   * Index one full source item payload stored in CAS.
+   */
+  upsertSourceItem(item: {
+    source: string;
+    upstream_id: string;
+    purl?: string;
+    item_sha256: string;
+    fetched_at: string;
+  }): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO source_items (source, upstream_id, purl, item_sha256, fetched_at)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(source, upstream_id) DO UPDATE SET
+        purl = excluded.purl,
+        item_sha256 = excluded.item_sha256,
+        fetched_at = excluded.fetched_at,
+        updated_at = datetime('now')
+    `);
+    stmt.run(item.source, item.upstream_id, item.purl ?? null, item.item_sha256, item.fetched_at);
+  }
+
+  /**
+   * Remove one source item index entry.
+   */
+  deleteSourceItem(source: string, upstreamId: string): void {
+    const stmt = this.db.prepare('DELETE FROM source_items WHERE source = ? AND upstream_id = ?');
+    stmt.run(source, upstreamId);
+  }
+
+  /**
+   * List source item CAS references for a source.
+   */
+  listSourceItems(source: string): Array<{
+    source: string;
+    upstream_id: string;
+    purl: string | null;
+    item_sha256: string;
+    fetched_at: string;
+  }> {
+    const stmt = this.db.prepare(`
+      SELECT source, upstream_id, purl, item_sha256, fetched_at
+      FROM source_items
+      WHERE source = ?
+      ORDER BY upstream_id
+    `);
+    return stmt.all(source) as Array<{
+      source: string;
+      upstream_id: string;
+      purl: string | null;
+      item_sha256: string;
+      fetched_at: string;
+    }>;
   }
 
   /**

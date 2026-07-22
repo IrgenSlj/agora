@@ -27,6 +27,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   SQLite store and exits `1` on manifest/tool drift.
 - Core CLI command paths now use the brief §9 exit-code contract: `1` for policy/drift failures,
   `2` for usage, `3` for network failure, and `4` reserved for sandbox unavailability.
+- `agora refresh` now mirrors official registry source items into the SQLite store with CAS-backed
+  item blobs, while keeping the JSONL federation cache as the compatibility read path.
 - Added model contract tests for generated schema freshness, deterministic JCS hashing, purl helpers,
   and focused lock verifier tests for clean verification and drift detection.
 

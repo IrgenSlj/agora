@@ -15,11 +15,13 @@ export const commandRefresh: CommandHandler = async (parsed, io, style) => {
     );
   }
 
+  const dataDir = detectDataDir(parsed, io);
   const env: FederationEnv = {
     fetcher: io.fetcher,
     env: io.env,
     home: io.env?.HOME,
-    cacheDir: join(detectDataDir(parsed, io), 'federation')
+    cacheDir: join(dataDir, 'federation'),
+    storePath: stringFlag(parsed, 'store') || join(dataDir, 'agora.db')
   };
 
   const result = await refreshOfficialCache(env);
@@ -43,5 +45,6 @@ export const commandRefresh: CommandHandler = async (parsed, io, style) => {
     `official: +${result.added} added, ~${result.updated} updated, -${result.pruned} pruned (cache now has ${result.total})`
   );
   writeLine(io.stdout, style.dim(`synced at ${result.syncedAt}`));
+  if (result.storeError) writeLine(io.stderr, `local store update failed: ${result.storeError}`);
   return ExitCode.OK;
 };
