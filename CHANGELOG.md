@@ -26,6 +26,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   summaries from the local SQLite/CAS sync store without contacting upstream registries.
 - `agora search --offline` now forces federation into local sync/cache mode, including SQLite/CAS
   source-index fallback when JSONL compatibility files are absent.
+- Added an S2 gate test proving `agora search filesystem --offline` returns a merged official+local
+  result after one refresh with only the SQLite/CAS source index available.
 - `agora search` now accepts the v2 artifact-kind filter `--kind mcp-server|agent-skill`, mapped onto
   existing catalog categories for compatibility.
 - Added the initial Cloudflare Worker catalog API scaffold under `workers/api/` with Hono routes for

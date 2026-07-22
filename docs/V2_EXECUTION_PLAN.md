@@ -217,6 +217,9 @@ on the macOS+Linux matrix — pin a version with prebuilds.
 
 **Gate (brief S2):** `agora search filesystem` returns merged/deduped results **offline** after one
 sync; adapter contract tests green.
+- ✅ **Pinned:** `test/federation/cli-search.test.ts` covers the filesystem offline gate after one
+  `agora refresh`, with JSONL removed so the result must come from SQLite/CAS source sync plus local
+  catalog merge.
 
 ---
 

@@ -16,6 +16,34 @@ function pageFetcher(servers: unknown[]): FetchLike {
     new Response(JSON.stringify({ servers, metadata: { count: servers.length } }), { status: 200 });
 }
 
+function filesystemServerEntry(): unknown {
+  return {
+    server: {
+      name: 'io.github.modelcontextprotocol/server-filesystem',
+      description: 'Secure filesystem operations',
+      version: '2026.1.14',
+      repository: {
+        url: 'https://github.com/modelcontextprotocol/servers',
+        source: 'github'
+      },
+      packages: [
+        {
+          registryType: 'npm',
+          identifier: '@modelcontextprotocol/server-filesystem',
+          version: '2026.1.14'
+        }
+      ]
+    },
+    _meta: {
+      'io.modelcontextprotocol.registry/official': {
+        status: 'active',
+        publishedAt: '2026-01-14T00:00:00Z',
+        isLatest: true
+      }
+    }
+  };
+}
+
 function createIo(fetcher: FetchLike, dataDir: string) {
   const stdout: string[] = [];
   const stderr: string[] = [];
@@ -199,6 +227,36 @@ describe('agora search --json — federated shape', () => {
           (item: { id: string }) => item.id === 'capital.hove/read-only-local-postgres-mcp-server'
         )
       ).toBe(true);
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  });
+
+  test('S2 gate: filesystem search is merged and deduped offline after one refresh', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'agora-federation-cli-'));
+    try {
+      const { io } = createIo(pageFetcher([filesystemServerEntry()]), dataDir);
+      expect(await runCli(['refresh', '--json'], io)).toBe(0);
+
+      const jsonlPath = join(dataDir, 'federation', 'official.jsonl');
+      if (existsSync(jsonlPath)) unlinkSync(jsonlPath);
+
+      const { io: offlineIo, stdout } = createIo(async () => {
+        throw new Error('offline should not fetch');
+      }, dataDir);
+      const code = await runCli(['search', 'filesystem', '--offline', '--json'], offlineIo);
+      const payload = JSON.parse(stdout.join(''));
+
+      expect(code).toBe(0);
+      const merged = payload.items.find(
+        (item: { provenance: { source: string }[] }) =>
+          item.provenance.some((p) => p.source === 'official') &&
+          item.provenance.some((p) => p.source === 'local')
+      );
+      expect(merged).toBeDefined();
+      expect(payload.items.filter((item: { id: string }) => item.id === 'mcp-filesystem')).toEqual(
+        []
+      );
     } finally {
       rmSync(dataDir, { recursive: true, force: true });
     }
