@@ -2,14 +2,20 @@
  * Tests for `agora installed` and `agora doctor` CLI commands.
  */
 
-import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
-import { writeCapabilityCache } from '../src/stack/capability-cache';
+import {
+  capabilityKey,
+  descriptionDigest,
+  writeCapabilityCache
+} from '../src/stack/capability-cache';
 
 // ── Test harness ─────────────────────────────────────────────────────────────
+
+const FAKE_SERVER = join(import.meta.dirname, 'fixtures/mcp-fake-server.js');
 
 function createIo(cwd: string, home: string, extraEnv?: Record<string, string | undefined>) {
   const stdout: string[] = [];
@@ -315,6 +321,53 @@ describe('agora doctor', () => {
       rmSync(binDir, { recursive: true, force: true });
     }
   });
+
+  test('--probe exits 1 on description drift and quarantines the host entry', async () => {
+    const cwd = makeTmp('agora-doctor-drift-');
+    const home = makeTmp('agora-home-');
+    const dataDir = makeTmp('agora-data-');
+    try {
+      writeOpencodeConfig(cwd, {
+        'fake-server': { command: ['node', FAKE_SERVER], type: 'local' }
+      });
+
+      const baselineTools = [
+        { name: 'echo', description: 'old description' },
+        { name: 'removed', description: 'removed tool' }
+      ];
+      writeCapabilityCache(dataDir, [
+        {
+          key: capabilityKey('fake-server', ['node', FAKE_SERVER]),
+          name: 'fake-server',
+          command: ['node', FAKE_SERVER],
+          tools: baselineTools,
+          ok: true,
+          probedAt: new Date().toISOString(),
+          descriptionDigest: descriptionDigest(baselineTools),
+          descriptionDigestAt: new Date().toISOString()
+        }
+      ]);
+
+      const { io, out } = createIo(cwd, home, {
+        AGORA_HOME: dataDir,
+        PATH: process.env.PATH
+      });
+      const code = await runCli(['doctor', '--probe'], io);
+
+      expect(code).toBe(1);
+      expect(out()).toContain('DRIFT');
+      expect(out()).toContain('QUARANTINED');
+
+      const config = JSON.parse(readFileSync(join(cwd, 'opencode.json'), 'utf8')) as {
+        mcp?: Record<string, Record<string, unknown>>;
+      };
+      expect(config.mcp?.['fake-server']?.enabled).toBe(false);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  }, 15000);
 
   test('--json empty case returns empty StackHealth', async () => {
     const cwd = makeTmp('agora-doctor-');

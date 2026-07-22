@@ -241,6 +241,11 @@ sync; adapter contract tests green.
      `descriptionDigest` path used by scan/doctor/acquire.
    - ✅ **Started:** `src/evidence/diff.ts` now reports per-tool added/removed/changed drift with
      before/after schema hashes, and the existing stack `diffToolDescriptions` helper delegates to it.
+   - ✅ **Started:** `agora doctor --probe` now turns description/schema drift into local quarantine
+     state in the capability cache and rewrites affected host configs: OpenCode entries are disabled,
+     while hosts without a disabled representation have the drifted entry removed. The printed
+     `description-drift` detail remains the per-tool diff, and drift exits `1` per the brief §9
+     contract.
 3. **[sonnet]** `evidence/enrich.ts` deterministic poisoning heuristics (regex/AST): imperative-to-model
    phrases, zero-width unicode, HTML comments, base64 >128 chars, cross-tool shadowing. LLM pass
    optional/keyed. (Repurpose `src/curator/` + `src/hubs/enrichment.ts`.)

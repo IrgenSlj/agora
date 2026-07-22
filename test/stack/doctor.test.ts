@@ -2,7 +2,7 @@
  * Tests for src/stack/doctor.ts (static checks only, probe=false).
  */
 
-import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
@@ -456,6 +456,95 @@ describe('checkStack with probe=true', () => {
       expect(cached.tools.map((tool) => tool.name)).toEqual(['echo', 'removed']);
       expect(cached.liveTools?.map((tool) => tool.name)).toEqual(['echo', 'add']);
     } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  }, 15000);
+
+  test('probe can quarantine drifted servers and rewrite host config', async () => {
+    const cwd = makeTmp();
+    const dataDir = makeTmp();
+    try {
+      const configPath = join(cwd, 'opencode.json');
+      writeFileSync(
+        configPath,
+        JSON.stringify(
+          {
+            theme: 'nord',
+            mcp: {
+              'fake-server': { type: 'local', command: ['node', FAKE_SERVER] },
+              peer: { type: 'remote', url: 'https://peer.example.com/mcp' }
+            }
+          },
+          null,
+          2
+        )
+      );
+
+      const server = makeServer({
+        name: 'fake-server',
+        command: ['node', FAKE_SERVER],
+        configPath
+      });
+      const peer = makeServer({
+        name: 'peer',
+        configPath,
+        transport: 'remote',
+        command: undefined,
+        url: 'https://peer.example.com/mcp'
+      });
+      const key = capabilityKey('fake-server', ['node', FAKE_SERVER]);
+      const baselineTools = [
+        { name: 'echo', description: 'old description' },
+        { name: 'removed', description: 'removed tool' }
+      ];
+      writeCapabilityCache(dataDir, [
+        {
+          key,
+          name: 'fake-server',
+          command: ['node', FAKE_SERVER],
+          tools: baselineTools,
+          ok: true,
+          probedAt: new Date().toISOString(),
+          descriptionDigest: descriptionDigest(baselineTools),
+          descriptionDigestAt: new Date().toISOString()
+        }
+      ]);
+
+      const result = await checkStack([server, peer], {
+        probe: true,
+        probeTimeoutMs: 10000,
+        dataDir,
+        quarantineOnDrift: true,
+        cwd
+      });
+
+      const sh = result.servers[0]!;
+      const quarantine = sh.checks.find((c) => c.name === 'quarantine')!;
+      expect(quarantine).toBeDefined();
+      expect(quarantine.ok).toBe(false);
+      expect(quarantine.level).toBe('error');
+      expect(quarantine.detail).toContain('QUARANTINED');
+      expect(quarantine.detail).toContain(configPath);
+      expect(sh.status).toBe('error');
+
+      const config = JSON.parse(readFileSync(configPath, 'utf8')) as {
+        theme?: string;
+        mcp?: Record<string, Record<string, unknown>>;
+      };
+      expect(config.theme).toBe('nord');
+      expect(config.mcp?.['fake-server']?.enabled).toBe(false);
+      expect(config.mcp?.['peer']).toEqual({
+        type: 'remote',
+        url: 'https://peer.example.com/mcp'
+      });
+
+      const cached = readCapabilityCache(dataDir)[0]!;
+      expect(cached.state).toBe('quarantined');
+      expect(cached.quarantineReason).toBe('description-drift');
+      expect(cached.quarantinedAt).toBeDefined();
+      expect(cached.descriptionDigest).toBe(descriptionDigest(baselineTools));
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
       rmSync(dataDir, { recursive: true, force: true });
     }
   }, 15000);

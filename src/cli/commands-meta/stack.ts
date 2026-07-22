@@ -112,14 +112,20 @@ export const COMMANDS: CommandMeta[] = [
     details:
       'Checks each configured MCP server for common problems: missing binary, invalid remote URL, ' +
       'all instances disabled, conflicting definitions across tools/scopes. ' +
-      'Use --probe to briefly start each local server and verify it launches. ' +
+      'Use --probe to briefly start each local server, verify it launches, and compare its tool ' +
+      'schemas against the approved baseline; drift is printed and quarantined by disabling/removing ' +
+      'the affected host config entry. ' +
       'Returns exit code 0 by default (informational); use --strict to return 1 when any server has errors.',
     flags: [
       {
         flag: '--tool',
         description: 'Filter to a single tool: opencode, claude-code, cursor, or windsurf'
       },
-      { flag: '--probe', description: 'Briefly start each local server to verify it runs' },
+      {
+        flag: '--probe',
+        description:
+          'Briefly start each local server, refresh capability data, and quarantine schema drift'
+      },
       {
         flag: '--strict',
         description: 'Exit 1 if any server has errors (for CI/scripting)'

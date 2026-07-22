@@ -9,6 +9,7 @@ import {
 } from './capability-cache.js';
 import { type McpProbeResult, probeMcpServer } from './mcp-probe.js';
 import { KNOWN_RUNNERS, resolveOnPath } from './path-resolve.js';
+import { formatQuarantineRewrites, quarantineConfiguredServers } from './quarantine.js';
 import type { ConfiguredServer, StackEnv } from './types.js';
 
 export type HealthStatus = 'ok' | 'warn' | 'error';
@@ -36,6 +37,7 @@ export interface DoctorOptions extends StackEnv {
   probe?: boolean;
   probeTimeoutMs?: number;
   dataDir?: string;
+  quarantineOnDrift?: boolean;
 }
 
 function deriveStatus(checks: HealthCheck[]): HealthStatus {
@@ -250,6 +252,7 @@ export async function checkStack(
   opts?: DoctorOptions
 ): Promise<StackHealth> {
   const probeTimeoutMs = opts?.probeTimeoutMs ?? 8000;
+  const quarantinedNames = new Set<string>();
 
   // Group by name
   const grouped = new Map<string, ConfiguredServer[]>();
@@ -281,12 +284,24 @@ export async function checkStack(
         const hasDescriptionDrift =
           result.ok && digest && baselineDigest && baselineDigest !== digest;
         if (hasDescriptionDrift) {
+          const driftDetail = `DRIFT: ${formatToolDrift(diffToolDescriptions(previous.tools, result.tools ?? []))}`;
           health.checks.push({
             name: 'description-drift',
             ok: false,
             level: 'warn',
-            detail: `DRIFT: ${formatToolDrift(diffToolDescriptions(previous.tools, result.tools ?? []))}`
+            detail: driftDetail
           });
+
+          if (opts?.quarantineOnDrift && !quarantinedNames.has(name)) {
+            const rewrites = quarantineConfiguredServers(servers, [name], opts);
+            quarantinedNames.add(name);
+            health.checks.push({
+              name: 'quarantine',
+              ok: false,
+              level: 'error',
+              detail: `QUARANTINED: ${formatQuarantineRewrites(rewrites)}`
+            });
+          }
         }
         if (opts?.dataDir && inst.command && inst.command.length > 0) {
           try {
@@ -315,7 +330,14 @@ export async function checkStack(
                 ? {
                     liveDescriptionDigest: digest,
                     liveTools: result.tools ?? [],
-                    driftDetectedAt: probedAt
+                    driftDetectedAt: probedAt,
+                    ...(opts.quarantineOnDrift
+                      ? {
+                          state: 'quarantined' as const,
+                          quarantineReason: 'description-drift',
+                          quarantinedAt: probedAt
+                        }
+                      : {})
                   }
                 : {})
             });

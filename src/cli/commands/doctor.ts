@@ -61,11 +61,14 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
   }
 
   const dataDir = detectDataDir(parsed, io);
-  const health = await checkStack(servers, { ...env, probe, dataDir });
+  const health = await checkStack(servers, { ...env, probe, dataDir, quarantineOnDrift: probe });
+  const driftOrQuarantine = health.servers.some((server) =>
+    server.checks.some((check) => check.name === 'description-drift' || check.name === 'quarantine')
+  );
 
   if (parsed.flags.json) {
     writeJson(io.stdout, health);
-    return 0;
+    return driftOrQuarantine ? ExitCode.POLICY_FORBID : ExitCode.OK;
   }
 
   for (const server of health.servers) {
@@ -114,6 +117,7 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
     `${theme.success(`ok: ${ok}`)}  ${theme.warning(`warn: ${warn}`)}  ${theme.error(`error: ${error}`)}`
   );
 
+  if (driftOrQuarantine) return ExitCode.POLICY_FORBID;
   if (strict && error > 0) return ExitCode.POLICY_FORBID;
   return ExitCode.OK;
 };

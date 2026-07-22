@@ -21,6 +21,9 @@ export interface ServerCapabilities {
   liveDescriptionDigest?: string;
   liveTools?: McpTool[];
   driftDetectedAt?: string;
+  state?: 'installed' | 'quarantined';
+  quarantineReason?: string;
+  quarantinedAt?: string;
 }
 
 export interface ToolDrift {
