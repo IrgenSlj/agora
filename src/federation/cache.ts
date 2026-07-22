@@ -7,12 +7,12 @@
 //   2. `agora refresh` — official's `updated_since` incremental sync, which
 //      also prunes entries the registry has tombstoned as `deleted`.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { buildPurl, parsePurl } from '../model/purl.js';
+import { join } from 'node:path';
 import { detectAgoraDataDir } from '../state.js';
 import { AgoraStore, CASCache } from '../store/index.js';
 import { fetchOfficialPage } from './sources/official.js';
-import type { FederatedItem, FederationEnv, ServerPackage, SourceId } from './types.js';
+import { syncFederationItems } from './sync.js';
+import type { FederatedItem, FederationEnv, SourceId } from './types.js';
 
 const MAX_ITEMS_PER_SOURCE = 5000;
 /** Hard cap on pages crawled during a bootstrap (no prior `lastSyncAt`) sync. */
@@ -95,131 +95,16 @@ export interface RefreshResult {
   storeError?: string;
 }
 
-function resolveStorePath(env: FederationEnv): string | undefined {
-  if (env.storePath) return env.storePath;
-  return undefined;
-}
-
-function resolveCasDir(env: FederationEnv): string | undefined {
-  if (env.casDir) return env.casDir;
-  if (env.storePath) return join(dirname(env.storePath), 'cas');
-  return undefined;
-}
-
-function packagePurl(pkg: ServerPackage, fallbackVersion?: string): string | undefined {
-  const type = pkg.registryType.trim().toLowerCase();
-  const identifier = pkg.identifier.trim();
-  const version = pkg.version || fallbackVersion || undefined;
-  if (!type || !identifier) return undefined;
-
-  if (type === 'npm' && identifier.startsWith('@')) {
-    const slash = identifier.indexOf('/');
-    if (slash <= 1 || slash === identifier.length - 1) return undefined;
-    return buildPurl({
-      type,
-      namespace: identifier.slice(0, slash),
-      name: identifier.slice(slash + 1),
-      version
-    });
-  }
-
-  if (type === 'github') {
-    const [namespace, name] = identifier.split('/', 2);
-    if (!namespace || !name) return undefined;
-    return buildPurl({ type, namespace, name, version });
-  }
-
-  if (identifier.includes('/')) return undefined;
-  return buildPurl({ type, name: identifier, version });
-}
-
-export function purlForFederatedItem(item: FederatedItem): string | undefined {
-  for (const pkg of item.serverJson?.packages ?? []) {
-    try {
-      const purl = packagePurl(pkg, item.serverJson?.version || item.version || undefined);
-      if (purl) return purl;
-    } catch {}
-  }
-  return undefined;
-}
-
-function publisherNamespace(item: FederatedItem, purl: string): string {
-  try {
-    const parsed = parsePurl(purl);
-    return parsed.namespace || item.author || item.id;
-  } catch {
-    return item.author || item.id;
-  }
-}
-
-function officialSourceUrl(item: FederatedItem): string {
-  const official = item.provenance.find((p) => p.source === 'official');
-  return (
-    official?.sourceUrl ||
-    `https://registry.modelcontextprotocol.io/v0.1/servers/${encodeURIComponent(item.id)}/versions`
-  );
-}
-
-function officialFetchedAt(item: FederatedItem, syncedAt: string): string {
-  return item.provenance.find((p) => p.source === 'official')?.fetchedAt || syncedAt;
-}
-
 function persistSourceIndex(
   env: FederationEnv,
   items: FederatedItem[],
   prunedItems: FederatedItem[],
   syncedAt: string
 ): string | undefined {
-  const storePath = resolveStorePath(env);
-  if (!storePath) return undefined;
-  const casDir = resolveCasDir(env);
-  let store: AgoraStore | undefined;
-
   try {
-    store = new AgoraStore(storePath);
-    const cas = casDir ? new CASCache(casDir) : new CASCache();
-
-    for (const item of prunedItems) {
-      store.deleteSourceItem('official', item.id);
-      const purl = purlForFederatedItem(item);
-      if (purl) store.deleteArtifactSource(purl, 'official');
-    }
-
-    for (const item of items) {
-      const purl = purlForFederatedItem(item);
-      const fetchedAt = officialFetchedAt(item, syncedAt);
-      if (purl) {
-        store.upsertArtifact({
-          purl,
-          kind: 'mcp-server',
-          display_name: item.name || item.id,
-          publisher: {
-            namespace: publisherNamespace(item, purl),
-            identity_verified: false
-          }
-        });
-        store.upsertArtifactSource({
-          purl,
-          adapter: 'official',
-          upstream_id: item.id,
-          url: officialSourceUrl(item),
-          first_seen: fetchedAt
-        });
-      }
-
-      const itemSha256 = cas.put(JSON.stringify(item));
-      store.upsertSourceItem({
-        source: 'official',
-        upstream_id: item.id,
-        purl,
-        item_sha256: itemSha256,
-        fetched_at: fetchedAt
-      });
-    }
+    syncFederationItems(env, { source: 'official', items, prunedItems, syncedAt });
   } catch (err) {
     return err instanceof Error ? err.message : String(err);
-  } finally {
-    store?.close();
   }
   return undefined;
 }

@@ -12,6 +12,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   `--write --yes` while preserving unrelated config keys.
 - Added optional PulseMCP federation source support, disabled unless partner API credentials are
   present in `AGORA_PULSEMCP_*` or `PULSEMCP_*` environment variables.
+- Added `federation/sync.ts` for purl-keyed SQLite/CAS source-item sync with source precedence
+  (`official > glama > pulsemcp`) and prune-time canonical artifact recomputation.
 
 ### V2 direction refresh
 - Updated front-door project copy to the locked identity: Agora is **the trust plane for agentic

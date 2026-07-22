@@ -183,6 +183,9 @@ on the macOS+Linux matrix — pin a version with prebuilds.
      env-keyed source, disabled by default and cacheable/offline-first when credentials are present.
 2. **[opus]** `federation/sync.ts`: dedupe **by purl**, precedence official > glama > pulsemcp,
    incremental sync into SQLite.
+   - ✅ **Started:** `syncFederationItems()` now persists source items into CAS/SQLite by purl,
+     recomputes canonical artifact metadata by source precedence, and falls back to the next source
+     when the preferred source is pruned. `refreshOfficialCache()` uses this shared path.
 3. **[sonnet]** Rewire `agora search` + new `agora info <purl>` to read from local sync (offline-first).
 4. **[opus/you]** `workers/api/` hono app: `GET /v1/catalog?cursor=` from D1, cron sync every 6h,
    `GET /v1/health`. **[you]** create Cloudflare account + `wrangler` project + D1/KV; I author the code

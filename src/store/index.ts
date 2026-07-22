@@ -278,6 +278,31 @@ export class AgoraStore {
   }
 
   /**
+   * List source item CAS references that resolve to one normalized purl.
+   */
+  listSourceItemsByPurl(purl: string): Array<{
+    source: string;
+    upstream_id: string;
+    purl: string | null;
+    item_sha256: string;
+    fetched_at: string;
+  }> {
+    const stmt = this.db.prepare(`
+      SELECT source, upstream_id, purl, item_sha256, fetched_at
+      FROM source_items
+      WHERE purl = ?
+      ORDER BY source, upstream_id
+    `);
+    return stmt.all(purl) as Array<{
+      source: string;
+      upstream_id: string;
+      purl: string | null;
+      item_sha256: string;
+      fetched_at: string;
+    }>;
+  }
+
+  /**
    * Store a declared manifest.
    */
   upsertManifest(purl: string, version: string, manifestSha256: string, data: string): void {
