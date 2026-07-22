@@ -1,5 +1,6 @@
-// Federation source: Smithery (registry.smithery.ai). Keyless reads today
-// (OQ-3) — this is THE reliable per-server tool-schema source: fetchItem()'s
+// Federation source: Smithery (registry.smithery.ai). Keyless reads still
+// work (OQ-3), but S2 treats this as a non-canonical opt-in source. This is
+// the reliable per-server tool-schema source: fetchItem()'s
 // detail endpoint returns tools[]/resources[]/prompts[], which flow straight
 // into FederatedItem.tools and from there into the P2 gate's
 // annotation_hints / observed_permissions checks (src/acquire.ts already
@@ -35,6 +36,7 @@ import type {
   RegistrySource,
   ToolAnnotationHints
 } from '../types.js';
+import { isNonCanonicalSourceEnabled } from './noncanonical.js';
 
 export const SMITHERY_BASE_URL = 'https://registry.smithery.ai';
 
@@ -272,7 +274,7 @@ export const smitherySource: RegistrySource = {
   displayName: 'Smithery',
 
   isEnabled(env: FederationEnv): boolean {
-    return env.env?.AGORA_OFFLINE !== '1';
+    return isNonCanonicalSourceEnabled(env, 'smithery', 'AGORA_ENABLE_SMITHERY');
   },
 
   async search(

@@ -183,6 +183,10 @@ on the macOS+Linux matrix — pin a version with prebuilds.
      env-keyed source, disabled by default and cacheable/offline-first when credentials are present.
    - ✅ **Skills source:** `skills-github` reuses the GitHub repository crawler with skill-focused
      topics and maps results as `category: skill` / `agent-skill` sync candidates.
+   - ✅ **Non-canonical sources:** Smithery and Hugging Face remain available for explicit research,
+     but no longer participate in default federation unless `AGORA_ENABLE_NONCANONICAL_SOURCES=1`,
+     `AGORA_ENABLE_SMITHERY=1`, `AGORA_ENABLE_HUGGINGFACE=1`, or
+     `AGORA_NONCANONICAL_SOURCES=smithery,huggingface` is set.
 2. **[opus]** `federation/sync.ts`: dedupe **by purl**, precedence official > glama > pulsemcp,
    incremental sync into SQLite.
    - ✅ **Started:** `syncFederationItems()` now persists source items into CAS/SQLite by purl,
@@ -401,7 +405,8 @@ evidence summaries; `request_install` never mutates state.
 1. **OpenCode plugin path** — if `opencode-agora` is deprecated (D1), should the OpenCode plugin entry
    become `agora-hub` (which exports `./opencode`), or keep `packages/opencode-agora` alive as a thin
    pinned re-export? (Affects README install copy + `publish.yml`.)
-2. **smithery/huggingface adapters** — retire outright, or keep as non-canonical extra sources behind
-   a flag? (Brief §D7 names only official/glama/pulsemcp + skills-github.)
-3. **`agora today` (news)** — brief §3 keeps it read-only, zero investment. Confirm we keep the
+2. **`agora today` (news)** — brief §3 keeps it read-only, zero investment. Confirm we keep the
    current news sources as-is (just frozen), not trimmed.
+
+Resolved: Smithery/Hugging Face are retained as non-canonical opt-in sources behind
+`AGORA_ENABLE_NONCANONICAL_SOURCES`, per-source env flags, or `AGORA_NONCANONICAL_SOURCES`.

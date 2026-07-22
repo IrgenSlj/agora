@@ -153,12 +153,26 @@ describe('smitherySource.search() — genuine live-captured list + detail shape 
 });
 
 describe('smitherySource.isEnabled()', () => {
-  test('enabled by default (keyless reads)', () => {
-    expect(smitherySource.isEnabled({})).toBe(true);
+  test('disabled by default as a non-canonical source', () => {
+    expect(smitherySource.isEnabled({})).toBe(false);
   });
 
-  test('disabled when AGORA_OFFLINE=1', () => {
-    expect(smitherySource.isEnabled({ env: { AGORA_OFFLINE: '1' } })).toBe(false);
+  test('enabled by the shared or source-specific opt-in flags', () => {
+    expect(smitherySource.isEnabled({ env: { AGORA_ENABLE_NONCANONICAL_SOURCES: '1' } })).toBe(
+      true
+    );
+    expect(smitherySource.isEnabled({ env: { AGORA_ENABLE_SMITHERY: 'true' } })).toBe(true);
+    expect(smitherySource.isEnabled({ env: { AGORA_NONCANONICAL_SOURCES: 'smithery' } })).toBe(
+      true
+    );
+  });
+
+  test('disabled when AGORA_OFFLINE=1 even with an opt-in flag', () => {
+    expect(
+      smitherySource.isEnabled({
+        env: { AGORA_OFFLINE: '1', AGORA_ENABLE_NONCANONICAL_SOURCES: '1' }
+      })
+    ).toBe(false);
   });
 });
 

@@ -8,8 +8,10 @@ export const COMMANDS: CommandMeta[] = [
     usage:
       'agora search <query> [--source official|glama|pulsemcp|skills-github|smithery|github|huggingface|local|all] [--kind mcp-server|agent-skill] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
     details:
-      'Federates the official MCP Registry, Glama, PulseMCP, GitHub Skills, Smithery, GitHub, and Hugging Face with the ' +
-      'bundled local catalog, deduping matches found across sources (each result keeps its ' +
+      'Federates the official MCP Registry, Glama, PulseMCP, GitHub Skills, GitHub, and the bundled local catalog. ' +
+      'Smithery and Hugging Face are non-canonical opt-in sources; set AGORA_ENABLE_NONCANONICAL_SOURCES=1, ' +
+      'AGORA_ENABLE_SMITHERY=1, AGORA_ENABLE_HUGGINGFACE=1, or AGORA_NONCANONICAL_SOURCES=smithery,huggingface to enable them. ' +
+      'Dedupes matches found across sources (each result keeps its ' +
       'provenance). An unreachable source degrades honestly instead of failing the whole search — ' +
       'local always works offline. ' +
       'Use --kind for v2 artifact kinds, --category for legacy catalog categories, --source to restrict to one upstream, and --offline to ' +

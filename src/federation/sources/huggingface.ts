@@ -1,5 +1,5 @@
-// Federation source: Hugging Face — the long-tail model/dataset/space
-// catalog. search() wraps src/hubs/huggingface.ts's existing
+// Federation source: Hugging Face — non-canonical opt-in long-tail
+// model/dataset/space catalog. search() wraps src/hubs/huggingface.ts's existing
 // searchHuggingFace() (fixed category queries, no auth needed) and maps each
 // HubItem 1:1 into a FederatedItem. Like the GitHub source, searchHuggingFace
 // has no free-text query of its own — this source applies the query as a
@@ -20,6 +20,7 @@ import type {
   FederationEnv,
   RegistrySource
 } from '../types.js';
+import { isNonCanonicalSourceEnabled } from './noncanonical.js';
 
 const DETAIL_ENDPOINTS = ['models', 'datasets', 'spaces'] as const;
 
@@ -102,7 +103,7 @@ export const huggingfaceSource: RegistrySource = {
   displayName: 'Hugging Face',
 
   isEnabled(env: FederationEnv): boolean {
-    return env.env?.AGORA_OFFLINE !== '1';
+    return isNonCanonicalSourceEnabled(env, 'huggingface', 'AGORA_ENABLE_HUGGINGFACE');
   },
 
   async search(

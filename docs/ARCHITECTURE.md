@@ -26,8 +26,9 @@ Everything in the codebase serves one of four planes:
 ### Federate (`src/federation/`) — live
 
 Adapters behind a `RegistrySource`/`FederatedItem` contract normalize results from upstream
-registries (the official MCP Registry, Glama, GitHub, HuggingFace, …), deduped and merged into one
-search. `agora search`/`refresh` read from this. Target shape (brief §4): `src/federation/adapters/`
+registries (the official MCP Registry, Glama, GitHub, and non-canonical opt-in sources such as
+Smithery/Hugging Face), deduped and merged into one search. `agora search`/`refresh` read from this.
+Target shape (brief §4): `src/federation/adapters/`
 with per-source files plus `sync.ts` doing dedupe-by-purl and precedence — today's
 `src/federation/sources/` + `index.ts` are the pre-migration form of this.
 

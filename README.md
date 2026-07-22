@@ -44,7 +44,8 @@ for the full specification):
 
 - **Federate** — one search across federated upstream registries (the official MCP Registry as
   canonical, then Glama, PulseMCP, + skills). Agora never competes on catalog size; its effective
-  catalog is everyone's, deduped by [purl](https://github.com/package-url/purl-spec).
+  catalog is everyone's, deduped by [purl](https://github.com/package-url/purl-spec). Smithery and
+  Hugging Face are available as non-canonical opt-in research sources.
 - **Verify (evidence)** — provenance verification (Sigstore / npm & GitHub attestations),
   schema-and-description hashing with rug-pull **drift** detection, a sandboxed `vet` that records what
   a server actually reads / writes / contacts, and canary-token exfiltration detection — all emitted as

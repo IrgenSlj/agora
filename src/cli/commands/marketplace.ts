@@ -40,10 +40,9 @@ import {
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
-// P1+ registers glama/smithery/github/huggingface as real RegistrySources and
-// S2 adds optional PulseMCP. This allow-list has to grow with SOURCES
-// or `--source smithery` etc. would 404 at the CLI layer despite the source
-// being fully wired and reachable via federatedSearch().
+// This allow-list has to grow with SOURCES or `--source smithery` etc. would
+// 404 at the CLI layer despite the source being wired. Non-canonical sources
+// can still report `offline` until their opt-in env flags are set.
 const SEARCHABLE_SOURCE_IDS: SourceId[] = [
   'official',
   'glama',

@@ -46,7 +46,10 @@ discipline as the official source.
   an `annotations` object** — `security.scanPassed` and `tools[].annotations` exist in the response shape
   but were not observed populated in practice. Still THE reliable per-server tool-*schema* source
   (`name`/`description`/`inputSchema` are populated on every sampled server) — mapped so `annotations`
-  flows through the moment upstream starts setting it, without depending on it today.
+  flows through the moment upstream starts setting it, without depending on it today. S2 keeps it as
+  a non-canonical opt-in source (`AGORA_ENABLE_SMITHERY=1`, `AGORA_ENABLE_NONCANONICAL_SOURCES=1`, or
+  `AGORA_NONCANONICAL_SOURCES=smithery`), so default federation stays aligned to the brief's canonical
+  registry set.
 - **Glama** — `https://glama.ai/api/mcp/v1/servers` (`after` cursor, `first`, `query`,
   `attributes[]=<value>` — note the array-bracket param name; a bare `attributes=` silently no-ops),
   detail `/v1/servers/{namespace}/{slug}`, no auth. Re-confirmed 2026-07-04: **`tools[]` is `[]` on every
@@ -73,13 +76,17 @@ discipline as the official source.
   backoff (`maxRetries: 2`, ~1s base delay) — a fully-down network rides the federation engine's own
   per-source timeout ceiling (`DEFAULT_TIMEOUT_MS` = 5000) rather than failing fast. `fetchItem()` for
   both does one dedicated single-item GET (`GET /repos/{owner}/{repo}` for GitHub, tries
-  `models`/`datasets`/`spaces` in order for Hugging Face) rather than reusing the crawl.
+  `models`/`datasets`/`spaces` in order for Hugging Face) rather than reusing the crawl. Hugging Face
+  is non-canonical in S2 and requires `AGORA_ENABLE_HUGGINGFACE=1`,
+  `AGORA_ENABLE_NONCANONICAL_SOURCES=1`, or `AGORA_NONCANONICAL_SOURCES=huggingface`.
 
-**Adaptation:** P1 shipped `official` + `local`; P1+ adds `smithery` · `glama` · `github`
+**Adaptation:** P1 shipped `official` + `local`; P1+ added `smithery` · `glama` · `github`
 (reuse `src/hubs/github.ts`) · `huggingface` (reuse `src/hubs/huggingface.ts`). S2 adds optional
-`pulsemcp` with credential gating. S2 also adds `skills-github` as a GitHub-topic skill source.
-`SOURCES` preference order (`src/federation/index.ts`):
-`official, glama, pulsemcp, skills-github, smithery, github, huggingface, local`. Annotation hints for the gate come
+`pulsemcp` with credential gating and `skills-github` as a GitHub-topic skill source. S2 also resolves
+the Smithery/Hugging Face question: both are non-canonical and opt-in, not part of default federation.
+`SOURCES` preference order (`src/federation/index.ts`) remains
+`official, glama, pulsemcp, skills-github, smithery, github, huggingface, local`; disabled sources report
+`offline` and use cache fallback instead of contacting the network. Annotation hints for the gate come
 from the **Smithery detail endpoint** when upstream populates them (mapped defensively; not observed
 live as of 2026-07-04 — see correction above), never Glama.
 

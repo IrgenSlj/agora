@@ -7,12 +7,12 @@
  *
  * External-API reality verified 2026-07-03 (see docs/OPEN_QUESTIONS.md OQ-3):
  *   - official  registry.modelcontextprotocol.io — required, no auth for reads
- *   - smithery  api.smithery.ai — the reliable per-server tool-schema source
+ *   - smithery  api.smithery.ai — non-canonical opt-in, reliable per-server tool schemas
  *   - glama     glama.ai/api/mcp — NO tool schemas / annotation hints in practice
  *   - pulsemcp partner-gated sub-registry API; optional env-keyed source
  *   - skills-github GitHub-hosted Agent Skills discovered by skill topics
  *   - github    reuse src/hubs/github.ts as the long-tail source
- *   - huggingface reuse src/hubs/huggingface.ts
+ *   - huggingface non-canonical opt-in, reuse src/hubs/huggingface.ts
  *   - local     bundled data.ts / on-disk cache (offline fallback)
  * mcp.so has no self-serve public API — deliberately absent.
  */

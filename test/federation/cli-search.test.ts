@@ -19,11 +19,12 @@ function pageFetcher(servers: unknown[]): FetchLike {
 function createIo(fetcher: FetchLike, dataDir: string) {
   const stdout: string[] = [];
   const stderr: string[] = [];
+  const env: Record<string, string | undefined> = { AGORA_HOME: dataDir };
   return {
     io: {
       stdout: { write: (c: string) => stdout.push(c) },
       stderr: { write: (c: string) => stderr.push(c) },
-      env: { AGORA_HOME: dataDir },
+      env,
       cwd: process.cwd(),
       fetcher
     },
@@ -58,7 +59,9 @@ describe('agora search --json — federated shape', () => {
       ]);
       expect(
         payload.statuses.every((s: { source: string; state: string }) =>
-          s.source === 'pulsemcp' ? s.state === 'offline' : s.state === 'ok'
+          ['pulsemcp', 'smithery', 'huggingface'].includes(s.source)
+            ? s.state === 'offline'
+            : s.state === 'ok'
         )
       ).toBe(true);
       expect(payload.count).toBe(payload.items.length);
@@ -82,6 +85,28 @@ describe('agora search --json — federated shape', () => {
       rmSync(dataDir, { recursive: true, force: true });
     }
   });
+
+  test('non-canonical sources can be opted into with AGORA_ENABLE_NONCANONICAL_SOURCES', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'agora-federation-cli-'));
+    try {
+      const fixture = loadFixture('official-search-postgres.json');
+      const { io, stdout } = createIo(pageFetcher(fixture.servers), dataDir);
+      io.env.AGORA_ENABLE_NONCANONICAL_SOURCES = '1';
+
+      const code = await runCli(['search', 'postgres', '--json'], io);
+      const payload = JSON.parse(stdout.join(''));
+
+      expect(code).toBe(0);
+      expect(payload.statuses.find((s: { source: string }) => s.source === 'smithery').state).toBe(
+        'ok'
+      );
+      expect(
+        payload.statuses.find((s: { source: string }) => s.source === 'huggingface').state
+      ).toBe('ok');
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  }, 10000);
 
   test('--source official restricts results and statuses to the official registry', async () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'agora-federation-cli-'));

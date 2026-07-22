@@ -107,12 +107,26 @@ describe('huggingfaceSource.search() — wraps searchHuggingFace()', () => {
 });
 
 describe('huggingfaceSource.isEnabled()', () => {
-  test('enabled by default (public API, no auth needed)', () => {
-    expect(huggingfaceSource.isEnabled({})).toBe(true);
+  test('disabled by default as a non-canonical source', () => {
+    expect(huggingfaceSource.isEnabled({})).toBe(false);
   });
 
-  test('disabled when AGORA_OFFLINE=1', () => {
-    expect(huggingfaceSource.isEnabled({ env: { AGORA_OFFLINE: '1' } })).toBe(false);
+  test('enabled by the shared or source-specific opt-in flags', () => {
+    expect(huggingfaceSource.isEnabled({ env: { AGORA_ENABLE_NONCANONICAL_SOURCES: '1' } })).toBe(
+      true
+    );
+    expect(huggingfaceSource.isEnabled({ env: { AGORA_ENABLE_HUGGINGFACE: 'true' } })).toBe(true);
+    expect(
+      huggingfaceSource.isEnabled({ env: { AGORA_NONCANONICAL_SOURCES: 'huggingface' } })
+    ).toBe(true);
+  });
+
+  test('disabled when AGORA_OFFLINE=1 even with an opt-in flag', () => {
+    expect(
+      huggingfaceSource.isEnabled({
+        env: { AGORA_OFFLINE: '1', AGORA_ENABLE_NONCANONICAL_SOURCES: '1' }
+      })
+    ).toBe(false);
   });
 });
 

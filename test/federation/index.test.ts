@@ -39,6 +39,30 @@ describe('SOURCES registry — the seam for follow-on sources', () => {
       'local'
     ]);
   });
+
+  test('keeps non-canonical sources disabled by default unless explicitly opted in', async () => {
+    const cacheDir = tempCacheDir();
+    try {
+      const { statuses } = await federatedSearch(
+        'postgres',
+        {},
+        { fetcher: makeFetcher({ servers: [] }), cacheDir }
+      );
+
+      expect(statuses.find((s) => s.source === 'smithery')).toEqual({
+        source: 'smithery',
+        state: 'offline',
+        reason: 'disabled'
+      });
+      expect(statuses.find((s) => s.source === 'huggingface')).toEqual({
+        source: 'huggingface',
+        state: 'offline',
+        reason: 'disabled'
+      });
+    } finally {
+      rmSync(cacheDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('federatedSearch() — dedupe / canonicalization', () => {
