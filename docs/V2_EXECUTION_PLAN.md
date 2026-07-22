@@ -239,6 +239,8 @@ sync; adapter contract tests green.
    - ✅ **Started:** `src/evidence/schemahash.ts` now canonicalizes MCP `tools/list` data with
      JCS/SHA-256, extracts normalized descriptions, and backs the existing stack
      `descriptionDigest` path used by scan/doctor/acquire.
+   - ✅ **Started:** `src/evidence/diff.ts` now reports per-tool added/removed/changed drift with
+     before/after schema hashes, and the existing stack `diffToolDescriptions` helper delegates to it.
 3. **[sonnet]** `evidence/enrich.ts` deterministic poisoning heuristics (regex/AST): imperative-to-model
    phrases, zero-width unicode, HTML comments, base64 >128 chars, cross-tool shadowing. LLM pass
    optional/keyed. (Repurpose `src/curator/` + `src/hubs/enrichment.ts`.)

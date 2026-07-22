@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
-import { hashToolSchema, hashToolsList } from '../evidence/schemahash.js';
+import { diffToolSchemas } from '../evidence/diff.js';
+import { hashToolsList } from '../evidence/schemahash.js';
 import type { McpTool } from './mcp-probe.js';
 
 export interface ServerCapabilities {
@@ -53,33 +54,16 @@ export function diffToolDescriptions(
   before: ReadonlyArray<McpTool>,
   after: ReadonlyArray<McpTool>
 ): ToolDrift {
-  const beforeMap = new Map(before.map((tool) => [tool.name, tool]));
-  const afterMap = new Map(after.map((tool) => [tool.name, tool]));
-  const added: string[] = [];
-  const removed: string[] = [];
-  const changed: ToolDrift['changed'] = [];
-
-  for (const [name, tool] of afterMap) {
-    const previous = beforeMap.get(name);
-    if (!previous) {
-      added.push(name);
-    } else if (hashToolSchema(previous) !== hashToolSchema(tool)) {
-      changed.push({
-        name,
-        beforeDescription: previous.description,
-        afterDescription: tool.description
-      });
-    }
-  }
-
-  for (const name of beforeMap.keys()) {
-    if (!afterMap.has(name)) removed.push(name);
-  }
+  const diff = diffToolSchemas(before, after);
 
   return {
-    added: added.sort(),
-    removed: removed.sort(),
-    changed: changed.sort((a, b) => a.name.localeCompare(b.name))
+    added: diff.added.map((tool) => tool.name),
+    removed: diff.removed.map((tool) => tool.name),
+    changed: diff.changed.map((change) => ({
+      name: change.name,
+      beforeDescription: change.before_description,
+      afterDescription: change.after_description
+    }))
   };
 }
 
