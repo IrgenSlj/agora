@@ -4,6 +4,11 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
 import type { FetchLike } from '../src/live';
+import {
+  capabilityKey,
+  descriptionDigest,
+  writeCapabilityCache
+} from '../src/stack/capability-cache';
 import type { ConfiguredServer } from '../src/stack/types';
 import { buildUpdatePlan, bumpCommand, classifyUpdate, parsePinnedPackage } from '../src/update';
 
@@ -43,13 +48,17 @@ function makeRegistryBody(version: string) {
   };
 }
 
-function createIo(cwd = process.cwd(), options: { fetcher?: FetchLike } = {}) {
+function createIo(
+  cwd = process.cwd(),
+  options: { fetcher?: FetchLike; env?: Record<string, string | undefined> } = {}
+) {
   const stdout: string[] = [];
   const stderr: string[] = [];
   const env = {
     HOME: cwd,
     XDG_CONFIG_HOME: join(cwd, '.config'),
-    OPENCODE_CONFIG: join(cwd, 'opencode.json')
+    OPENCODE_CONFIG: join(cwd, 'opencode.json'),
+    ...options.env
   };
   return {
     io: {
@@ -453,6 +462,63 @@ describe('agora update command', () => {
       expect(code).toBe(0);
       expect(out).toContain('updatable');
       expect(out).toContain('agora update --write --yes');
+    } finally {
+      rmSync(temp, { recursive: true, force: true });
+    }
+  });
+
+  test('cached quarantine blocks update before npm lookup or host write', async () => {
+    const temp = mkdtempSync(join(tmpdir(), 'agora-update-drift-'));
+    const dataDir = join(temp, 'agora-data');
+    const configPath = join(temp, 'opencode.json');
+    const command = ['npx', 'my-pkg@1.0.0'];
+    const original = JSON.stringify({
+      mcp: {
+        'my-server': {
+          type: 'local',
+          command,
+          enabled: false
+        }
+      }
+    });
+    writeFileSync(configPath, original);
+
+    const baselineTools = [{ name: 'echo', description: 'old description' }];
+    const liveTools = [{ name: 'echo', description: 'new description' }];
+    writeCapabilityCache(dataDir, [
+      {
+        key: capabilityKey('my-server', command),
+        name: 'my-server',
+        command,
+        tools: baselineTools,
+        ok: true,
+        probedAt: new Date().toISOString(),
+        descriptionDigest: descriptionDigest(baselineTools),
+        liveDescriptionDigest: descriptionDigest(liveTools),
+        liveTools,
+        driftDetectedAt: new Date().toISOString(),
+        state: 'quarantined',
+        quarantineReason: 'description-drift',
+        quarantinedAt: new Date().toISOString()
+      }
+    ]);
+
+    let fetched = false;
+    const fetcher: FetchLike = async () => {
+      fetched = true;
+      throw new Error('npm lookup should not run when drift is blocked');
+    };
+
+    const { io, stdout } = createIo(temp, { fetcher, env: { AGORA_HOME: dataDir } });
+    try {
+      const code = await runCli(['update', '--write', '--yes'], io);
+      const out = stdout.join('');
+
+      expect(code).toBe(1);
+      expect(out).toContain('drift blocked');
+      expect(out).toContain('DRIFT');
+      expect(fetched).toBe(false);
+      expect(readFileSync(configPath, 'utf8')).toBe(original);
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }

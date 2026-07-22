@@ -249,6 +249,8 @@ sync; adapter contract tests green.
    - ✅ **Started:** `agora sync` now checks local capability-cache drift/quarantine state before
      planning or applying host writes, blocks with exit `1`, and prints the cached per-tool diff so a
      quarantined server cannot be silently reintroduced from `agora.toml`.
+   - ✅ **Started:** `agora update` now checks the same local drift/quarantine state before npm
+     lookup or host writes, exits `1`, and includes disabled quarantine entries in the preflight.
 3. **[sonnet]** `evidence/enrich.ts` deterministic poisoning heuristics (regex/AST): imperative-to-model
    phrases, zero-width unicode, HTML comments, base64 >128 chars, cross-tool shadowing. LLM pass
    optional/keyed. (Repurpose `src/curator/` + `src/hubs/enrichment.ts`.)

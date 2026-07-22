@@ -2,12 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import type { FetchLike } from '../live.js';
 import type { MarketplaceItem } from '../marketplace/types.js';
 import { type ScanOptions, type ScanResult, scanItem } from '../scan.js';
-import {
-  capabilityKey,
-  diffToolDescriptions,
-  formatToolDrift,
-  readCapabilityCache
-} from './capability-cache.js';
+import { type CapabilityDriftBlock, findCapabilityDriftBlocks } from './drift-blocks.js';
 import type { ManifestEntry, StackManifest } from './manifest.js';
 import { hashContent, resolveInstructionContent } from './manifest.js';
 import { getAdapter } from './registry.js';
@@ -31,12 +26,7 @@ export interface ToolSyncPlan {
   skipped: { name: string; reason: string }[];
 }
 
-export interface SyncDriftBlock {
-  name: string;
-  key: string;
-  reason: 'quarantined' | 'description-drift';
-  detail: string;
-}
+export type SyncDriftBlock = CapabilityDriftBlock;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -54,37 +44,15 @@ function manifestToDesired(manifest: StackManifest): DesiredServer[] {
 }
 
 export function findSyncDriftBlocks(manifest: StackManifest, dataDir: string): SyncDriftBlock[] {
-  const capabilityCache = readCapabilityCache(dataDir);
-  const cacheByKey = new Map(capabilityCache.map((entry) => [entry.key, entry]));
-  const blocks: SyncDriftBlock[] = [];
-
-  for (const [name, entry] of Object.entries(manifest.mcp)) {
-    if (entry.enabled === false || !entry.command || entry.command.length === 0) continue;
-    const key = capabilityKey(name, entry.command);
-    const cached = cacheByKey.get(key);
-    if (!cached) continue;
-
-    const approvedDigest = entry.descriptionDigest ?? cached.descriptionDigest;
-    const hasLiveDrift =
-      approvedDigest !== undefined &&
-      cached.liveDescriptionDigest !== undefined &&
-      cached.liveDescriptionDigest !== approvedDigest;
-    const isQuarantined = cached.state === 'quarantined';
-    if (!hasLiveDrift && !isQuarantined) continue;
-
-    const detail =
-      cached.liveTools && cached.liveTools.length > 0
-        ? `DRIFT: ${formatToolDrift(diffToolDescriptions(cached.tools, cached.liveTools))}`
-        : (cached.quarantineReason ?? 'description drift previously quarantined this server');
-    blocks.push({
+  return findCapabilityDriftBlocks(
+    Object.entries(manifest.mcp).map(([name, entry]) => ({
       name,
-      key,
-      reason: isQuarantined ? 'quarantined' : 'description-drift',
-      detail
-    });
-  }
-
-  return blocks.sort((a, b) => a.name.localeCompare(b.name));
+      command: entry.command,
+      enabled: entry.enabled,
+      descriptionDigest: entry.descriptionDigest
+    })),
+    dataDir
+  );
 }
 
 /**

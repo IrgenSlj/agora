@@ -1,8 +1,10 @@
 import { checkOutdated } from '../../outdated.js';
+import { findConfiguredServerDriftBlocks } from '../../stack/drift-blocks.js';
 import { ALL_ADAPTERS, getAdapter, readAllServers } from '../../stack/registry.js';
 import type { AgentToolId, DesiredServer, StackEnv } from '../../stack/types.js';
 import { buildUpdatePlan, bumpCommand, collectPackages } from '../../update.js';
-import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
+import { ExitCode } from '../exit-codes.js';
+import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { status } from '../pages/components.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
@@ -81,6 +83,30 @@ export const commandUpdate: CommandHandler = async (parsed, io, style) => {
       )
     );
     return 0;
+  }
+
+  const dataDir = detectDataDir(parsed, io);
+  const driftBlocks = findConfiguredServerDriftBlocks(servers, dataDir, { includeDisabled: true });
+  if (driftBlocks.length > 0) {
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { mode: 'drift-blocked', blocked: driftBlocks });
+      return ExitCode.POLICY_FORBID;
+    }
+    writeLine(io.stdout, theme.accent('agora update — drift blocked'));
+    writeLine(io.stdout);
+    for (const block of driftBlocks) {
+      const location = block.tool ? ` (${block.tool})` : '';
+      writeLine(io.stdout, `  mcp "${block.name}"${location}:`);
+      writeLine(io.stdout, `    ✗ Description drift — ${block.detail}`);
+    }
+    writeLine(io.stdout);
+    writeLine(
+      io.stdout,
+      theme.muted(
+        'No npm lookup or host write was performed. Run `agora doctor --probe` to refresh or inspect quarantine.'
+      )
+    );
+    return ExitCode.POLICY_FORBID;
   }
 
   // Collect unique npm package names and fetch latest versions

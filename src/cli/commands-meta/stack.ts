@@ -76,7 +76,8 @@ export const COMMANDS: CommandMeta[] = [
       'package in local server commands, and reports whether a newer npm version is available. ' +
       'Servers using a dist-tag, an unpinned package, a remote URL, or an unresolvable command are ' +
       'reported without writing anything. By default this is a dry-run; pass --write --yes to apply ' +
-      'version bumps to the selected scope while preserving unrelated config keys.',
+      'version bumps to the selected scope while preserving unrelated config keys. Local capability ' +
+      'cache drift or quarantine blocks the check before npm lookup or host writes and exits 1.',
     flags: [
       {
         flag: '--tool',

@@ -102,7 +102,9 @@ producer in S3 and `agora serve` exposing Agora itself as an MCP server (brief Â
   descriptions + input schemas) computed per server on probe; re-probe detects drift with a
   per-tool diff, preserves the approved baseline, records live drift/quarantine metadata, and rewrites
   affected host configs by disabling/removing the drifted entry. `agora sync` consults that local
-  state before writing so a quarantined server is not reintroduced from `agora.toml`.
+  state before writing so a quarantined server is not reintroduced from `agora.toml`; `agora update`
+  uses the same cache preflight before npm lookup or host writes, including disabled quarantine
+  entries.
 - **Description-poisoning heuristic scan** (`src/evidence/enrich.ts`, surfaced by `src/scan.ts`) â€”
   checks tool descriptions for imperative-to-model phrases, zero-width unicode, HTML comments, large
   base64-looking blobs, and cross-tool shadowing. Status `warn` to avoid false positives.

@@ -40,6 +40,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   config entry with a printed per-tool diff and exit code `1`.
 - `agora sync` now blocks before any host write when the local capability cache marks a manifest MCP
   entry as drifted or quarantined, preventing `agora.toml` from reintroducing a quarantined server.
+- `agora update` now refuses npm lookup and host writes when the selected configured server is marked
+  drifted or quarantined in the local capability cache, including disabled quarantine entries.
 - Added `src/evidence/enrich.ts` for deterministic, offline tool-description poisoning checks
   (imperative-to-model phrases, zero-width unicode, HTML comments, large base64-looking blobs, and
   cross-tool shadowing), surfaced through scan as `tool_description_poisoning`.
