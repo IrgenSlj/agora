@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
@@ -144,6 +144,39 @@ describe('agora search --json — federated shape', () => {
       rmSync(dataDir, { recursive: true, force: true });
     }
   }, 10000);
+
+  test('--offline reads the SQLite/CAS source index when JSONL is absent', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'agora-federation-cli-'));
+    try {
+      const fixture = loadFixture('official-search-postgres.json');
+      const { io } = createIo(pageFetcher(fixture.servers), dataDir);
+      await runCli(['refresh', '--json'], io);
+
+      const jsonlPath = join(dataDir, 'federation', 'official.jsonl');
+      if (existsSync(jsonlPath)) unlinkSync(jsonlPath);
+
+      const { io: offlineIo, stdout } = createIo(async () => {
+        throw new Error('offline should not fetch');
+      }, dataDir);
+      const code = await runCli(
+        ['search', 'postgres', '--offline', '--source', 'official', '--json'],
+        offlineIo
+      );
+      const payload = JSON.parse(stdout.join(''));
+
+      expect(code).toBe(0);
+      expect(payload.statuses).toEqual([
+        { source: 'official', state: 'offline', reason: 'disabled' }
+      ]);
+      expect(
+        payload.items.some(
+          (item: { id: string }) => item.id === 'capital.hove/read-only-local-postgres-mcp-server'
+        )
+      ).toBe(true);
+    } finally {
+      rmSync(dataDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('agora refresh', () => {

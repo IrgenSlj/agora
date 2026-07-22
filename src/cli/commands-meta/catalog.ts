@@ -12,7 +12,8 @@ export const COMMANDS: CommandMeta[] = [
       'bundled local catalog, deduping matches found across sources (each result keeps its ' +
       'provenance). An unreachable source degrades honestly instead of failing the whole search — ' +
       'local always works offline. ' +
-      'Use --category to filter by kind, --source to restrict to one upstream. ' +
+      'Use --category to filter by kind, --source to restrict to one upstream, and --offline to ' +
+      'read only local sync/cache data. ' +
       'Add --api to query a self-hosted Agora API instead (unrelated to federation).',
     flags: [
       {
@@ -22,6 +23,7 @@ export const COMMANDS: CommandMeta[] = [
       },
       { flag: '--category, -c', description: 'Filter by category: mcp, prompt, workflow, skill' },
       { flag: '--limit, -n', description: 'Maximum number of results (default 10)' },
+      { flag: '--offline', description: 'Read local sync/cache data without contacting upstreams' },
       { flag: '--json', description: 'Output results as JSON, including per-item provenance' }
     ],
     examples: [

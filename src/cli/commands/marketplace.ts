@@ -69,10 +69,11 @@ function federationEnvFor(
   io: Parameters<CommandHandler>[1]
 ): FederationEnv {
   const dataDir = detectDataDir(parsed, io);
+  const env = parsed.flags.offline ? { ...io.env, AGORA_OFFLINE: '1' } : io.env;
   return {
     fetcher: io.fetcher,
-    env: io.env,
-    home: io.env?.HOME,
+    env,
+    home: env?.HOME,
     cacheDir: join(dataDir, 'federation'),
     storePath: join(dataDir, 'agora.db'),
     casDir: join(dataDir, 'cas')
@@ -148,7 +149,9 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
   const perPage = numberFlag(parsed, 'perPage', 'pp') || 0;
   const limit = perPage > 0 ? perPage : numberFlag(parsed, 'limit', 'n') || 10;
 
-  const opts = await sourceOptions(parsed, io);
+  const opts = parsed.flags.offline
+    ? { useApi: false, fetcher: io.fetcher }
+    : await sourceOptions(parsed, io);
 
   // The legacy hosted-API path (`--api`/`--live`/a configured API URL) is
   // orthogonal to federation — a self-hosted Agora API, not an upstream MCP
@@ -222,8 +225,8 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
     return 0;
   }
 
-  // Federated path (default): official MCP registry + the bundled local
-  // catalog, deduped and merged, with an honest per-source status.
+  // Federated path (default): upstream registries + local sync/cache + the
+  // bundled local catalog, deduped and merged, with honest per-source status.
   const sourceFlag = stringFlag(parsed, 'source');
   if (sourceFlag && sourceFlag !== 'all' && !isSourceId(sourceFlag)) {
     return usageError(

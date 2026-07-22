@@ -189,6 +189,8 @@ on the macOS+Linux matrix — pin a version with prebuilds.
 3. **[sonnet]** Rewire `agora search` + new `agora info <purl>` to read from local sync (offline-first).
    - ✅ **Started:** `agora info <purl>` reads the local SQLite/CAS sync store directly and returns
      normalized artifact metadata plus source references/source-item summaries with `--json`.
+   - ✅ **Search path:** `agora search --offline` now sets the federation offline gate explicitly and
+     reads local sync/cache data, including SQLite/CAS source items when JSONL is absent.
 4. **[opus/you]** `workers/api/` hono app: `GET /v1/catalog?cursor=` from D1, cron sync every 6h,
    `GET /v1/health`. **[you]** create Cloudflare account + `wrangler` project + D1/KV; I author the code
    + `wrangler.toml` and a local `miniflare` test harness.

@@ -16,6 +16,8 @@ _Next (see [`ROADMAP.md`](./ROADMAP.md)): v2 S1 data model and lockfile hardenin
   (`official > glama > pulsemcp`) and prune-time canonical artifact recomputation.
 - Added `agora info <purl>` to inspect normalized artifacts, source references, and cached source-item
   summaries from the local SQLite/CAS sync store without contacting upstream registries.
+- `agora search --offline` now forces federation into local sync/cache mode, including SQLite/CAS
+  source-index fallback when JSONL compatibility files are absent.
 
 ### V2 direction refresh
 - Updated front-door project copy to the locked identity: Agora is **the trust plane for agentic
