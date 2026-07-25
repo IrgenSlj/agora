@@ -20,6 +20,14 @@ Agora is a **customs office over multi-source registries**, not a competing cata
 **evidence** — verifiable, inspectable attestations — never opaque numeric "trust scores." It is
 host-neutral and local-first: no accounts, no hosted backend you depend on, `--json` on every command.
 
+<p align="center">
+  <img src="./docs/assets/demo.gif" alt="agora doctor, search, scan, and freeze in the terminal" width="100%">
+</p>
+
+<p align="center">
+  <sub><em>audit what you already run · search every registry at once · gate what comes in · freeze it into a portable profile</em></sub>
+</p>
+
 ## Why this exists
 
 The agent-tooling ecosystem has 20k+ published MCP servers and a fast-growing skills ecosystem,
