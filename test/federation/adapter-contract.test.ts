@@ -187,20 +187,15 @@ function expectContractItems(source: SourceId, items: FederatedItem[], minItems 
 }
 
 describe('federation adapter contract', () => {
-  test.each(
-    CONTRACT_CASES
-  )('$source.id normalizes recorded upstream data without live network', async ({
-    source,
-    query,
-    env,
-    fetcher,
-    minItems
-  }) => {
-    const federationEnv: FederationEnv = { env, fetcher };
+  test.each(CONTRACT_CASES)(
+    '$source.id normalizes recorded upstream data without live network',
+    async ({ source, query, env, fetcher, minItems }) => {
+      const federationEnv: FederationEnv = { env, fetcher };
 
-    expect(source.isEnabled(federationEnv)).toBe(true);
-    const items = await source.search(query, { limit: 5 }, federationEnv);
+      expect(source.isEnabled(federationEnv)).toBe(true);
+      const items = await source.search(query, { limit: 5 }, federationEnv);
 
-    expectContractItems(source.id, items, minItems);
-  });
+      expectContractItems(source.id, items, minItems);
+    }
+  );
 });

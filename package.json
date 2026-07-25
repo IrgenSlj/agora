@@ -70,12 +70,12 @@
     "canonicalize": "^3.0.0",
     "hono": "^4.12.31",
     "packageurl-js": "^2.0.1",
-    "smol-toml": "^1.6.1",
+    "smol-toml": "^1.7.0",
     "yargs": "18",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.5.2",
+    "@biomejs/biome": "^2.5.5",
     "@cloudflare/workers-types": "^5.20260722.1",
     "@opencode-ai/plugin": "^1.18.4",
     "@types/better-sqlite3": "^7.6.13",
