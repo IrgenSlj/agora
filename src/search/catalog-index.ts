@@ -293,7 +293,7 @@ export function searchIndex(
   query: string,
   opts?: { k1?: number; b?: number }
 ): { id: string; score: number }[] {
-  if (!query || !query.trim()) return [];
+  if (!query?.trim()) return [];
 
   const k1 = opts?.k1 ?? 1.5;
   const b = opts?.b ?? 0.75;

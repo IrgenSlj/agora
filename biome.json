@@ -53,10 +53,17 @@
       "includes": ["src/**/*.ts", "scripts/**/*.ts", "test/**/*.ts"],
       "linter": {
         "rules": {
-          "complexity": { "noUselessEscapeInRegex": "off" },
+          "complexity": {
+            "noUselessEscapeInRegex": "off",
+            "useLiteralKeys": "off"
+          },
           "correctness": {
             "noUnusedVariables": "warn",
             "noVoidTypeReturn": "off"
+          },
+          "style": {
+            "useTemplate": "off",
+            "noNonNullAssertion": "off"
           },
           "suspicious": {
             "noExplicitAny": "off",

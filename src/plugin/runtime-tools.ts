@@ -168,7 +168,7 @@ export function createAgoraRuntimeTools(input?: PluginInput): Record<string, Too
           }
           if (loaded.config.mcp) {
             for (const [key, entry] of Object.entries(loaded.config.mcp)) {
-              if (!entry.command || !entry.command.length) {
+              if (!entry.command?.length) {
                 delete loaded.config.mcp[key];
                 fixes.push(`Removed empty MCP entry "${key}"`);
                 changed = true;

@@ -12,7 +12,7 @@ export const commandWatch: CommandHandler = async (parsed, io, style) => {
 
   const intervalArg = args[0];
   const interval = parseInt(intervalArg, 10);
-  if (isNaN(interval) || interval < 1) {
+  if (Number.isNaN(interval) || interval < 1) {
     return usageError(
       io,
       `Invalid interval "${intervalArg}". Must be a positive number of seconds.`

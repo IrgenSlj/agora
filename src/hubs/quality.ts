@@ -31,7 +31,7 @@ export function passes(repo: RawGithubRepo, now: Date): boolean {
   if (repo.archived) return false;
   if (repo.stargazers_count < 10) return false;
   if (!repo.description || repo.description.trim().length < 10) return false;
-  if (!repo.license || !repo.license.spdx_id) return false;
+  if (!repo.license?.spdx_id) return false;
   const pushed = new Date(repo.pushed_at).getTime();
   const ageDays = (now.getTime() - pushed) / (1000 * 60 * 60 * 24);
   if (ageDays > 365) return false; // not abandoned

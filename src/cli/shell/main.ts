@@ -316,7 +316,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         if (dispatch.sub === 'last') {
           const entries = readTranscript(dataDir, cwd0);
           const lastBash = [...entries].reverse().find((e) => e.kind === 'bash' && e.input);
-          if (!lastBash || !lastBash.input) {
+          if (!lastBash?.input) {
             process.stdout.write(style.dim('No previous bash command in this session.') + '\n');
             continue;
           }
@@ -329,7 +329,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
         if (dispatch.sub === 'again') {
           const entries = readTranscript(dataDir, cwd0);
           const lastChat = [...entries].reverse().find((e) => e.kind === 'chat-user' && e.input);
-          if (!lastChat || !lastChat.input) {
+          if (!lastChat?.input) {
             process.stdout.write(style.dim('No previous chat message in this session.') + '\n');
             continue;
           }

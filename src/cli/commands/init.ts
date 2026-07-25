@@ -8,12 +8,9 @@ import {
   loadOpenCodeConfig,
   writeOpenCodeConfig
 } from '../../config-files.js';
-import { sampleWorkflows } from '../../data.js';
 import { applyInitPlan, generateInitPlan, runCommands, scanProject } from '../../init.js';
 import { renderMeander, supportsTrueColor } from '../../ui.js';
-import { header } from '../format.js';
 import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
-import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 const TEMPLATES: Record<
@@ -288,76 +285,5 @@ export const commandInit: CommandHandler = async (parsed, io, style) => {
     for (const cmd of plan.commands) writeLine(io.stdout, `  ${cmd}`);
     writeLine(io.stdout, '\nRun without --dry-run to apply.');
   }
-  return 0;
-};
-
-export const commandUse: CommandHandler = async (parsed, io, style) => {
-  const id = parsed.args[0];
-  if (!id) {
-    const theme = cliTheme(style, io);
-    writeLine(
-      io.stdout,
-      header('agora use', [`${sampleWorkflows.length} available workflows`], theme)
-    );
-    writeLine(io.stdout, '');
-    writeLine(
-      io.stdout,
-      sampleWorkflows
-        .map((wf) => `  ${style.accent(wf.id.padEnd(22))} ${style.dim(wf.name)}`)
-        .join('\n')
-    );
-    writeLine(io.stdout, '');
-    writeLine(io.stdout, style.dim('Run `agora use <id>` to apply a workflow as a skill.'));
-    return 0;
-  }
-
-  const workflow = sampleWorkflows.find(
-    (w) => w.id === id || w.name.toLowerCase() === id.toLowerCase()
-  );
-  if (!workflow)
-    return usageError(
-      io,
-      `Workflow not found: ${id}. Run \`agora workflows\` to see available workflows.`
-    );
-
-  const cwd = io.cwd || process.cwd();
-  const skillsDir = join(cwd, '.opencode', 'skills');
-  mkdirSync(skillsDir, { recursive: true });
-
-  const skillId = workflow.id.replace(/^wf-/, 'skill-');
-  const skillPath = join(skillsDir, `${skillId}.md`);
-  const skillContent = `---
-name: ${workflow.name}
-description: ${workflow.description}
-model: ${workflow.model || ''}
-tags: [${workflow.tags.map((t) => `"${t}"`).join(', ')}]
----
-
-${workflow.prompt}
-`;
-
-  writeFileSync(skillPath, skillContent, 'utf8');
-
-  const configPath = detectOpenCodeConfigPath({ cwd, env: io.env });
-  const loaded = loadOpenCodeConfig(configPath);
-  if (loaded.error) return usageError(io, `${loaded.path}: ${loaded.error}`);
-  const plugins = new Set(loaded.config.plugin || []);
-  plugins.add(skillId);
-
-  const updatedConfig = {
-    ...loaded.config,
-    plugin: Array.from(plugins)
-  };
-  writeOpenCodeConfig(configPath, updatedConfig);
-
-  if (parsed.flags.json) {
-    writeJson(io.stdout, { workflow: workflow.id, skillPath, registered: true });
-    return 0;
-  }
-
-  writeLine(io.stdout, `✓ Applied "${workflow.name}" as an OpenCode skill.`);
-  writeLine(io.stdout, `  Skill file: ${skillPath}`);
-  writeLine(io.stdout, `  Registered in: ${configPath}`);
-  writeLine(io.stdout, '  Restart OpenCode to start using it.');
   return 0;
 };

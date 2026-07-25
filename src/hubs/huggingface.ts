@@ -58,7 +58,7 @@ export async function searchHuggingFace(opts: HfSearchOptions = {}): Promise<Hub
       if (!res.ok) continue;
       const json = (await res.json()) as RawHfItem[];
       for (const item of json ?? []) {
-        if (!item.id || !item.id.includes('/')) continue;
+        if (!item.id?.includes('/')) continue;
         if (!byId.has(item.id)) {
           byId.set(item.id, { raw: item, endpoint: query.endpoint });
         }

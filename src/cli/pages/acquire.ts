@@ -225,7 +225,7 @@ function gateActionFor(result: AcquireResult): PageAction {
 }
 
 function canApply(): boolean {
-  if (!state.result || !state.result.scan || state.applying || state.applyResult) return false;
+  if (!state.result?.scan || state.applying || state.applyResult) return false;
   return scanVerdict(state.result.scan) !== 'fail';
 }
 
