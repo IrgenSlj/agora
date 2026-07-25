@@ -10,6 +10,9 @@ import {
   type MarketplaceItem,
   searchMarketplaceItems
 } from './marketplace.js';
+import { checkRevocations } from './revocation/client.js';
+import { npmPurl } from './revocation/installed.js';
+import { isBlocking } from './revocation/match.js';
 import { type ScanOptions, type ScanResult, scanItem } from './scan.js';
 import { capabilityKey, descriptionDigest, readCapabilityCache } from './stack/capability-cache.js';
 import { manifestPath, readManifest, type StackManifest, writeManifest } from './stack/manifest.js';
@@ -66,6 +69,20 @@ export interface AcquireResult {
 }
 
 const DEFAULT_TOOL: AgentToolId = 'opencode';
+
+/**
+ * The purls a catalog item could be revoked under. An item's npm package is
+ * the addressable identity today; both the pinned-version and version-less
+ * forms are queried so an entry written against either shape still matches.
+ */
+function revocationPurlsFor(item: MarketplaceItem): string[] {
+  const npmPackage = item.kind === 'package' ? item.npmPackage : undefined;
+  if (!npmPackage) return [];
+  const version = item.kind === 'package' ? item.version : undefined;
+  const purls = [npmPurl(npmPackage)];
+  if (version) purls.push(npmPurl(npmPackage, version));
+  return purls;
+}
 
 function federationEnvFrom(input: AcquireInput): FederationEnv {
   return {
@@ -238,6 +255,26 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
         )?.descriptionDigest
       : undefined;
   const previousDigest = existingTrust?.descriptionDigestBaseline ?? cachedDigest;
+
+  // Revocation runs BEFORE the scan and before any write. A revoked artifact
+  // is not a judgement call the heuristics get to weigh in on — it is a known
+  // -bad thing someone has published an advisory about, and the answer is no.
+  // Offline lookup against the cached feed: this must never wait on a network.
+  const revocation = input.dataDir
+    ? checkRevocations(input.dataDir, revocationPurlsFor(item))
+    : undefined;
+  const blockingRevocation = revocation?.matches.find((m) => isBlocking(m.entry));
+  if (blockingRevocation) {
+    return {
+      status: 'blocked',
+      item,
+      plan,
+      reason:
+        `Refusing: ${item.name} is revoked — ${blockingRevocation.entry.id} ` +
+        `(${blockingRevocation.entry.reason}, ${blockingRevocation.entry.severity}).` +
+        (blockingRevocation.entry.refs[0] ? ` See ${blockingRevocation.entry.refs[0]}` : '')
+    };
+  }
 
   const scan = await (input.deps?.scan ?? scanItem)(item, {
     ...input.scanOptions,

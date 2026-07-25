@@ -113,9 +113,41 @@ Two bugs worth naming, both caught by testing against real packages rather than 
   correctly-signed package. `ProvenanceVerifierUnavailable` now separates "could not check" from
   "checked and it failed".
 
+### Added — signed revocation feed (S4)
+
+The ecosystem Agora sits in front of has **no revocation mechanism at all**: once a malicious MCP
+server is published and installed, nothing tells you later that it turned out to be malicious. This
+is that missing piece.
+
+- `src/revocation/feed.ts` — ed25519 over the JCS canonicalization of the feed minus its signature,
+  verified against a public key **pinned in the binary**, so a compromised CDN can withhold entries
+  but cannot forge them. `feed_version` is strictly monotonic and a feed that is not newer than the
+  cached one is refused, so an attacker who can serve traffic cannot roll a user back past the entry
+  naming their own package. Rollback is checked only *after* the signature holds — an unsigned
+  document's version number is not evidence of anything.
+- `src/revocation/client.ts` — fetch, verify, cache. Lookups are synchronous and offline: no command
+  waits on the network to answer "is this revoked?", and a refresh failure never affects the command
+  the user actually ran.
+- `agora acquire` refuses a `critical`/`high` match **before the scan and before any write**, exits
+  1, and names the advisory. `advisory` severity warns.
+- `agora doctor` marks revoked servers `REVOKED`, prints the advisory and its references, and exits
+  non-zero.
+
+Three honesty properties are load-bearing here. No cached feed reports `unknown` rather than a clean
+bill of health; a cache past the staleness window says so rather than staying quiet; and servers
+whose identity cannot be expressed as a purl (remote, or a non-npm launcher) are reported as
+**not checkable** rather than counted as clean.
+
+**No feed key is pinned yet**, so every feed is currently `unverifiable` and no revocations are
+applied — a deliberate fail-closed default, because a feed nobody can authenticate is a vector
+rather than a safety net. `bun scripts/generate-feed-key.ts` mints the keypair; the public half is
+pinned in a release, the private half belongs in CI.
+
 ### Known
 
 - Glama's upstream endpoint returns HTTP 504; reported as `unreachable`.
+- The revocation feed has no publishing endpoint yet (the Cloudflare Worker route is unbuilt), and
+  no signing key is pinned — the client half is complete and tested, the operational half is not.
 - Provenance verification requires Node (the shipped runtime). Under `bun run`, it degrades to
   "could not check" rather than reporting a false failure.
 

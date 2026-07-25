@@ -42,8 +42,8 @@ policy engine, and the agent-facing `agora serve` discovery tools — see the ph
 | S0 | Hygiene & identity | ✅ Complete |
 | S1 | Data model & lockfile | ✅ Complete |
 | S2 | Multi-source search | ✅ Complete |
-| S3 | Provenance & drift | 🔄 Partial — modules exist, needs live Sigstore |
-| S4 | Revocation | ⬜ Not started |
+| S3 | Provenance & drift | ✅ Complete — live Sigstore verification wired |
+| S4 | Revocation | 🔄 Client complete — needs a pinned key + publishing endpoint |
 | S5 | Policy (Cedar) | ⬜ Not started |
 | S6 | Vet (sandbox) | ⬜ Not started |
 | S7 | Serve (agent-facing) | ⬜ Not started |
