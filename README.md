@@ -1,4 +1,6 @@
-# agora
+<p align="center">
+  <img src="./docs/assets/banner.svg" alt="Agora — the trust plane for agentic tooling" width="100%">
+</p>
 
 > **The trust plane for agentic tooling.** Agora verifies where your MCP servers and Agent Skills
 > come from, watches what they actually do, enforces *your* policy over both, and manages them across

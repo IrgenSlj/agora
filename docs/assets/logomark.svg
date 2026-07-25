@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Agora logomark">
+  <title>Agora logomark</title>
+  <rect width="512" height="512" rx="96" fill="#1A1614"/>
+  <rect x="14" y="14" width="484" height="484" rx="84" fill="none" stroke="#944038" stroke-width="3" opacity="0.6"/>
+  <g transform="translate(91.0 56.5)" shape-rendering="crispEdges">
+    <rect x="120.00" y="0.00" width="30.00" height="57.00" fill="#ca7c5b" opacity="0.72"/>
+    <rect x="150.00" y="0.00" width="30.00" height="57.00" fill="#c66a4a" opacity="0.72"/>
+    <rect x="180.00" y="0.00" width="30.00" height="57.00" fill="#bc6246" opacity="0.72"/>
+    <rect x="90.00" y="57.00" width="30.00" height="57.00" fill="#cf8e6c" opacity="0.72"/>
+    <rect x="120.00" y="57.00" width="30.00" height="57.00" fill="#ca7c5b" opacity="0.46"/>
+    <rect x="150.00" y="57.00" width="30.00" height="57.00" fill="#c66a4a" opacity="0.46"/>
+    <rect x="180.00" y="57.00" width="30.00" height="57.00" fill="#bc6246" opacity="0.46"/>
+    <rect x="210.00" y="57.00" width="30.00" height="57.00" fill="#b25943" opacity="0.72"/>
+    <rect x="60.00" y="114.00" width="30.00" height="57.00" fill="#d3a07c" opacity="0.72"/>
+    <rect x="90.00" y="114.00" width="30.00" height="57.00" fill="#cf8e6c" opacity="0.46"/>
+    <rect x="210.00" y="114.00" width="30.00" height="57.00" fill="#b25943" opacity="1"/>
+    <rect x="240.00" y="114.00" width="30.00" height="57.00" fill="#a8513f" opacity="0.72"/>
+    <rect x="60.00" y="171.00" width="30.00" height="57.00" fill="#d3a07c" opacity="1"/>
+    <rect x="90.00" y="171.00" width="30.00" height="57.00" fill="#cf8e6c" opacity="1"/>
+    <rect x="210.00" y="171.00" width="30.00" height="57.00" fill="#b25943" opacity="0.46"/>
+    <rect x="240.00" y="171.00" width="30.00" height="57.00" fill="#a8513f" opacity="1"/>
+    <rect x="60.00" y="228.00" width="30.00" height="57.00" fill="#d3a07c" opacity="1"/>
+    <rect x="90.00" y="228.00" width="30.00" height="57.00" fill="#cf8e6c" opacity="1"/>
+    <rect x="120.00" y="228.00" width="30.00" height="57.00" fill="#ca7c5b" opacity="0.72"/>
+    <rect x="150.00" y="228.00" width="30.00" height="57.00" fill="#c66a4a" opacity="0.72"/>
+    <rect x="180.00" y="228.00" width="30.00" height="57.00" fill="#bc6246" opacity="0.72"/>
+    <rect x="210.00" y="228.00" width="30.00" height="57.00" fill="#b25943" opacity="1"/>
+    <rect x="240.00" y="228.00" width="30.00" height="57.00" fill="#a8513f" opacity="1"/>
+    <rect x="60.00" y="285.00" width="30.00" height="57.00" fill="#d3a07c" opacity="1"/>
+    <rect x="90.00" y="285.00" width="30.00" height="57.00" fill="#cf8e6c" opacity="1"/>
+    <rect x="210.00" y="285.00" width="30.00" height="57.00" fill="#b25943" opacity="1"/>
+    <rect x="240.00" y="285.00" width="30.00" height="57.00" fill="#a8513f" opacity="0.46"/>
+    <rect x="60.00" y="342.00" width="30.00" height="57.00" fill="#d3a07c" opacity="0.46"/>
+    <rect x="90.00" y="342.00" width="30.00" height="57.00" fill="#cf8e6c" opacity="0.46"/>
+    <rect x="210.00" y="342.00" width="30.00" height="57.00" fill="#b25943" opacity="0.46"/>
+    <rect x="240.00" y="342.00" width="30.00" height="57.00" fill="#a8513f" opacity="0.46"/>
+  </g>
+</svg>
