@@ -6,10 +6,17 @@ import type { FederatedTool, OfficialStatus } from './federation/types.js';
 import type { FetchLike } from './live.js';
 import type { MarketplaceItem, PackageMarketplaceItem } from './marketplace.js';
 import { getInstallKind, hasPermissions } from './marketplace.js';
+import type { ProvenanceVerification } from './model/attestation.js';
 import { fetchWithRetry } from './retry.js';
 import { descriptionDigest } from './stack/capability-cache.js';
 import type { McpTool } from './stack/mcp-probe.js';
 import type { Permissions } from './types.js';
+
+/** The subset of a provenance verdict the gate needs; see evidence/provenance.ts. */
+export type ProvenanceEvidenceSummary = Pick<
+  ProvenanceVerification,
+  'verified' | 'reason' | 'source_repo'
+>;
 
 export type CheckStatus = 'pass' | 'warn' | 'fail';
 
@@ -40,6 +47,13 @@ export interface ScanOptions {
    */
   /** Official-registry lifecycle status, when the item resolved there. */
   officialStatus?: OfficialStatus;
+  /**
+   * Resolves signed-provenance evidence for an npm package. Injected rather
+   * than imported so `scan.ts` keeps no hard dependency on the Sigstore stack
+   * (and so the suite never reaches Fulcio or Rekor). Absent → the provenance
+   * check is skipped entirely rather than reporting a verdict Agora doesn't have.
+   */
+  provenance?: (npmPackage: string) => Promise<ProvenanceEvidenceSummary | null>;
   /** Tool schemas + MCP annotation hints from federation (e.g. Smithery) or a live probe. */
   tools?: FederatedTool[];
   /**
@@ -402,6 +416,68 @@ async function checkNpmExists(item: PackageMarketplaceItem, opts: ScanOptions): 
   }
 }
 
+/**
+ * Sigstore provenance — "was this published by the repository it claims?"
+ *
+ * This check only speaks when it has something to say, and that is a
+ * deliberate design choice rather than timidity.
+ *
+ * The overwhelming majority of npm packages publish no provenance at all.
+ * Emitting a warning for each of them would make almost every scan warn, which
+ * teaches users that warnings are background noise — and this gate's whole
+ * value rests on a warning meaning something. `test/gate/acquire-gate.test.ts`
+ * pins that property ("zero false positives on a clean fixture").
+ *
+ * So: `pass` only when a signature verified *and* bound to the declared source
+ * repo; `fail` when a signature was checked and did not hold up, which is a
+ * genuine red flag about this specific package; and **no row at all** when
+ * there is simply no attestation to check, or the network prevented checking.
+ * The absence of evidence is reported as absence — visible in `--json` via the
+ * missing check — not dressed up as either reassurance or alarm.
+ */
+async function checkProvenance(
+  item: PackageMarketplaceItem,
+  opts: ScanOptions
+): Promise<ScanCheck | null> {
+  if (!item.npmPackage || !opts.provenance || opts.offline) return null;
+
+  const base: Omit<ScanCheck, 'status' | 'message'> = {
+    name: 'registry_provenance',
+    label: 'Signed provenance'
+  };
+
+  try {
+    const evidence = await opts.provenance(item.npmPackage);
+    if (!evidence) return null;
+
+    if (evidence.verified) {
+      return {
+        ...base,
+        status: 'pass',
+        message: evidence.source_repo
+          ? `signed by ${evidence.source_repo.replace('https://github.com/', '')}`
+          : 'signature verified'
+      };
+    }
+
+    if (evidence.reason === 'verification-failed' || evidence.reason === 'publisher-mismatch') {
+      return {
+        ...base,
+        status: 'fail',
+        message:
+          evidence.reason === 'publisher-mismatch'
+            ? 'attestation was signed by a different repository than it claims'
+            : 'attestation failed verification'
+      };
+    }
+
+    // no-provenance · network-error · verification-skipped — say nothing.
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Promise<ScanCheck[]> {
   const checks: ScanCheck[] = [];
 
@@ -461,6 +537,10 @@ async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Pro
   if (item.npmPackage) {
     checks.push(await checkNpmExists(item, opts));
   }
+
+  // 4b. registry_provenance — skipped entirely when no resolver is wired.
+  const provenance = await checkProvenance(item, opts);
+  if (provenance) checks.push(provenance);
 
   // 5. recently_active
   if (item.pushedAt) {

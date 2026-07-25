@@ -1,4 +1,5 @@
 import { type AcquireResult, acquire, renderAcquireResult } from '../../acquire.js';
+import { createProvenanceResolver } from '../../evidence/resolve-provenance.js';
 import type { SourceId } from '../../federation/types.js';
 import type { AgentToolId } from '../../stack/types.js';
 import { ExitCode } from '../exit-codes.js';
@@ -77,7 +78,15 @@ export const commandAcquire: CommandHandler = async (parsed, io) => {
     env: io.env,
     dataDir: detectDataDir(parsed, io),
     fetcher: io.fetcher,
-    githubToken: io.env?.AGORA_GITHUB_TOKEN
+    githubToken: io.env?.AGORA_GITHUB_TOKEN,
+    // Wired here rather than inside acquire() so the library never reaches
+    // Fulcio/Rekor on its own — callers and tests opt in.
+    scanOptions: {
+      provenance: createProvenanceResolver({
+        fetcher: io.fetcher,
+        offline: io.env?.AGORA_OFFLINE === '1'
+      })
+    }
   });
 
   if (parsed.flags.json) {

@@ -1,3 +1,4 @@
+import { createProvenanceResolver } from '../../evidence/resolve-provenance.js';
 import { findMarketplaceItem } from '../../marketplace.js';
 import { scanItem } from '../../scan.js';
 import { ExitCode } from '../exit-codes.js';
@@ -30,7 +31,13 @@ export const commandScan: CommandHandler = async (parsed, io, style) => {
   }
 
   const githubToken = io.env?.AGORA_GITHUB_TOKEN;
-  const result = await scanItem(item, { fetcher: io.fetcher, githubToken });
+  const offline = io.env?.AGORA_OFFLINE === '1';
+  const result = await scanItem(item, {
+    fetcher: io.fetcher,
+    githubToken,
+    offline,
+    provenance: createProvenanceResolver({ fetcher: io.fetcher, offline })
+  });
   const exitCode = scanExitCode(result.summary);
 
   if (parsed.flags.json) {

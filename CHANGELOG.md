@@ -80,11 +80,44 @@ replacements — they belonged to pillars the v2 brief deleted.
 - `ROADMAP.md` advertised search "across 8 upstream registries." Four query by default; PulseMCP is
   disabled for lack of a self-serve API, and Smithery and Hugging Face are opt-in non-canonical.
 
+### Added — Sigstore provenance verification (S3)
+
+`agora scan` and `agora acquire` can now answer the trust plane's headline question: *was this
+published by the repository it claims?* Verified end to end against the live transparency log —
+`@modelcontextprotocol/server-filesystem` reports `✓ Signed provenance — signed by
+modelcontextprotocol/servers`.
+
+- `src/evidence/sigstore.ts` verifies the DSSE bundle against Sigstore's trusted root (Fulcio chain,
+  CT log, Rekor inclusion) via `sigstore` v5, pinned to the GitHub Actions OIDC issuer.
+- **Identity binding.** A valid signature only proves *somebody* signed inside GitHub Actions, and
+  anyone can run a workflow. The signing certificate's SAN must also match the repository the
+  provenance statement claims — otherwise an attacker signs their own package with their own
+  perfectly valid workflow and passes. A mismatch is refused.
+- `src/evidence/resolve-provenance.ts` joins the two halves; wired in at the CLI layer so `acquire()`
+  and the test suite never reach Fulcio or Rekor on their own.
+
+Gate semantics are deliberately quiet: `pass` only on a verified, identity-bound signature; `fail`
+only when a signature was checked and did not hold up; and **no row at all** when a package simply
+publishes no attestation. Most of npm publishes none, and warning on all of them would make almost
+every scan warn and drain the meaning from every other warning.
+
+Two bugs worth naming, both caught by testing against real packages rather than fixtures:
+
+- The purl for a scoped package was built by string concatenation, yielding
+  `pkg:npm/@scope/name@version` where npm signs `pkg:npm/%40scope/name@version`. The subject match
+  failed, so **every scoped package — most MCP servers — came back `verification-failed`**, which the
+  gate would have rendered as a supply-chain red flag.
+- Under Bun, tuf-js cannot verify the Sigstore root's own signatures ("root was signed by 0/3 keys")
+  while the identical bundle verifies cleanly under Node. Agora ships as a Node CLI so users are
+  unaffected, but an unavailable verifier reporting `verification-failed` would have condemned every
+  correctly-signed package. `ProvenanceVerifierUnavailable` now separates "could not check" from
+  "checked and it failed".
+
 ### Known
 
-- Sigstore online verification (Fulcio + Rekor) is still unwired, so `agora scan` cannot yet answer
-  "was this signed by its author?" — it reports `verification-skipped`, honestly.
 - Glama's upstream endpoint returns HTTP 504; reported as `unreachable`.
+- Provenance verification requires Node (the shipped runtime). Under `bun run`, it degrades to
+  "could not check" rather than reporting a false failure.
 
 ## [0.6.1] - 2026-07-22 — evidence pipeline, federation expansion, and quarantine hardening
 
