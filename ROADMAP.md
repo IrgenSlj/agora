@@ -13,9 +13,13 @@ shipped work is in [`CHANGELOG.md`](./CHANGELOG.md).
 - **Manage** — stack manager (`src/stack/`): `agora.toml` profile, per-host adapters (OpenCode,
   Claude Code, Cursor, Windsurf), `plan`/`apply`, `sync --from <url>`, `doctor` with drift,
   quarantine system for drifted/quarantined servers.
-- **Multi-source search** — offline-first catalog search (`agora search`) across 8 upstream
-  registries (official MCP Registry, Glama, PulseMCP, Smithery, GitHub, Hugging Face, skills-github,
-  local), deduped, with honest per-source status.
+- **Multi-source search** — offline-first catalog search (`agora search`), deduped by purl, with
+  honest per-source status. Eight adapters exist; **four query by default** (official MCP Registry,
+  Glama, GitHub, skills-github) alongside the bundled local catalog. PulseMCP is disabled (no
+  self-serve API — see `docs/OPEN_QUESTIONS.md` OQ-3); Smithery and Hugging Face are non-canonical
+  and opt-in behind `AGORA_ENABLE_NONCANONICAL_SOURCES`. A source that cannot answer reports
+  `unreachable` with a reason and falls back to its cache — it never reports an empty result as
+  success. Glama's upstream endpoint currently 504s.
 - **Gate** — heuristic customs gate on `agora acquire` (injection-pattern, drift, permission,
   poisoning checks) — being replaced by the evidence + Cedar policy plane (S3–S5).
 - **Evidence (S3 partial)** — schema hashing (`evidence/schemahash.ts`), schema drift
@@ -23,6 +27,10 @@ shipped work is in [`CHANGELOG.md`](./CHANGELOG.md).
   verification scaffold (`evidence/provenance.ts`).
 - **Integration** — `agora mcp` (MCP server exposing the stack + catalog as tools),
   `agora integrate --all` (installs Agora into every host via its own stack machinery).
+- **Surface** — the v1 catalog commands (`auth`, `curate`, `chat`, `trending`, `workflows`,
+  `tutorials`, `save`/`saved`/`bookmarks`, `similar`, `compare`, `share`, `author`, `use`, `menu`)
+  were removed in v0.6.2 along with `src/auth/` and `src/curator/`. There are no accounts and no
+  stored credentials anywhere in the product.
 
 Not yet live: live Sigstore verification, sandboxed `vet`, signed revocation feed, the Cedar
 policy engine, and the agent-facing `agora serve` discovery tools — see the phases below.

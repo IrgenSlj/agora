@@ -65,7 +65,7 @@ is **what is live today**. The phase-by-phase map is [`docs/V2_EXECUTION_PLAN.md
 | Capability | State |
 |---|---|
 | **Manage** — stack manager, multi-host adapters, `plan`/`apply`, `sync --from` | ✅ live |
-| **Federate** — federated, offline-first catalog search (`agora search`) | ✅ live |
+| **Federate** — multi-source, offline-first catalog search (`agora search`) | ✅ live *(4 of 8 sources query by default)* |
 | **Gate** — heuristic customs gate on `agora acquire` (injection / drift / permission checks) | ✅ live *(being replaced by evidence + Cedar)* |
 | **Verify** — Sigstore provenance · drift attestations · sandboxed `vet` · attestation export | 🔜 building (S3, S6) |
 | **Gate** — Cedar policy engine · signed revocation feed | 🔜 building (S4, S5) |

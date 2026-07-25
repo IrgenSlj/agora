@@ -26,19 +26,23 @@ Target shape (brief §4): `src/federation/adapters/`
 with per-source files plus `sync.ts` doing dedupe-by-purl and precedence. The old
 `src/federation/sources/` paths are compatibility barrels over the adapter implementations.
 
-### Verify — evidence (`src/evidence/`) — planned, heuristic precursor live today
+### Verify — evidence (`src/evidence/`) — partial
 
-Not yet built: provenance verification (Sigstore / npm & GitHub attestations), schema/description
-hashing with rug-pull drift detection, a sandboxed `vet` recording what a server actually
-reads/writes/contacts, canary-token exfiltration detection — all emitted as in-toto/DSSE
-attestations (brief §6). Today, `src/scan.ts` implements a heuristic precursor: injection-pattern
-checks, permission-manifest diffs, and live-probe tool-schema drift, without sandboxing or signed
-attestations.
+Live: schema/description hashing (`schemahash.ts`), drift diffing (`diff.ts`), and
+description-poisoning heuristics (`enrich.ts`). `provenance.ts` parses in-toto/DSSE statements and
+npm attestation bundles, but **Sigstore online verification (Fulcio + Rekor) is not wired** — so the
+plane's headline question, "was this signed by its author?", cannot be answered yet.
+
+Not yet built: the sandboxed `vet` recording what a server actually reads/writes/contacts, and
+canary-token exfiltration detection (brief §6). Today, `src/scan.ts` is the heuristic precursor:
+injection-pattern checks, permission-manifest diffs, and live-probe tool-schema drift, without
+sandboxing or signed attestations.
 
 ### Gate — policy (`src/policy/`) — planned, heuristic gate live today
 
-Not yet built: a real Cedar policy engine evaluated over evidence, plus a signed revocation feed
-with anti-rollback (brief §7). Today, `agora acquire` (`src/acquire.ts`) is the safe
+Not yet built: `src/policy/` does not exist. The Cedar policy engine and the signed revocation feed
+with anti-rollback (brief §7) are unimplemented; `src/model/policy.ts` and `src/model/revocation.ts`
+define their schemas, but nothing consumes them yet. Today, `agora acquire` (`src/acquire.ts`) is the safe
 capability-acquisition gateway: `resolve → install plan → scan gate → config write`. `fail` blocks
 the write and exits non-zero; `warn` requires `--accept-warnings`; `--dry-run` previews without
 writing. **It is not a sandbox and does not execute or formally verify server code** — "passed the
@@ -67,8 +71,13 @@ producer in S3 and `agora serve` exposing Agora itself as an MCP server (brief �
   tools (`agora_search`, `agora_acquire`, `agora_config`, …) plus lifecycle hooks
   (`tool.execute.before` for opt-in capability-gap suggestions, `experimental.session.compacting`
   for stack-aware context). The plugin never owns a write that bypasses the gate.
-- **News** (`src/news/`) — a federated feed reader (HN, GitHub Trending, arXiv today), retained
-  read-only with zero new investment (brief §3), surfaced via `agora today`.
+- **News** (`src/news/`) — a feed reader (HN, GitHub Trending, arXiv), retained read-only with zero
+  new investment (brief §3), surfaced via `agora today` / `agora news`.
+
+The v1 catalog surface — `auth`, `curate`, `chat`, `trending`, `workflows`, `tutorials`,
+`save`/`saved`/`bookmarks`, `similar`, `compare`, `share`, `author`, `use`, `menu` — was removed, along
+with `src/auth/` and `src/curator/`. Agora has no accounts, no sessions, and stores no credentials;
+the optional `AGORA_API_URL` catalog mirror is configured by env/flag only.
 
 ## Design principles
 
@@ -117,7 +126,7 @@ src/acquire.ts        capability-acquisition gateway (resolve → scan-gate → 
 src/scan.ts           the heuristic gate — injection/permission/drift heuristics
                       → target: src/evidence/ + src/policy/ (brief §6, §7)
 src/search/           offline BM25 catalog index over federated results
-src/news/             federated feed sources + ranking (read-only, frozen)
+src/news/             feed sources + ranking (read-only, frozen)
 src/cli/              command handlers, dispatch, shell, prompter, TUI pages
 src/plugin/           OpenCode plugin (tools, hooks, SDK-preferring chat)
 src/hubs/             GitHub + HuggingFace connectors + AI README enrichment
@@ -126,7 +135,8 @@ src/data.ts           curated MCP servers, workflows, tutorials — the offline-
 packages/opencode-agora/  thin npm entry re-exporting agora-hub/opencode
 ```
 
-Not yet present, per the brief §4 target tree: `src/evidence/`, `src/policy/`, `src/serve/`, and
-`workers/api/` (Cloudflare Worker). `src/model/`, `src/store/`, and `schemas/` now exist as S1
-foundations but still need integration hardening before the S1 gate is complete — see
-[`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_PLAN.md).
+`src/evidence/`, `workers/api/` (Cloudflare Worker scaffold), `src/model/`, `src/store/`, and
+`schemas/` now exist. Still absent from the brief §4 target tree: **`src/policy/`** (Cedar),
+**`src/revocation/`** (signed feed), **`src/vet/`** (sandbox), and **`src/serve/`** (agent-facing
+discovery) — four of the nine phases, and between them most of the Verify + Gate value proposition.
+See [`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_PLAN.md).
