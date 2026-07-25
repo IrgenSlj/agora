@@ -2,6 +2,90 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
+## [Unreleased] — surface reduction, honest sources, and a green build
+
+**Contains breaking changes.** Not yet published; `agora-hub` on npm remains at 0.6.1.
+
+### Removed — BREAKING
+
+The v1 catalog surface is gone. Seventeen commands were retired, along with the code behind them,
+so that what `agora --help` lists is the trust plane and nothing else:
+
+`auth` (and its `login` / `logout` / `whoami` aliases) · `curate` · `chat` · `trending` ·
+`workflows` · `tutorials` · `tutorial` · `save` · `saved` · `remove` · `bookmarks` · `similar` ·
+`compare` · `share` · `author` · `use` · `menu`
+
+- **There are no accounts, and no credentials are stored anywhere.** `src/auth/`, the session layer
+  in `src/state.ts` (`setAuthState` / `getAuthState` / `clearAuthState` / `decodeJwtExp`), and the
+  auth display helpers are deleted. `agora auth`'s own help text described "legacy Agora API
+  credentials" in a product whose stated non-negotiable is no accounts. The optional `AGORA_API_URL`
+  catalog mirror is now configured by flag or environment only.
+- Curator-as-discovery is deleted (`src/curator/`, `scripts/curate.ts`), per brief §3.
+- The discussion and tutorial data paths are deleted from `src/data.ts` and `src/catalog.json`, and
+  the `agora_tutorial` / `agora_trending` plugin tools with them.
+- **Kept** per brief §3: `today` / `news` (read-only, zero investment) and the bash+chat shell.
+
+`src/` went from 32,909 to 30,334 lines. Migration: `install`, `acquire`, `scan`, `doctor`,
+`freeze`, `plan`, `apply`, `sync`, `search` and `browse` are unchanged. The retired commands have no
+replacements — they belonged to pillars the v2 brief deleted.
+
+### Fixed
+
+- **CI had been failing on every push since `90a185d`,** for two independent reasons. A single
+  unformatted file (`src/cli/pages/acquire.ts`) failed `biome format --check` and killed each run at
+  26 seconds; and the Tests step invoked `bun test` — Bun's own runner — instead of `bun run test`
+  (vitest). Bun's runner panics with a NAPI fatal error on this suite, so the 1,655-test suite had
+  never actually been enforced in CI.
+- **The test suite performed real `npm install -g` and `git clone` operations.** Install plans carry
+  live shell commands and `commandInstall` ran them through `execSync`, so the suite mutated the
+  machine it ran on and one test overran its budget at 37 seconds. `CliIo` gained an injectable
+  `exec` on the same rationale as its existing `fetcher`, and the tests default it to a recorder.
+  `test/cli.test.ts` went from 33.7s to 0.85s; the full suite from 61s to 9.2s.
+- **`skills-github` and `github` timed out on every single search,** so Agent Skills — half the
+  stated product scope — silently returned nothing. `searchGithub` fetched its topics sequentially:
+  8 topics x (1 request + up to 2 retries) cannot fit federation's 5s per-source budget. Topic
+  queries now fan out in parallel.
+- **A rate-limited source reported `ok · 0`,** which reads as "nothing matched" when the truth is
+  "the registry never answered." `searchGithub` now throws when every topic query fails, naming the
+  cause and distinguishing an unauthenticated rate limit with an actionable hint; the adapters no
+  longer swallow it, so federation renders `unreachable` with a reason.
+- **`cacheFallback` had nothing to fall back to.** Only `agora refresh` ever wrote the per-source
+  cache, and only for `official`, so every other source's cache was permanently empty. Successful
+  searches now fold their results into the cache, so a later rate-limited run degrades to cached
+  data rather than to nothing.
+- Both Claude Code plugin manifests and the Gemini extension still described Agora as "the system
+  manager for your agentic stack" — the v1.x framing — and were pinned at 0.5.0 against a 0.6.1
+  package. `packages/opencode-agora` also carried a stale 0.6.0 dependency pin.
+- `agora welcome` walked a retired tour (sign in, browse trending, read the news). It now follows
+  the trust plane's own order: audit, search, acquire through the gate, freeze/plan/apply, integrate.
+- Empty command groups no longer render as bare headings in `agora --help`.
+
+### Added
+
+- Brand assets (`docs/assets/`) — the repository previously contained no images at all.
+  `scripts/generate-brand-assets.ts` builds the banner, social preview, logomark and wordmarks from
+  `AGORA_WORDMARK_RELIEF` and `BANNER_GRADIENT` in `src/ui.ts`, the same constants the CLI renders,
+  so the README and the terminal cannot drift apart.
+- A new `docs/assets/demo.gif` and the `scripts/demo.tape` + `scripts/demo-sandbox.sh` that produce
+  it. The previous tape told the v1.x story and `docs/demo.gif` had been deleted outright.
+- `docs/DIAGRAM_BRIEF.md` — commission brief for the five README architecture diagrams, including
+  the honesty rules that keep a diagram from claiming capability the code does not have.
+- GitHub repository topics (there were none) and a homepage URL.
+
+### Changed
+
+- `docs/ARCHITECTURE.md` claimed `src/evidence/` and `workers/api/` were "not yet present" — both
+  exist — while overstating the evidence plane as wholly unbuilt and understating that
+  `src/policy/`, `src/revocation/`, `src/vet/` and `src/serve/` do not exist at all.
+- `ROADMAP.md` advertised search "across 8 upstream registries." Four query by default; PulseMCP is
+  disabled for lack of a self-serve API, and Smithery and Hugging Face are opt-in non-canonical.
+
+### Known
+
+- Sigstore online verification (Fulcio + Rekor) is still unwired, so `agora scan` cannot yet answer
+  "was this signed by its author?" — it reports `verification-skipped`, honestly.
+- Glama's upstream endpoint returns HTTP 504; reported as `unreachable`.
+
 ## [0.6.1] - 2026-07-22 — evidence pipeline, federation expansion, and quarantine hardening
 
 Consolidates the S2/S3 evidence modules, multi-source federation, drift quarantine system, and the
