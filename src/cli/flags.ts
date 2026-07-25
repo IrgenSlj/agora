@@ -5,12 +5,20 @@ export type OutputStream = {
   write(chunk: string): unknown;
 };
 
+/**
+ * Runs an install-plan shell command. Injectable for the same reason `fetcher`
+ * is: without it, exercising an install path in a test shells out for real
+ * (`npm install -g …`), mutating the machine running the suite.
+ */
+export type ExecLike = (command: string, options: { timeout: number }) => void;
+
 export interface CliIo {
   stdout: OutputStream;
   stderr: OutputStream;
   env?: Record<string, string | undefined>;
   cwd?: string;
   fetcher?: FetchLike;
+  exec?: ExecLike;
 }
 
 export interface ParsedArgs {

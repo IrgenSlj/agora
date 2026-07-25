@@ -52,12 +52,18 @@ import {
   writeJson,
   writeLine
 } from '../helpers.js';
+import type { ExecLike } from '../flags.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 export const commandInstall: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'install requires an item id');
+
+  // Injectable so tests can exercise the install paths without really running
+  // `npm install -g` / `git clone` against the machine.
+  const runCommand: ExecLike =
+    io.exec ?? ((cmd, options) => void execSync(cmd, { stdio: 'pipe', ...options }));
 
   const source = await findMarketplaceSource({
     ...(await sourceOptions(parsed, io)),
@@ -173,7 +179,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
         writeLine(io.stdout, 'Cloning repository...');
         for (const cmd of plan.commands) {
           try {
-            execSync(cmd, { stdio: 'pipe', timeout: 60000 });
+            runCommand(cmd, { timeout: 60000 });
             writeLine(io.stdout, `  ✓ ${cmd}`);
           } catch (err: any) {
             writeLine(io.stderr, `  ! Failed: ${cmd}`);
@@ -193,7 +199,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
         writeLine(io.stdout, 'Installing packages...');
         for (const cmd of plan.commands) {
           try {
-            execSync(cmd, { stdio: 'pipe', timeout: 120000 });
+            runCommand(cmd, { timeout: 120000 });
             writeLine(io.stdout, `  ✓ ${cmd}`);
           } catch {
             writeLine(io.stderr, `  ! Failed: ${cmd} (may already be installed)`);
@@ -215,7 +221,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
         writeLine(io.stdout, 'Installing packages...');
         for (const cmd of plan.commands) {
           try {
-            execSync(cmd, { stdio: 'pipe', timeout: 120000 });
+            runCommand(cmd, { timeout: 120000 });
             writeLine(io.stdout, `  ✓ ${cmd}`);
           } catch {
             writeLine(io.stderr, `  ! Failed: ${cmd} (may already be installed)`);
@@ -300,7 +306,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
       }
       for (const cmd of plan.commands) {
         try {
-          execSync(cmd, { stdio: 'pipe', timeout: 60000 });
+          runCommand(cmd, { timeout: 60000 });
           writeLine(io.stdout, `  ✓ ${cmd}`);
         } catch (err: any) {
           writeLine(io.stdout, `  ! Failed: ${cmd}`);
@@ -311,7 +317,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
     } else if (plan.kind === 'package-install') {
       for (const cmd of plan.commands) {
         try {
-          execSync(cmd, { stdio: 'pipe', timeout: 120000 });
+          runCommand(cmd, { timeout: 120000 });
           writeLine(io.stdout, `  ✓ ${cmd}`);
         } catch {
           writeLine(io.stdout, `  ! Failed: ${cmd} (may already be installed)`);
@@ -321,7 +327,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
       writeOpenCodeConfig(configPath, plan.config);
       for (const cmd of plan.commands) {
         try {
-          execSync(cmd, { stdio: 'pipe', timeout: 120000 });
+          runCommand(cmd, { timeout: 120000 });
           writeLine(io.stdout, `  ✓ ${cmd}`);
         } catch {
           writeLine(io.stdout, `  ! Failed: ${cmd} (may already be installed)`);

@@ -33,7 +33,7 @@ jobs:
         run: bun run typecheck:cli
 
       - name: Tests
-        run: bun test
+        run: bun run test
 
   docker-integration:
     runs-on: ubuntu-latest
@@ -44,4 +44,4 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - name: Integration tests (Docker)
-        run: bun test --testPathPattern='vet'
+        run: bun run test -- vet

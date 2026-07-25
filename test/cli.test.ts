@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
-import { parseArgs } from '../src/cli/flags';
+import { type ExecLike, parseArgs } from '../src/cli/flags';
 import type { FetchLike } from '../src/live';
 import { readManifest } from '../src/stack/manifest';
 
@@ -12,10 +12,12 @@ function createIo(
   options: {
     env?: Record<string, string | undefined>;
     fetcher?: FetchLike;
+    exec?: ExecLike;
   } = {}
 ) {
   const stdout: string[] = [];
   const stderr: string[] = [];
+  const execed: string[] = [];
 
   return {
     io: {
@@ -23,10 +25,15 @@ function createIo(
       stderr: { write: (chunk: string) => stderr.push(chunk) },
       env: options.env || {},
       cwd,
-      fetcher: options.fetcher
+      fetcher: options.fetcher,
+      // Default to recording instead of running. Install plans carry real
+      // commands (`npm install -g …`, `git clone …`); without this the suite
+      // mutates the machine it runs on and blows the per-test time budget.
+      exec: options.exec ?? ((command: string) => void execed.push(command))
     },
     stdout,
-    stderr
+    stderr,
+    execed
   };
 }
 
@@ -35,6 +42,27 @@ function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { 'content-type': 'application/json' }
   });
+}
+
+/**
+ * Canned responses for the two endpoints `scanItem` reaches (the GitHub repo
+ * API and the npm registry). Without this the `install --write` tests fall
+ * through to `globalThis.fetch` and make real network calls — each with an 8s
+ * timeout and 2 retries, which blows the 10s per-test budget and makes the
+ * suite non-hermetic. Anything unexpected 404s loudly rather than escaping to
+ * the network.
+ */
+function scanFetcher(): FetchLike {
+  return async (input: string | URL | Request) => {
+    const url = typeof input === 'string' ? input : input.toString();
+    if (url.startsWith('https://api.github.com/repos/')) {
+      return jsonResponse({ license: { spdx_id: 'MIT' } });
+    }
+    if (url.startsWith('https://registry.npmjs.org/')) {
+      return jsonResponse({ version: '1.0.0' });
+    }
+    return jsonResponse({ error: `unexpected fetch in test: ${url}` }, 404);
+  };
 }
 
 describe('CLI argument parsing', () => {
@@ -164,7 +192,7 @@ describe('CLI commands', () => {
   test('install --write creates an OpenCode config', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
     const configPath = join(temp, 'opencode.json');
-    const { io, stdout } = createIo(temp);
+    const { io, stdout } = createIo(temp, { fetcher: scanFetcher() });
 
     try {
       const code = await runCli(['install', 'mcp-github', '--write', '--config', configPath], io);
@@ -185,7 +213,7 @@ describe('CLI commands', () => {
   test('install --write of a permission-declaring item refuses without --yes', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
     const configPath = join(temp, 'opencode.json');
-    const { io, stdout } = createIo(temp);
+    const { io, stdout } = createIo(temp, { fetcher: scanFetcher() });
 
     try {
       const code = await runCli(
@@ -208,7 +236,7 @@ describe('CLI commands', () => {
   test('install --write --yes of a permission-declaring item prints Granted permissions', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
     const configPath = join(temp, 'opencode.json');
-    const { io, stdout } = createIo(temp);
+    const { io, stdout } = createIo(temp, { fetcher: scanFetcher() });
 
     try {
       const code = await runCli(
@@ -228,7 +256,7 @@ describe('CLI commands', () => {
   test('install --write prints a Scan: section before applying', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
     const configPath = join(temp, 'opencode.json');
-    const { io, stdout } = createIo(temp);
+    const { io, stdout } = createIo(temp, { fetcher: scanFetcher() });
 
     try {
       const code = await runCli(['install', 'mcp-github', '--write', '--config', configPath], io);
@@ -380,7 +408,7 @@ describe('CLI commands', () => {
   test('config doctor reports config metadata', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
     const configPath = join(temp, 'opencode.json');
-    const setup = createIo(temp);
+    const setup = createIo(temp, { fetcher: scanFetcher() });
 
     try {
       await runCli(

@@ -300,10 +300,7 @@ export const acquirePage: Page = {
       state.tick++;
       lines.push('');
       lines.push(
-        ' ' +
-          spinnerFrame(state.tick, theme) +
-          '  ' +
-          theme.dim('Resolving ' + state.target + '…')
+        ' ' + spinnerFrame(state.tick, theme) + '  ' + theme.dim('Resolving ' + state.target + '…')
       );
       return frame(lines, width, height);
     }
