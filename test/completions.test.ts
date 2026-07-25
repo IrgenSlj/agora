@@ -122,19 +122,6 @@ describe('marketplace completions', () => {
     expect(r.matches).toContain('mcp-postgres');
   });
 
-  test('remove <prefix> filters saved ids', () => {
-    const line = 'remove mcp';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('mcp-github');
-    expect(r.matches).not.toContain('mcp-postgres'); // not saved
-  });
-
-  test('save <prefix> filters marketplace ids', () => {
-    const line = 'save wf-';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('wf-tdd-cycle');
-  });
-
   test('replaceFrom points to start of second token', () => {
     const line = 'install mcp-g';
     const r = completeShellLine(line, line.length, makeContext());
@@ -144,21 +131,6 @@ describe('marketplace completions', () => {
 });
 
 // ── New command completions ───────────────────────────────────────────────────
-
-describe('similar/compare completions', () => {
-  test('similar <prefix> filters marketplace ids', () => {
-    const line = 'similar mcp-g';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('mcp-github');
-    expect(r.matches).not.toContain('mcp-postgres');
-  });
-
-  test('compare <prefix> filters marketplace ids', () => {
-    const line = 'compare mcp-p';
-    const r = completeShellLine(line, line.length, makeContext());
-    expect(r.matches).toContain('mcp-postgres');
-  });
-});
 
 describe('flag-value completions', () => {
   test('news --source h completes to hn', () => {

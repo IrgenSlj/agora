@@ -1,4 +1,4 @@
-import { execFileSync, execSync, spawnSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { formatConfigJson } from '../../config.js';
 import {
@@ -10,7 +10,6 @@ import {
 import { clearHistory, loadHistory } from '../../history.js';
 import { findMarketplaceSource } from '../../live.js';
 import { createInstallPlan, hasPermissions, renderPermissionLines } from '../../marketplace.js';
-import { readCache, readNewsMeta } from '../../news/cache.js';
 import { isOpencodeAvailable } from '../../opencode-exec.js';
 import { loadPreferences, prefsPath, writePreferences } from '../../preferences.js';
 import { type ScanResult, scanItem } from '../../scan.js';
@@ -21,29 +20,11 @@ import {
   type StackManifest,
   writeManifest
 } from '../../stack/manifest.js';
-import {
-  clearAuthState,
-  decodeJwtExp,
-  detectAgoraDataDir,
-  getAgoraStatePath,
-  getAuthState,
-  loadAgoraState,
-  removeItemFromState,
-  resolveSavedItems,
-  saveItemToState,
-  setAuthState,
-  writeAgoraState
-} from '../../state.js';
+
 import { ExitCode } from '../exit-codes.js';
-import { formatDate, formatSavedList, header } from '../format.js';
+import type { ExecLike } from '../flags.js';
 import {
-  authStatusPayload,
-  authTokenInput,
   detectDataDir,
-  envString,
-  formatRelativeExp,
-  maskToken,
-  matchesSavedQuery,
   numberFlag,
   sourceOptions,
   stringFlag,
@@ -52,8 +33,6 @@ import {
   writeJson,
   writeLine
 } from '../helpers.js';
-import type { ExecLike } from '../flags.js';
-import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 export const commandInstall: CommandHandler = async (parsed, io, style) => {
@@ -378,104 +357,6 @@ export const commandMcp: CommandHandler = async (_parsed, io, _style) => {
   return ExitCode.OK;
 };
 
-export const commandSave: CommandHandler = async (parsed, io, style) => {
-  const id = parsed.args[0];
-  if (!id) return usageError(io, 'save requires an item id');
-
-  const source = await findMarketplaceSource({
-    ...(await sourceOptions(parsed, io)),
-    id,
-    type: stringFlag(parsed, 'type', 't')
-  });
-  const item = source.data;
-  warnFallback(source, io);
-  if (!item) return usageError(io, `Item not found: ${id}`);
-
-  const dataDir = detectDataDir(parsed, io);
-  const state = loadAgoraState(dataDir);
-  const result = saveItemToState(state, item);
-  writeAgoraState(dataDir, result.state);
-
-  if (parsed.flags.json) {
-    writeJson(io.stdout, {
-      source: source.source,
-      apiUrl: source.apiUrl,
-      fallbackReason: source.fallbackReason,
-      dataDir,
-      statePath: getAgoraStatePath(dataDir),
-      added: result.added,
-      item
-    });
-    return 0;
-  }
-
-  writeLine(
-    io.stdout,
-    result.added ? `Saved ${style.accent(item.id)}` : `${style.accent(item.id)} is already saved`
-  );
-  writeLine(io.stdout, `${style.dim('State')} ${getAgoraStatePath(dataDir)}`);
-  return 0;
-};
-
-export const commandSaved: CommandHandler = async (parsed, io, style) => {
-  const query = parsed.args.join(' ').trim().toLowerCase();
-  const dataDir = detectDataDir(parsed, io);
-  const state = loadAgoraState(dataDir);
-  const saved = resolveSavedItems(state).filter((entry) => matchesSavedQuery(entry, query));
-
-  if (parsed.flags.json) {
-    writeJson(io.stdout, {
-      dataDir,
-      statePath: getAgoraStatePath(dataDir),
-      count: saved.length,
-      items: saved
-    });
-    return 0;
-  }
-
-  if (saved.length === 0) {
-    writeLine(io.stdout, query ? `No saved items match "${query}".` : 'No saved items yet.');
-    writeLine(io.stdout, 'Run agora save <id> to save a package or workflow.');
-    return 0;
-  }
-
-  const theme = cliTheme(style, io);
-  writeLine(io.stdout, header('agora saved', [`${saved.length} items`], theme));
-  writeLine(io.stdout, formatSavedList(saved, theme));
-  return 0;
-};
-
-export const commandRemove: CommandHandler = async (parsed, io, style) => {
-  const id = parsed.args[0];
-  if (!id) return usageError(io, 'remove requires an item id');
-
-  const dataDir = detectDataDir(parsed, io);
-  const state = loadAgoraState(dataDir);
-  const targetId =
-    resolveSavedItems(state).find((entry) => {
-      return entry.saved.id === id || entry.item?.id === id || entry.item?.name === id;
-    })?.saved.id || id;
-  const result = removeItemFromState(state, targetId);
-  writeAgoraState(dataDir, result.state);
-
-  if (parsed.flags.json) {
-    writeJson(io.stdout, {
-      dataDir,
-      statePath: getAgoraStatePath(dataDir),
-      removed: result.removed,
-      id: targetId
-    });
-    return result.removed ? ExitCode.OK : ExitCode.USAGE;
-  }
-
-  if (!result.removed) {
-    return usageError(io, `Saved item not found: ${id}`);
-  }
-
-  writeLine(io.stdout, `Removed ${style.accent(targetId)}`);
-  return 0;
-};
-
 export const commandPreferences: CommandHandler = async (parsed, io, _style) => {
   const dataDir = detectDataDir(parsed, io);
   const prefs = loadPreferences(dataDir);
@@ -789,29 +670,17 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
     }
 
     // Check data directory
-    const agoraDir = detectAgoraDataDir({ cwd: io.cwd, env: io.env });
+    const agoraDir = detectDataDir({ command: undefined, args: [], flags: {} }, io);
     if (existsSync(agoraDir)) {
       deepOk.push(`Agora data dir: ${agoraDir}`);
     } else {
       deepIssues.push(`Agora data dir ${agoraDir} does not exist`);
     }
 
-    // Auth state — distinguishes "no backend configured" from "signed out"
-    const agoraState = loadAgoraState(agoraDir);
-    const auth = getAuthState(agoraState);
-    if (auth?.apiUrl && auth?.accessToken) {
-      const expIn = (auth.accessExp ?? 0) - Math.floor(Date.now() / 1000);
-      const expLabel =
-        expIn > 3600
-          ? Math.round(expIn / 3600) + 'h'
-          : expIn > 0
-            ? Math.round(expIn / 60) + 'm'
-            : 'expired';
-      deepOk.push(`auth: signed in to ${auth.apiUrl} (token ${expLabel})`);
-    } else if (io.env?.AGORA_API_URL) {
-      deepIssues.push('AGORA_API_URL set but no auth token — run `agora auth login`');
+    if (io.env?.AGORA_API_URL) {
+      deepOk.push(`catalog mirror: ${io.env.AGORA_API_URL}`);
     } else {
-      deepOk.push('auth: not configured (offline mode)');
+      deepOk.push('catalog: local-first (no mirror configured)');
     }
 
     // News cache age — surfaces "the feed is stale" before the user notices
@@ -863,308 +732,4 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
     style.dim('Run with --fix to auto-heal common issues, --deep for full diagnostics.')
   );
   return report.valid ? 0 : 1;
-};
-
-export const commandAuth: CommandHandler = async (parsed, io, style) => {
-  const subcommand = parsed.args[0] || 'status';
-  const dataDir = detectDataDir(parsed, io);
-  const state = loadAgoraState(dataDir);
-  const existingAuth = getAuthState(state);
-
-  if (subcommand === 'login') {
-    const explicitToken = authTokenInput(parsed, io);
-
-    if (explicitToken) {
-      // Token-paste flow (existing behaviour, for CI/automation)
-      const apiUrl =
-        stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
-      const nowSec = Math.floor(Date.now() / 1000);
-      const accessExp = decodeJwtExp(explicitToken) || nowSec + 3600;
-      const nextState = setAuthState(state, { accessToken: explicitToken, accessExp, apiUrl });
-      const auth = getAuthState(nextState);
-      writeAgoraState(dataDir, nextState);
-
-      if (parsed.flags.json) {
-        writeJson(io.stdout, authStatusPayload(dataDir, auth));
-        return 0;
-      }
-
-      const minutesLeft = Math.max(0, Math.round((accessExp - nowSec) / 60));
-      writeLine(io.stdout, 'Stored Agora API token');
-      writeLine(
-        io.stdout,
-        `Note: pasted token expires in ${minutesLeft}m. Use \`agora auth login\` (device-code) for a persistent session.`
-      );
-      writeLine(io.stdout, `${style.dim('API URL')} ${auth?.apiUrl || 'not stored'}`);
-      writeLine(io.stdout, `${style.dim('State')} ${getAgoraStatePath(dataDir)}`);
-      return 0;
-    }
-
-    // ── Device-code flow ─────────────────────────────────────────────────
-    const apiUrl =
-      stringFlag(parsed, 'apiUrl') || envString(io, 'AGORA_API_URL') || existingAuth?.apiUrl;
-
-    if (!apiUrl) {
-      return usageError(io, 'auth login requires --api-url, AGORA_API_URL, or stored apiUrl');
-    }
-
-    const baseUrl = apiUrl.replace(/\/+$/, '');
-
-    process.stdout.write(`\n${style.accent('Agora Login')}\n`);
-    process.stdout.write(`${style.dim('Connecting to')} ${baseUrl}...\n`);
-
-    try {
-      const codeRes = await fetch(`${baseUrl}/auth/device/code`, {
-        method: 'POST',
-        signal: AbortSignal.timeout(10000)
-      });
-      if (!codeRes.ok) {
-        const err = await codeRes.json().catch(() => ({ error: 'request failed' }));
-        return usageError(io, `Device code request failed: ${err.error || codeRes.status}`);
-      }
-      const codeData = (await codeRes.json()) as {
-        verification_uri?: string;
-        user_code?: string;
-        device_code?: string;
-        interval?: number;
-      };
-      if (
-        !codeData ||
-        typeof codeData !== 'object' ||
-        typeof codeData.verification_uri !== 'string' ||
-        typeof codeData.user_code !== 'string' ||
-        typeof codeData.device_code !== 'string'
-      ) {
-        return usageError(io, 'Device code response missing required fields');
-      }
-      const verificationUri = codeData.verification_uri;
-      const userCode = codeData.user_code;
-      const deviceCode = codeData.device_code;
-      const interval = (codeData.interval || 5) * 1000;
-
-      io.stdout.write(`\n${style.accent(userCode.slice(0, 4) + ' ' + userCode.slice(4))}\n\n`);
-      io.stdout.write(`  ${style.dim('Open in your browser:')} ${verificationUri}\n`);
-      io.stdout.write(`  ${style.dim('Enter code:')}         ${userCode}\n\n`);
-
-      // Try to open browser automatically. verificationUri is server-supplied,
-      // so we validate the scheme and pass via spawnSync args (no shell).
-      try {
-        const parsed = new URL(verificationUri);
-        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-          throw new Error('Refusing to open non-http(s) verification URI');
-        }
-        const opener = process.platform === 'darwin' ? 'open' : 'xdg-open';
-        const result = spawnSync(opener, [parsed.toString()], { timeout: 3000, stdio: 'ignore' });
-        if (result.status === 0) {
-          io.stdout.write(`  ${style.dim('Browser opened.')}\n\n`);
-        } else {
-          io.stdout.write(`  ${style.dim('Open the URL manually.')}\n\n`);
-        }
-      } catch {
-        io.stdout.write(`  ${style.dim('Open the URL manually.')}\n\n`);
-      }
-
-      // Poll for token
-      const pollStart = Date.now();
-      const pollTimeout = 15 * 60 * 1000; // 15 minutes
-
-      for (;;) {
-        await new Promise((r) => setTimeout(r, interval));
-
-        if (Date.now() - pollStart > pollTimeout) {
-          return usageError(io, 'Login timed out. Run `agora auth login` to try again.');
-        }
-
-        process.stdout.write(`\r\x1b[K${style.dim('Waiting for browser authorization...')}`);
-
-        try {
-          const tokenRes = await fetch(`${baseUrl}/auth/device/token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ device_code: deviceCode }),
-            signal: AbortSignal.timeout(10000)
-          });
-
-          if (tokenRes.ok) {
-            const tokenData = (await tokenRes.json()) as {
-              access_token?: string;
-              refresh_token?: string;
-              expires_in?: number;
-              refresh_expires_in?: number;
-            };
-            if (
-              !tokenData ||
-              typeof tokenData !== 'object' ||
-              typeof tokenData.access_token !== 'string' ||
-              typeof tokenData.refresh_token !== 'string'
-            ) {
-              return usageError(io, 'Token response missing access_token / refresh_token');
-            }
-
-            process.stdout.write(`\r\x1b[K${style.dim('Authorization received.')}\n`);
-
-            const nowSec = Math.floor(Date.now() / 1000);
-            const nextState = setAuthState(state, {
-              accessToken: tokenData.access_token,
-              accessExp: nowSec + (tokenData.expires_in || 3600),
-              refreshToken: tokenData.refresh_token,
-              refreshExp: nowSec + (tokenData.refresh_expires_in || 0),
-              apiUrl
-            });
-            writeAgoraState(dataDir, nextState);
-
-            if (parsed.flags.json) {
-              writeJson(io.stdout, authStatusPayload(dataDir, getAuthState(nextState)));
-              return 0;
-            }
-
-            const expiresInMin = Math.round((tokenData.expires_in || 3600) / 60);
-            io.stdout.write(`\n${style.accent('✓ Authenticated')}\n`);
-            io.stdout.write(`${style.dim('API URL')} ${baseUrl}\n`);
-            io.stdout.write(`${style.dim('Token expires')} in ${expiresInMin}m\n`);
-            io.stdout.write(`${style.dim('State')} ${getAgoraStatePath(dataDir)}\n`);
-            return 0;
-          }
-
-          const errData = await tokenRes.json().catch(() => ({ error: 'unknown' }));
-          if (errData.error === 'expired') {
-            process.stdout.write(`\r\x1b[K`);
-            return usageError(io, 'Code expired. Run `agora auth login` again.');
-          }
-          // "authorization_pending" is expected — keep polling
-        } catch {
-          // Network error, retry
-        }
-      }
-    } catch (e: any) {
-      return usageError(io, `Login failed: ${e.message || 'connection error'}`);
-    }
-  }
-
-  if (subcommand === 'status') {
-    if (parsed.flags.json) {
-      writeJson(io.stdout, authStatusPayload(dataDir, existingAuth));
-      return 0;
-    }
-
-    writeLine(io.stdout, `${style.dim('Authenticated')} ${existingAuth ? 'yes' : 'no'}`);
-    if (existingAuth) {
-      const nowSec = Math.floor(Date.now() / 1000);
-      writeLine(
-        io.stdout,
-        `${style.dim('Access')}         ${maskToken(existingAuth.accessToken)}  (${formatRelativeExp(existingAuth.accessExp, nowSec)})`
-      );
-      if (existingAuth.refreshToken) {
-        writeLine(
-          io.stdout,
-          `${style.dim('Refresh')}        ${maskToken(existingAuth.refreshToken)}  (${formatRelativeExp(existingAuth.refreshExp ?? 0, nowSec)})`
-        );
-      } else {
-        writeLine(io.stdout, `${style.dim('Refresh')}        (none)`);
-      }
-      writeLine(io.stdout, `${style.dim('API URL')} ${existingAuth.apiUrl || 'not stored'}`);
-      writeLine(io.stdout, `${style.dim('Saved')} ${formatDate(existingAuth.savedAt)}`);
-    }
-    writeLine(io.stdout, `${style.dim('State')} ${getAgoraStatePath(dataDir)}`);
-    return 0;
-  }
-
-  if (subcommand === 'logout') {
-    if (!existingAuth) {
-      if (parsed.flags.json) {
-        writeJson(io.stdout, authStatusPayload(dataDir, undefined));
-        return 0;
-      }
-
-      writeLine(io.stdout, 'No stored Agora API token');
-      return 0;
-    }
-
-    if (existingAuth.apiUrl && existingAuth.accessToken && existingAuth.refreshToken) {
-      try {
-        await fetch(`${existingAuth.apiUrl.replace(/\/+$/, '')}/auth/logout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${existingAuth.accessToken}`
-          },
-          body: JSON.stringify({ refresh_token: existingAuth.refreshToken }),
-          signal: AbortSignal.timeout(5000)
-        });
-      } catch {
-        /* network failure — clear local anyway */
-      }
-    }
-    writeAgoraState(dataDir, clearAuthState(state));
-
-    if (parsed.flags.json) {
-      writeJson(io.stdout, authStatusPayload(dataDir, undefined));
-      return 0;
-    }
-
-    writeLine(io.stdout, 'Removed stored Agora API token');
-    return 0;
-  }
-
-  return usageError(io, `Unknown auth command: ${subcommand}`);
-};
-
-export const commandBookmarks: CommandHandler = async (parsed, io, style) => {
-  const dataDir = detectDataDir(parsed, io);
-  const rawKind = (parsed.flags.kind as string | undefined) || 'all';
-  const kind = rawKind === 'catalog' ? 'marketplace' : rawKind;
-
-  const state = loadAgoraState(dataDir);
-  const marketplaceItems = kind === 'news' ? [] : resolveSavedItems(state);
-
-  const newsMeta = readNewsMeta(dataDir);
-  const newsCache = readCache(dataDir);
-  const newsItems =
-    kind === 'marketplace'
-      ? []
-      : newsMeta.saved
-          .map((id) => newsCache.find((n) => n.id === id))
-          .filter((n): n is NonNullable<typeof n> => n !== undefined);
-
-  if (parsed.flags.json) {
-    writeJson(io.stdout, {
-      marketplace: marketplaceItems,
-      news: newsItems
-    });
-    return 0;
-  }
-
-  const hasMarketplace = marketplaceItems.length > 0;
-  const hasNews = newsItems.length > 0;
-
-  if (!hasMarketplace && !hasNews) {
-    writeLine(io.stdout, 'No bookmarks yet.');
-    writeLine(io.stdout, style.dim('Use `agora save <id>` to bookmark catalog items.'));
-    return 0;
-  }
-
-  const theme = cliTheme(style, io);
-  if (kind !== 'news' && hasMarketplace) {
-    writeLine(io.stdout, style.accent('Catalog'));
-    writeLine(io.stdout, style.dim('─'.repeat(40)));
-    writeLine(io.stdout, formatSavedList(marketplaceItems, theme));
-    writeLine(io.stdout, '');
-  }
-
-  if (kind !== 'marketplace' && hasNews) {
-    const now = Date.now();
-    writeLine(io.stdout, style.accent('News'));
-    writeLine(io.stdout, style.dim('─'.repeat(40)));
-    for (const item of newsItems) {
-      const ageMs = now - new Date(item.publishedAt).getTime();
-      const ageDays = Math.floor(ageMs / 86400000);
-      const age = ageDays === 0 ? 'today' : ageDays === 1 ? '1d ago' : `${ageDays}d ago`;
-      writeLine(
-        io.stdout,
-        `${style.dim(item.source.padEnd(16))} ${style.dim(age.padStart(8))}  ${item.title}`
-      );
-    }
-  }
-
-  return 0;
 };

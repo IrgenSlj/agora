@@ -5,15 +5,12 @@ import * as acquireModule from './commands/acquire.js';
 import * as applyModule from './commands/apply.js';
 import * as browseModule from './commands/browse.js';
 import * as capabilitiesModule from './commands/capabilities.js';
-import * as chatModule from './commands/chat.js';
-import * as curateModule from './commands/curate.js';
 import * as doctorModule from './commands/doctor.js';
 import * as exportModule from './commands/export.js';
 import * as freezeModule from './commands/freeze.js';
 import * as initModule from './commands/init.js';
 import * as installedModule from './commands/installed.js';
 import * as integrateModule from './commands/integrate.js';
-import * as learn from './commands/learn.js';
 import * as lockModule from './commands/lock.js';
 import * as marketplace from './commands/marketplace.js';
 import * as newsModule from './commands/news.js';
@@ -35,7 +32,6 @@ import { ExitCode } from './exit-codes.js';
 import { type CliIo, parseArgs } from './flags.js';
 import { usage, welcome } from './format.js';
 import { isInteractive, writeLine } from './helpers.js';
-import { runInteractiveMenu } from './menu.js';
 import { cliTheme } from './theme.js';
 import { runTui } from './tui.js';
 
@@ -128,21 +124,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       search: marketplace.commandSearch,
       info: marketplace.commandInfo,
       browse: marketplace.commandBrowse,
-      trending: marketplace.commandTrending,
-      workflows: marketplace.commandWorkflows,
-      similar: marketplace.commandSimilar,
-      compare: marketplace.commandCompare,
       news: newsModule.commandNews,
-      tutorials: learn.commandTutorials,
-      tutorial: learn.commandTutorial,
-      chat: chatModule.commandChat,
       init: initModule.commandInit,
-      use: initModule.commandUse,
       install: operations.commandInstall,
       mcp: operations.commandMcp,
-      save: operations.commandSave,
-      saved: operations.commandSaved,
-      remove: operations.commandRemove,
       preferences: operations.commandPreferences,
       history: operations.commandHistory,
       config: operations.commandConfig,
@@ -169,12 +154,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       notify: notifyModule.commandNotify,
       today: todayModule.commandToday,
       open: browseModule.commandOpen,
-      share: browseModule.commandShare,
       scan: scanModule.commandScan,
       acquire: acquireModule.commandAcquire,
       outdated: outdatedModule.commandOutdated,
       refresh: refreshModule.commandRefresh,
-      curate: curateModule.commandCurate,
       installed: installedModule.commandInstalled,
       doctor: doctorModule.commandDoctor,
       freeze: freezeModule.commandFreeze,
@@ -182,24 +165,11 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       plan: planModule.commandPlan,
       apply: applyModule.commandApply,
       update: updateModule.commandUpdate,
-      author: marketplace.commandAuthor,
       try: tryModule.commandTry,
       capabilities: capabilitiesModule.commandCapabilities,
       integrate: integrateModule.commandIntegrate,
       lock: lockModule.commandLock,
-      bookmarks: operations.commandBookmarks,
-      welcome: welcomeModule.commandWelcome,
-      auth: operations.commandAuth,
-      login: (p, io2, style2) =>
-        operations.commandAuth({ ...p, args: ['login', ...p.args], command: 'auth' }, io2, style2),
-      logout: (p, io2, style2) =>
-        operations.commandAuth({ ...p, args: ['logout'], command: 'auth' }, io2, style2),
-      whoami: (p, io2, style2) =>
-        operations.commandAuth(
-          { ...p, args: ['status'], command: 'auth', flags: { ...p.flags, json: true } },
-          io2,
-          style2
-        )
+      welcome: welcomeModule.commandWelcome
     };
 
     const handler = cmd[parsed.command];
@@ -221,7 +191,6 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       return 0;
     }
 
-    if (parsed.command === 'menu') return await runInteractiveMenu(io, style);
     if (parsed.command === 'tui') return await runTui(io, { initial: 'home' });
     if (parsed.command === 'completions') return await commandCompletions(parsed, io, style);
     if (parsed.command === 'shell') {

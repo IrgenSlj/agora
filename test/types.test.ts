@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { sampleDiscussions, samplePackages, sampleTutorials, sampleWorkflows } from '../src/data';
-import type { Discussion, Package, Review, Tutorial, Workflow } from '../src/types';
+import { samplePackages, sampleWorkflows } from '../src/data';
+import type { Package, Review, Workflow } from '../src/types';
 
 describe('TypeScript Types', () => {
   test('Package type matches sample data', () => {
@@ -44,38 +44,6 @@ describe('TypeScript Types', () => {
     expect(typed.id).toBeDefined();
     expect(typed.prompt).toBeDefined();
   });
-
-  test('Discussion type is well-formed', () => {
-    const typed: Discussion = {
-      id: 'disc-1',
-      title: 'Example discussion',
-      author: 'user1',
-      content: 'Body text',
-      category: 'question',
-      replies: 0,
-      stars: 0,
-      createdAt: '2026-01-01'
-    };
-
-    expect(typed.id).toBeDefined();
-    expect(typed.category).toBe('question');
-  });
-
-  test('Tutorial type matches sample data', () => {
-    const tut = sampleTutorials[0];
-
-    const typed: Tutorial = {
-      id: tut.id,
-      title: tut.title,
-      description: tut.description,
-      level: tut.level,
-      duration: tut.duration,
-      steps: tut.steps
-    };
-
-    expect(typed.id).toBeDefined();
-    expect(typed.steps.length).toBeGreaterThan(0);
-  });
 });
 
 describe('Type Validation', () => {
@@ -83,20 +51,6 @@ describe('Type Validation', () => {
     samplePackages.forEach((pkg) => {
       const validCategories = ['mcp', 'prompt', 'workflow', 'skill'];
       expect(validCategories).toContain(pkg.category);
-    });
-  });
-
-  test('Discussion category is valid', () => {
-    sampleDiscussions.forEach((disc) => {
-      const validCategories = ['question', 'idea', 'showcase', 'discussion'];
-      expect(validCategories).toContain(disc.category);
-    });
-  });
-
-  test('Tutorial level is valid', () => {
-    sampleTutorials.forEach((tut) => {
-      const validLevels = ['beginner', 'intermediate', 'advanced'];
-      expect(validLevels).toContain(tut.level);
     });
   });
 
@@ -133,23 +87,5 @@ describe('Type Compatibility', () => {
 
     expect(parsed.id).toBe(wf.id);
     expect(parsed.prompt).toBe(wf.prompt);
-  });
-
-  test('Discussion can be converted to JSON', () => {
-    const disc: Discussion = {
-      id: 'disc-1',
-      title: 'Example discussion',
-      author: 'user1',
-      content: 'Body text',
-      category: 'question',
-      replies: 0,
-      stars: 0,
-      createdAt: '2026-01-01'
-    };
-    const json = JSON.stringify(disc);
-    const parsed = JSON.parse(json);
-
-    expect(parsed.id).toBe(disc.id);
-    expect(parsed.title).toBe(disc.title);
   });
 });

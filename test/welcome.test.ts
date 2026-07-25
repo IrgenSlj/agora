@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
@@ -20,17 +20,15 @@ function createIo(dataDir: string) {
 }
 
 describe('agora welcome', () => {
-  test('--json returns { signedIn: false, steps } on empty data dir', async () => {
+  test('--json returns a steps array', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-welcome-'));
     const { io, stdout } = createIo(dir);
     try {
       const code = await runCli(['welcome', '--json'], io);
       expect(code).toBe(0);
       const payload = JSON.parse(stdout.join(''));
-      expect(payload.signedIn).toBe(false);
-      expect(payload.username).toBeUndefined();
       expect(Array.isArray(payload.steps)).toBe(true);
-      expect(payload.steps.length).toBe(5);
+      expect(payload.steps.length).toBeGreaterThan(0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -58,47 +56,60 @@ describe('agora welcome', () => {
     try {
       const code = await runCli(['welcome'], io);
       expect(code).toBe(0);
-      const out = stdout.join('');
-      expect(out).toContain('Welcome to agora');
+      expect(stdout.join('')).toContain('Welcome to agora');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test('default render contains all five section titles', async () => {
+  test('the tour walks the trust plane, not the retired v1 catalog', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-welcome-sections-'));
     const { io, stdout } = createIo(dir);
     try {
       await runCli(['welcome'], io);
       const out = stdout.join('');
-      expect(out).toContain('Sign in');
-      expect(out).toContain('Browse the catalog');
-      expect(out).toContain('Read the news');
+      expect(out).toContain('Audit what you already run');
+      expect(out).toContain('Search across every registry at once');
+      expect(out).toContain('Acquire through the gate');
+      expect(out).toContain('Make your stack reproducible');
       expect(out).toContain('Set up shell completions');
-      expect(out).toContain('Start an MCP project');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test('default render contains recommended commands', async () => {
+  test('default render recommends commands that still exist', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-welcome-cmds-'));
     const { io, stdout } = createIo(dir);
     try {
       await runCli(['welcome'], io);
       const out = stdout.join('');
-      expect(out).toContain('agora auth login');
+      expect(out).toContain('agora doctor');
       expect(out).toContain('agora search');
-      expect(out).toContain('agora trending');
-      expect(out).toContain('agora news');
+      expect(out).toContain('agora acquire');
+      expect(out).toContain('agora freeze');
       expect(out).toContain('agora completions');
-      expect(out).toContain('agora init --template');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
   });
 
-  test('--json steps do not reference non-existent agora marketplace command', async () => {
+  test('the tour never mentions accounts — Agora has none', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-welcome-noauth-'));
+    const { io, stdout } = createIo(dir);
+    try {
+      const code = await runCli(['welcome', '--json'], io);
+      expect(code).toBe(0);
+      const raw = stdout.join('');
+      for (const gone of ['auth login', 'Sign in', 'signedIn', 'agora bookmarks', 'agora saved']) {
+        expect(raw).not.toContain(gone);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('--json steps do not reference a non-existent agora marketplace command', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-welcome-nomarket-'));
     const { io, stdout } = createIo(dir);
     try {
@@ -111,84 +122,6 @@ describe('agora welcome', () => {
         .join('\n');
       expect(allCommands).not.toContain('agora marketplace');
       expect(raw).not.toContain('api.agora.example');
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test('step 1 flips to signed-in variant when state.json has auth', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'agora-welcome-auth-'));
-    mkdirSync(dir, { recursive: true });
-    const state = {
-      version: 1,
-      savedItems: [],
-      auth: {
-        accessToken: 'tok_test',
-        accessExp: Math.floor(Date.now() / 1000) + 3600,
-        savedAt: new Date().toISOString()
-      }
-    };
-    writeFileSync(join(dir, 'state.json'), JSON.stringify(state), 'utf8');
-    const prefs = {
-      username: 'alice',
-      theme: 'dark',
-      verbosity: 'medium',
-      email: '',
-      bio: '',
-      defaultNewsSource: 'all',
-      defaultNewsCategory: 'all',
-      lastTab: 0
-    };
-    writeFileSync(join(dir, 'preferences.json'), JSON.stringify(prefs), 'utf8');
-
-    const { io, stdout } = createIo(dir);
-    try {
-      const code = await runCli(['welcome', '--json'], io);
-      expect(code).toBe(0);
-      const payload = JSON.parse(stdout.join(''));
-      expect(payload.signedIn).toBe(true);
-      expect(payload.username).toBe('alice');
-      expect(payload.steps[0].title).toContain('alice');
-      expect(payload.steps[0].commands.some((c: string) => c.includes('agora bookmarks'))).toBe(
-        true
-      );
-    } finally {
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test('default render shows "Signed in as" when authenticated', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'agora-welcome-auth-render-'));
-    mkdirSync(dir, { recursive: true });
-    const state = {
-      version: 1,
-      savedItems: [],
-      auth: {
-        accessToken: 'tok_test',
-        accessExp: Math.floor(Date.now() / 1000) + 3600,
-        savedAt: new Date().toISOString()
-      }
-    };
-    writeFileSync(join(dir, 'state.json'), JSON.stringify(state), 'utf8');
-    const prefs = {
-      username: 'bob',
-      theme: 'dark',
-      verbosity: 'medium',
-      email: '',
-      bio: '',
-      defaultNewsSource: 'all',
-      defaultNewsCategory: 'all',
-      lastTab: 0
-    };
-    writeFileSync(join(dir, 'preferences.json'), JSON.stringify(prefs), 'utf8');
-
-    const { io, stdout } = createIo(dir);
-    try {
-      await runCli(['welcome'], io);
-      const out = stdout.join('');
-      expect(out).toContain('Signed in as bob');
-      expect(out).toContain('agora bookmarks');
-      expect(out).toContain('agora saved');
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

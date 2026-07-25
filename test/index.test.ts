@@ -1,11 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import {
-  sampleDiscussions,
-  samplePackages,
-  sampleTutorials,
-  sampleWorkflows,
-  trendingTags
-} from '../src/data';
+import { samplePackages, sampleWorkflows, trendingTags } from '../src/data';
 
 describe('Agora Data Validation', () => {
   test('samplePackages has required fields', () => {
@@ -26,18 +20,6 @@ describe('Agora Data Validation', () => {
     expect(wf.name).toBeDefined();
     expect(wf.prompt).toBeDefined();
     expect(wf.author).toBeDefined();
-  });
-
-  test('sampleDiscussions is empty offline (discussions are backend-only)', () => {
-    expect(Array.isArray(sampleDiscussions)).toBe(true);
-    expect(sampleDiscussions).toHaveLength(0);
-  });
-
-  test('sampleTutorials has steps', () => {
-    const tut = sampleTutorials[0];
-    expect(tut).toBeDefined();
-    expect(tut.steps).toBeDefined();
-    expect(tut.steps.length).toBeGreaterThan(0);
   });
 
   test('trendingTags is non-empty', () => {
@@ -101,57 +83,6 @@ describe('Trending Logic', () => {
     const sorted = [...samplePackages].sort((a, b) => b.stars - a.stars);
     const maxStars = Math.max(...samplePackages.map((p) => p.stars));
     expect(sorted[0].stars).toBe(maxStars);
-  });
-});
-
-describe('Discussions', () => {
-  test('filter by category works', () => {
-    const category = 'question';
-    const filtered = sampleDiscussions.filter((d) => d.category === category);
-    expect(filtered.every((d) => d.category === category)).toBe(true);
-  });
-
-  test('all categories are valid', () => {
-    const validCategories = ['question', 'idea', 'showcase', 'discussion'];
-    const allValid = sampleDiscussions.every((d) => validCategories.includes(d.category));
-    expect(allValid).toBe(true);
-  });
-
-  test('replies count is non-negative', () => {
-    const allValid = sampleDiscussions.every((d) => d.replies >= 0);
-    expect(allValid).toBe(true);
-  });
-
-  test('stars count is non-negative', () => {
-    const allValid = sampleDiscussions.every((d) => d.stars >= 0);
-    expect(allValid).toBe(true);
-  });
-});
-
-describe('Tutorials', () => {
-  test('steps have content', () => {
-    const tut = sampleTutorials[0];
-    const step = tut.steps[0];
-    expect(step.content).toBeDefined();
-    expect(step.content.length).toBeGreaterThan(0);
-  });
-
-  test('step navigation works', () => {
-    const tut = sampleTutorials[0];
-    const currentStep = 1;
-    const step = tut.steps[currentStep - 1];
-    expect(step).toBeDefined();
-  });
-
-  test('all tutorials have valid levels', () => {
-    const validLevels = ['beginner', 'intermediate', 'advanced'];
-    const allValid = sampleTutorials.every((t) => validLevels.includes(t.level));
-    expect(allValid).toBe(true);
-  });
-
-  test('tutorial duration is defined', () => {
-    const tut = sampleTutorials[0];
-    expect(tut.duration).toBeDefined();
   });
 });
 
@@ -236,7 +167,7 @@ describe('Edge Cases', () => {
 });
 
 describe('Plugin Tools', () => {
-  test('Agora plugin exports all 13 tools', async () => {
+  test('Agora plugin exports all 11 tools', async () => {
     const plugin = await import('../src/plugin/index');
     const tools = (await plugin.Agora({} as any)).tool!;
     expect(Object.keys(tools).sort()).toEqual([
@@ -250,9 +181,7 @@ describe('Plugin Tools', () => {
       'agora_news',
       'agora_scan',
       'agora_search',
-      'agora_today',
-      'agora_trending',
-      'agora_tutorial'
+      'agora_today'
     ]);
   });
 

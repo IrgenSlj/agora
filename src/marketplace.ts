@@ -1,13 +1,6 @@
 import { join } from 'node:path';
 import type { OpenCodeConfig } from './config.js';
-import { readCuratedCache } from './curator/index.js';
-import {
-  sampleDiscussions,
-  samplePackages,
-  sampleTutorials,
-  sampleWorkflows,
-  trendingTags
-} from './data.js';
+import { samplePackages, sampleWorkflows, trendingTags } from './data.js';
 import { isHubCacheStale, readHubsCache } from './hubs/cache.js';
 import type { HubItem, InstallKind } from './hubs/types.js';
 import type {
@@ -18,13 +11,11 @@ import type {
   MarketplaceItemType,
   PackageMarketplaceItem,
   SearchOptions,
-  TutorialSearchOptions,
   WorkflowMarketplaceItem
 } from './marketplace/types.js';
 import type { CatalogIndex } from './search/catalog-index.js';
 import { buildIndex, searchIndex } from './search/catalog-index.js';
 import { detectAgoraDataDir } from './state.js';
-import type { Discussion, Tutorial } from './types.js';
 
 export {
   hasPermissions,
@@ -38,7 +29,6 @@ export type {
   MarketplaceItemType,
   PackageMarketplaceItem,
   SearchOptions,
-  TutorialSearchOptions,
   WorkflowMarketplaceItem
 } from './marketplace/types.js';
 
@@ -148,16 +138,14 @@ export function clearMarketplaceItemsCache(): void {
 }
 
 export function getCuratedSource(): 'ai' | 'bundled' {
-  const useAiCuration = (process.env.AGORA_AI_CURATE ?? '1') === '1';
-  if (!useAiCuration) return 'bundled';
-  const dataDir = detectAgoraDataDir({ env: process.env });
-  const cache = readCuratedCache(dataDir);
-  return cache.length > 0 ? 'ai' : 'bundled';
+  // Curator-as-discovery is gone (brief §3): the bundled catalog is the only
+  // offline fallback, and everything else comes from federated upstreams.
+  return 'bundled';
 }
 
 export function getMarketplaceItems(): MarketplaceItem[] {
   const envFlag = process.env.AGORA_LIVE_HUBS ?? '';
-  const useAiCuration = (process.env.AGORA_AI_CURATE ?? '1') === '1';
+  const useAiCuration = false;
   if (
     _memo &&
     _memo.envFlag === envFlag &&
@@ -167,20 +155,10 @@ export function getMarketplaceItems(): MarketplaceItem[] {
     return _memo.items;
   }
 
-  // Try AI-curated cache first
-  const dataDir = detectAgoraDataDir({ env: process.env });
-  let curatedPackages: MarketplaceItem[] = [];
-  if (useAiCuration) {
-    const cache = readCuratedCache(dataDir);
-    if (cache.length > 0) {
-      curatedPackages = cache.map((pkg) => ({ ...pkg, kind: 'package' as const }));
-    }
-  }
-
-  const packageItems: MarketplaceItem[] =
-    curatedPackages.length > 0
-      ? curatedPackages
-      : samplePackages.map((pkg) => ({ ...pkg, kind: 'package' as const }));
+  const packageItems: MarketplaceItem[] = samplePackages.map((pkg) => ({
+    ...pkg,
+    kind: 'package' as const
+  }));
 
   const workflowItems: MarketplaceItem[] = sampleWorkflows.map((workflow) => ({
     ...workflow,
@@ -194,7 +172,7 @@ export function getMarketplaceItems(): MarketplaceItem[] {
   let items: MarketplaceItem[] = curated;
 
   if (envFlag === '1') {
-    const hubItems = readHubsCache(dataDir);
+    const hubItems = readHubsCache(detectAgoraDataDir({ env: process.env }));
     if (hubItems.length === 0 && !_warnedEmpty) {
       console.warn('AGORA_LIVE_HUBS=1 but hub cache is empty. Run: bun scripts/refresh-hubs.ts');
       _warnedEmpty = true;
@@ -404,47 +382,6 @@ export function getTrendingItems(options: SearchOptions = {}): MarketplaceItem[]
     .filter((item) => matchesCategory(item, category))
     .sort((a, b) => b.installs - a.installs || b.stars - a.stars || a.name.localeCompare(b.name))
     .slice(0, limit);
-}
-
-export function getDiscussions(category = 'all', query = ''): Discussion[] {
-  const normalizedCategory = normalize(category);
-  const normalizedQuery = normalize(query);
-
-  return sampleDiscussions
-    .filter(
-      (discussion) => normalizedCategory === 'all' || discussion.category === normalizedCategory
-    )
-    .filter((discussion) => {
-      if (!normalizedQuery) return true;
-      return normalize(`${discussion.title} ${discussion.content} ${discussion.author}`).includes(
-        normalizedQuery
-      );
-    })
-    .sort((a, b) => b.stars - a.stars);
-}
-
-export function getTutorials(options: TutorialSearchOptions = {}): Tutorial[] {
-  const query = normalize(options.query || '');
-  const level = normalizeTutorialLevel(options.level || 'all');
-  const limit = normalizeLimit(options.limit);
-
-  const tutorials = sampleTutorials
-    .filter((tutorial) => level === 'all' || tutorial.level === level)
-    .filter((tutorial) => matchesTutorialQuery(tutorial, query))
-    .sort((a, b) => a.title.localeCompare(b.title));
-
-  return limit ? tutorials.slice(0, limit) : tutorials;
-}
-
-export function findTutorial(id: string): Tutorial | null {
-  const target = normalize(id);
-  return (
-    sampleTutorials.find((tutorial) => normalize(tutorial.id) === target) ||
-    sampleTutorials.find((tutorial) => normalize(tutorial.title) === target) ||
-    sampleTutorials.find((tutorial) => normalize(tutorial.id).includes(target)) ||
-    sampleTutorials.find((tutorial) => normalize(tutorial.title).includes(target)) ||
-    null
-  );
 }
 
 export function getTrendingTags(limit = 8): string[] {
@@ -681,14 +618,6 @@ export function similarItems(
   return scored.slice(0, limit).map((s) => s.item);
 }
 
-export function normalizeTutorialLevel(level: string): Tutorial['level'] | 'all' {
-  const normalized = normalize(level);
-  if (normalized === 'beginner' || normalized === 'intermediate' || normalized === 'advanced') {
-    return normalized;
-  }
-  return 'all';
-}
-
 function matchesCategory(item: MarketplaceItem, category: MarketplaceCategory): boolean {
   if (category === 'all') return true;
   if (category === 'package') return item.kind === 'package';
@@ -706,21 +635,6 @@ function matchesQuery(item: MarketplaceItem, query: string): boolean {
     item.author,
     item.category,
     ...item.tags
-  ].join(' ');
-
-  return normalize(searchable).includes(query);
-}
-
-function matchesTutorialQuery(tutorial: Tutorial, query: string): boolean {
-  if (!query) return true;
-
-  const searchable = [
-    tutorial.id,
-    tutorial.title,
-    tutorial.description,
-    tutorial.level,
-    tutorial.duration,
-    ...tutorial.steps.flatMap((step) => [step.title, step.content, step.code || ''])
   ].join(' ');
 
   return normalize(searchable).includes(query);

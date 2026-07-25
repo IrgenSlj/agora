@@ -18,15 +18,6 @@ export interface SavedItem {
   item?: MarketplaceItem;
 }
 
-export interface AuthState {
-  accessToken: string;
-  accessExp: number; // unix seconds
-  refreshToken?: string;
-  refreshExp?: number; // unix seconds
-  apiUrl?: string;
-  savedAt: string;
-}
-
 export interface HomeMeta {
   lastSeenAt?: string;
   serverCount?: number;
@@ -35,7 +26,6 @@ export interface HomeMeta {
 export interface AgoraState {
   version: 1;
   savedItems: SavedItem[];
-  auth?: AuthState;
   home?: HomeMeta;
 }
 
@@ -131,43 +121,6 @@ export function removeItemFromState(
   };
 }
 
-export function setAuthState(
-  state: AgoraState,
-  auth: {
-    accessToken: string;
-    accessExp: number;
-    refreshToken?: string;
-    refreshExp?: number;
-    apiUrl?: string;
-  },
-  now = new Date()
-): AgoraState {
-  return normalizeState({
-    ...state,
-    auth: {
-      accessToken: auth.accessToken.trim(),
-      accessExp: auth.accessExp,
-      refreshToken: auth.refreshToken?.trim() || undefined,
-      refreshExp: auth.refreshExp,
-      apiUrl: auth.apiUrl?.trim() || undefined,
-      savedAt: now.toISOString()
-    }
-  });
-}
-
-export function clearAuthState(state: AgoraState): AgoraState {
-  const normalized = normalizeState(state);
-
-  return {
-    version: 1,
-    savedItems: normalized.savedItems
-  };
-}
-
-export function getAuthState(state: AgoraState): AuthState | undefined {
-  return normalizeState(state).auth;
-}
-
 export function resolveSavedItems(state: AgoraState): ResolvedSavedItem[] {
   return normalizeState(state).savedItems.map((saved) => ({
     saved,
@@ -208,7 +161,6 @@ function normalizeState(state: Partial<AgoraState>): AgoraState {
   return {
     version: 1,
     savedItems,
-    auth: normalizeAuthState(state.auth),
     ...(home !== undefined ? { home } : {})
   };
 }
@@ -224,60 +176,6 @@ function normalizeHomeMeta(home: unknown): HomeMeta | undefined {
     result.serverCount = candidate.serverCount;
   }
   return result;
-}
-
-function normalizeAuthState(auth: unknown): AuthState | undefined {
-  if (!auth || typeof auth !== 'object') return undefined;
-
-  const candidate = auth as Record<string, unknown>;
-
-  // Backward-compat: legacy shape has only `token`
-  let accessToken: string;
-  let accessExp: number;
-  if (typeof candidate.accessToken === 'string' && candidate.accessToken.trim()) {
-    accessToken = candidate.accessToken.trim();
-    accessExp = typeof candidate.accessExp === 'number' ? candidate.accessExp : 0;
-  } else if (typeof candidate.token === 'string' && candidate.token.trim()) {
-    accessToken = candidate.token.trim();
-    accessExp = 0;
-  } else {
-    return undefined;
-  }
-
-  const refreshToken =
-    typeof candidate.refreshToken === 'string' && candidate.refreshToken.trim()
-      ? candidate.refreshToken.trim()
-      : undefined;
-  const refreshExp = typeof candidate.refreshExp === 'number' ? candidate.refreshExp : undefined;
-  const apiUrl =
-    typeof candidate.apiUrl === 'string' && candidate.apiUrl.trim()
-      ? candidate.apiUrl.trim()
-      : undefined;
-  const savedAt =
-    typeof candidate.savedAt === 'string' && candidate.savedAt
-      ? candidate.savedAt
-      : new Date(0).toISOString();
-
-  return {
-    accessToken,
-    accessExp,
-    refreshToken,
-    refreshExp,
-    apiUrl,
-    savedAt
-  };
-}
-
-export function decodeJwtExp(token: string): number {
-  try {
-    const part = token.split('.')[1];
-    if (!part) return 0;
-    const padded = part.replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
-    return Number(payload.exp) || 0;
-  } catch {
-    return 0;
-  }
 }
 
 function resolvePath(filePath: string, cwd: string, home: string): string {

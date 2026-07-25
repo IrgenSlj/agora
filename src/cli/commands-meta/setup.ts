@@ -2,35 +2,6 @@ import type { CommandMeta } from './types.js';
 
 export const COMMANDS: CommandMeta[] = [
   {
-    name: 'auth',
-    group: 'Setup',
-    summary: 'Manage legacy Agora API credentials',
-    usage:
-      'agora auth login [--api-url url] [--data-dir path]\n' +
-      '  agora auth login --token <token> [--api-url url]\n' +
-      '  agora auth status [--data-dir path] [--json]\n' +
-      '  agora auth logout [--data-dir path]',
-    details:
-      'Stores or clears legacy live-API credentials in the Agora state file. ' +
-      'Core v2 trust-plane flows are local-first and do not require accounts. ' +
-      'Without --token, runs the device-code login flow: opens your browser to ' +
-      'authorize via GitHub and returns a short-lived JWT. ' +
-      'Pass --token (or set AGORA_TOKEN / AGORA_API_TOKEN) for headless/CI use. ' +
-      'Do not build new core flows on this surface; it is being retired as S1/S2 replace pre-v2 live APIs.',
-    flags: [
-      { flag: '--token', description: 'API auth token (also AGORA_TOKEN / AGORA_API_TOKEN env)' },
-      { flag: '--api-url', description: 'Override AGORA_API_URL for stored auth' },
-      { flag: '--data-dir', description: 'Override the Agora data directory' },
-      { flag: '--json', description: 'Output status as JSON' }
-    ],
-    examples: [
-      'agora auth login --api-url https://api.agora.example.com',
-      'agora auth login --token $AGORA_TOKEN --api-url https://agora.example.com',
-      'agora auth status',
-      'agora auth logout'
-    ]
-  },
-  {
     name: 'init',
     group: 'Setup',
     summary: 'Scaffold Agora into the current project, or generate MCP server templates',
@@ -55,25 +26,6 @@ export const COMMANDS: CommandMeta[] = [
       'agora init --template python-mcp',
       'agora init --template node-mcp --force'
     ]
-  },
-  {
-    name: 'use',
-    group: 'Setup',
-    summary: 'Apply a workflow template as an OpenCode skill',
-    usage: 'agora use <workflow-id> [--json]',
-    details:
-      'Copies a workflow from the catalog into .opencode/skills/ and registers it in opencode.json ' +
-      'so OpenCode can load it on the next restart.',
-    flags: [{ flag: '--json', description: 'Output result as JSON' }],
-    examples: ['agora use wf-tdd-cycle', 'agora use wf-security-audit']
-  },
-  {
-    name: 'menu',
-    group: 'Setup',
-    summary: 'Browse commands interactively (the old menu)',
-    usage: 'agora menu',
-    details: 'Opens the interactive command browser powered by @clack/prompts.',
-    examples: ['agora menu']
   },
   {
     name: 'tui',

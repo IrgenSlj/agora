@@ -258,7 +258,6 @@ function fish(): string {
       '"',
     'complete -c agora -n "__fish_seen_subcommand_from browse install" -xa "(__agora_list_ids)"',
     'complete -c agora -n "__fish_seen_subcommand_from completions" -xa "bash zsh fish"',
-    'complete -c agora -n "__fish_seen_subcommand_from trending" -l category -d "Category" -xa "packages workflows all"',
     'complete -c agora -n "__fish_seen_subcommand_from init" -l dry-run -d "Preview only"',
     'complete -c agora -n "__fish_seen_subcommand_from init" -l mcp -d "Register MCP server"',
     'complete -c agora -n "__fish_seen_subcommand_from news" -l source -d "Source" -xa "' +

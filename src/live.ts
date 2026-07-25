@@ -3,7 +3,6 @@ export {
   searchMarketplaceSource,
   trendingMarketplaceSource
 } from './live/search.js';
-export { findTutorialSource, tutorialsSource } from './live/tutorials.js';
 export type {
   ApiProfile,
   ApiReview,

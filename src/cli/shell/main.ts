@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from 'n
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { getMarketplaceItems } from '../../marketplace.js';
-import { buildOpencodeRunArgs, spawnOpencode } from '../../opencode-exec.js';
+import { buildOpencodeRunArgs, FREE_MODELS, spawnOpencode } from '../../opencode-exec.js';
 import { detectAgoraDataDir, loadAgoraState, resolveSavedItems } from '../../state.js';
 import {
   appendTranscript,
@@ -17,11 +17,9 @@ import {
 import { gradientText, renderBanner, type Styler, supportsTrueColor } from '../../ui.js';
 import { AGORA_VERSION } from '../app.js';
 import { createChatRenderer, type Verbosity } from '../chat-renderer.js';
-import { FREE_MODELS } from '../commands/chat.js';
 import { COMMANDS } from '../commands-meta.js';
 import { completeShellLine, ghostFromHistory } from '../completions.js';
 import type { CliIo } from '../flags.js';
-import { runInteractiveMenu } from '../menu.js';
 import { readLine } from '../prompter.js';
 import { runTui } from '../tui.js';
 import {
@@ -48,9 +46,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     const motto = 'The trust plane for agentic tooling - type a command, bash or chat:';
     const mottoLine = gradientText(motto, { trueColor });
     const model = FREE_MODELS[0];
-    const infoLine = style.dim(
-      `v${AGORA_VERSION} · ${model} · /abc · /help · /menu · /search · /quit`
-    );
+    const infoLine = style.dim(`v${AGORA_VERSION} · ${model} · /abc · /help · /search · /quit`);
     const slashLine = style.orange('/home · /catalog · /news · /settings');
     process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${infoLine}\n${slashLine}\n\n`);
   }
@@ -126,7 +122,6 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     '/settings',
     '/abc',
     '/help',
-    '/menu',
     '/transcript',
     '/verbose',
     '/medium',
@@ -172,7 +167,6 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const tips = [
     'type /abc for a quick letter-shortcut reference (/a /b /c ...)',
     'type /help to see all slash commands',
-    'type /menu to browse the command catalog',
     'type ?<msg> to force AI chat',
     'type !<cmd> to force bash',
     'type /clear to reset and see the home banner',
@@ -298,11 +292,6 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
               process.stdout.write(formatTranscriptEntry(e) + '\n');
             }
           }
-          continue;
-        }
-
-        if (dispatch.sub === 'menu') {
-          await runInteractiveMenu(io, style);
           continue;
         }
 
@@ -909,7 +898,6 @@ function printHelp(style: Styler): void {
     '  ?<msg>        force chat (e.g. ?what is MCP)',
     '  /tui          open the full-screen TUI on Home',
     '  /home /catalog /comm /news /settings  open the TUI on that page',
-    '  /menu         open the command-browser menu',
     '  /transcript   print last 20 transcript entries',
     '  /clear        clear screen',
     '  /help         this help',

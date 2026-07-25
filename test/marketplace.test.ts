@@ -15,12 +15,10 @@ import {
   createInstallPlan,
   extractPostInstallHint,
   findMarketplaceItem,
-  findTutorial,
   getHotItems,
   getInstallKind,
   getMarketplaceItems,
   getTrendingItems,
-  getTutorials,
   hasPermissions,
   hasSharedRepositoryStars,
   type MarketplaceItem,
@@ -198,49 +196,6 @@ describe('getTrendingItems', () => {
   test('category filter is respected', () => {
     const packages = getTrendingItems({ category: 'package', limit: 10 });
     expect(packages.every((i) => i.kind === 'package')).toBe(true);
-  });
-});
-
-// ── getTutorials / findTutorial ─────────────────────────────────────────────
-
-describe('getTutorials', () => {
-  test('returns all tutorials when no filter applied', () => {
-    const all = getTutorials();
-    expect(all.length).toBeGreaterThan(0);
-  });
-
-  test('level filter restricts results', () => {
-    const beginners = getTutorials({ level: 'beginner' });
-    expect(beginners.every((t) => t.level === 'beginner')).toBe(true);
-    expect(beginners.length).toBeGreaterThan(0);
-  });
-
-  test('limit restricts result count', () => {
-    const limited = getTutorials({ limit: 2 });
-    expect(limited.length).toBe(2);
-  });
-
-  test('query filters by tutorial content', () => {
-    const results = getTutorials({ query: 'mcp' });
-    expect(results.length).toBeGreaterThan(0);
-  });
-});
-
-describe('findTutorial', () => {
-  test('finds by exact id', () => {
-    const tut = findTutorial('tut-mcp-basics');
-    expect(tut).not.toBeNull();
-    expect(tut!.id).toBe('tut-mcp-basics');
-  });
-
-  test('finds by substring of id', () => {
-    const tut = findTutorial('mcp-basics');
-    expect(tut).not.toBeNull();
-  });
-
-  test('returns null for unknown id', () => {
-    const tut = findTutorial('zzz-nonexistent');
-    expect(tut).toBeNull();
   });
 });
 

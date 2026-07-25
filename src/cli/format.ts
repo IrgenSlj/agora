@@ -226,11 +226,11 @@ export function welcome(color: boolean, trueColor: boolean, theme: Theme, versio
       '',
       `agora · the trust plane for agentic tooling · v${version}`,
       '',
-      '  Search    agora search <query>',
-      '  Browse    agora trending · agora browse <id>',
-      '  Learn     agora tutorials · agora tutorial <id>',
-      '  Install   agora install <id> [--write]',
-      '  Setup     agora init [--mcp] · agora use <workflow>',
+      '  Audit     agora doctor · agora installed',
+      '  Search    agora search <query> · agora browse <id>',
+      '  Acquire   agora scan <id> · agora acquire <id>',
+      '  Stack     agora freeze --write · agora plan · agora apply',
+      '  Setup     agora init [--mcp] · agora integrate --all',
       ''
     ].join('\n');
   }
@@ -244,11 +244,11 @@ export function welcome(color: boolean, trueColor: boolean, theme: Theme, versio
     { color, trueColor }
   );
   const hint = [
-    `${theme.muted('Search')}    agora search <query>`,
-    `${theme.muted('Browse')}    agora trending · agora browse <id>`,
-    `${theme.muted('Learn')}     agora tutorials · agora tutorial <id>`,
-    `${theme.muted('Install')}   agora install <id> [--write]`,
-    `${theme.muted('Setup')}     agora init [--mcp] · agora use <workflow>`
+    `${theme.muted('Audit')}     agora doctor · agora installed`,
+    `${theme.muted('Search')}    agora search <query> · agora browse <id>`,
+    `${theme.muted('Acquire')}   agora scan <id> · agora acquire <id>`,
+    `${theme.muted('Stack')}     agora freeze --write · agora plan · agora apply`,
+    `${theme.muted('Setup')}     agora init [--mcp] · agora integrate --all`
   ].join('\n');
   return `\n${banner}\n\n${box}\n\n${hint}\n`;
 }
@@ -259,7 +259,7 @@ export function header(title: string, meta: string[], theme: Theme): string {
 
 export function usage(theme: Theme, version: string): string {
   const nameWidth = Math.max(...COMMANDS.map((c) => c.name.length));
-  const groups = ['Catalog', 'Setup', 'Stack', 'Library', 'Learn'] as const;
+  const groups = ['Catalog', 'Setup', 'Stack'] as const;
 
   const lines: string[] = [
     `${theme.accent('agora')}${theme.dim(` · the trust plane for agentic tooling · v${version}`)}`,
@@ -268,6 +268,7 @@ export function usage(theme: Theme, version: string): string {
 
   for (const group of groups) {
     const groupCmds = COMMANDS.filter((c) => c.group === group);
+    if (groupCmds.length === 0) continue;
     lines.push(theme.muted(group));
     for (const cmd of groupCmds) {
       lines.push(`  ${theme.accent(cmd.name.padEnd(nameWidth))}  ${theme.dim(cmd.summary)}`);

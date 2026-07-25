@@ -1,10 +1,7 @@
-import { homedir } from 'node:os';
-import { join } from 'node:path';
 import type { FederatedItem } from '../../federation/types.js';
 import type { SourceOptions } from '../../live.js';
 import type { MarketplaceItem } from '../../marketplace.js';
 import { observedCapabilities, type ScanResult } from '../../scan.js';
-import { getAuthState, loadAgoraState } from '../../state.js';
 import type { HealthTone, Verdict } from './components.js';
 import type { PageContext } from './types.js';
 
@@ -91,23 +88,9 @@ export function pageSourceOptions(
   ctx: PageContext,
   opts: { requireAuth?: boolean } = {}
 ): SourceOptions | null {
-  const env = ctx.io.env ?? {};
-  const configured = env.AGORA_HOME || process.env.AGORA_HOME;
-  const xdg = env.XDG_CONFIG_HOME || process.env.XDG_CONFIG_HOME || join(homedir(), '.config');
-  const dir = configured || join(xdg, 'agora');
-  let apiUrl = process.env.AGORA_API_URL || '';
-  let token = process.env.AGORA_TOKEN || process.env.AGORA_API_TOKEN || '';
-  if (!apiUrl || !token) {
-    try {
-      const auth = getAuthState(loadAgoraState(dir));
-      if (auth) {
-        if (!apiUrl) apiUrl = auth.apiUrl || '';
-        if (!token) token = auth.accessToken || '';
-      }
-    } catch {
-      /* ignore */
-    }
-  }
+  // Env-only: Agora stores no credentials and has no login.
+  const apiUrl = process.env.AGORA_API_URL || '';
+  const token = process.env.AGORA_TOKEN || process.env.AGORA_API_TOKEN || '';
   if (opts.requireAuth && (!apiUrl || !token)) return null;
   return { useApi: Boolean(apiUrl), apiUrl, token, fetcher: ctx.io.fetcher, timeoutMs: 10000 };
 }

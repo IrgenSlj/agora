@@ -3,7 +3,7 @@
  * Every assertion covers the FULL dataset, not just the first element.
  */
 import { describe, expect, test } from 'vitest';
-import { samplePackages, sampleTutorials, sampleWorkflows, trendingTags } from '../src/data';
+import { samplePackages, sampleWorkflows, trendingTags } from '../src/data';
 
 // npm package-name shape: optional scope (@scope/) + package name
 const NPM_PKG_RE = /^@?[a-z0-9][\w.-]*(\/[\w.-]+)?$/;
@@ -149,58 +149,6 @@ describe('sampleWorkflows — data integrity', () => {
   test('prompt field is non-empty for every workflow', () => {
     for (const wf of sampleWorkflows) {
       expect(wf.prompt.length).toBeGreaterThan(50);
-    }
-  });
-});
-
-describe('sampleTutorials — data integrity', () => {
-  test('ids are unique', () => {
-    const ids = sampleTutorials.map((t) => t.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  test('every tutorial has non-empty required string fields', () => {
-    for (const tut of sampleTutorials) {
-      expect(tut.id.length).toBeGreaterThan(0);
-      expect(tut.title.length).toBeGreaterThan(0);
-      expect(tut.description.length).toBeGreaterThan(0);
-      expect(tut.duration.length).toBeGreaterThan(0);
-    }
-  });
-
-  test('every tutorial has a valid level', () => {
-    const validLevels = new Set(['beginner', 'intermediate', 'advanced']);
-    for (const tut of sampleTutorials) {
-      expect(validLevels.has(tut.level)).toBe(true);
-    }
-  });
-
-  test('every tutorial has at least one step', () => {
-    for (const tut of sampleTutorials) {
-      expect(Array.isArray(tut.steps)).toBe(true);
-      expect(tut.steps.length).toBeGreaterThan(0);
-    }
-  });
-
-  test('every tutorial step has non-empty title and content', () => {
-    for (const tut of sampleTutorials) {
-      for (const step of tut.steps) {
-        expect(step.title.length).toBeGreaterThan(0);
-        expect(step.content.length).toBeGreaterThan(0);
-      }
-    }
-  });
-
-  test('tutorial ids are prefixed with tut-', () => {
-    for (const tut of sampleTutorials) {
-      expect(tut.id.startsWith('tut-')).toBe(true);
-    }
-  });
-
-  test('duration follows the pattern "N min"', () => {
-    const durRe = /^\d+\s+min$/;
-    for (const tut of sampleTutorials) {
-      expect(tut.duration).toMatch(durRe);
     }
   });
 });

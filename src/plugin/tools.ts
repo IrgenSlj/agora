@@ -2,13 +2,11 @@ import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
 import { type AcquireInput, acquire, renderAcquireResult } from '../acquire.js';
 import { formatConfigJson } from '../config.js';
-import { sampleTutorials } from '../data.js';
 import { formatInstalls, formatStars } from '../format.js';
 import {
   createInstallPlan,
   findMarketplaceItem,
   getTrendingItems,
-  getTrendingTags,
   type MarketplaceItem,
   searchMarketplaceItems
 } from '../marketplace.js';
@@ -229,89 +227,6 @@ ${items
 
 ---
 Run \`/agora browse <id>\` for details.`;
-      }
-    }),
-
-    agora_trending: tool({
-      description: 'Show trending packages and workflows in Agora',
-      args: {
-        category: tool.schema
-          .string()
-          .optional()
-          .describe('Category to show: packages, workflows, all')
-      },
-      async execute(args) {
-        const category = args.category || 'all';
-
-        let output = `📈 **Trending in Agora**\n\n`;
-
-        if (category === 'all' || category === 'packages' || category === 'package') {
-          output += `**Top Packages**\n`;
-          const topPackages = getTrendingItems({ category: 'package', limit: 5 });
-          // Rank and display by installs — stars are repo-level and tie
-          // across the modelcontextprotocol/servers monorepo.
-          output += topPackages
-            .map(
-              (p, i) =>
-                `${i + 1}. ${p.id} — 📥 ${formatInstalls(p.installs)} installs · ⭐ ${formatStars(p.stars)}`
-            )
-            .join('\n');
-          output += '\n\n';
-        }
-
-        if (category === 'all' || category === 'workflows' || category === 'workflow') {
-          output += `**Top Workflows**\n`;
-          const topWorkflows = getTrendingItems({ category: 'workflow', limit: 5 });
-          output += topWorkflows
-            .map((w, i) => `${i + 1}. ${w.id} — ${w.name} (⭐ ${formatStars(w.stars)})`)
-            .join('\n');
-        }
-
-        output += `\n\n🏷️ **Trending Tags**: ${getTrendingTags(8).join(', ')}`;
-
-        return output;
-      }
-    }),
-
-    agora_tutorial: tool({
-      description: 'Learn about AI/MCP with interactive tutorials',
-      args: {
-        tutorial: tool.schema
-          .string()
-          .optional()
-          .describe('Tutorial ID or "list" to see available tutorials'),
-        step: tool.schema.number().optional().describe('Step number (1-based)')
-      },
-      async execute(args) {
-        const tutorial = args.tutorial;
-        const step = args.step || 1;
-
-        if (!tutorial || tutorial === 'list') {
-          const tutorialList = sampleTutorials
-            .map((t, i) => `${i + 1}. **${t.id}** - ${t.title} (${t.level}, ${t.duration})`)
-            .join('\n');
-          return `📚 **Available Tutorials**\n\n${tutorialList}\n\nRun \`/agora tutorial <id>\` to start a tutorial.`;
-        }
-
-        const tut = sampleTutorials.find((t) => t.id === tutorial);
-        if (!tut) {
-          return `Tutorial "${tutorial}" not found. Run \`/agora tutorial list\` to see available tutorials.`;
-        }
-
-        if (step > tut.steps.length) {
-          return `✅ You've completed "${tut.title}"!
-
-Run \`/agora tutorial list\` for more tutorials.`;
-        }
-
-        const currentStep = tut.steps[step - 1];
-        return `📚 **${tut.title}** (${tut.level}, ${tut.duration})
-**Step ${step}/${tut.steps.length}**: ${currentStep.title}
-
-${currentStep.content}
-${currentStep.code ? `\n\`\`\`\n${currentStep.code}\n\`\`\`` : ''}
-
-Run \`/agora tutorial ${tutorial} ${step + 1}\` for next step.`;
       }
     }),
 

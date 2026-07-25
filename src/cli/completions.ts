@@ -20,9 +20,7 @@ export interface CompletionContext {
 }
 
 const PATH_COMMANDS = new Set(['cd', 'ls', 'cat', 'vi', 'vim', 'nano', 'less', 'more']);
-const MARKETPLACE_COMMANDS = new Set(['install', 'browse']);
-const SAVED_COMMANDS = new Set(['remove']);
-const ID_ARG_COMMANDS = new Set(['similar', 'compare']);
+const MARKETPLACE_COMMANDS = new Set(['install', 'browse', 'acquire', 'scan']);
 
 const NEWS_SOURCES = ['hn', 'gh', 'arxiv', 'rss'];
 const TYPES = ['package', 'workflow'];
@@ -100,29 +98,8 @@ export function completeShellLine(
       return { matches: ids.slice(0, 12), replaceFrom };
     }
 
-    if (firstToken === 'save') {
-      const replaceFrom = upToCursor.length - secondToken.length;
-      const ids = context.marketplaceIds().filter((id) => id.startsWith(secondToken));
-      ids.sort();
-      return { matches: ids.slice(0, 12), replaceFrom };
-    }
-
-    if (SAVED_COMMANDS.has(firstToken)) {
-      const replaceFrom = upToCursor.length - secondToken.length;
-      const ids = context.savedIds().filter((id) => id.startsWith(secondToken));
-      ids.sort();
-      return { matches: ids.slice(0, 12), replaceFrom };
-    }
-
-    if (ID_ARG_COMMANDS.has(firstToken)) {
-      const replaceFrom = upToCursor.length - secondToken.length;
-      const ids = context.marketplaceIds().filter((id) => id.startsWith(secondToken));
-      ids.sort();
-      return { matches: ids.slice(0, 12), replaceFrom };
-    }
-
     // Flag-only commands: complete flag names
-    const flagCmds = new Set(['auth', 'init', 'use', 'config']);
+    const flagCmds = new Set(['init', 'config', 'doctor', 'sync']);
     if (flagCmds.has(firstToken) && secondToken.startsWith('-')) {
       const replaceFrom = upToCursor.length - secondToken.length;
       const knownFlags = getFlags(firstToken).filter((f) => f.startsWith(secondToken));

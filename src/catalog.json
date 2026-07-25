@@ -14,8 +14,12 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-filesystem",
       "createdAt": "2024-11-21",
-      "pricing": { "kind": "free" },
-      "permissions": { "fs": ["./**/*"] }
+      "pricing": {
+        "kind": "free"
+      },
+      "permissions": {
+        "fs": ["./**/*"]
+      }
     },
     {
       "id": "mcp-everything",
@@ -30,7 +34,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-everything",
       "createdAt": "2024-11-19",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-github",
@@ -45,7 +51,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-github",
       "createdAt": "2024-11-21",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-gitlab",
@@ -60,7 +68,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-gitlab",
       "createdAt": "2024-12-04",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-postgres",
@@ -75,7 +85,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-postgres",
       "createdAt": "2024-11-19",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-redis",
@@ -90,7 +102,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-redis",
       "createdAt": "2025-04-07",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-mongodb",
@@ -105,7 +119,9 @@
       "repository": "https://github.com/mongodb-js/mongodb-mcp-server",
       "npmPackage": "mongodb-mcp-server",
       "createdAt": "2025-04-23",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-elasticsearch",
@@ -120,7 +136,9 @@
       "repository": "https://github.com/elastic/mcp-server-elasticsearch",
       "npmPackage": "@elastic/mcp-server-elasticsearch",
       "createdAt": "2025-03-24",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-supabase",
@@ -135,7 +153,9 @@
       "repository": "https://github.com/supabase-community/supabase-mcp",
       "npmPackage": "@supabase/mcp-server-supabase",
       "createdAt": "2025-03-28",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-openai",
@@ -150,8 +170,12 @@
       "repository": "https://github.com/openai/openai-mcp-server",
       "npmPackage": "openai-mcp-server",
       "createdAt": "2025-01-15",
-      "pricing": { "kind": "free" },
-      "permissions": { "net": ["api.openai.com", "api.anthropic.com"] }
+      "pricing": {
+        "kind": "free"
+      },
+      "permissions": {
+        "net": ["api.openai.com", "api.anthropic.com"]
+      }
     },
     {
       "id": "mcp-anthropic",
@@ -165,7 +189,9 @@
       "installs": 289000,
       "repository": "https://github.com/anthropics/anthropic-mcp-server",
       "createdAt": "2025-04-01",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-replicate",
@@ -180,7 +206,9 @@
       "repository": "https://github.com/replicate/replicate-mcp-server",
       "npmPackage": "replicate-mcp",
       "createdAt": "2025-02-10",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-huggingface",
@@ -194,7 +222,9 @@
       "installs": 56780,
       "repository": "https://github.com/huggingface/hf-mcp-server",
       "createdAt": "2025-03-05",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-sequential-thinking",
@@ -209,7 +239,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-sequential-thinking",
       "createdAt": "2024-12-03",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-memory",
@@ -224,7 +256,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-memory",
       "createdAt": "2024-11-21",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-context7",
@@ -239,7 +273,9 @@
       "repository": "https://github.com/upstash/context7",
       "npmPackage": "@upstash/context7-mcp",
       "createdAt": "2025-04-08",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-brave-search",
@@ -254,8 +290,12 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-brave-search",
       "createdAt": "2024-11-21",
-      "pricing": { "kind": "free" },
-      "permissions": { "net": ["api.brave.com", "api.duckduckgo.com", "serpapi.com"] }
+      "pricing": {
+        "kind": "free"
+      },
+      "permissions": {
+        "net": ["api.brave.com", "api.duckduckgo.com", "serpapi.com"]
+      }
     },
     {
       "id": "mcp-tavily",
@@ -270,7 +310,9 @@
       "repository": "https://github.com/tavily-ai/tavily-mcp",
       "npmPackage": "tavily-mcp",
       "createdAt": "2025-01-27",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-exa",
@@ -285,7 +327,9 @@
       "repository": "https://github.com/exa-labs/exa-mcp-server",
       "npmPackage": "exa-mcp-server",
       "createdAt": "2024-12-17",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-perplexity",
@@ -300,7 +344,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "server-perplexity-ask",
       "createdAt": "2025-02-19",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-firecrawl",
@@ -315,8 +361,12 @@
       "repository": "https://github.com/firecrawl/firecrawl-mcp-server",
       "npmPackage": "firecrawl-mcp",
       "createdAt": "2025-02-21",
-      "pricing": { "kind": "free" },
-      "permissions": { "net": ["*"] }
+      "pricing": {
+        "kind": "free"
+      },
+      "permissions": {
+        "net": ["*"]
+      }
     },
     {
       "id": "mcp-google-maps",
@@ -331,7 +381,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-google-maps",
       "createdAt": "2024-11-21",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-puppeteer",
@@ -346,7 +398,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-puppeteer",
       "createdAt": "2024-11-19",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-playwright",
@@ -361,7 +415,9 @@
       "repository": "https://github.com/microsoft/playwright-mcp",
       "npmPackage": "@playwright/mcp",
       "createdAt": "2025-03-13",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-playwright-ea",
@@ -376,7 +432,9 @@
       "repository": "https://github.com/executeautomation/mcp-playwright",
       "npmPackage": "@executeautomation/playwright-mcp-server",
       "createdAt": "2024-12-05",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-browsermcp",
@@ -390,7 +448,9 @@
       "installs": 7461,
       "npmPackage": "@browsermcp/mcp",
       "createdAt": "2025-04-05",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-linear",
@@ -404,7 +464,9 @@
       "installs": 189000,
       "repository": "https://github.com/linear/linear-mcp-server",
       "createdAt": "2025-02-25",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-jira",
@@ -419,7 +481,9 @@
       "repository": "https://github.com/atlassian-labs/jira-mcp-server",
       "npmPackage": "jira-mcp-server",
       "createdAt": "2025-03-01",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-asana",
@@ -433,7 +497,9 @@
       "installs": 12300,
       "repository": "https://github.com/asana-community/asana-mcp-server",
       "createdAt": "2025-04-10",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-obsidian",
@@ -448,8 +514,12 @@
       "repository": "https://github.com/obsidian-mcp/obsidian-mcp-server",
       "npmPackage": "obsidian-mcp-server",
       "createdAt": "2025-01-25",
-      "pricing": { "kind": "free" },
-      "permissions": { "fs": ["~/.obsidian/**/*", "./**/*.md"] }
+      "pricing": {
+        "kind": "free"
+      },
+      "permissions": {
+        "fs": ["~/.obsidian/**/*", "./**/*.md"]
+      }
     },
     {
       "id": "mcp-confluence",
@@ -464,7 +534,9 @@
       "repository": "https://github.com/atlassian-labs/confluence-mcp-server",
       "npmPackage": "confluence-mcp-server",
       "createdAt": "2025-04-05",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-sonarqube",
@@ -478,7 +550,9 @@
       "installs": 18900,
       "repository": "https://github.com/SonarSource/sonarqube-mcp-server",
       "createdAt": "2025-03-20",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-snyk",
@@ -492,7 +566,9 @@
       "installs": 34500,
       "repository": "https://github.com/snyk-labs/snyk-mcp-server",
       "createdAt": "2025-04-15",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-aws",
@@ -506,7 +582,9 @@
       "installs": 156000,
       "repository": "https://github.com/awslabs/aws-mcp-server",
       "createdAt": "2025-02-01",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-vercel",
@@ -520,7 +598,9 @@
       "installs": 89000,
       "repository": "https://github.com/vercel/vercel-mcp-server",
       "createdAt": "2025-03-01",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-netlify",
@@ -535,7 +615,9 @@
       "repository": "https://github.com/netlify/netlify-mcp-server",
       "npmPackage": "@netlify/mcp",
       "createdAt": "2025-04-01",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-discord",
@@ -550,7 +632,9 @@
       "repository": "https://github.com/discord-community/discord-mcp-server",
       "npmPackage": "discord-mcp-server",
       "createdAt": "2025-03-05",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-email",
@@ -565,7 +649,9 @@
       "repository": "https://github.com/sendgrid-community/sendgrid-mcp-server",
       "npmPackage": "sendgrid-mcp",
       "createdAt": "2025-04-15",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-slack",
@@ -580,7 +666,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-slack",
       "createdAt": "2024-11-19",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-notion",
@@ -595,7 +683,9 @@
       "repository": "https://github.com/makenotion/notion-mcp-server",
       "npmPackage": "@notionhq/notion-mcp-server",
       "createdAt": "2025-04-03",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-gdrive",
@@ -610,7 +700,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-gdrive",
       "createdAt": "2024-11-19",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-figma",
@@ -625,7 +717,9 @@
       "repository": "https://github.com/GLips/Figma-Context-MCP",
       "npmPackage": "figma-developer-mcp",
       "createdAt": "2025-02-22",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-magic",
@@ -640,7 +734,9 @@
       "repository": "https://github.com/21st-dev/magic-mcp",
       "npmPackage": "@21st-dev/magic",
       "createdAt": "2025-03-11",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-docker",
@@ -655,8 +751,13 @@
       "repository": "https://github.com/docker-labs/mcp-docker-server",
       "npmPackage": "mcp-docker-server",
       "createdAt": "2025-01-20",
-      "pricing": { "kind": "free" },
-      "permissions": { "exec": ["docker"], "fs": ["./**/*"] }
+      "pricing": {
+        "kind": "free"
+      },
+      "permissions": {
+        "exec": ["docker"],
+        "fs": ["./**/*"]
+      }
     },
     {
       "id": "mcp-sqlite",
@@ -671,7 +772,9 @@
       "repository": "https://github.com/sqlite-community/sqlite-mcp",
       "npmPackage": "@easy-mcps/sqlite-mcp-server",
       "createdAt": "2025-02-15",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-pinecone",
@@ -686,7 +789,9 @@
       "repository": "https://github.com/pinecone-io/pinecone-mcp-server",
       "npmPackage": "pinecone-mcp",
       "createdAt": "2025-03-10",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-qdrant",
@@ -701,7 +806,9 @@
       "repository": "https://github.com/qdrant/qdrant-mcp-server",
       "npmPackage": "qdrant-mcp-server",
       "createdAt": "2025-03-15",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-chromadb",
@@ -716,7 +823,9 @@
       "repository": "https://github.com/chroma-core/chromadb-mcp-server",
       "npmPackage": "chromadb-mcp",
       "createdAt": "2025-04-01",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-neo4j",
@@ -730,7 +839,9 @@
       "installs": 56700,
       "repository": "https://github.com/neo4j/neo4j-mcp-server",
       "createdAt": "2025-02-20",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-cloudflare",
@@ -744,7 +855,9 @@
       "installs": 2249,
       "npmPackage": "@cloudflare/mcp-server-cloudflare",
       "createdAt": "2024-11-27",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-kubernetes",
@@ -759,8 +872,12 @@
       "repository": "https://github.com/Flux159/mcp-server-kubernetes",
       "npmPackage": "mcp-server-kubernetes",
       "createdAt": "2024-12-10",
-      "pricing": { "kind": "free" },
-      "permissions": { "exec": ["kubectl", "helm"] }
+      "pricing": {
+        "kind": "free"
+      },
+      "permissions": {
+        "exec": ["kubectl", "helm"]
+      }
     },
     {
       "id": "mcp-heroku",
@@ -775,7 +892,9 @@
       "repository": "https://github.com/heroku/heroku-mcp-server",
       "npmPackage": "@heroku/mcp-server",
       "createdAt": "2025-04-07",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-aws-kb",
@@ -790,7 +909,9 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-aws-kb-retrieval",
       "createdAt": "2025-01-14",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-remote",
@@ -805,7 +926,9 @@
       "repository": "https://github.com/geelen/mcp-remote",
       "npmPackage": "mcp-remote",
       "createdAt": "2025-03-17",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-datadog",
@@ -820,7 +943,9 @@
       "repository": "https://github.com/DataDog/datadog-mcp-server",
       "npmPackage": "datadog-mcp",
       "createdAt": "2025-03-10",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-grafana",
@@ -834,7 +959,9 @@
       "installs": 67800,
       "repository": "https://github.com/grafana-community/grafana-mcp-server",
       "createdAt": "2025-02-20",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-pagerduty",
@@ -848,7 +975,9 @@
       "installs": 18900,
       "repository": "https://github.com/PagerDuty/pagerduty-mcp-server",
       "createdAt": "2025-04-01",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-newrelic",
@@ -862,7 +991,9 @@
       "installs": 12300,
       "repository": "https://github.com/newrelic/newrelic-mcp-server",
       "createdAt": "2025-04-10",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-sentry",
@@ -877,7 +1008,9 @@
       "repository": "https://github.com/getsentry/sentry-mcp",
       "npmPackage": "@sentry/mcp-server",
       "createdAt": "2025-04-24",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-stripe",
@@ -892,7 +1025,9 @@
       "repository": "https://github.com/stripe/ai",
       "npmPackage": "@stripe/mcp",
       "createdAt": "2025-02-19",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "mcp-sequelize",
@@ -906,7 +1041,9 @@
       "installs": 12400,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "createdAt": "2025-03-10",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "prompt-code-review",
@@ -919,7 +1056,9 @@
       "stars": 1200,
       "installs": 8900,
       "createdAt": "2025-01-10",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "prompt-api-design",
@@ -932,7 +1071,9 @@
       "stars": 560,
       "installs": 3400,
       "createdAt": "2025-02-20",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "prompt-refactor-plan",
@@ -945,7 +1086,9 @@
       "stars": 780,
       "installs": 4500,
       "createdAt": "2025-03-01",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "prompt-debug-session",
@@ -958,7 +1101,9 @@
       "stars": 920,
       "installs": 6200,
       "createdAt": "2025-04-10",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "prompt-test-strategy",
@@ -971,7 +1116,9 @@
       "stars": 410,
       "installs": 2100,
       "createdAt": "2025-04-20",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     },
     {
       "id": "prompt-migration-plan",
@@ -984,7 +1131,9 @@
       "stars": 340,
       "installs": 1800,
       "createdAt": "2025-05-01",
-      "pricing": { "kind": "free" }
+      "pricing": {
+        "kind": "free"
+      }
     }
   ],
   "sampleWorkflows": [
@@ -1120,303 +1269,6 @@
       "stars": 278,
       "forks": 52,
       "createdAt": "2025-04-15"
-    }
-  ],
-  "sampleDiscussions": [],
-  "sampleTutorials": [
-    {
-      "id": "tut-mcp-basics",
-      "title": "MCP Servers 101",
-      "description": "Learn the fundamentals of Model Context Protocol and how to use it with OpenCode",
-      "level": "beginner",
-      "duration": "15 min",
-      "steps": [
-        {
-          "title": "What is MCP?",
-          "content": "The Model Context Protocol (MCP) is an open standard that lets AI models connect with external tools and data sources. Think of it as a USB-C port for AI — a universal way to plug any AI into any tool. MCP was created by Anthropic and is now governed by the Linux Foundation's Agentic AI Foundation."
-        },
-        {
-          "title": "Installing Your First MCP Server",
-          "content": "Let's install the filesystem MCP server. OpenCode uses MCP servers to access your files, run commands, and interact with APIs.",
-          "code": "npm install -g @modelcontextprotocol/server-filesystem"
-        },
-        {
-          "title": "Configure in OpenCode",
-          "content": "Add the MCP server to your OpenCode configuration and restart opencode to pick it up:",
-          "code": "{\n  \"mcp\": {\n    \"filesystem\": {\n      \"type\": \"local\",\n      \"command\": [\"npx\", \"@modelcontextprotocol/server-filesystem\", \"./\"]\n    }\n  }\n}"
-        },
-        {
-          "title": "Test It Out",
-          "content": "Now in OpenCode, try asking: \"List the files in the current directory\" or \"Read the package.json file\". The AI will use the filesystem MCP server to access your files safely."
-        }
-      ]
-    },
-    {
-      "id": "tut-agents-skills",
-      "title": "OpenCode Agents & Skills Deep Dive",
-      "description": "Master the three-tier extensibility system: Skills, Agents, and Plugins",
-      "level": "intermediate",
-      "duration": "30 min",
-      "steps": [
-        {
-          "title": "Skills — Lightweight Prompts",
-          "content": "Skills are markdown files with frontmatter that define agent behavior. They're the lightest form of customization. Create a file called `.opencode/skills/reviewer.md` and OpenCode will load it automatically.",
-          "code": "---\nname: code-reviewer\ndescription: Reviews code for quality and security\n---\n\nYou are a senior code reviewer. Focus on:\n- Security vulnerabilities\n- Performance issues\n- Code style and maintainability"
-        },
-        {
-          "title": "Agents — Specialized Workers",
-          "content": "Agents are specialized workers with their own system prompt and tool permissions. You can define them in your opencode.json or using the `opencode agent create` command. Each agent can have different model, permissions, and behavior."
-        },
-        {
-          "title": "Plugins — Full Integration",
-          "content": "Plugins are npm packages that provide full TypeScript integration with hooks, tools, and event handlers. Agora itself runs as a plugin. Plugins can add custom tools, respond to events, and integrate deeply with OpenCode."
-        }
-      ]
-    },
-    {
-      "id": "tut-tdd-workflow",
-      "title": "TDD with OpenCode",
-      "description": "Use the TDD workflow to drive test-first development with AI assistance",
-      "level": "intermediate",
-      "duration": "20 min",
-      "steps": [
-        {
-          "title": "Install the TDD Workflow",
-          "content": "Agora comes with a TDD workflow. View it first:",
-          "code": "agora browse wf-tdd-cycle"
-        },
-        {
-          "title": "Apply the Workflow",
-          "content": "Apply the workflow as an OpenCode skill to use it during development:",
-          "code": "agora use wf-tdd-cycle"
-        },
-        {
-          "title": "Start Coding",
-          "content": "Now when you ask OpenCode to implement a feature, it will automatically follow TDD — write the test first, implement, then refactor. The structured thinking MCP server helps with the planning phase."
-        }
-      ]
-    },
-    {
-      "id": "tut-security-audit",
-      "title": "Security Auditing with OpenCode",
-      "description": "Run automated security audits using the security workflow and community tools",
-      "level": "advanced",
-      "duration": "25 min",
-      "steps": [
-        {
-          "title": "Install Security Tools",
-          "content": "First, install the security audit workflow and the necessary MCP servers:",
-          "code": "agora use wf-security-audit\nagora install mcp-github"
-        },
-        {
-          "title": "Run an Audit",
-          "content": "In OpenCode, use the security workflow: \"Run a security audit on this project\". The agent will check for OWASP Top 10 vulnerabilities, hardcoded secrets, dependency vulnerabilities, and more."
-        },
-        {
-          "title": "Review Findings",
-          "content": "The audit produces a prioritized report with severity levels and suggested fixes. Each finding includes a clear remediation step you can ask OpenCode to implement."
-        }
-      ]
-    },
-    {
-      "id": "tut-advanced-mcp",
-      "title": "Building Custom MCP Servers",
-      "description": "Create your own MCP servers using the TypeScript SDK",
-      "level": "advanced",
-      "duration": "45 min",
-      "steps": [
-        {
-          "title": "Prerequisites",
-          "content": "Make sure you have the MCP SDK installed and a basic understanding of TypeScript.",
-          "code": "npm install @modelcontextprotocol/sdk zod"
-        },
-        {
-          "title": "Create a Basic Server",
-          "content": "An MCP server exposes tools, resources, and prompts. Here is a minimal server with one tool:",
-          "code": "import { McpServer } from \"@modelcontextprotocol/sdk/server/mcp.js\";\nimport { z } from \"zod\";\n\nconst server = new McpServer({ name: \"My Server\", version: \"1.0.0\" });\n\nserver.tool(\"greet\", { name: z.string() }, async ({ name }) => ({\n  content: [{ type: \"text\", text: `Hello, ${name}!` }]\n}));\n\n// Start with stdio transport\nconst { StdioServerTransport } = await import(\"@modelcontextprotocol/sdk/server/stdio.js\");\nconst transport = new StdioServerTransport();\nawait server.connect(transport);"
-        },
-        {
-          "title": "Test Your Server",
-          "content": "Run it and test with an MCP inspector or add it to OpenCode:",
-          "code": "# Run your server\nnpx tsx src/my-server.ts\n\n# Add to opencode.json\n{\n  \"mcp\": {\n    \"my-server\": {\n      \"type\": \"local\",\n      \"command\": [\"npx\", \"tsx\", \"src/my-server.ts\"]\n    }\n  }\n}"
-        }
-      ]
-    },
-    {
-      "id": "tut-docker-dev",
-      "title": "Docker Development with MCP",
-      "description": "Manage Docker containers, images, and compose files from your AI assistant",
-      "level": "intermediate",
-      "duration": "20 min",
-      "steps": [
-        {
-          "title": "Install the Docker MCP Server",
-          "content": "First, install the Docker MCP server globally. This lets your AI assistant manage containers.",
-          "code": "npm install -g mcp-docker-server"
-        },
-        {
-          "title": "Configure in OpenCode",
-          "content": "Add the Docker MCP server to your opencode.json:",
-          "code": "{\n  \"mcp\": {\n    \"docker\": {\n      \"type\": \"local\",\n      \"command\": [\"npx\", \"mcp-docker-server\"]\n    }\n  }\n}"
-        },
-        {
-          "title": "Common Docker Tasks",
-          "content": "Now you can ask your AI to: list running containers, view logs, restart services, build images, manage Docker Compose, and clean up unused resources — all from your terminal via natural language."
-        }
-      ]
-    },
-    {
-      "id": "tut-api-testing",
-      "title": "API Testing with MCP Tools",
-      "description": "Learn to test and debug APIs using MCP servers and OpenCode workflows",
-      "level": "beginner",
-      "duration": "15 min",
-      "steps": [
-        {
-          "title": "Set Up API Testing Tools",
-          "content": "Install the necessary MCP servers for API testing. The Brave Search and GitHub servers are useful for testing external APIs.",
-          "code": "agora install mcp-github"
-        },
-        {
-          "title": "Test REST Endpoints",
-          "content": "With the MCP tools configured, you can ask OpenCode to test API endpoints: \"Make a GET request to https://api.example.com/health\" or \"Test the POST /users endpoint with this payload.\""
-        },
-        {
-          "title": "Automate API Tests",
-          "content": "Use the TDD workflow combined with API tools to write automated tests: \"Create a test suite that verifies all API endpoints return correct status codes and response shapes.\""
-        }
-      ]
-    },
-    {
-      "id": "tut-vector-search",
-      "title": "Vector Search with MCP",
-      "description": "Set up and query vector databases for semantic search and RAG applications",
-      "level": "advanced",
-      "duration": "30 min",
-      "steps": [
-        {
-          "title": "Choose a Vector Database",
-          "content": "Agora supports several vector databases. For local development, ChromaDB is the easiest to start with. For production, Pinecone or Qdrant are recommended.",
-          "code": "agora search vector\nagora browse mcp-chromadb"
-        },
-        {
-          "title": "Install and Configure",
-          "content": "Install your chosen vector database MCP server and add it to OpenCode:",
-          "code": "npm install -g chromadb-mcp-server"
-        },
-        {
-          "title": "Semantic Search in Action",
-          "content": "With vector search configured, you can ask OpenCode to: \"Search for documents similar to this text\" or \"Find the most relevant code examples for implementing OAuth.\" The AI will use the vector database to find semantically similar content."
-        }
-      ]
-    },
-    {
-      "id": "tut-opencode-tips",
-      "title": "OpenCode Power User Tips",
-      "description": "Advanced tips and workflows for getting the most out of OpenCode",
-      "level": "beginner",
-      "duration": "10 min",
-      "steps": [
-        {
-          "title": "Keyboard Shortcuts",
-          "content": "Learn the essential keybindings: Tab switches between agents, Ctrl+C interrupts the current action, Ctrl+L clears the conversation, / lists all available commands."
-        },
-        {
-          "title": "Custom Agents",
-          "content": "Create specialized agents for different tasks. For example, a \"reviewer\" agent with read-only permissions for code review, or a \"deploy\" agent with access to deployment tools.",
-          "code": "opencode agent create --name reviewer --mode primary --permissions read,glob,grep"
-        },
-        {
-          "title": "Session Management",
-          "content": "Continue previous sessions with `opencode -c`, fork them with `opencode --fork`, or start a specific agent with `opencode --agent reviewer`. Sessions persist across restarts."
-        }
-      ]
-    },
-    {
-      "id": "tut-trust-gate",
-      "title": "Understand the Trust Gate",
-      "description": "Read Agora gate output correctly before installing an MCP server",
-      "level": "beginner",
-      "duration": "10 min",
-      "steps": [
-        {
-          "title": "What the Gate Means",
-          "content": "Agora's live gate checks known red flags before a write: description-injection patterns, declared permissions, registry status, package reachability, and drift when a probe baseline exists. A clean result means no known red flags, not safe."
-        },
-        {
-          "title": "Preview Before Writing",
-          "content": "Use `agora acquire <id-or-query> --dry-run --json` to resolve a package, build the install plan, and inspect the gate verdict without changing any host config.",
-          "code": "agora acquire mcp-postgres --dry-run --json"
-        },
-        {
-          "title": "Handle Warnings",
-          "content": "Warnings require explicit acceptance. Read the checks first; only re-run with `--accept-warnings` when the warning is acceptable for the project.",
-          "code": "agora acquire mcp-postgres --accept-warnings --json"
-        },
-        {
-          "title": "Treat Failures as Stop Signs",
-          "content": "A hard fail blocks the write and exits non-zero. Do not report a passing gate as a safety guarantee, and do not look for bypass flags around failed checks."
-        }
-      ]
-    },
-    {
-      "id": "tut-catalog-contrib",
-      "title": "Contributing to the Catalog",
-      "description": "Add MCP servers, workflows, and tutorials to the Agora ecosystem",
-      "level": "intermediate",
-      "duration": "20 min",
-      "steps": [
-        {
-          "title": "The Offline Catalog",
-          "content": "Agora ships with a bundled offline catalog in src/data.ts. It contains MCP servers, prompt tools, workflows, and tutorials. The catalog is refreshed periodically and serves as the default data source when no API is available."
-        },
-        {
-          "title": "Add an MCP Server",
-          "content": "To add a new MCP server, append an entry to the samplePackages array in src/data.ts. Include the id, name, npm package, description, tags, and metadata. Run the tests to verify your entry works.",
-          "code": "{\n  id: 'mcp-my-server',\n  name: '@you/mcp-server',\n  description: 'Description of what it does',\n  author: 'You',\n  version: '1.0.0',\n  category: 'mcp',\n  tags: ['your-tag', 'tool'],\n  stars: 100,\n  installs: 500,\n  npmPackage: '@you/mcp-server',\n  createdAt: '2026-05-15'\n}"
-        },
-        {
-          "title": "Add a Workflow",
-          "content": "Workflows are structured prompts that guide AI behavior. Add them to the sampleWorkflows array with a descriptive prompt that includes step-by-step instructions, tags, and metadata.",
-          "code": "{\n  id: 'wf-my-workflow',\n  name: 'My Workflow Name',\n  description: 'What this workflow does',\n  author: 'you',\n  prompt: 'Step-by-step instructions for the AI to follow...',\n  tags: ['your-tag'],\n  stars: 1,\n  forks: 0,\n  createdAt: '2026-05-15'\n}"
-        },
-        {
-          "title": "Add a Tutorial",
-          "content": "Tutorials guide users through multi-step learning paths. Add them to the sampleTutorials array with a unique id, title, level, duration, and an array of steps. Each step has a title and content, with optional code blocks.",
-          "code": "{\n  id: 'tut-my-topic',\n  title: 'My Tutorial',\n  description: 'What users will learn',\n  level: 'beginner',\n  duration: '15 min',\n  steps: [\n    { title: 'First Step', content: 'Explanation...' },\n    { title: 'Second Step', content: 'More details...', code: 'example command' }\n  ]\n}"
-        },
-        {
-          "title": "Submit a Pull Request",
-          "content": "After adding your entries to data.ts, run `bun run test`, `bun run typecheck`, and `bun run build`, then submit a PR on GitHub. See CONTRIBUTING.md for the full contribution guide."
-        }
-      ]
-    },
-    {
-      "id": "tut-lock-verify",
-      "title": "Verify an Agora Lockfile",
-      "description": "Use agora.lock and the local store to catch manifest drift",
-      "level": "advanced",
-      "duration": "15 min",
-      "steps": [
-        {
-          "title": "Know the Split",
-          "content": "`agora.toml` is human intent. `agora.lock` is machine truth: exact artifact identity, hashes, policy verdicts, and where the artifact is synced."
-        },
-        {
-          "title": "Verify the Lock",
-          "content": "Run `agora lock verify` from a project with an `agora.lock`. The command compares the lockfile's approved hashes against the current manifest in the local SQLite store.",
-          "code": "agora lock verify --json"
-        },
-        {
-          "title": "Read Drift Output",
-          "content": "Any manifest or per-tool hash mismatch exits 1 and prints the changed artifact. Treat that as a quarantine signal until the diff is reviewed."
-        },
-        {
-          "title": "Use a Custom Store in CI",
-          "content": "Automation can point verification at an isolated SQLite store with `--store <path>` or `AGORA_DB_PATH`.",
-          "code": "agora lock verify --store .agora/agora.db --json"
-        }
-      ]
     }
   ],
   "trendingTags": [

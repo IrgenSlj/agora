@@ -143,18 +143,6 @@ describe('CLI commands', () => {
     expect(out).toContain('installs');
   });
 
-  test('trending --table renders table format', async () => {
-    const { io, stdout } = createIo();
-    const code = await runCli(['trending', '--table', '--limit', '3'], io);
-    const out = stdout.join('');
-
-    expect(code).toBe(0);
-    expect(out).toContain('┌');
-    expect(out).toContain('┐');
-    expect(out).toContain('id');
-    expect(out).toContain('stars');
-  });
-
   test('browse surfaces declared permissions for permission-declaring items', async () => {
     const { io, stdout } = createIo();
     const code = await runCli(['browse', 'mcp-filesystem'], io);
@@ -429,199 +417,6 @@ describe('CLI commands', () => {
     }
   });
 
-  test('save stores items in the Agora data directory', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const { io, stdout } = createIo(temp);
-
-    try {
-      const code = await runCli(['save', 'wf-security-audit', '--data-dir', dataDir], io);
-      const state = JSON.parse(readFileSync(join(dataDir, 'state.json'), 'utf8'));
-
-      expect(code).toBe(0);
-      expect(stdout.join('')).toContain('Saved wf-security-audit');
-      expect(state.savedItems[0].id).toBe('wf-security-audit');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('saved lists persisted items as JSON', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const setup = createIo(temp);
-
-    try {
-      await runCli(['save', 'mcp-github', '--data-dir', dataDir], setup.io);
-
-      const { io, stdout } = createIo(temp);
-      const code = await runCli(['saved', '--data-dir', dataDir, '--json'], io);
-      const payload = JSON.parse(stdout.join(''));
-
-      expect(code).toBe(0);
-      expect(payload.count).toBe(1);
-      expect(payload.items[0].item.id).toBe('mcp-github');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('save is idempotent', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const setup = createIo(temp);
-
-    try {
-      await runCli(['save', 'mcp-github', '--data-dir', dataDir], setup.io);
-
-      const { io, stdout } = createIo(temp);
-      const code = await runCli(['save', 'mcp-github', '--data-dir', dataDir], io);
-      const state = JSON.parse(readFileSync(join(dataDir, 'state.json'), 'utf8'));
-
-      expect(code).toBe(0);
-      expect(stdout.join('')).toContain('already saved');
-      expect(state.savedItems).toHaveLength(1);
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('remove deletes saved items', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const setup = createIo(temp);
-
-    try {
-      await runCli(['save', 'mcp-github', '--data-dir', dataDir], setup.io);
-
-      const { io, stdout } = createIo(temp);
-      const code = await runCli(['remove', 'mcp-github', '--data-dir', dataDir], io);
-      const state = JSON.parse(readFileSync(join(dataDir, 'state.json'), 'utf8'));
-
-      expect(code).toBe(0);
-      expect(stdout.join('')).toContain('Removed mcp-github');
-      expect(state.savedItems).toHaveLength(0);
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('saved does not create state when empty', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const { io, stdout } = createIo(temp);
-
-    try {
-      const code = await runCli(['saved', '--data-dir', dataDir], io);
-
-      expect(code).toBe(0);
-      expect(stdout.join('')).toContain('No saved items yet');
-      expect(existsSync(join(dataDir, 'state.json'))).toBe(false);
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('auth login stores API credentials without echoing the token', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const token = 'ghp_1234567890abcdef';
-    const { io, stdout } = createIo(temp);
-
-    try {
-      const code = await runCli(
-        [
-          'auth',
-          'login',
-          '--token',
-          token,
-          '--api-url',
-          'https://api.example.test',
-          '--data-dir',
-          dataDir
-        ],
-        io
-      );
-      const state = JSON.parse(readFileSync(join(dataDir, 'state.json'), 'utf8'));
-
-      expect(code).toBe(0);
-      expect(stdout.join('')).toContain('Stored Agora API token');
-      expect(stdout.join('')).not.toContain(token);
-      expect(state.auth.accessToken).toBe(token);
-      expect(state.auth.apiUrl).toBe('https://api.example.test');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('auth status reports masked stored credentials as JSON', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const token = 'ghp_1234567890abcdef';
-    const setup = createIo(temp);
-
-    try {
-      await runCli(
-        [
-          'auth',
-          'login',
-          '--token',
-          token,
-          '--api-url',
-          'https://api.example.test',
-          '--data-dir',
-          dataDir
-        ],
-        setup.io
-      );
-
-      const { io, stdout } = createIo(temp);
-      const code = await runCli(['auth', 'status', '--data-dir', dataDir, '--json'], io);
-      const payload = JSON.parse(stdout.join(''));
-
-      expect(code).toBe(0);
-      expect(stdout.join('')).not.toContain(token);
-      expect(payload.authenticated).toBe(true);
-      expect(payload.accessTokenPreview).toBe('ghp_...cdef');
-      expect(payload.apiUrl).toBe('https://api.example.test');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('auth logout clears stored credentials', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const setup = createIo(temp);
-
-    try {
-      await runCli(
-        [
-          'auth',
-          'login',
-          '--token',
-          'stored-token',
-          '--api-url',
-          'https://api.example.test',
-          '--data-dir',
-          dataDir
-        ],
-        setup.io
-      );
-
-      const { io, stdout } = createIo(temp);
-      const code = await runCli(['auth', 'logout', '--data-dir', dataDir, '--json'], io);
-      const payload = JSON.parse(stdout.join(''));
-      const state = JSON.parse(readFileSync(join(dataDir, 'state.json'), 'utf8'));
-
-      expect(code).toBe(0);
-      expect(payload.authenticated).toBe(false);
-      expect(state.auth).toBeUndefined();
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
   test('search can use the live API source', async () => {
     const fetcher = async (input: string | URL) => {
       const url = new URL(String(input));
@@ -723,131 +518,6 @@ describe('CLI commands', () => {
       rmSync(temp, { recursive: true, force: true });
     }
   });
-
-  test('save keeps a snapshot for API-only items', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const fetcher = async (input: string | URL) => {
-      const url = new URL(String(input));
-      if (url.pathname === '/api/packages/remote-mcp') {
-        return jsonResponse({
-          package: {
-            id: 'remote-mcp',
-            name: '@remote/server',
-            description: 'Remote MCP server',
-            author: 'remote-dev',
-            version: '1.2.3',
-            category: 'mcp',
-            tags: ['remote'],
-            stars: 99,
-            installs: 1000,
-            npm_package: '@remote/server',
-            created_at: '2026-01-01'
-          }
-        });
-      }
-      return jsonResponse({ error: 'not found' }, 404);
-    };
-    const setup = createIo(temp, { fetcher });
-
-    try {
-      await runCli(
-        [
-          'save',
-          'remote-mcp',
-          '--api',
-          '--api-url',
-          'https://api.example.test',
-          '--data-dir',
-          dataDir
-        ],
-        setup.io
-      );
-
-      const { io, stdout } = createIo(temp);
-      const code = await runCli(['saved', '--data-dir', dataDir, '--json'], io);
-      const payload = JSON.parse(stdout.join(''));
-
-      expect(code).toBe(0);
-      expect(payload.items[0].item.id).toBe('remote-mcp');
-      expect(payload.items[0].item.name).toBe('@remote/server');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('agora use without id lists available workflows', async () => {
-    const { io, stdout } = createIo();
-    const code = await runCli(['use'], io);
-    const out = stdout.join('');
-
-    expect(code).toBe(0);
-    expect(out).toContain('agora use');
-    expect(out).toContain('wf-tdd-cycle');
-    expect(out).toContain('available workflows');
-    expect(out).toContain('agora use <id>');
-  });
-
-  test('agora tutorial without id lists available tutorials', async () => {
-    const { io, stdout } = createIo();
-    const code = await runCli(['tutorial'], io);
-    const out = stdout.join('');
-
-    expect(code).toBe(0);
-    expect(out).toContain('agora tutorial');
-    expect(out).toContain('tut-mcp-basics');
-    expect(out).toContain('available tutorials');
-    expect(out).toContain('agora tutorial <id>');
-  });
-
-  test('login is an alias for auth login', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const { io, stdout } = createIo(temp);
-
-    try {
-      const code = await runCli(
-        ['login', '--token', 'test-token', '--api-url', 'https://api.test', '--data-dir', dataDir],
-        io
-      );
-      expect(code).toBe(0);
-      expect(stdout.join('')).toContain('Stored Agora API token');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('whoami returns auth status as JSON', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const dataDir = join(temp, 'state');
-    const setup = createIo(temp);
-
-    try {
-      await runCli(
-        [
-          'login',
-          '--token',
-          'whoami-token',
-          '--api-url',
-          'https://api.test',
-          '--data-dir',
-          dataDir
-        ],
-        setup.io
-      );
-
-      const { io, stdout } = createIo(temp);
-      const code = await runCli(['whoami', '--data-dir', dataDir], io);
-      const payload = JSON.parse(stdout.join(''));
-
-      expect(code).toBe(0);
-      expect(payload.authenticated).toBe(true);
-      expect(payload.apiUrl).toBe('https://api.test');
-      expect(payload.accessTokenPreview).toBe('whoa...oken');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
 });
 
 describe('TTY gate — no-command path', () => {
@@ -871,13 +541,47 @@ describe('help system', () => {
     expect(code).toBe(0);
     expect(out).toContain('Catalog');
     expect(out).toContain('Setup');
-    expect(out).toContain('Library');
-    expect(out).toContain('Learn');
+    expect(out).toContain('Stack');
     expect(out).toContain('search');
     expect(out).toContain('install');
     expect(out).toContain('init');
-    expect(out).toContain('tutorials');
-    expect(out).toContain('auth');
+    expect(out).toContain('acquire');
+    expect(out).toContain('doctor');
+  });
+
+  test('agora help no longer advertises the retired v1 surface', async () => {
+    const { io, stdout } = createIo();
+    const code = await runCli(['help'], io);
+    const out = stdout.join('');
+
+    expect(code).toBe(0);
+    // Match the command column only — "trending" legitimately appears inside
+    // the `today` description.
+    const listed = out
+      .split('\n')
+      .map((line) => /^ {2}(\S+)/.exec(line)?.[1])
+      .filter((name): name is string => Boolean(name));
+
+    for (const retired of [
+      'auth',
+      'curate',
+      'chat',
+      'trending',
+      'workflows',
+      'similar',
+      'compare',
+      'share',
+      'author',
+      'save',
+      'saved',
+      'bookmarks',
+      'tutorials',
+      'tutorial',
+      'use',
+      'menu'
+    ]) {
+      expect(listed).not.toContain(retired);
+    }
   });
 
   test('agora help install outputs install-specific manual content', async () => {
@@ -906,31 +610,6 @@ describe('help system', () => {
 
     expect(code).toBe(2);
     expect(stderr.join('')).toContain('Unknown shell: powershell');
-  });
-
-  test('agora share emits a markdown snippet', async () => {
-    const { io, stdout } = createIo();
-    const code = await runCli(['share', 'mcp-github'], io);
-    const out = stdout.join('');
-    expect(code).toBe(0);
-    expect(out).toContain('**');
-    expect(out).toContain('Install: `agora install mcp-github`');
-  });
-
-  test('agora share --json wraps the snippet', async () => {
-    const { io, stdout } = createIo();
-    const code = await runCli(['share', 'mcp-github', '--json'], io);
-    expect(code).toBe(0);
-    const payload = JSON.parse(stdout.join(''));
-    expect(payload.id).toBe('mcp-github');
-    expect(payload.snippet).toContain('Install:');
-  });
-
-  test('agora share unknown id exits 2', async () => {
-    const { io, stderr } = createIo();
-    const code = await runCli(['share', 'nope-no-such-thing'], io);
-    expect(code).toBe(2);
-    expect(stderr.join('')).toContain('Unknown item');
   });
 
   test('unknown command suggests the nearest match', async () => {
@@ -1003,63 +682,6 @@ describe('help system', () => {
     expect(payload.id).toBe('mcp-github');
     expect(payload.url).toContain('https://');
     expect(payload.opened).toBe(false);
-  });
-
-  test('author --json returns expected shape', async () => {
-    const { io, stdout } = createIo();
-    const code = await runCli(['author', 'Anthropic, PBC', '--json'], io);
-    const payload = JSON.parse(stdout.join(''));
-
-    expect(code).toBe(0);
-    expect(payload.author).toBe('Anthropic, PBC');
-    expect(payload.count).toBeGreaterThan(0);
-    expect(Array.isArray(payload.items)).toBe(true);
-    expect(payload.items[0].author.toLowerCase()).toContain('anthropic');
-  });
-
-  test('author unknown prints "No items by …"', async () => {
-    const { io, stdout } = createIo();
-    const code = await runCli(['author', 'no-such-author-xyz'], io);
-
-    expect(code).toBe(0);
-    expect(stdout.join('')).toContain('No items by no-such-author-xyz');
-  });
-
-  test('bookmarks --json on empty data dir returns { marketplace: [], news: [] }', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-bookmarks-'));
-    const dataDir = join(temp, 'state');
-    const { io, stdout } = createIo(temp);
-
-    try {
-      const code = await runCli(['bookmarks', '--data-dir', dataDir, '--json'], io);
-      const payload = JSON.parse(stdout.join(''));
-
-      expect(code).toBe(0);
-      expect(payload.marketplace).toEqual([]);
-      expect(payload.news).toEqual([]);
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-
-  test('bookmarks lists saved marketplace items', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-bookmarks-'));
-    const dataDir = join(temp, 'state');
-    const setup = createIo(temp);
-
-    try {
-      await runCli(['save', 'mcp-github', '--data-dir', dataDir], setup.io);
-
-      const { io, stdout } = createIo(temp);
-      const code = await runCli(['bookmarks', '--data-dir', dataDir], io);
-      const out = stdout.join('');
-
-      expect(code).toBe(0);
-      expect(out).toContain('Catalog');
-      expect(out).toContain('mcp-github');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
   });
 });
 

@@ -1,17 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
 import process from 'node:process';
-import { ensureFreshAccess } from '../auth/refresh.js';
 import { dataRefreshedAt } from '../data.js';
 import type { SourceOptions, SourceResult } from '../live.js';
-import {
-  detectAgoraDataDir,
-  getAgoraStatePath,
-  getAuthState,
-  loadAgoraState,
-  type ResolvedSavedItem,
-  writeAgoraState
-} from '../state.js';
-import type { Tutorial } from '../types.js';
+import { detectAgoraDataDir, type ResolvedSavedItem } from '../state.js';
 import { ExitCode } from './exit-codes.js';
 import type { CliIo, OutputStream, ParsedArgs } from './flags.js';
 
@@ -80,7 +70,11 @@ export function envString(io: CliIo, name: string): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
-export function authTokenInput(parsed: ParsedArgs, io: CliIo): string | undefined {
+/**
+ * Token for the optional `AGORA_API_URL` catalog mirror. Read from flags/env
+ * only — Agora has no accounts, no login, and stores no credentials.
+ */
+export function apiTokenInput(parsed: ParsedArgs, io: CliIo): string | undefined {
   return (
     requiredStringFlag(parsed, 'token') ||
     envString(io, 'AGORA_TOKEN') ||
@@ -101,22 +95,16 @@ export function detectDataDir(parsed: ParsedArgs, io: CliIo): string {
 export async function sourceOptions(parsed: ParsedArgs, io: CliIo): Promise<SourceOptions> {
   const explicitApiUrl = stringFlag(parsed, 'apiUrl');
   const envApiUrl = envString(io, 'AGORA_API_URL');
-  const dataDir = detectDataDir(parsed, io);
-  let state = loadAgoraState(dataDir);
-  state = await ensureFreshAccess(state, { dataDir, fetcher: io.fetcher });
-  const storedAuth = getAuthState(state);
-  const storedApiUrl = storedAuth?.apiUrl;
-  const apiUrl = explicitApiUrl || envApiUrl || storedApiUrl || '';
+  const apiUrl = explicitApiUrl || envApiUrl || '';
   const useApi =
     explicitApiUrl !== undefined ||
     envApiUrl !== undefined ||
-    storedApiUrl !== undefined ||
     Boolean(parsed.flags.api) ||
     Boolean(parsed.flags.live);
   return {
     useApi,
     apiUrl,
-    token: authTokenInput(parsed, io) || storedAuth?.accessToken,
+    token: apiTokenInput(parsed, io),
     fetcher: io.fetcher,
     timeoutMs: numberFlag(parsed, 'apiTimeout')
   };
@@ -130,13 +118,13 @@ export async function writeSourceOptions(
   if (!options.apiUrl) {
     return {
       ok: false,
-      error: 'This command requires --api-url, AGORA_API_URL, or an auth login API URL'
+      error: 'This command requires --api-url or AGORA_API_URL'
     };
   }
   if (!options.token) {
     return {
       ok: false,
-      error: 'This command requires --token, AGORA_TOKEN, AGORA_API_TOKEN, or agora auth login'
+      error: 'This command requires --token, AGORA_TOKEN, or AGORA_API_TOKEN'
     };
   }
   return { ok: true, options: { ...options, useApi: true } };
@@ -150,7 +138,7 @@ export async function readSourceOptions(
   if (!options.apiUrl) {
     return {
       ok: false,
-      error: 'This command requires --api-url, AGORA_API_URL, or an auth login API URL'
+      error: 'This command requires --api-url or AGORA_API_URL'
     };
   }
   return { ok: true, options: { ...options, useApi: true } };
@@ -190,51 +178,6 @@ export function sourcePayload<T extends object, TValue>(
   };
 }
 
-// ── Auth display helpers ────────────────────────────────────────────────────
-
-export function maskToken(token: string): string {
-  const value = token.trim();
-  if (value.length <= 4) return '****';
-  if (value.length <= 8) return `${'*'.repeat(value.length - 4)}${value.slice(-4)}`;
-  return `${value.slice(0, 4)}...${value.slice(-4)}`;
-}
-
-export function formatRelativeExp(exp: number, nowSec: number): string {
-  if (exp === 0) return 'unknown';
-  const diff = exp - nowSec;
-  if (diff <= 0) return 'expired';
-  if (diff < 3600) return `${Math.round(diff / 60)}m`;
-  if (diff < 86400) return `${Math.round(diff / 3600)}h`;
-  return `${Math.round(diff / 86400)}d`;
-}
-
-export function authStatusPayload(
-  dataDir: string,
-  auth: ReturnType<typeof getAuthState>
-): {
-  dataDir: string;
-  statePath: string;
-  authenticated: boolean;
-  accessTokenPreview?: string;
-  accessExp?: number;
-  refreshTokenPreview?: string;
-  refreshExp?: number;
-  apiUrl?: string;
-  savedAt?: string;
-} {
-  return {
-    dataDir,
-    statePath: getAgoraStatePath(dataDir),
-    authenticated: Boolean(auth),
-    accessTokenPreview: auth ? maskToken(auth.accessToken) : undefined,
-    accessExp: auth?.accessExp,
-    refreshTokenPreview: auth?.refreshToken ? maskToken(auth.refreshToken) : undefined,
-    refreshExp: auth?.refreshExp,
-    apiUrl: auth?.apiUrl,
-    savedAt: auth?.savedAt
-  };
-}
-
 // ── Search helpers ──────────────────────────────────────────────────────────
 
 export function matchesSavedQuery(entry: ResolvedSavedItem, query: string): boolean {
@@ -252,152 +195,4 @@ export function matchesSavedQuery(entry: ResolvedSavedItem, query: string): bool
     : entry.saved.id;
 
   return searchable.toLowerCase().includes(query);
-}
-
-// ── Tutorial helpers ────────────────────────────────────────────────────────
-
-export function tutorialLevelFlag(
-  parsed: ParsedArgs
-): { ok: true; value: string } | { ok: false; error: string } {
-  const level = stringFlag(parsed, 'level') || 'all';
-  if (level === 'all' || level === 'beginner' || level === 'intermediate' || level === 'advanced') {
-    return { ok: true, value: level };
-  }
-  return { ok: false, error: 'tutorial level must be beginner, intermediate, advanced, or all' };
-}
-
-export function tutorialStepNumber(
-  parsed: ParsedArgs
-): { ok: true; value: number } | { ok: false; error: string } {
-  const rawStep = parsed.args[1] || stringFlag(parsed, 'step');
-  if (!rawStep) return { ok: true, value: 1 };
-
-  const step = Number(rawStep);
-  if (!Number.isInteger(step) || step < 1) {
-    return { ok: false, error: 'tutorial step must be a positive integer' };
-  }
-
-  return { ok: true, value: step };
-}
-
-export function tutorialStepPayload(
-  tutorial: Tutorial,
-  stepNumber: number
-): {
-  stepNumber: number;
-  totalSteps: number;
-  completed: boolean;
-  title?: string;
-  content?: string;
-  code?: string;
-} {
-  const step = tutorial.steps[stepNumber - 1];
-
-  return {
-    stepNumber,
-    totalSteps: tutorial.steps.length,
-    completed: !step,
-    title: step?.title,
-    content: step?.content,
-    code: step?.code
-  };
-}
-
-// ── Input helpers ───────────────────────────────────────────────────────────
-
-export function tagsFlag(parsed: ParsedArgs): string[] {
-  const value = stringFlag(parsed, 'tags');
-  if (!value) return [];
-  return value
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean);
-}
-
-export function promptInput(parsed: ParsedArgs, io: CliIo): string | undefined {
-  const prompt = stringFlag(parsed, 'prompt');
-  if (prompt) return prompt;
-
-  const promptFile = stringFlag(parsed, 'promptFile');
-  if (!promptFile) return undefined;
-
-  if (!existsSync(promptFile)) {
-    usageError(io, `prompt-file not found: ${promptFile}`);
-    return undefined;
-  }
-
-  return readFileSync(promptFile, 'utf8');
-}
-
-export function contentInput(parsed: ParsedArgs, io: CliIo): string | undefined {
-  const content = requiredStringFlag(parsed, 'content');
-  if (content) return content;
-
-  const contentFile = stringFlag(parsed, 'contentFile');
-  if (!contentFile) return undefined;
-
-  if (!existsSync(contentFile)) {
-    usageError(io, `content-file not found: ${contentFile}`);
-    return undefined;
-  }
-
-  return readFileSync(contentFile, 'utf8').trim();
-}
-
-export function itemTypeFlag(parsed: ParsedArgs, itemId: string): 'package' | 'workflow' {
-  const type = stringFlag(parsed, 'type', 't');
-  if (type === 'workflow' || itemId.startsWith('wf-')) return 'workflow';
-  return 'package';
-}
-
-export function discussionCategoryFlag(
-  parsed: ParsedArgs
-): { ok: true; value: string } | { ok: false; error: string } {
-  const category = stringFlag(parsed, 'category', 'c') || 'discussion';
-  if (
-    category === 'question' ||
-    category === 'idea' ||
-    category === 'showcase' ||
-    category === 'discussion'
-  ) {
-    return { ok: true, value: category };
-  }
-  return {
-    ok: false,
-    error: 'discussion category must be question, idea, showcase, or discussion'
-  };
-}
-
-// ── Chat helpers ────────────────────────────────────────────────────────────
-
-export function extractSessionId(line: string): string | null {
-  try {
-    const ev = JSON.parse(line);
-    if (ev.sessionID && typeof ev.sessionID === 'string') return ev.sessionID;
-  } catch {
-    /* not JSON, skip */
-  }
-  return null;
-}
-
-export function persistChatSession(dataDir: string, sessionId: string): void {
-  try {
-    const state = loadAgoraState(dataDir);
-    const updated = {
-      ...state,
-      _meta: { ...((state as any)._meta || {}), lastChatSession: sessionId }
-    };
-    writeAgoraState(dataDir, updated);
-  } catch {
-    // best-effort
-  }
-}
-
-export function loadLastChatSession(dataDir: string): string | undefined {
-  try {
-    const state = loadAgoraState(dataDir);
-    return (state as any)._meta?.lastChatSession;
-  } catch {
-    return undefined;
-  }
 }

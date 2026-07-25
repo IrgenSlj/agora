@@ -45,6 +45,13 @@ function resolveCacheKey(env: NodeJS.ProcessEnv | Record<string, string | undefi
   ].join('\0');
 }
 
+/**
+ * Zero-cost models Agora routes to when it needs an LLM pass (feed
+ * summarisation, README enrichment). Ordered by preference; index 0 is the
+ * default. Agora owns no inference and never requires a paid key for these.
+ */
+export const FREE_MODELS = ['deepseek-v4-flash-free', 'minimax-m2.5-free', 'nemotron-3-super-free'];
+
 export function normalizeOpencodeModel(model: string): string {
   return model.includes('/') ? model : `opencode/${model}`;
 }

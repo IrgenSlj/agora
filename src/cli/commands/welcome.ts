@@ -1,6 +1,4 @@
-import { loadPreferences } from '../../preferences.js';
-import { getAuthState, loadAgoraState } from '../../state.js';
-import { detectDataDir, writeJson, writeLine } from '../helpers.js';
+import { writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
 interface WelcomeStep {
@@ -9,59 +7,51 @@ interface WelcomeStep {
   effect: string;
 }
 
-function buildSteps(signedIn: boolean, username: string): WelcomeStep[] {
-  const signInStep: WelcomeStep = signedIn
-    ? {
-        title: `Signed in as ${username}`,
-        commands: ['agora bookmarks', 'agora saved'],
-        effect: 'view your saved items and bookmarks'
-      }
-    : {
-        title: 'Sign in (optional)',
-        commands: ['agora auth login --api-url <your-agora-backend>'],
-        effect: 'optional: connect a self-hosted legacy Agora backend for cross-device bookmarks'
-      };
-
+/**
+ * The guided tour follows the trust plane's own order — see what you already
+ * run, find something new, gate it on the way in, then make the whole stack
+ * reproducible. No accounts, so there is no sign-in step.
+ */
+function buildSteps(): WelcomeStep[] {
   return [
-    signInStep,
     {
-      title: 'Browse the catalog',
-      commands: ['agora trending', 'agora search <query>', 'agora today'],
-      effect: 'discover MCP servers, agent skills, and workflow templates'
+      title: 'Audit what you already run',
+      commands: ['agora doctor', 'agora installed'],
+      effect: 'one table of every MCP server across all your hosts, plus drift'
     },
     {
-      title: 'Read the news',
-      commands: ['agora news', 'agora news --source hn --limit 10'],
-      effect: 'ranked feed from HN, GitHub, and arXiv'
+      title: 'Search across every registry at once',
+      commands: ['agora search postgres', 'agora search --kind agent-skill review'],
+      effect: 'multi-source catalog search, deduped by purl, with honest per-source status'
+    },
+    {
+      title: 'Acquire through the gate',
+      commands: ['agora scan mcp-postgres', 'agora acquire mcp-postgres'],
+      effect: 'resolve, check for known red flags, then write host config — or refuse'
+    },
+    {
+      title: 'Make your stack reproducible',
+      commands: ['agora freeze --write', 'agora plan', 'agora apply'],
+      effect: 'capture agora.toml, diff it against reality, reconcile surgically'
+    },
+    {
+      title: 'Put Agora inside your agents',
+      commands: ['agora integrate --all'],
+      effect: 'install Agora into every detected host, using its own stack machinery'
     },
     {
       title: 'Set up shell completions',
       commands: ['agora completions bash', 'agora completions zsh', 'agora completions fish'],
       effect: 'tab-complete commands, flags, and catalog item IDs'
-    },
-    {
-      title: 'Start an MCP project of your own',
-      commands: ['agora init --template node-mcp', 'agora init --template python-mcp'],
-      effect: 'scaffold a complete MCP server project in the current directory'
     }
   ];
 }
 
 export const commandWelcome: CommandHandler = async (parsed, io, style) => {
-  const dataDir = detectDataDir(parsed, io);
-  const state = loadAgoraState(dataDir);
-  const auth = getAuthState(state);
-  const signedIn = Boolean(auth);
-  const prefs = loadPreferences(dataDir);
-  const username = prefs.username || 'you';
-  const steps = buildSteps(signedIn, username);
+  const steps = buildSteps();
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, {
-      signedIn,
-      username: signedIn ? username : undefined,
-      steps
-    });
+    writeJson(io.stdout, { steps });
     return 0;
   }
 
@@ -74,9 +64,9 @@ export const commandWelcome: CommandHandler = async (parsed, io, style) => {
   steps.forEach((step, i) => {
     writeLine(io.stdout, `${i + 1}. ${style.bold(step.title)}`);
     for (const cmd of step.commands) {
-      writeLine(io.stdout, '   ' + style.accent(cmd));
+      writeLine(io.stdout, `   ${style.accent(cmd)}`);
     }
-    writeLine(io.stdout, '   ' + style.dim('▸ ' + step.effect));
+    writeLine(io.stdout, `   ${style.dim(`▸ ${step.effect}`)}`);
     writeLine(io.stdout, '');
   });
 
