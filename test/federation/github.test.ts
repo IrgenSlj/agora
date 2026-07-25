@@ -114,9 +114,14 @@ describe('githubSource.search() — wraps searchGithub()', () => {
   // (maxRetries: 2, real non-signal-aware backoff) — a fetcher that always
   // throws genuinely takes several seconds to exhaust every topic. Headroom
   // above bun's default 5000ms test timeout instead of racing it.
-  test('never throws — resolves to [] when the fetcher throws', async () => {
-    const items = await githubSource.search('postgres', {}, { fetcher: throwingFetcher() });
-    expect(items).toEqual([]);
+  test('propagates a total failure so federation can report it honestly', async () => {
+    // The adapter deliberately does not swallow this: `runSource` turns it
+    // into an `unreachable` status with a reason plus a cache fallback,
+    // instead of the `ok · 0` it used to report for a source that never
+    // answered.
+    await expect(
+      githubSource.search('postgres', {}, { fetcher: throwingFetcher() })
+    ).rejects.toThrow('network unreachable');
   }, 15000);
 });
 

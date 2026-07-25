@@ -91,20 +91,19 @@ export const skillsGithubSource: RegistrySource = {
     opts: FederatedSearchOptions,
     env: FederationEnv
   ): Promise<FederatedItem[]> {
-    try {
-      const fetchedAt = new Date().toISOString();
-      const items = await searchGithub({
-        fetcher: env.fetcher,
-        signal: opts.signal,
-        token: env.env?.AGORA_GITHUB_TOKEN,
-        topics: SKILLS_GITHUB_TOPICS
-      });
-      const filtered = items.filter((i) => matchesQuery(i, query));
-      const limited = opts.limit ? filtered.slice(0, opts.limit) : filtered;
-      return limited.map((i) => toSkillItem(i, fetchedAt));
-    } catch {
-      return [];
-    }
+    // Errors propagate: the federation layer turns them into an honest
+    // `unreachable` status with a reason and falls back to cache. Swallowing
+    // them here reported `ok · 0` for a source that never answered.
+    const fetchedAt = new Date().toISOString();
+    const items = await searchGithub({
+      fetcher: env.fetcher,
+      signal: opts.signal,
+      token: env.env?.AGORA_GITHUB_TOKEN,
+      topics: SKILLS_GITHUB_TOPICS
+    });
+    const filtered = items.filter((i) => matchesQuery(i, query));
+    const limited = opts.limit ? filtered.slice(0, opts.limit) : filtered;
+    return limited.map((i) => toSkillItem(i, fetchedAt));
   },
 
   async fetchItem(ref: string, env: FederationEnv): Promise<FederatedItem | null> {

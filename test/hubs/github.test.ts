@@ -94,7 +94,7 @@ describe('searchGithub()', () => {
     expect(typeof item.fetchedAt).toBe('string');
   });
 
-  test('gracefully handles fetch error — skips topic and continues', async () => {
+  test('a partial failure still returns the topics that succeeded', async () => {
     let callCount = 0;
     const fetcher: FetchLike = async (_url, _init) => {
       callCount++;
@@ -104,11 +104,31 @@ describe('searchGithub()', () => {
         json: async () => ({ items: [REPO_B] })
       } as Response;
     };
-    // Should not throw; returns items from second topic
-    // First topic fails, gets retried once (2 calls), second topic succeeds (1 call) = 3 total
+    // Topics fan out in parallel with a single attempt each, so two topics is
+    // exactly two calls. One fails, the other's items still come through.
     const items = await searchGithub({ fetcher, topics: ['mcp', 'opencode'], now: NOW });
-    expect(callCount).toBe(3);
+    expect(callCount).toBe(2);
     expect(items.length).toBeGreaterThanOrEqual(1);
+  });
+
+  test('throws when every topic fails — an empty result would be a lie', async () => {
+    const fetcher: FetchLike = async () => {
+      throw new Error('network error');
+    };
+    await expect(searchGithub({ fetcher, topics: ['mcp', 'opencode'], now: NOW })).rejects.toThrow(
+      'network error'
+    );
+  });
+
+  test('reports rate limiting distinctly from a generic failure', async () => {
+    const fetcher: FetchLike = async () =>
+      new Response('{}', {
+        status: 403,
+        headers: { 'x-ratelimit-remaining': '0' }
+      });
+    await expect(searchGithub({ fetcher, topics: ['mcp'], now: NOW })).rejects.toThrow(
+      /rate limit reached/i
+    );
   });
 
   test('sorts results by stars descending', async () => {

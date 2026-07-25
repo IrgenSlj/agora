@@ -12,7 +12,12 @@ import { officialSource } from './adapters/official.js';
 import { pulseMcpSource } from './adapters/pulsemcp.js';
 import { skillsGithubSource } from './adapters/skills-github.js';
 import { smitherySource } from './adapters/smithery.js';
-import { readSourceCache, readSourceStoreCache, resolveCacheDir } from './cache.js';
+import {
+  readSourceCache,
+  readSourceStoreCache,
+  resolveCacheDir,
+  writeSourceCache
+} from './cache.js';
 import type {
   FederatedItem,
   FederatedSearchOptions,
@@ -117,6 +122,32 @@ function cacheFallback(
   }
 }
 
+/**
+ * Fold a successful search's results into the source's on-disk cache, newest
+ * first, deduped by id.
+ *
+ * Only `agora refresh` used to write here, and only for `official` — so every
+ * other source had an empty cache and `cacheFallback` returned nothing the
+ * moment that source was rate-limited or slow. Recording what we successfully
+ * fetched is what makes the local-first promise hold for them too: degraded,
+ * not broken.
+ */
+function rememberSourceResults(cacheDir: string, sourceId: SourceId, items: FederatedItem[]): void {
+  if (items.length === 0) return;
+  try {
+    const merged: FederatedItem[] = [...items];
+    const seen = new Set(items.map((item) => item.id));
+    for (const cached of readSourceCache(cacheDir, sourceId)) {
+      if (seen.has(cached.id)) continue;
+      seen.add(cached.id);
+      merged.push(cached);
+    }
+    writeSourceCache(cacheDir, sourceId, merged);
+  } catch {
+    // A cache write must never fail a search that already succeeded.
+  }
+}
+
 interface SourceOutcome {
   items: FederatedItem[];
   status: SourceStatus;
@@ -158,6 +189,7 @@ async function runSource(
         status: { source: source.id, state: 'unreachable', reason: failure }
       };
     }
+    rememberSourceResults(cacheDir, source.id, items);
     return { items, status: { source: source.id, state: 'ok', count: items.length } };
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);

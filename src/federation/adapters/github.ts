@@ -81,19 +81,16 @@ export const githubSource: RegistrySource = {
     opts: FederatedSearchOptions,
     env: FederationEnv
   ): Promise<FederatedItem[]> {
-    try {
-      const fetchedAt = new Date().toISOString();
-      const items = await searchGithub({
-        fetcher: env.fetcher,
-        signal: opts.signal,
-        token: env.env?.AGORA_GITHUB_TOKEN
-      });
-      const filtered = items.filter((i) => matchesQuery(i, query));
-      const limited = opts.limit ? filtered.slice(0, opts.limit) : filtered;
-      return limited.map((i) => toFederatedItem(i, fetchedAt));
-    } catch {
-      return [];
-    }
+    // Errors propagate — see the note in skills-github.ts.
+    const fetchedAt = new Date().toISOString();
+    const items = await searchGithub({
+      fetcher: env.fetcher,
+      signal: opts.signal,
+      token: env.env?.AGORA_GITHUB_TOKEN
+    });
+    const filtered = items.filter((i) => matchesQuery(i, query));
+    const limited = opts.limit ? filtered.slice(0, opts.limit) : filtered;
+    return limited.map((i) => toFederatedItem(i, fetchedAt));
   },
 
   async fetchItem(ref: string, env: FederationEnv): Promise<FederatedItem | null> {
