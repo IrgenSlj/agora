@@ -8,7 +8,7 @@
     {
       "name": "agora",
       "source": "./",
-      "description": "The system manager for your agentic stack — federated MCP catalog search, stack introspection, plan/apply, and gated capability acquisition, via the agora MCP server."
+      "description": "The trust plane for agentic tooling — multi-source catalog search, evidence-backed inspection, a policy gate on install, and cross-host stack management, via the agora MCP server."
     }
   ]
 }
