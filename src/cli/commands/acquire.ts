@@ -1,6 +1,7 @@
 import { type AcquireResult, acquire, renderAcquireResult } from '../../acquire.js';
 import { createProvenanceResolver } from '../../evidence/resolve-provenance.js';
 import type { SourceId } from '../../federation/types.js';
+import { manifestPath, readManifest } from '../../stack/manifest.js';
 import type { AgentToolId } from '../../stack/types.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
@@ -79,6 +80,7 @@ export const commandAcquire: CommandHandler = async (parsed, io) => {
     dataDir: detectDataDir(parsed, io),
     fetcher: io.fetcher,
     githubToken: io.env?.AGORA_GITHUB_TOKEN,
+    policyFiles: readManifest(manifestPath({ cwd: io.cwd, env: io.env }))?.policy?.files ?? [],
     // Wired here rather than inside acquire() so the library never reaches
     // Fulcio/Rekor on its own — callers and tests opt in.
     scanOptions: {

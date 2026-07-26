@@ -18,6 +18,7 @@ import * as notifyModule from './commands/notify.js';
 import * as operations from './commands/operations.js';
 import * as outdatedModule from './commands/outdated.js';
 import * as planModule from './commands/plan.js';
+import * as policyModule from './commands/policy.js';
 import * as refreshModule from './commands/refresh.js';
 import * as scanModule from './commands/scan.js';
 import * as syncModule from './commands/sync.js';
@@ -163,6 +164,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       freeze: freezeModule.commandFreeze,
       sync: syncModule.commandSync,
       plan: planModule.commandPlan,
+      policy: policyModule.commandPolicy,
       apply: applyModule.commandApply,
       update: updateModule.commandUpdate,
       try: tryModule.commandTry,

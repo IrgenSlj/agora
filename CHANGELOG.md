@@ -143,6 +143,26 @@ applied — a deliberate fail-closed default, because a feed nobody can authenti
 rather than a safety net. `bun scripts/generate-feed-key.ts` mints the keypair; the public half is
 pinned in a release, the private half belongs in CI.
 
+### Added — the policy plane is wired (S5)
+
+`agora policy init|check|test`, `[policy] files` in `agora.toml`, and policy evaluation as the final
+step of the acquire gate. The engine existed and was tested; nothing consumed it until now.
+
+- `agora policy check` **lints before it evaluates**. A Cedar rule that reads a missing attribute is
+  skipped and the decision returns permissive, so an unguarded `forbid` looks like protection
+  without being it. Exits 1 on a lint failure or any deny; `--ci` also fails on an inconclusive
+  result, because in automation nobody reads the caveat.
+- `agora acquire` refuses on deny, **and equally on inconclusive or engine-unavailable**. Installing
+  under rules that were never actually enforced would defeat the point of having written them.
+  Verified end to end: a project policy forbidding fs-declaring servers refuses
+  `mcp-filesystem` with exit 1 and writes no config.
+- `agora.toml` gained a `[policy]` section. The hand-rolled TOML parser learned single-segment table
+  headers rather than adding a second TOML reader over the same file.
+
+One semantic bug caught by an existing test: the gate initially passed "any revocation match" as
+Cedar's `revoked`, which turned every *advisory* into a hard install failure. `revoked` now means a
+blocking match, matching the documented critical/high-blocks, advisory-warns semantics.
+
 ### Known
 
 - Glama's upstream endpoint returns HTTP 504; reported as `unreachable`.

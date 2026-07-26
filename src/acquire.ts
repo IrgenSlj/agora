@@ -10,6 +10,7 @@ import {
   type MarketplaceItem,
   searchMarketplaceItems
 } from './marketplace.js';
+import { evaluatePolicy, isConclusive } from './policy/engine.js';
 import { checkRevocations } from './revocation/client.js';
 import { npmPurl } from './revocation/installed.js';
 import { isBlocking } from './revocation/match.js';
@@ -37,6 +38,8 @@ export interface AcquireInput {
   save?: boolean;
   dryRun?: boolean;
   cwd?: string;
+  /** Project `.cedar` files from `agora.toml → [policy] files`. */
+  policyFiles?: readonly string[];
   home?: string;
   env?: Record<string, string | undefined>;
   dataDir?: string;
@@ -284,6 +287,67 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     tools: federated?.tools ?? input.scanOptions?.tools,
     previousDigest: previousDigest ?? input.scanOptions?.previousDigest
   });
+
+  // ── Policy: the final gate, over everything gathered above ──────────────
+  //
+  // Runs after the scan (it consumes the scan's divergence) but before any
+  // write. An inconclusive result is treated as a refusal rather than an
+  // allow: Cedar silently skips a rule that reads a missing attribute, so a
+  // policy someone wrote to protect themselves can evaluate permissive
+  // without ever firing. Proceeding on that would defeat the point of having
+  // written it.
+  const policyDecision = await evaluatePolicy({
+    purl: revocationPurlsFor(item)[0] ?? `pkg:generic/${item.id}`,
+    action: 'Install',
+    policyFiles: input.policyFiles ?? [],
+    cwd: input.cwd,
+    scan,
+    // `revoked` means "matched a BLOCKING entry". An advisory match is not a
+    // revocation for policy purposes — it is an advisory, surfaced by
+    // `agora doctor`, and conflating the two would make every advisory a hard
+    // install failure. `undefined` when no feed is cached: never consulted is
+    // not the same as consulted-and-clean.
+    revoked: revocation && !revocation.unknown ? revocation.blocked : undefined,
+    kind: item.kind === 'package' ? 'mcp-server' : item.kind,
+    permissions: item.kind === 'package' ? item.permissions : undefined
+  });
+
+  if (policyDecision.decision === 'deny') {
+    return {
+      status: 'blocked',
+      item,
+      plan,
+      scan,
+      reason: `Refusing: policy denied this install${
+        policyDecision.determining.length ? ` (${policyDecision.determining.join(', ')})` : ''
+      }. Run \`agora policy check\` to see the rules in force.`
+    };
+  }
+
+  if (policyDecision.unavailable) {
+    return {
+      status: 'blocked',
+      item,
+      plan,
+      scan,
+      reason:
+        `Refusing: the policy engine could not run (${policyDecision.unavailable}), so no ` +
+        'policy was actually enforced. Proceeding would install under rules that were never checked.'
+    };
+  }
+
+  if (!isConclusive(policyDecision)) {
+    return {
+      status: 'blocked',
+      item,
+      plan,
+      scan,
+      reason:
+        'Refusing: policy evaluation was inconclusive — ' +
+        `${policyDecision.skipped.length} rule(s) were skipped because they read evidence Agora ` +
+        'does not have. Run `agora policy check` to see which, and guard them with `has`.'
+    };
+  }
 
   if (input.dryRun) {
     return {

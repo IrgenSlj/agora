@@ -35,8 +35,18 @@ export interface InstructionManifestEntry {
   enabled?: boolean;
 }
 
+/**
+ * `[policy]` — the project's Cedar policy files, evaluated on top of the
+ * shipped baseline. Paths are relative to the manifest.
+ */
+export interface PolicyConfig {
+  files?: string[];
+}
+
 export interface StackManifest {
   mcp: Record<string, ManifestEntry>;
+  /** Project policy configuration; see src/policy/engine.ts. */
+  policy?: PolicyConfig;
   skills?: Record<string, ManifestEntry>;
   workflows?: Record<string, ManifestEntry>;
   /** Managed instruction/memory artifacts (P3). */
@@ -192,6 +202,14 @@ function serializeInstructionsSection(
 export function serializeManifest(m: StackManifest): string {
   const lines: string[] = ['# agora stack manifest', ''];
 
+  // Policy first: it governs everything below it, and a reader opening
+  // agora.toml should see the rules before the entries they apply to.
+  if (m.policy?.files?.length) {
+    lines.push('[policy]');
+    lines.push(`files = [${m.policy.files.map((f) => JSON.stringify(f)).join(', ')}]`);
+    lines.push('');
+  }
+
   if (m.mcp && Object.keys(m.mcp).length > 0) {
     serializeSection('mcp', m.mcp, lines);
   }
@@ -214,7 +232,13 @@ export function serializeManifest(m: StackManifest): string {
 
 // ── TOML parser ───────────────────────────────────────────────────────────────
 
-const KNOWN_SECTIONS = new Set(['mcp', 'skills', 'workflows', 'instructions']);
+const KNOWN_SECTIONS = new Set(['mcp', 'skills', 'workflows', 'instructions', 'policy']);
+
+/**
+ * Sections that are a single table rather than a map of named entries, so
+ * `[policy]` is legal where `[mcp]` alone is not.
+ */
+const SINGLETON_SECTIONS = new Set(['policy']);
 const KNOWN_ENTRY_KEYS = new Set(['command', 'url', 'enabled', 'description_digest']);
 const KNOWN_INSTRUCTION_KEYS = new Set(['source', 'content', 'ref', 'content_hash', 'enabled']);
 
@@ -306,11 +330,14 @@ function parseTableHeader(
     }
   }
 
-  if (segments.length < 2) {
-    throw new Error(`Line ${lineNum}: table header must have at least 2 segments: ${line}`);
+  const section = segments[0];
+  if (segments.length === 1) {
+    if (!SINGLETON_SECTIONS.has(section)) {
+      throw new Error(`Line ${lineNum}: table header must have at least 2 segments: ${line}`);
+    }
+    return { section, name: '', isEnv: false };
   }
 
-  const section = segments[0];
   if (!KNOWN_SECTIONS.has(section)) {
     throw new Error(`Line ${lineNum}: unknown section "${section}" in: ${line}`);
   }
@@ -366,6 +393,8 @@ export function parseManifest(text: string): StackManifest {
       } else if (section === 'instructions') {
         manifest.instructions = manifest.instructions ?? {};
         if (!manifest.instructions[name]) manifest.instructions[name] = {};
+      } else if (section === 'policy') {
+        manifest.policy = manifest.policy ?? {};
       }
       continue;
     }
@@ -377,6 +406,15 @@ export function parseManifest(text: string): StackManifest {
     }
     const key = line.slice(0, eqIdx).trim();
     const rawVal = line.slice(eqIdx + 1).trim();
+
+    if (currentSection === 'policy') {
+      const policy = (manifest.policy ??= {});
+      if (key !== 'files') {
+        throw new Error(`Line ${lineNum}: unknown key "${key}" in [policy]`);
+      }
+      policy.files = parseStringArray(rawVal, lineNum);
+      continue;
+    }
 
     if (currentSection === null || currentName === null) {
       throw new Error(`Line ${lineNum}: key/value before any table header: ${line}`);

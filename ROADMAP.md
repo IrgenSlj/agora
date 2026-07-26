@@ -44,7 +44,7 @@ policy engine, and the agent-facing `agora serve` discovery tools — see the ph
 | S2 | Multi-source search | ✅ Complete |
 | S3 | Provenance & drift | ✅ Complete — live Sigstore verification wired |
 | S4 | Revocation | 🔄 Client complete — needs a pinned key + publishing endpoint |
-| S5 | Policy (Cedar) | ⬜ Not started |
+| S5 | Policy (Cedar) | ✅ Complete — engine, `agora policy`, acquire gate |
 | S6 | Vet (sandbox) | ⬜ Not started |
 | S7 | Serve (agent-facing) | ⬜ Not started |
 | S8 | Launch hardening | ⬜ Not started |

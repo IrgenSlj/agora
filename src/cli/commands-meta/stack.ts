@@ -2,6 +2,30 @@ import type { CommandMeta } from './types.js';
 
 export const COMMANDS: CommandMeta[] = [
   {
+    name: 'policy',
+    group: 'Stack',
+    summary: 'Scaffold, lint, and evaluate your Cedar policy over installed servers',
+    usage: 'agora policy <init|check|test> [--ci] [--json]',
+    details:
+      'Policy is evaluated on top of the shipped baseline, which already forbids revoked ' +
+      'artifacts, tripped canaries, and installing something whose evidence critically ' +
+      'contradicts its claims. A project file can only make that stricter — Cedar is ' +
+      'order-independent and any forbid beats every permit. `check` lints first: a rule that ' +
+      'reads a missing attribute is skipped by Cedar and silently evaluates to allow, so an ' +
+      'unguarded forbid looks like protection without being it. Register files under [policy] ' +
+      'in agora.toml.',
+    flags: [
+      { flag: '--ci', description: 'Also fail when any decision is inconclusive' },
+      { flag: '--json', description: 'Output decisions as JSON' }
+    ],
+    examples: [
+      'agora policy init',
+      'agora policy check',
+      'agora policy check --ci',
+      'agora policy test'
+    ]
+  },
+  {
     name: 'try',
     group: 'Stack',
     summary: 'Ephemeral test-drive an MCP server without saving any config',
