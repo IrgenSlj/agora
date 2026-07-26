@@ -2,6 +2,37 @@ import type { CommandMeta } from './types.js';
 
 export const COMMANDS: CommandMeta[] = [
   {
+    name: 'observe',
+    group: 'Stack',
+    summary: 'Report what your MCP servers actually did while you used them',
+    usage: 'agora observe [status] [--json]',
+    details:
+      'Observation records real behaviour in the real environment, rather than a one-shot ' +
+      'sandbox run a server could detect. Route a server through Agora by setting its host ' +
+      'config command to ["agora", "run", "--", ...original]; Agora becomes its parent process ' +
+      'and tees the MCP protocol stream. Recorded: which tools were called and how often, which ' +
+      'tools the server advertised, and which peers it held connections to. NEVER recorded: tool ' +
+      'arguments, results, or anything derived from them — nothing leaves the machine. Network ' +
+      'sampling polls, so a connection opened and closed between polls is not seen; an empty ' +
+      'result means "nothing observed", never "nothing happened".',
+    flags: [{ flag: '--json', description: 'Output observations as JSON' }],
+    examples: ['agora observe', 'agora observe status --json']
+  },
+  {
+    name: 'run',
+    group: 'Stack',
+    summary: 'Run an MCP server through Agora so its behaviour can be observed',
+    usage: 'agora run -- <command…>',
+    details:
+      'The supervising shim. Spawns the real server, forwards stdio byte-for-byte in both ' +
+      'directions, and propagates its exit code and signals. Observation is a tee off that ' +
+      'stream and can never alter or delay it — if anything in the observation layer fails, the ' +
+      'result is a perfectly working server and no data. Normally invoked by your host config ' +
+      'rather than by hand.',
+    flags: [],
+    examples: ['agora run -- npx @modelcontextprotocol/server-filesystem']
+  },
+  {
     name: 'policy',
     group: 'Stack',
     summary: 'Scaffold, lint, and evaluate your Cedar policy over installed servers',

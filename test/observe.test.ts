@@ -86,9 +86,7 @@ describe('the shim is byte-transparent', () => {
     child.emit('close', 0, null);
     await done;
 
-    expect(Buffer.concat(child.stdin.written).toString()).toBe(
-      '{"method":"tools/list"}\npartial'
-    );
+    expect(Buffer.concat(child.stdin.written).toString()).toBe('{"method":"tools/list"}\npartial');
   });
 
   test('stderr is forwarded and never parsed as protocol', async () => {

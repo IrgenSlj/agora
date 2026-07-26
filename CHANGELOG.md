@@ -163,9 +163,41 @@ One semantic bug caught by an existing test: the gate initially passed "any revo
 Cedar's `revoked`, which turned every *advisory* into a hard install failure. `revoked` now means a
 blocking match, matching the documented critical/high-blocks, advisory-warns semantics.
 
+### Added — runtime observation (S6, reshaped)
+
+`agora run -- <command…>` and `agora observe`. A sharpen pass rejected the brief's §6.2 Docker
+sandbox as the *primary* shape: it is evadable (a server can detect `--network=none`, `/.dockerenv`,
+placeholder tool args, and canary credentials that resolve to a distinctive host), its canary half
+is blocked on a domain that is not registered, and it no-ops entirely for users without Docker —
+which the `4 = sandbox-unavailable` exit code already concedes.
+
+Observation happens in the real environment instead. Agora becomes the server's parent process and
+tees the MCP protocol stream, so there is no sandbox to detect and nothing rehearsed about the
+behaviour. It costs nothing to run and works for everyone.
+
+- **The shim is byte-transparent.** It sits in front of every MCP server the user runs, so a
+  corrupted byte would not degrade observation — it would break their whole agent setup. stdio is
+  forwarded verbatim in both directions, exit codes and signals propagate, and every observation
+  call site is wrapped so a broken recorder yields a working server and no data. Verified against a
+  live stdio server: output through the shim is byte-identical to running it directly.
+- **Tool arguments and results are never recorded.** This code sits in the path of real work and
+  sees real data — file contents, prompts, secrets. Recorded: which tools were called and how often,
+  which tools were advertised, and which peers the process held connections to. A trust tool that
+  quietly logged its user's activity would be a worse liability than the servers it watches.
+- `undeclared-egress` divergence when a server contacts hosts it never declared, reusing the
+  existing `DivergenceKind` vocabulary so a Docker `vet --pre-install` mode can be added later
+  without changing the evidence model.
+
+Network sampling polls `lsof`, so a connection opened and closed between polls is invisible. Sessions
+therefore carry `networkSampled` rather than letting an empty host list stand in for a clean result —
+"nothing observed" is not "nothing happened".
+
 ### Known
 
 - Glama's upstream endpoint returns HTTP 504; reported as `unreachable`.
+- Observation is opt-in and currently wired by hand (set a host config command to
+  `["agora", "run", "--", …]`); `agora observe enable/disable` to rewrite configs automatically is
+  not built yet.
 - The revocation feed has no publishing endpoint yet (the Cloudflare Worker route is unbuilt), and
   no signing key is pinned — the client half is complete and tested, the operational half is not.
 - Provenance verification requires Node (the shipped runtime). Under `bun run`, it degrades to

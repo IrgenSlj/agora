@@ -19,8 +19,8 @@
 // working MCP server and no data.
 
 import { type ChildProcess, spawn } from 'node:child_process';
-import type { SessionRecorder } from './session.js';
 import { createFrameTee } from './protocol.js';
+import type { SessionRecorder } from './session.js';
 
 export interface RunOptions {
   /** argv of the real server, already split from `agora run --`. */
@@ -67,11 +67,11 @@ export async function runSupervised(options: RunOptions): Promise<number> {
     return 127;
   }
 
-  options.recorder?.started(command, child.pid);
+  safely(() => options.recorder?.started(command, child.pid));
 
   // ── stdin: host → server ────────────────────────────────────────────────
   // Piped straight through. The tee sees a copy; it can never gate the write.
-  const clientTee = createFrameTee((frame) => options.recorder?.clientFrame(frame));
+  const clientTee = createFrameTee((frame) => safely(() => options.recorder?.clientFrame(frame)));
   stdin.on('data', (chunk: Buffer) => {
     try {
       child.stdin?.write(chunk);
@@ -89,7 +89,7 @@ export async function runSupervised(options: RunOptions): Promise<number> {
   });
 
   // ── stdout: server → host ───────────────────────────────────────────────
-  const serverTee = createFrameTee((frame) => options.recorder?.serverFrame(frame));
+  const serverTee = createFrameTee((frame) => safely(() => options.recorder?.serverFrame(frame)));
   child.stdout?.on('data', (chunk: Buffer) => {
     stdout.write(chunk);
     serverTee(chunk);
@@ -136,6 +136,21 @@ export async function runSupervised(options: RunOptions): Promise<number> {
   }
 
   return code;
+}
+
+/**
+ * Runs an observation callback, swallowing anything it throws.
+ *
+ * Every recorder call site goes through this. The rule at the top of the file
+ * is only real if it holds for a recorder that is actively broken — otherwise
+ * a bug in the observation layer takes down every MCP server the user has.
+ */
+function safely(fn: () => void): void {
+  try {
+    fn();
+  } catch {
+    /* observation is never allowed to reach the data path */
+  }
 }
 
 function signalNumber(signal: NodeJS.Signals): number {

@@ -15,6 +15,7 @@ import * as lockModule from './commands/lock.js';
 import * as marketplace from './commands/marketplace.js';
 import * as newsModule from './commands/news.js';
 import * as notifyModule from './commands/notify.js';
+import * as observeModule from './commands/observe.js';
 import * as operations from './commands/operations.js';
 import * as outdatedModule from './commands/outdated.js';
 import * as planModule from './commands/plan.js';
@@ -153,6 +154,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       export: exportModule.commandExport,
       watch: watchModule.commandWatch,
       notify: notifyModule.commandNotify,
+      observe: observeModule.commandObserve,
+      run: observeModule.commandRun,
       today: todayModule.commandToday,
       open: browseModule.commandOpen,
       scan: scanModule.commandScan,

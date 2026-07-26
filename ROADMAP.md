@@ -56,7 +56,7 @@ the revocation feed's *publishing* half — see the plan below.
 | S3 | Provenance & drift | ✅ Complete — live Sigstore verification wired |
 | S4 | Revocation | 🔄 Client complete — needs a pinned key + publishing endpoint |
 | S5 | Policy (Cedar) | ✅ Complete — engine, `agora policy`, acquire gate |
-| S6 | Vet (sandbox) | ⬜ Not started |
+| S6 | Vet → **Observe** | 🔄 Runtime observation shipped; Docker vet deferred |
 | S7 | Serve (agent-facing) | ⬜ Not started |
 | S8 | Launch hardening | ⬜ Not started |
 
