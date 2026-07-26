@@ -35,6 +35,18 @@ jobs:
       - name: Tests
         run: bun run test
 
+      # schemas/ is generated from src/model/ but committed, so consumers can
+      # read it without building. Regenerate and fail on any diff — otherwise a
+      # zod change silently leaves the published JSON Schema describing an older
+      # shape, which is worse than not publishing it at all.
+      - name: Schemas are up to date
+        run: |
+          bun run build:schemas
+          git diff --exit-code --stat schemas/ || {
+            echo "::error::schemas/ is stale — run 'bun run build:schemas' and commit the result"
+            exit 1
+          }
+
   docker-integration:
     runs-on: ubuntu-latest
     needs: [check]
