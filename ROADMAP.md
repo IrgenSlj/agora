@@ -20,11 +20,22 @@ shipped work is in [`CHANGELOG.md`](./CHANGELOG.md).
   and opt-in behind `AGORA_ENABLE_NONCANONICAL_SOURCES`. A source that cannot answer reports
   `unreachable` with a reason and falls back to its cache — it never reports an empty result as
   success. Glama's upstream endpoint currently 504s.
-- **Gate** — heuristic customs gate on `agora acquire` (injection-pattern, drift, permission,
-  poisoning checks) — being replaced by the evidence + Cedar policy plane (S3–S5).
-- **Evidence (S3 partial)** — schema hashing (`evidence/schemahash.ts`), schema drift
-  (`evidence/diff.ts`), tool-description poisoning checks (`evidence/enrich.ts`), provenance
-  verification scaffold (`evidence/provenance.ts`).
+- **Verify** — schema hashing (`evidence/schemahash.ts`), schema drift (`evidence/diff.ts`),
+  tool-description poisoning checks (`evidence/enrich.ts`), and **live Sigstore provenance**
+  (`evidence/sigstore.ts`): Fulcio chain, CT log and Rekor inclusion, with the signing
+  certificate's identity bound to the repository the provenance claims. `agora scan
+  mcp-filesystem` reports `✓ Signed provenance — signed by modelcontextprotocol/servers`.
+  Requires Node (the shipped runtime); under `bun run` it degrades to "could not check" rather
+  than reporting a false failure.
+- **Gate** — the heuristic customs gate on `agora acquire` (injection-pattern, drift, permission,
+  poisoning checks) **plus** a real Cedar policy evaluated over that evidence. `agora policy
+  init|check|test`, `[policy] files` in `agora.toml`, and a shipped baseline that forbids only
+  what is known-bad. `check` lints before evaluating, because a Cedar rule reading a missing
+  attribute is silently skipped and returns permissive. `acquire` refuses on deny **and** on
+  inconclusive — an allow reached with rules switched off is not an allow.
+- **Revocation (client half)** — ed25519-signed feed with monotonic anti-rollback, offline
+  lookups, `acquire` refusing critical/high matches before any write, `doctor` showing `REVOKED`.
+  **No key is pinned yet, so no revocations currently apply** — see the owner-gated table.
 - **Integration** — `agora mcp` (MCP server exposing the stack + catalog as tools),
   `agora integrate --all` (installs Agora into every host via its own stack machinery).
 - **Surface** — the v1 catalog commands (`auth`, `curate`, `chat`, `trending`, `workflows`,
@@ -32,8 +43,8 @@ shipped work is in [`CHANGELOG.md`](./CHANGELOG.md).
   were removed in v0.6.2 along with `src/auth/` and `src/curator/`. There are no accounts and no
   stored credentials anywhere in the product.
 
-Not yet live: live Sigstore verification, sandboxed `vet`, signed revocation feed, the Cedar
-policy engine, and the agent-facing `agora serve` discovery tools — see the phases below.
+Not yet live: the sandboxed `vet` (S6), the agent-facing `agora serve` discovery tools (S7), and
+the revocation feed's *publishing* half — see the plan below.
 
 ## Phase status
 
@@ -49,87 +60,62 @@ policy engine, and the agent-facing `agora serve` discovery tools — see the ph
 | S7 | Serve (agent-facing) | ⬜ Not started |
 | S8 | Launch hardening | ⬜ Not started |
 
-## Next sessions plan
+## Remaining plan
 
-### Session 1 — S3 completion: live Sigstore provenance verification
+Ordered by dependency, not ambition. Everything above the line is code; below it is
+work only the owner can do.
 
-The `evidence/provenance.ts` module exists with in-toto/DSSE parsing, but the actual Sigstore
-online verification (Fulcio + Reko) is not wired. This session makes the trust plane's core
-promise real: "this server was signed by its author" or "this server has no attestation."
+### Now — S6 Vet (2 wk, must follow S5)
 
-**Deliverables:**
-- Wire Fulcio (certificate issuance) + Rekor (transparency log) into `provenance.ts`
-- `agora scan` surfaces provenance verdict: `verified`, `unsigned`, `invalid`, `expired`
-- Trust panel in TUI shows provenance badge per item
-- `--json` output includes `provenanceVerification` field
-- Hermetic tests with recorded Sigstore fixtures (no live network in test suite)
-- Gate check `registry_provenance` added to `scan.ts`
+The last plane with no implementation, and the one that turns the rest honest. Until a
+sandbox observes what a server *actually does*, `divergence_max` is derived from the
+heuristic scan — so the policy plane is still partly grading the thing it replaced — and
+`canary_triggered` is an attribute nothing can ever set.
 
-### Session 2 — S4: signed revocation feed
-
-When a server gets flagged, every Agora user needs to know within hours. This is what
-makes Agora infrastructure.
-
-**Deliverables:**
-- `src/revocation/feed.ts` — signed JSON feed (ed25519, key pinned in binary)
-- Monotonic version counter, TUF-style anti-rollback on client
-- `src/revocation/client.ts` — fetch + verify + cache the feed
-- `agora doctor` checks revocation status for installed servers
-- Cloudflare Worker endpoint for feed hosting (`/v1/revocation`)
-- `agora acquire` blocks on revoked servers (exit 1)
-- Tests with recorded feed fixtures
-
-### Session 3 — S5: Cedar policy engine
-
-Replace the heuristic gate with real policy evaluation over evidence. Users write `.cedar`
-policy files; Agora evaluates them against the evidence collected in S3/S4.
-
-**Deliverables:**
-- `src/policy/engine.ts` — Cedar WASM integration (`@cedar-policy/cedar-wasm`)
-- `src/policy/builtin.ts` — baseline policy (require provenance, no revoked, no drift)
-- `agora policy init` — scaffold `.cedar` files + `agora.toml` policy section
-- `agora policy check` — evaluate policy against current evidence
-- `agora policy test` — run policy test cases
-- Gate integration: `scan.ts` evaluates Cedar policy as final step
-- Tests with Cedar policy fixtures
-
-### Session 4 — S6: sandboxed vet
-
-The "what does this server actually do" layer. Run untrusted servers in Docker, record
-their behavior, emit attestations.
-
-**Deliverables:**
 - `src/vet/sandbox.ts` — Docker backend (L0/L1 isolation)
-- `src/vet/observer.ts` — record syscalls, network, filesystem access
-- `src/vet/canary.ts` — canary token exfiltration detection
-- `src/vet/profile.ts` — `ObservedProfile` (what the server actually touched)
-- `agora vet <purl>` — run server in sandbox, emit observation attestation
-- Attestation stored in CAS, surfaced in trust panel
-- Tests with Docker mock fixtures
+- `src/vet/observer.ts` — record filesystem, network and process activity
+- `src/vet/canary.ts` — mint tokens, inject into env, detect exfiltration
+- `src/vet/profile.ts` — raw logs → `ObservedProfile` (`src/model/observed.ts` already
+  defines the shape)
+- `agora vet <purl>` → observation attestation in the CAS
+- Feeds `observed_*` attributes into the policy entity model, replacing the scan-derived
+  `divergence_max` with real evidence
 
-### Session 5 — S7: agent-facing serve
+### Next — retire the legacy catalog path (~2,100 lines)
 
-Make Agora discoverable by agents at runtime. `agora serve` exposes tools that let agents
-search, verify, and request installation of capabilities — all filtered through Cedar policy.
+`src/live/` (619) + `src/hubs/` (719) + `src/marketplace.ts` (745) are a pre-federation
+stack still on the install route, in parallel with `src/federation/` (2,433). Brief DA-5
+says it dies; only the account layer went so far. `findMarketplaceSource` /
+`searchMarketplaceSource` are still used by `install`, `browse`, `export`, `live.ts` and
+`live/search.ts`.
 
-**Deliverables:**
-- `src/serve/index.ts` — MCP server with agent-facing tools
-- `search_tools(query, k)` — embedding search over catalog tool descriptions
-- `get_evidence(purl)` — return provenance + vet + drift evidence
-- `check_policy(purl)` — evaluate Cedar policy, return verdict
-- `request_install(purl)` — dry-run acquire, return plan for agent to confirm
-- Policy-filtered: `search_tools` only returns items that pass the active policy
-- Tests with DI dependencies
+**This changes `agora install` behaviour** — it currently resolves through the old client
+with a bundled offline fallback, and federation fails differently. Owner sign-off before
+starting.
 
-### Session 6 — S8: launch hardening
+### Then — S7 Serve (1 wk)
 
-Final pass before v2.0.0: docs site, privacy, polish.
+`src/serve/` — the agent-facing MCP server. `search_tools`, `get_evidence`,
+`check_policy`, `request_install`, with results filtered to `permit` only. Depends on S5
+(done) and is much more useful after S6.
 
-**Deliverables:**
-- `PRIVACY.md` — what Agora collects (nothing by default, optional telemetry)
-- `agora doctor` polish — comprehensive health report
-- Docs site scaffold (mdx or similar)
-- v2.0.0 release (minor bump from current v0.6.x)
+### Finally — S8 Launch hardening (1 wk)
+
+`PRIVACY.md`, a comprehensive `agora doctor`, docs site, and the 2.0.0 release. The
+unreleased breaking changes (17 retired commands) land here.
+
+---
+
+### Owner-gated — none of this is blocked on code
+
+| | What | Why it is blocking |
+|---|---|---|
+| 1 | Mint the revocation feed key (`bun scripts/generate-feed-key.ts`) | Until a public key is pinned, every feed is `unverifiable` and **no revocations apply**. S4's client half is inert without it. |
+| 2 | Register `agora-hub.dev` (~$12/yr) | The feed endpoint, canary callbacks, and attestation predicate URLs all hardcode it. Blocks S4's publishing half and S6's canaries. |
+| 3 | Cloudflare Worker + D1 + KV ($5/mo), `wrangler` token in CI | `workers/api/` is a scaffold with no deploy path. Hosts `/v1/revocations`. |
+| 4 | Upload `docs/assets/social-preview.png` | Settings → Social preview. The API cannot set it. |
+| 5 | Commission the five diagrams | `docs/DIAGRAM_BRIEF.md` is written and ready to hand over. |
+| 6 | Decide the release story | 17 removed commands are breaking for anyone on 0.6.1. Either 0.7.0 with a loud note, or sit unreleased until 2.0.0. Nothing is urgent for existing users. |
 
 ## Execution conventions
 
