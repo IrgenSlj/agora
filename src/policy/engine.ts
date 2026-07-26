@@ -26,10 +26,29 @@ export interface PolicyDecision {
   decision: 'allow' | 'deny';
   /** Policy ids that determined the answer — what to show the user. */
   determining: string[];
+  /**
+   * Policies that ERRORED during evaluation and were therefore skipped.
+   *
+   * This is the single most important field here. Cedar skips a policy that
+   * reads a missing attribute and returns the remaining decision, so a `forbid`
+   * with a typo — or one guarding on evidence Agora never collected — comes
+   * back as `allow` that looks entirely normal. A non-empty `skipped` means the
+   * decision was reached with rules switched off, and no caller may treat such
+   * an `allow` as a clean result.
+   */
+  skipped: string[];
   /** Human-readable errors from evaluation; non-empty means the answer is suspect. */
   errors: string[];
   /** Set when the engine could not run at all, in which case `decision` is not meaningful. */
   unavailable?: string;
+}
+
+/**
+ * True when the decision can be relied on: it ran, and no rule was skipped.
+ * An `allow` that fails this is "we could not fully decide", not "permitted".
+ */
+export function isConclusive(decision: PolicyDecision): boolean {
+  return !decision.unavailable && decision.skipped.length === 0 && decision.errors.length === 0;
 }
 
 export interface PolicySource {
@@ -46,6 +65,19 @@ export function baselinePolicyPath(): string {
     join(HERE, '..', '..', 'src', 'policy', 'defaults', 'baseline.cedar')
   ];
   return candidates.find((p) => existsSync(p)) ?? candidates[0]!;
+}
+
+/** The shipped entity schema, in both src and dist layouts. */
+export function schemaPath(): string {
+  const candidates = [
+    join(HERE, 'defaults', 'agora.cedarschema'),
+    join(HERE, '..', '..', 'src', 'policy', 'defaults', 'agora.cedarschema')
+  ];
+  return candidates.find((p) => existsSync(p)) ?? candidates[0]!;
+}
+
+export function readSchema(): string {
+  return readFileSync(schemaPath(), 'utf8');
 }
 
 export function readBaselinePolicy(): PolicySource {
@@ -115,6 +147,7 @@ export async function evaluatePolicy(options: EvaluateOptions): Promise<PolicyDe
       decision: 'allow',
       determining: [],
       errors: [],
+      skipped: [],
       unavailable: 'the Cedar engine could not be loaded'
     };
   }
@@ -136,30 +169,133 @@ export async function evaluatePolicy(options: EvaluateOptions): Promise<PolicyDe
       return {
         decision: 'allow',
         determining: [],
+        skipped: [],
         errors: answer.errors.map((e) => e.message),
         unavailable: `policy evaluation failed: ${answer.errors[0]?.message ?? 'unknown'}`
       };
     }
 
     const response = answer.response;
+    const diagnosticErrors = response.diagnostics?.errors ?? [];
     return {
       decision: response.decision,
       determining: [...(response.diagnostics?.reason ?? [])],
-      errors: (response.diagnostics?.errors ?? []).map((e) =>
-        typeof e === 'string' ? e : (e as { message?: string }).message || String(e)
+      // Cedar reports a skipped policy as a diagnostics error carrying its id.
+      skipped: diagnosticErrors
+        .map((e) => (typeof e === 'string' ? undefined : (e as { policyId?: string }).policyId))
+        .filter((id): id is string => Boolean(id)),
+      errors: diagnosticErrors.map((e) =>
+        typeof e === 'string'
+          ? e
+          : (e as { error?: { message?: string } }).error?.message || String(e)
       )
     };
   } catch (err) {
     return {
       decision: 'allow',
       determining: [],
+      skipped: [],
       errors: [],
       unavailable: err instanceof Error ? err.message : 'policy evaluation threw'
     };
   }
 }
 
-/** Parses a policy file without evaluating it — used by `agora policy check`. */
+/**
+ * Attribute names the schema declares on `Artifact`, parsed from the shipped
+ * `.cedarschema`. Used for the unknown-attribute lint below.
+ */
+export function schemaAttributeNames(schemaText = readSchema()): Set<string> {
+  const body = schemaText.match(/entity\s+Artifact\s*=\s*\{([\s\S]*?)\n\};/)?.[1] ?? '';
+  const names = new Set<string>();
+  for (const line of body.split('\n')) {
+    const withoutComment = line.replace(/\/\/.*$/, '').trim();
+    const match = withoutComment.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*\??\s*:/);
+    if (match?.[1]) names.add(match[1]);
+  }
+  return names;
+}
+
+/**
+ * Attribute names a policy actually references, via `resource.x` or
+ * `resource has x`.
+ */
+export function referencedAttributes(policyText: string): string[] {
+  const found = new Set<string>();
+  for (const m of policyText.matchAll(/resource\s+has\s+([A-Za-z_][A-Za-z0-9_]*)/g)) {
+    if (m[1]) found.add(m[1]);
+  }
+  for (const m of policyText.matchAll(/resource\.([A-Za-z_][A-Za-z0-9_]*)/g)) {
+    if (m[1]) found.add(m[1]);
+  }
+  return [...found];
+}
+
+export interface PolicyLint {
+  ok: boolean;
+  /** Syntax errors — the file is not valid Cedar. */
+  errors: string[];
+  /**
+   * Schema violations: attributes that do not exist, or optional ones read
+   * without a `has` guard.
+   *
+   * These are the dangerous ones. A rule with a misspelt attribute parses
+   * perfectly and then silently never fires — it is skipped at evaluation and
+   * the decision comes back `allow`. Catching it here is the difference
+   * between a typo and a policy someone trusts for a year without noticing it
+   * does nothing.
+   */
+  schemaViolations: string[];
+}
+
+/**
+ * Lints a policy file: syntax first, then validation against the shipped
+ * entity schema. Used by `agora policy check`.
+ */
+export async function lintPolicyText(text: string): Promise<PolicyLint> {
+  const cedar = await loadCedar();
+  if (!cedar) {
+    return { ok: false, errors: ['the Cedar engine could not be loaded'], schemaViolations: [] };
+  }
+
+  const parsed = cedar.checkParsePolicySet({ staticPolicies: text } as never);
+  if (parsed.type !== 'success') {
+    return { ok: false, errors: parsed.errors.map((e) => e.message), schemaViolations: [] };
+  }
+
+  let schemaViolations: string[] = [];
+  try {
+    const validation = cedar.validate({
+      schema: readSchema() as never,
+      policies: { staticPolicies: text } as never
+    });
+    if (validation.type === 'success') {
+      schemaViolations = validation.validationErrors.map(
+        (v) => `${v.policyId}: ${v.error.message}`
+      );
+    } else {
+      schemaViolations = validation.errors.map((e) => e.message);
+    }
+  } catch (err) {
+    schemaViolations = [err instanceof Error ? err.message : 'schema validation threw'];
+  }
+
+  // Cedar's own validator accepts `resource has madeUpName` — `has` on an
+  // undeclared attribute is legal and simply evaluates false. That is precisely
+  // the silent-never-fires case this plane exists to prevent, so check the
+  // referenced names against the schema ourselves.
+  const known = schemaAttributeNames();
+  const unknown = referencedAttributes(text).filter((name) => !known.has(name));
+  for (const name of unknown) {
+    schemaViolations.push(
+      `unknown attribute \`${name}\` — not declared on Artifact, so any rule reading it can never fire`
+    );
+  }
+
+  return { ok: schemaViolations.length === 0, errors: [], schemaViolations };
+}
+
+/** Syntax-only check. Prefer {@link lintPolicyText}, which also catches typos. */
 export async function validatePolicyText(
   text: string
 ): Promise<{ ok: true } | { ok: false; errors: string[] }> {

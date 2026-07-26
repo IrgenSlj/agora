@@ -1,33 +1,35 @@
 // Agora's shipped baseline policy (AGORA_BRIEF_v2.md §7.1).
 //
-// Permissive but safe, and deliberately so: a default that forbade everything
+// Permissive but safe, deliberately: a default that forbade everything
 // unsigned would block essentially the entire MCP ecosystem on day one, and a
-// policy people have to disable to get any work done is a policy nobody runs.
+// policy people must disable to get work done is a policy nobody runs. What it
+// refuses is the small set of things that are known-bad rather than merely
+// unproven.
 //
-// What it refuses is the small set of things that are known-bad rather than
-// merely unproven:
-//
-//   - revoked artifacts (someone published an advisory about this exact thing)
-//   - artifacts whose sandboxed run tripped a canary token (S6)
-//   - installing something whose evidence diverges critically from its claims
-//
-// Everything else is permitted, and projects tighten from here via
-// `agora.toml → policy.files`. A team that wants "signed provenance or
-// nothing" writes one `forbid` and gets it — see policy init's scaffold.
+// EVERY RULE GUARDS WITH `has`. This is not style. Cedar treats a policy that
+// reads a missing attribute as an *error*, skips that policy, and returns the
+// remaining decision — so an unguarded `forbid when { resource.revoked }`
+// silently evaluates to ALLOW on any artifact whose revocation status was
+// never established. A forbid that fails open is worse than no forbid at all,
+// because it looks like protection. Guarding makes "we never checked" fall
+// through to the permit explicitly rather than by accident, and
+// `agora policy check` surfaces any rule that errored.
 
-// A revocation is not a judgement call. Somebody published an advisory naming
-// this artifact; no action on it is allowed.
+// A revocation is not a judgement call: somebody published an advisory naming
+// this exact artifact.
 forbid (principal, action, resource)
-when { resource.revoked };
+when { resource has revoked && resource.revoked };
 
 // A canary token that left the sandbox is proof of exfiltration, not a hint.
+// Absent until `agora vet` exists (S6) — the guard means this rule simply does
+// not apply yet, rather than silently passing everything.
 forbid (principal, action, resource)
-when { resource.canary_triggered };
+when { resource has canary_triggered && resource.canary_triggered };
 
-// Critical divergence means what the artifact does contradicts what it claims.
-// Scoped to Install: an artifact already present should still be inspectable
-// and syncable so a user can see and remove it.
+// Critical divergence: what the evidence shows contradicts what the artifact
+// claims. Scoped to Install — something already present must stay inspectable
+// and removable, so Sync and Serve are unaffected.
 forbid (principal, action == Action::"Install", resource)
-when { resource.divergence_max == "critical" };
+when { resource has divergence_max && resource.divergence_max == "critical" };
 
 permit (principal, action, resource);

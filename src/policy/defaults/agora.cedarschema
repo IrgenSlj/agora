@@ -1,41 +1,55 @@
 // Cedar entity schema for Agora's policy plane (AGORA_BRIEF_v2.md §7.1).
 //
-// Every attribute below must be derivable from evidence Agora actually holds —
-// see src/policy/entities.ts, which is the only thing allowed to populate them.
+// Optionality here is load-bearing, not incidental. An attribute marked `?` is
+// one Agora may genuinely not know, and a policy that reads it without a `has`
+// guard is a policy that can fail open. `agora policy check` validates authored
+// files against this schema so that mistake is caught at authoring time rather
+// than discovered as a forbid that never fired.
 
 entity Project;
 
 entity Artifact = {
+  // ── always known ──────────────────────────────────────────────────────────
+
   // "mcp-server" | "agent-skill"
   kind: String,
 
-  // Publisher namespace as it appears in the artifact's purl ("" when unscoped).
+  // Publisher namespace from the artifact's purl ("" when unscoped).
   publisher_namespace: String,
 
+  // Whether a permission manifest was declared at all. Most artifacts declare
+  // none, so this is the honest way to ask "do we know what this thing wants?"
+  permissions_declared: Bool,
+
+  // ── present only alongside a declared permission manifest ────────────────
+  //
+  // There is deliberately no fs_read/fs_write split: no upstream source
+  // publishes that distinction, so synthesising one would let a policy block
+  // read-only servers while appearing to target writers.
+
+  fs?: Bool,
+  exec?: Bool,
+  net_hosts?: Set<String>,
+
+  // ── present only when the provenance plane produced a verdict ────────────
+
   // True only when a signature verified AND bound to the declared source repo.
-  // False covers both "checked and failed" and "could not check" — read
-  // attestation_tier alongside it.
-  provenance_verified: Bool,
+  provenance_verified?: Bool,
 
-  // "sigstore" | "local" | "none". "none" means no verified attestation exists,
-  // which is the ecosystem default rather than a red flag.
-  attestation_tier: String,
+  // "sigstore" | "local" | "none". Absent means provenance was never checked;
+  // "none" means it was checked and no verified attestation exists.
+  attestation_tier?: String,
 
-  // Matched a critical/high entry in the signed revocation feed.
-  revoked: Bool,
+  // ── present only when the revocation feed was consulted ──────────────────
+  // Absent means no feed was cached, which is not the same as "not revoked".
+  revoked?: Bool,
 
-  // A canary token planted for the sandboxed run left the sandbox (S6).
-  canary_triggered: Bool,
+  // ── present only once a sandboxed vet has run (S6) ───────────────────────
+  canary_triggered?: Bool,
 
-  // Declared permission surface.
-  fs_read: Bool,
-  fs_write: Bool,
-  exec: Bool,
-  net_hosts: Set<String>,
-
-  // Worst observed divergence between what the artifact claims and what the
-  // evidence shows: "none" | "info" | "warn" | "critical".
-  divergence_max: String,
+  // ── present only when a scan was performed ───────────────────────────────
+  // "none" | "info" | "warn" | "critical"
+  divergence_max?: String,
 };
 
 action "Install", "Sync", "Serve" appliesTo {

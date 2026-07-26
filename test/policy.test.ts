@@ -4,8 +4,12 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import {
   evaluatePolicy,
+  isConclusive,
+  lintPolicyText,
   loadPolicies,
   readBaselinePolicy,
+  referencedAttributes,
+  schemaAttributeNames,
   validatePolicyText
 } from '../src/policy/engine';
 import { artifactAttributes, buildEntities, divergenceFromScan } from '../src/policy/entities';
@@ -18,10 +22,32 @@ function scanWith(summary: { pass: number; warn: number; fail: number }): ScanRe
 }
 
 describe('evidence → Cedar attributes', () => {
-  test('a missing provenance verdict is not reported as verified', () => {
+  test('an unchecked fact is ABSENT, not false', () => {
+    // The distinction the whole file exists for: `false` asserts something,
+    // absence admits ignorance. 60 of the 67 bundled packages declare no
+    // permissions at all — emitting `exec: false` for them would claim they
+    // execute nothing, and a policy forbidding exec would pass them all.
     const attrs = artifactAttributes({ purl: PURL });
-    expect(attrs.provenance_verified).toBe(false);
-    expect(attrs.attestation_tier).toBe('none');
+    expect(attrs.provenance_verified).toBeUndefined();
+    expect(attrs.attestation_tier).toBeUndefined();
+    expect(attrs.revoked).toBeUndefined();
+    expect(attrs.canary_triggered).toBeUndefined();
+    expect(attrs.divergence_max).toBeUndefined();
+    expect(attrs.exec).toBeUndefined();
+    // ...but whether a manifest exists at all is always knowable.
+    expect(attrs.permissions_declared).toBe(false);
+  });
+
+  test('a consulted-and-clean revocation is recorded, and differs from unchecked', () => {
+    expect(artifactAttributes({ purl: PURL, revoked: false }).revoked).toBe(false);
+    expect(artifactAttributes({ purl: PURL }).revoked).toBeUndefined();
+  });
+
+  test('no fs_read/fs_write split is invented — the data carries none', () => {
+    const attrs = artifactAttributes({ purl: PURL, permissions: { fs: ['./**'] } });
+    expect(attrs.fs).toBe(true);
+    expect('fs_read' in attrs).toBe(false);
+    expect('fs_write' in attrs).toBe(false);
   });
 
   test('only a verified signature earns the sigstore tier', () => {
@@ -37,7 +63,8 @@ describe('evidence → Cedar attributes', () => {
     ).toBe('none');
   });
 
-  test('divergence takes the worst scan status', () => {
+  test('divergence takes the worst scan status, and is absent with no scan', () => {
+    expect(divergenceFromScan(undefined)).toBeUndefined();
     expect(divergenceFromScan(scanWith({ pass: 3, warn: 0, fail: 0 }))).toBe('none');
     expect(divergenceFromScan(scanWith({ pass: 1, warn: 2, fail: 0 }))).toBe('warn');
     expect(divergenceFromScan(scanWith({ pass: 1, warn: 2, fail: 1 }))).toBe('critical');
@@ -48,7 +75,8 @@ describe('evidence → Cedar attributes', () => {
       purl: PURL,
       permissions: { fs: ['./**'], exec: ['node'], net: ['api.example.com'] }
     });
-    expect(attrs.fs_read).toBe(true);
+    expect(attrs.permissions_declared).toBe(true);
+    expect(attrs.fs).toBe(true);
     expect(attrs.exec).toBe(true);
     expect(attrs.net_hosts).toEqual(['api.example.com']);
   });
@@ -167,5 +195,126 @@ describe('project policy files', () => {
   test('an invalid policy is reported, not silently ignored', async () => {
     const result = await validatePolicyText('this is not cedar');
     expect(result.ok).toBe(false);
+  });
+});
+
+describe('a forbid that reads missing evidence must never fail open silently', () => {
+  test('an unguarded forbid is SKIPPED by Cedar and reported, not hidden', async () => {
+    // This is the failure mode the whole design turns on. Cedar treats a policy
+    // reading an absent attribute as an error, skips it, and returns the
+    // remaining decision — so this `forbid` produces `allow`. The decision is
+    // only safe to act on because `skipped` says a rule was switched off.
+    const dir = mkdtempSync(join(tmpdir(), 'agora-policy-failopen-'));
+    const file = join(dir, 'unguarded.cedar');
+    writeFileSync(file, 'forbid (principal, action, resource) when { resource.exec };\n', 'utf8');
+
+    const decision = await evaluatePolicy({ purl: PURL, policyFiles: [file] });
+
+    expect(decision.decision).toBe('allow');
+    expect(decision.skipped.length).toBeGreaterThan(0);
+    expect(isConclusive(decision)).toBe(false);
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('the same rule, guarded, is conclusive and applies correctly', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-policy-guarded-'));
+    const file = join(dir, 'guarded.cedar');
+    writeFileSync(
+      file,
+      'forbid (principal, action, resource) when { resource has exec && resource.exec };\n',
+      'utf8'
+    );
+
+    const unknown = await evaluatePolicy({ purl: PURL, policyFiles: [file] });
+    expect(unknown.decision).toBe('allow');
+    expect(isConclusive(unknown)).toBe(true);
+
+    const declared = await evaluatePolicy({
+      purl: PURL,
+      policyFiles: [file],
+      permissions: { exec: ['node'] }
+    });
+    expect(declared.decision).toBe('deny');
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('the shipped baseline is conclusive even with no evidence at all', async () => {
+    // Every baseline rule guards with `has`, so a bare artifact produces a
+    // clean allow rather than an allow-with-rules-disabled.
+    const decision = await evaluatePolicy({ purl: PURL });
+    expect(decision.decision).toBe('allow');
+    expect(isConclusive(decision)).toBe(true);
+  });
+
+  test('a policy requiring declared permissions is expressible and honest', async () => {
+    // The rule that only becomes possible once absence is first-class.
+    const dir = mkdtempSync(join(tmpdir(), 'agora-policy-require-'));
+    const file = join(dir, 'require-manifest.cedar');
+    writeFileSync(
+      file,
+      'forbid (principal, action, resource) when { resource.permissions_declared == false };\n',
+      'utf8'
+    );
+
+    const undeclared = await evaluatePolicy({ purl: PURL, policyFiles: [file] });
+    expect(undeclared.decision).toBe('deny');
+    expect(isConclusive(undeclared)).toBe(true);
+
+    const declared = await evaluatePolicy({
+      purl: PURL,
+      policyFiles: [file],
+      permissions: { fs: ['./**'] }
+    });
+    expect(declared.decision).toBe('allow');
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe('policy linting catches rules that can never fire', () => {
+  test('the shipped baseline lints clean against its own schema', async () => {
+    expect((await lintPolicyText(readBaselinePolicy().text)).ok).toBe(true);
+  });
+
+  test('an unguarded read of an optional attribute is rejected', async () => {
+    const lint = await lintPolicyText(
+      'forbid (principal, action, resource) when { resource.exec };'
+    );
+    expect(lint.ok).toBe(false);
+    expect(lint.schemaViolations.join(' ')).toMatch(/optional attribute/i);
+  });
+
+  test('a misspelt attribute is rejected even when correctly `has`-guarded', async () => {
+    // Cedar itself accepts this: `has` on an undeclared attribute is legal and
+    // simply evaluates false — so the rule parses, validates, and can never
+    // fire. That is the exact silent failure this plane exists to prevent.
+    const lint = await lintPolicyText(
+      'forbid (principal, action, resource) when { resource has revoke && resource.revoke };'
+    );
+    expect(lint.ok).toBe(false);
+    expect(lint.schemaViolations.join(' ')).toContain('revoke');
+  });
+
+  test('a correctly guarded rule on a real attribute passes', async () => {
+    const lint = await lintPolicyText(
+      'forbid (principal, action, resource) when { resource has exec && resource.exec };'
+    );
+    expect(lint.ok).toBe(true);
+  });
+
+  test('the schema attribute list is parsed, not hardcoded', () => {
+    const names = schemaAttributeNames();
+    expect(names.has('revoked')).toBe(true);
+    expect(names.has('permissions_declared')).toBe(true);
+    expect(names.has('fs_write')).toBe(false);
+  });
+
+  test('referencedAttributes finds both access forms', () => {
+    expect(referencedAttributes('resource has exec && resource.divergence_max').sort()).toEqual([
+      'divergence_max',
+      'exec'
+    ]);
   });
 });
