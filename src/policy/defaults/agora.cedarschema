@@ -1,0 +1,44 @@
+// Cedar entity schema for Agora's policy plane (AGORA_BRIEF_v2.md §7.1).
+//
+// Every attribute below must be derivable from evidence Agora actually holds —
+// see src/policy/entities.ts, which is the only thing allowed to populate them.
+
+entity Project;
+
+entity Artifact = {
+  // "mcp-server" | "agent-skill"
+  kind: String,
+
+  // Publisher namespace as it appears in the artifact's purl ("" when unscoped).
+  publisher_namespace: String,
+
+  // True only when a signature verified AND bound to the declared source repo.
+  // False covers both "checked and failed" and "could not check" — read
+  // attestation_tier alongside it.
+  provenance_verified: Bool,
+
+  // "sigstore" | "local" | "none". "none" means no verified attestation exists,
+  // which is the ecosystem default rather than a red flag.
+  attestation_tier: String,
+
+  // Matched a critical/high entry in the signed revocation feed.
+  revoked: Bool,
+
+  // A canary token planted for the sandboxed run left the sandbox (S6).
+  canary_triggered: Bool,
+
+  // Declared permission surface.
+  fs_read: Bool,
+  fs_write: Bool,
+  exec: Bool,
+  net_hosts: Set<String>,
+
+  // Worst observed divergence between what the artifact claims and what the
+  // evidence shows: "none" | "info" | "warn" | "critical".
+  divergence_max: String,
+};
+
+action "Install", "Sync", "Serve" appliesTo {
+  principal: [Project],
+  resource: [Artifact]
+};

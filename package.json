@@ -32,7 +32,7 @@
   },
   "files": ["dist"],
   "scripts": {
-    "build": "rm -rf dist && tsc && cp src/catalog.json dist/catalog.json && chmod +x dist/cli.js",
+    "build": "rm -rf dist && tsc && cp src/catalog.json dist/catalog.json && mkdir -p dist/policy/defaults && cp src/policy/defaults/* dist/policy/defaults/ && chmod +x dist/cli.js",
     "build:binary": "bun build src/cli.ts --compile --outfile dist/agora",
     "build:schemas": "bun scripts/generate-schemas.ts",
     "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
@@ -64,6 +64,7 @@
   "author": "IrgenSlj",
   "license": "MIT",
   "dependencies": {
+    "@cedar-policy/cedar-wasm": "4.11.2",
     "@clack/prompts": "^1.7.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "better-sqlite3": "^13.0.1",
