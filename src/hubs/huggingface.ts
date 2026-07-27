@@ -1,4 +1,4 @@
-import type { FetchLike } from '../live/types.js';
+import type { FetchLike } from '../fetch.js';
 import { fetchWithRetry } from '../retry.js';
 import type { HubItem } from './types.js';
 

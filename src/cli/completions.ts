@@ -171,9 +171,7 @@ function completePath(
 
 function getFlags(cmd: string): string[] {
   const map: Record<string, string[]> = {
-    auth: ['--token', '--api-url', '--data-dir', '--json'],
     init: ['--dry-run', '--json', '--mcp'],
-    use: ['--json'],
     config: ['--config', '--json']
   };
   return map[cmd] ?? [];

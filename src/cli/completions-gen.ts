@@ -121,7 +121,7 @@ function bash(): string {
     '    --level)      COMPREPLY=($(compgen -W "' + LEVELS.join(' ') + '" -- "$cur")) ;;',
     '    --model|-m)   COMPREPLY=($(compgen -W "deepseek-v4-flash-free nemotron-3-super-free gemini-2-flash-free" -- "$cur")) ;;',
     '    --limit|-n|--page|--per-page) COMPREPLY=($(compgen -W "5 10 20 50 100" -- "$cur")) ;;',
-    '    --token|--api-url|--config|--data-dir) COMPREPLY=($(compgen -A file -- "$cur")) ;;',
+    '    --config|--data-dir) COMPREPLY=($(compgen -A file -- "$cur")) ;;',
     '  esac',
     '',
     '  case $1 in',

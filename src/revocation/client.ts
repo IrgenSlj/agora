@@ -9,7 +9,7 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
-import type { FetchLike } from '../live/types.js';
+import type { FetchLike } from '../fetch.js';
 import type { RevocationEntry, RevocationFeed } from '../model/revocation.js';
 import { verifyFeed } from './feed.js';
 import { isBlocking, matchRevocations, type RevocationMatch } from './match.js';

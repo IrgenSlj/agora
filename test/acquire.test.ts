@@ -5,7 +5,7 @@ import { describe, expect, test } from 'vitest';
 
 import { acquire } from '../src/acquire';
 import { runCli } from '../src/cli/app';
-import type { FetchLike } from '../src/live';
+import type { FetchLike } from '../src/fetch';
 import type { MarketplaceItem } from '../src/marketplace';
 import type { ScanResult } from '../src/scan';
 import { readManifest } from '../src/stack/manifest';

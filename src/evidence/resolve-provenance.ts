@@ -6,7 +6,7 @@
 // Sigstore dependency tree into every code path that scans anything, and would
 // make the hermetic scan tests reach for Fulcio and Rekor.
 
-import type { FetchLike } from '../live/types.js';
+import type { FetchLike } from '../fetch.js';
 import { buildPurl } from '../model/purl.js';
 import type { ProvenanceEvidenceSummary } from '../scan.js';
 import { verifyNpmProvenance } from './provenance.js';

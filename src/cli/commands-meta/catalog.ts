@@ -15,8 +15,7 @@ export const COMMANDS: CommandMeta[] = [
       'provenance). An unreachable source degrades honestly instead of failing the whole search — ' +
       'local always works offline. ' +
       'Use --kind for v2 artifact kinds, --category for legacy catalog categories, --source to restrict to one upstream, and --offline to ' +
-      'read only local sync/cache data. ' +
-      'Add --api to query a self-hosted Agora API instead.',
+      'read only local sync/cache data.',
     flags: [
       {
         flag: '--source',
@@ -231,16 +230,14 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Catalog',
     summary: 'Export catalog data in various formats',
     usage:
-      'agora export [format] [query] [--category all|mcp|prompt|workflow] [--format json|csv|markdown|table] [--limit N] [--api]',
+      'agora export [format] [query] [--category all|mcp|prompt|workflow] [--format json|csv|markdown|table] [--limit N]',
     details:
       'Exports all catalog items matching the optional query and category filters. ' +
-      'Pass the format as the first positional argument (json, csv, markdown, table) or use --format. ' +
-      'Add --api to query the live Agora API instead of the bundled offline data.',
+      'Pass the format as the first positional argument (json, csv, markdown, table) or use --format.',
     flags: [
       { flag: '--format, -f', description: 'Output format: json (default), csv, markdown, table' },
       { flag: '--category, -c', description: 'Filter by category: all, mcp, prompt, workflow' },
       { flag: '--limit, -n', description: 'Maximum items to export' },
-      { flag: '--api', description: 'Query the live Agora API' },
       { flag: '--json', description: 'Alias for --format json' }
     ],
     examples: [

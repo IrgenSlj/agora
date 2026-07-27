@@ -1,4 +1,4 @@
-import type { FetchLike } from './live.js';
+import type { FetchLike } from './fetch.js';
 import { fetchWithRetry } from './retry.js';
 
 export type FreshnessStatus = 'fresh' | 'stale' | 'unknown';

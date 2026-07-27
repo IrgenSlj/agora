@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
 import { type ExecLike, parseArgs } from '../src/cli/flags';
-import type { FetchLike } from '../src/live';
+import type { FetchLike } from '../src/fetch';
 import { readManifest } from '../src/stack/manifest';
 
 function createIo(
@@ -417,110 +417,6 @@ describe('CLI commands', () => {
     }
   });
 
-  test('search can use the live API source', async () => {
-    const fetcher = async (input: string | URL) => {
-      const url = new URL(String(input));
-      if (url.pathname === '/api/packages') {
-        return jsonResponse({
-          packages: [
-            {
-              id: 'remote-mcp',
-              name: '@remote/server',
-              description: 'Remote MCP server',
-              author: 'remote-dev',
-              version: '1.2.3',
-              category: 'mcp',
-              tags: 'remote,mcp',
-              stars: 99,
-              installs: 1000,
-              npm_package: '@remote/server',
-              created_at: '2026-01-01'
-            }
-          ]
-        });
-      }
-      return jsonResponse({ workflows: [] });
-    };
-    const { io, stdout, stderr } = createIo(process.cwd(), { fetcher });
-
-    const code = await runCli(
-      ['search', 'remote', '--api', '--api-url', 'https://api.example.test'],
-      io
-    );
-
-    expect(code).toBe(0);
-    expect(stderr.join('')).toBe('');
-    expect(stdout.join('')).toContain('source: api');
-    expect(stdout.join('')).toContain('remote-mcp');
-  });
-
-  test('search falls back to offline data when the API fails', async () => {
-    const fetcher = async () => {
-      throw new Error('network down');
-    };
-    const { io, stdout, stderr } = createIo(process.cwd(), { fetcher });
-
-    const code = await runCli(
-      ['search', 'filesystem', '--api', '--api-url', 'https://api.example.test'],
-      io
-    );
-
-    expect(code).toBe(0);
-    expect(stdout.join('')).toContain('source: offline');
-    expect(stdout.join('')).toContain('mcp-filesystem');
-    expect(stderr.join('')).toContain('API unavailable');
-  });
-
-  test('install can use live API package metadata', async () => {
-    const temp = mkdtempSync(join(tmpdir(), 'agora-cli-'));
-    const configPath = join(temp, 'opencode.json');
-    const fetcher = async (input: string | URL) => {
-      const url = new URL(String(input));
-      if (url.pathname === '/api/packages/remote-mcp') {
-        return jsonResponse({
-          package: {
-            id: 'remote-mcp',
-            name: '@remote/server',
-            description: 'Remote MCP server',
-            author: 'remote-dev',
-            version: '1.2.3',
-            category: 'mcp',
-            tags: ['remote'],
-            stars: 99,
-            installs: 1000,
-            npm_package: '@remote/server',
-            created_at: '2026-01-01'
-          }
-        });
-      }
-      return jsonResponse({ error: 'not found' }, 404);
-    };
-    const { io, stdout } = createIo(temp, { fetcher });
-
-    try {
-      const code = await runCli(
-        [
-          'install',
-          'remote-mcp',
-          '--api',
-          '--api-url',
-          'https://api.example.test',
-          '--config',
-          configPath
-        ],
-        io
-      );
-
-      expect(code).toBe(0);
-      expect(stdout.join('')).toContain('@remote/server');
-      expect(stdout.join('')).toContain('remote-mcp');
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
-    }
-  });
-});
-
-describe('TTY gate — no-command path', () => {
   test('runCli([]) with non-TTY io returns 0 and prints static welcome, does not hang', async () => {
     const { io, stdout } = createIo();
     // io.stdout has no isTTY property (mock stream) → isInteractive returns false

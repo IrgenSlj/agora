@@ -1,4 +1,4 @@
-import type { FetchLike } from '../live/types.js';
+import type { FetchLike } from '../fetch.js';
 import type { ProvenanceVerification } from '../model/attestation.js';
 import { ProvenanceVerification as ProvenanceVerificationSchema } from '../model/attestation.js';
 import { parsePurl } from '../model/purl.js';

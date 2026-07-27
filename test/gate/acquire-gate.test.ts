@@ -22,7 +22,7 @@ import type {
   Provenance,
   ServerJson
 } from '../../src/federation/types';
-import type { FetchLike } from '../../src/live';
+import type { FetchLike } from '../../src/fetch';
 import type { PackageMarketplaceItem } from '../../src/marketplace';
 import { readManifest } from '../../src/stack/manifest';
 import { readTrustStore, TRUST_META_KEY } from '../../src/trust-store';

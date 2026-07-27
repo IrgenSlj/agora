@@ -3,7 +3,7 @@ import {
   formatDescriptionPoisoningSignals
 } from './evidence/enrich.js';
 import type { FederatedTool, OfficialStatus } from './federation/types.js';
-import type { FetchLike } from './live.js';
+import type { FetchLike } from './fetch.js';
 import type { MarketplaceItem, PackageMarketplaceItem } from './marketplace.js';
 import { getInstallKind, hasPermissions } from './marketplace.js';
 import type { ProvenanceVerification } from './model/attestation.js';

@@ -1,8 +1,6 @@
 import { formatNumber } from '../format.js';
-import type { ApiProfile, ApiReview } from '../live.js';
 import { getInstallKind, type MarketplaceItem, renderPermissionLines } from '../marketplace.js';
-import type { ResolvedSavedItem } from '../state.js';
-import type { Pricing, Tutorial } from '../types.js';
+import type { Pricing } from '../types.js';
 import { renderBanner, renderBox } from '../ui.js';
 import { COMMANDS } from './commands-meta.js';
 import { kvRow, pill, tagList } from './pages/components.js';
@@ -128,98 +126,6 @@ export function formatItemDetail(item: MarketplaceItem, theme: Theme): string {
 
   return lines.join('\n');
 }
-
-export function formatSavedList(items: ResolvedSavedItem[], theme: Theme): string {
-  return items
-    .map((entry, index) => {
-      if (!entry.item) {
-        return [
-          `${index + 1}. ${theme.accent(entry.saved.id)} ${theme.dim('[missing]')}`,
-          `   ${theme.dim('saved ' + formatDate(entry.saved.savedAt))}`
-        ].join('\n');
-      }
-
-      return [
-        `${index + 1}. ${theme.accent(entry.item.id)} ${theme.dim('[' + entry.item.category + ']')}`,
-        `   ${theme.dim(entry.item.name)}`,
-        `   ${truncate(entry.item.description, 88)}`,
-        `   ${theme.dim('saved ' + formatDate(entry.saved.savedAt))}`
-      ].join('\n');
-    })
-    .join('\n\n');
-}
-
-export function formatReviewList(reviews: ApiReview[], theme: Theme): string {
-  return reviews
-    .map((review, index) => {
-      return [
-        `${index + 1}. ${theme.accent(review.itemId)} ${theme.dim('[' + review.itemType + ']')}`,
-        `   ${theme.dim('rating ' + review.rating + '/5 by ' + review.author)}`,
-        `   ${truncate(review.content, 88)}`
-      ].join('\n');
-    })
-    .join('\n\n');
-}
-
-export function formatProfileDetail(profile: ApiProfile, theme: Theme): string {
-  const lines = [
-    theme.bold(profile.displayName),
-    `${theme.muted('username')} ${theme.accent(profile.username)}`,
-    `${theme.muted('packages')} ${formatNumber(profile.packages)}`,
-    `${theme.muted('workflows')} ${formatNumber(profile.workflows)}`,
-    `${theme.muted('discussions')} ${formatNumber(profile.discussions)}`,
-    `${theme.muted('reputation')} ${profile.reputation ?? 0}`
-  ];
-
-  if (profile.bio) lines.splice(2, 0, `${theme.muted('bio')} ${profile.bio}`);
-  if (profile.avatarUrl) lines.push(`${theme.muted('avatar')} ${profile.avatarUrl}`);
-  if (profile.joinedAt) lines.push(`${theme.muted('joined')} ${formatDate(profile.joinedAt)}`);
-
-  return lines.join('\n');
-}
-
-export function formatTutorialList(tutorials: Tutorial[], theme: Theme): string {
-  return tutorials
-    .map((tutorial, index) => {
-      return [
-        `${index + 1}. ${theme.accent(tutorial.id)} ${theme.dim('[' + tutorial.level + ']')}`,
-        `   ${theme.dim(tutorial.title)}`,
-        `   ${truncate(tutorial.description, 88)}`,
-        `   ${theme.dim(tutorial.duration + ' | ' + tutorial.steps.length + ' steps')}`
-      ].join('\n');
-    })
-    .join('\n\n');
-}
-
-export function formatTutorialStep(tutorial: Tutorial, stepNumber: number, theme: Theme): string {
-  const step = tutorial.steps[stepNumber - 1];
-
-  if (!step) {
-    return [
-      theme.bold(tutorial.title),
-      theme.dim(`Completed ${tutorial.steps.length}/${tutorial.steps.length} steps.`),
-      'Run agora tutorials for more tutorials.'
-    ].join('\n');
-  }
-
-  const lines = [
-    theme.bold(tutorial.title),
-    `${theme.dim('id')} ${theme.accent(tutorial.id)}`,
-    `${theme.dim('level')} ${tutorial.level}`,
-    `${theme.dim('duration')} ${tutorial.duration}`,
-    `${theme.dim('step')} ${stepNumber}/${tutorial.steps.length}`,
-    '',
-    step.title || '',
-    step.content || ''
-  ];
-
-  if (step.code) {
-    lines.push('', theme.dim('code:'), step.code);
-  }
-
-  return lines.join('\n');
-}
-
 export function welcome(color: boolean, trueColor: boolean, theme: Theme, version: string): string {
   if (!color) {
     return [

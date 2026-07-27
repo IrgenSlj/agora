@@ -51,7 +51,7 @@ export async function withRetry<T>(
   throw lastError;
 }
 
-import type { FetchLike } from './live/types.js';
+import type { FetchLike } from './fetch.js';
 
 export type { FetchLike };
 

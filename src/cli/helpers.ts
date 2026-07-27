@@ -1,7 +1,5 @@
 import process from 'node:process';
-import { dataRefreshedAt } from '../data.js';
-import type { SourceOptions, SourceResult } from '../live.js';
-import { detectAgoraDataDir, type ResolvedSavedItem } from '../state.js';
+import { detectAgoraDataDir } from '../state.js';
 import { ExitCode } from './exit-codes.js';
 import type { CliIo, OutputStream, ParsedArgs } from './flags.js';
 
@@ -70,18 +68,6 @@ export function envString(io: CliIo, name: string): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
-/**
- * Token for the optional `AGORA_API_URL` catalog mirror. Read from flags/env
- * only — Agora has no accounts, no login, and stores no credentials.
- */
-export function apiTokenInput(parsed: ParsedArgs, io: CliIo): string | undefined {
-  return (
-    requiredStringFlag(parsed, 'token') ||
-    envString(io, 'AGORA_TOKEN') ||
-    envString(io, 'AGORA_API_TOKEN')
-  );
-}
-
 // ── Options helpers ──────────────────────────────────────────────────────────
 
 export function detectDataDir(parsed: ParsedArgs, io: CliIo): string {
@@ -90,109 +76,4 @@ export function detectDataDir(parsed: ParsedArgs, io: CliIo): string {
     cwd: io.cwd,
     env: io.env
   });
-}
-
-export async function sourceOptions(parsed: ParsedArgs, io: CliIo): Promise<SourceOptions> {
-  const explicitApiUrl = stringFlag(parsed, 'apiUrl');
-  const envApiUrl = envString(io, 'AGORA_API_URL');
-  const apiUrl = explicitApiUrl || envApiUrl || '';
-  const useApi =
-    explicitApiUrl !== undefined ||
-    envApiUrl !== undefined ||
-    Boolean(parsed.flags.api) ||
-    Boolean(parsed.flags.live);
-  return {
-    useApi,
-    apiUrl,
-    token: apiTokenInput(parsed, io),
-    fetcher: io.fetcher,
-    timeoutMs: numberFlag(parsed, 'apiTimeout')
-  };
-}
-
-export async function writeSourceOptions(
-  parsed: ParsedArgs,
-  io: CliIo
-): Promise<{ ok: true; options: SourceOptions } | { ok: false; error: string }> {
-  const options = await sourceOptions(parsed, io);
-  if (!options.apiUrl) {
-    return {
-      ok: false,
-      error: 'This command requires --api-url or AGORA_API_URL'
-    };
-  }
-  if (!options.token) {
-    return {
-      ok: false,
-      error: 'This command requires --token, AGORA_TOKEN, or AGORA_API_TOKEN'
-    };
-  }
-  return { ok: true, options: { ...options, useApi: true } };
-}
-
-export async function readSourceOptions(
-  parsed: ParsedArgs,
-  io: CliIo
-): Promise<{ ok: true; options: SourceOptions } | { ok: false; error: string }> {
-  const options = await sourceOptions(parsed, io);
-  if (!options.apiUrl) {
-    return {
-      ok: false,
-      error: 'This command requires --api-url or AGORA_API_URL'
-    };
-  }
-  return { ok: true, options: { ...options, useApi: true } };
-}
-
-// ── Source display helpers ──────────────────────────────────────────────────
-
-export function sourceLabel(result: { source: string }): string {
-  return result.source === 'offline'
-    ? `source: offline · refreshed ${dataRefreshedAt}`
-    : `source: ${result.source}`;
-}
-
-export function warnFallback<T>(result: SourceResult<T>, io: CliIo): void {
-  if (result.fallbackReason) {
-    writeLine(
-      io.stderr,
-      `Warning: API unavailable — using offline data (cached ${dataRefreshedAt})`
-    );
-    writeLine(io.stderr, `  Reason: ${result.fallbackReason}`);
-  }
-}
-
-export function sourcePayload<T extends object, TValue>(
-  result: SourceResult<TValue>,
-  payload: T
-): T & {
-  source: string;
-  apiUrl?: string;
-  fallbackReason?: string;
-} {
-  return {
-    source: result.source,
-    apiUrl: result.apiUrl,
-    fallbackReason: result.fallbackReason,
-    ...payload
-  };
-}
-
-// ── Search helpers ──────────────────────────────────────────────────────────
-
-export function matchesSavedQuery(entry: ResolvedSavedItem, query: string): boolean {
-  if (!query) return true;
-
-  const searchable = entry.item
-    ? [
-        entry.item.id,
-        entry.item.name,
-        entry.item.description,
-        entry.item.author,
-        entry.item.category,
-        ...entry.item.tags
-      ].join(' ')
-    : entry.saved.id;
-
-  return searchable.toLowerCase().includes(query);
 }

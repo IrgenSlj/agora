@@ -9,8 +9,7 @@ import type {
 } from '../../federation/types.js';
 import { formatNumber } from '../../format.js';
 import { appendHistory } from '../../history.js';
-import { findMarketplaceSource, searchMarketplaceSource } from '../../live.js';
-import { similarItems, sortMarketplaceItems } from '../../marketplace.js';
+import { findMarketplaceItem, similarItems, sortMarketplaceItems } from '../../marketplace.js';
 import { isValidPurl } from '../../model/purl.js';
 import { AgoraStore, CASCache } from '../../store/index.js';
 import { ExitCode } from '../exit-codes.js';
@@ -18,12 +17,8 @@ import { formatItemDetail, formatItemList, formatItemTable, header } from '../fo
 import {
   detectDataDir,
   numberFlag,
-  sourceLabel,
-  sourceOptions,
-  sourcePayload,
   stringFlag,
   usageError,
-  warnFallback,
   writeJson,
   writeLine
 } from '../helpers.js';
@@ -151,83 +146,7 @@ export const commandSearch: CommandHandler = async (parsed, io, style) => {
   const perPage = numberFlag(parsed, 'perPage', 'pp') || 0;
   const limit = perPage > 0 ? perPage : numberFlag(parsed, 'limit', 'n') || 10;
 
-  const opts = parsed.flags.offline
-    ? { useApi: false, fetcher: io.fetcher }
-    : await sourceOptions(parsed, io);
-
-  // The legacy hosted-API path (`--api`/`--live`/a configured API URL) is
-  // orthogonal to federation — a self-hosted Agora API, not an upstream MCP
-  // registry — and stays exactly as it was.
-  if (opts.useApi) {
-    const result = await searchMarketplaceSource({
-      ...opts,
-      query,
-      category,
-      limit,
-      sortBy: sortBy as 'relevance' | 'stars' | 'installs' | 'name' | 'updated',
-      sortOrder,
-      page,
-      perPage
-    });
-    const results = result.data;
-    warnFallback(result, io);
-
-    if (parsed.flags.json) {
-      writeJson(
-        io.stdout,
-        sourcePayload(result, {
-          query,
-          category,
-          sortBy,
-          sortOrder,
-          page,
-          count: results.length,
-          items: results
-        })
-      );
-      return 0;
-    }
-
-    if (results.length === 0) {
-      writeLine(io.stdout, `No results found for "${query}".`);
-      return 0;
-    }
-
-    const theme = cliTheme(style, io);
-    writeLine(
-      io.stdout,
-      header(
-        'agora search',
-        [`"${query || 'all'}"`, `${results.length} results`, sourceLabel(result)],
-        theme
-      )
-    );
-    writeLine(io.stdout, '');
-
-    if (table) {
-      writeLine(io.stdout, formatItemTable(results, theme));
-    } else {
-      writeLine(io.stdout, formatItemList(results, theme));
-    }
-
-    if (perPage > 0) {
-      writeLine(io.stdout, '');
-      writeLine(
-        io.stdout,
-        style.dim(`Page ${page} · ${perPage} per page. Use --page N to navigate.`)
-      );
-    }
-
-    appendHistory(detectDataDir(parsed, io), {
-      type: 'search',
-      query,
-      timestamp: new Date().toISOString(),
-      results: results.length
-    });
-    return 0;
-  }
-
-  // Federated path (default): upstream registries + local sync/cache + the
+  // Federated path (the only path): upstream registries + local sync/cache + the
   // bundled local catalog, deduped and merged, with honest per-source status.
   const sourceFlag = stringFlag(parsed, 'source');
   if (sourceFlag && sourceFlag !== 'all' && !isSourceId(sourceFlag)) {
@@ -384,17 +303,11 @@ export const commandBrowse: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
   if (!id) return usageError(io, 'browse requires an item id');
 
-  const result = await findMarketplaceSource({
-    ...(await sourceOptions(parsed, io)),
-    id,
-    type: stringFlag(parsed, 'type', 't')
-  });
-  const item = result.data;
-  warnFallback(result, io);
+  const item = findMarketplaceItem(id, { type: stringFlag(parsed, 'type', 't') });
   if (!item) return usageError(io, `Item not found: ${id}`);
 
   if (parsed.flags.json) {
-    writeJson(io.stdout, sourcePayload(result, { item }));
+    writeJson(io.stdout, { item });
     return 0;
   }
 

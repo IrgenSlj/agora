@@ -1,9 +1,7 @@
 import type { FederatedItem } from '../../federation/types.js';
-import type { SourceOptions } from '../../live.js';
 import type { MarketplaceItem } from '../../marketplace.js';
 import { observedCapabilities, type ScanResult } from '../../scan.js';
 import type { HealthTone, Verdict } from './components.js';
-import type { PageContext } from './types.js';
 
 // eslint-disable-next-line no-control-regex
 export const ANSI_RE = /\x1b\[[0-9;]*m/g;
@@ -73,26 +71,6 @@ export function scrollbar(
     bar.push(i === thumbPos ? style.accent('\u2588') : style.dim('\u2591'));
   }
   return bar;
-}
-
-/**
- * Build SourceOptions for backend-fronted page calls.
- *
- * Reads AGORA_API_URL / AGORA_TOKEN from process env first; falls back to the
- * persisted auth state. When `requireAuth` is true and credentials are missing,
- * returns null so callers can render a "sign in" hint instead of firing a doomed
- * request. When `requireAuth` is false (default), returns a permissive options
- * object — useful for read-only endpoints that have offline fallbacks.
- */
-export function pageSourceOptions(
-  ctx: PageContext,
-  opts: { requireAuth?: boolean } = {}
-): SourceOptions | null {
-  // Env-only: Agora stores no credentials and has no login.
-  const apiUrl = process.env.AGORA_API_URL || '';
-  const token = process.env.AGORA_TOKEN || process.env.AGORA_API_TOKEN || '';
-  if (opts.requireAuth && (!apiUrl || !token)) return null;
-  return { useApi: Boolean(apiUrl), apiUrl, token, fetcher: ctx.io.fetcher, timeoutMs: 10000 };
 }
 
 // ── shared trust-panel inputs (Acquire's GATE stage + the Item page) ───────

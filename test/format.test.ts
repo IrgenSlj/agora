@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { formatProfileDetail } from '../src/cli/format.js';
-import { createTheme } from '../src/cli/theme.js';
 import { formatInstalls, formatStars } from '../src/format';
-import type { ApiProfile } from '../src/live.js';
 
 describe('Formatting Utilities', () => {
   describe('formatStars', () => {
@@ -27,33 +24,5 @@ describe('Formatting Utilities', () => {
     test('formats hundreds', () => {
       expect(formatInstalls(500)).toBe('500');
     });
-  });
-});
-
-describe('formatProfileDetail', () => {
-  const theme = createTheme({ useColor: false });
-
-  const baseProfile: ApiProfile = {
-    id: 'u-1',
-    username: 'alice',
-    displayName: 'Alice',
-    packages: 3,
-    workflows: 1,
-    discussions: 7,
-    reputation: 42.5,
-    joinedAt: '2025-01-01T00:00:00Z'
-  };
-
-  test('includes Reputation line', () => {
-    const output = formatProfileDetail(baseProfile, theme);
-    expect(output).toContain('reputation');
-    expect(output).toContain('42.5');
-  });
-
-  test('defaults reputation to 0 when not provided', () => {
-    const profile: ApiProfile = { ...baseProfile, reputation: undefined };
-    const output = formatProfileDetail(profile, theme);
-    expect(output).toContain('reputation');
-    expect(output).toContain('0');
   });
 });

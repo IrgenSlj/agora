@@ -1,5 +1,5 @@
 import yargs from 'yargs';
-import type { FetchLike } from '../live.js';
+import type { FetchLike } from '../fetch.js';
 
 export type OutputStream = {
   write(chunk: string): unknown;
@@ -30,7 +30,6 @@ export interface ParsedArgs {
 const booleanFlags = new Set([
   'acceptWarnings',
   'accept-warnings',
-  'api',
   'clear',
   'continue',
   'down',
@@ -40,7 +39,6 @@ const booleanFlags = new Set([
   'force',
   'help',
   'json',
-  'live',
   'mcp',
   'offline',
   'once',

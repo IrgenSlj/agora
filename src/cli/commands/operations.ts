@@ -8,8 +8,12 @@ import {
   writeOpenCodeConfig
 } from '../../config-files.js';
 import { clearHistory, loadHistory } from '../../history.js';
-import { findMarketplaceSource } from '../../live.js';
-import { createInstallPlan, hasPermissions, renderPermissionLines } from '../../marketplace.js';
+import {
+  createInstallPlan,
+  findMarketplaceItem,
+  hasPermissions,
+  renderPermissionLines
+} from '../../marketplace.js';
 import { isOpencodeAvailable } from '../../opencode-exec.js';
 import { loadPreferences, prefsPath, writePreferences } from '../../preferences.js';
 import { type ScanResult, scanItem } from '../../scan.js';
@@ -26,10 +30,8 @@ import type { ExecLike } from '../flags.js';
 import {
   detectDataDir,
   numberFlag,
-  sourceOptions,
   stringFlag,
   usageError,
-  warnFallback,
   writeJson,
   writeLine
 } from '../helpers.js';
@@ -44,13 +46,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
   const runCommand: ExecLike =
     io.exec ?? ((cmd, options) => void execSync(cmd, { stdio: 'pipe', ...options }));
 
-  const source = await findMarketplaceSource({
-    ...(await sourceOptions(parsed, io)),
-    id,
-    type: stringFlag(parsed, 'type', 't')
-  });
-  const item = source.data;
-  warnFallback(source, io);
+  const item = findMarketplaceItem(id, { type: stringFlag(parsed, 'type', 't') });
   if (!item) return usageError(io, `Item not found: ${id}`);
 
   const configPath = detectOpenCodeConfigPath({
@@ -86,9 +82,6 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
         })
       : undefined;
     writeJson(io.stdout, {
-      source: source.source,
-      apiUrl: source.apiUrl,
-      fallbackReason: source.fallbackReason,
       item,
       configPath,
       write: Boolean(parsed.flags.write),
@@ -677,11 +670,7 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
       deepIssues.push(`Agora data dir ${agoraDir} does not exist`);
     }
 
-    if (io.env?.AGORA_API_URL) {
-      deepOk.push(`catalog mirror: ${io.env.AGORA_API_URL}`);
-    } else {
-      deepOk.push('catalog: local-first (no mirror configured)');
-    }
+    deepOk.push('catalog: local-first (bundled + federated sources)');
 
     // News cache age — surfaces "the feed is stale" before the user notices
     try {

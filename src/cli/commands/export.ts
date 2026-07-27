@@ -1,15 +1,6 @@
-import { searchMarketplaceSource } from '../../live.js';
 import { getMarketplaceItems, type MarketplaceItem } from '../../marketplace.js';
 import { header } from '../format.js';
-import {
-  numberFlag,
-  sourceOptions,
-  stringFlag,
-  usageError,
-  warnFallback,
-  writeJson,
-  writeLine
-} from '../helpers.js';
+import { numberFlag, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
@@ -95,31 +86,18 @@ export const commandExport: CommandHandler = async (parsed, io, style) => {
     return usageError(io, `Unknown format "${format}". Use --format json|csv|markdown|table`);
   }
 
-  let items: MarketplaceItem[];
-
-  if (parsed.flags.api || parsed.flags.live) {
-    const result = await searchMarketplaceSource({
-      ...(await sourceOptions(parsed, io)),
-      query,
-      category,
-      limit: limit || 1000
-    });
-    items = result.data;
-    warnFallback(result, io);
-  } else {
-    items = getMarketplaceItems().filter((i) => {
-      if (category !== 'all' && i.category !== category) return false;
-      if (
-        query &&
-        !i.id.toLowerCase().includes(query.toLowerCase()) &&
-        !i.name.toLowerCase().includes(query.toLowerCase()) &&
-        !i.description.toLowerCase().includes(query.toLowerCase())
-      )
-        return false;
-      return true;
-    });
-    if (limit > 0) items = items.slice(0, limit);
-  }
+  let items: MarketplaceItem[] = getMarketplaceItems().filter((i) => {
+    if (category !== 'all' && i.category !== category) return false;
+    if (
+      query &&
+      !i.id.toLowerCase().includes(query.toLowerCase()) &&
+      !i.name.toLowerCase().includes(query.toLowerCase()) &&
+      !i.description.toLowerCase().includes(query.toLowerCase())
+    )
+      return false;
+    return true;
+  });
+  if (limit > 0) items = items.slice(0, limit);
 
   if (items.length === 0) {
     writeLine(

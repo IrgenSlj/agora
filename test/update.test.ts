@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
-import type { FetchLike } from '../src/live';
+import type { FetchLike } from '../src/fetch';
 import {
   capabilityKey,
   descriptionDigest,

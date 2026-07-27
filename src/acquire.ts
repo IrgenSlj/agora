@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js';
 import { federatedFetchItem } from './federation/index.js';
 import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
-import type { FetchLike } from './live.js';
+import type { FetchLike } from './fetch.js';
 import {
   createInstallPlan,
   findMarketplaceItem,
