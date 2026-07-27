@@ -11,6 +11,7 @@
 // Async fetch happens in `mount()` (and on submitting a new query) — never in
 // `render()`, which stays a pure function of state.
 import { join } from 'node:path';
+import type { MarketplaceItem } from '../../catalog/bundled.js';
 import { federatedSearch } from '../../federation/index.js';
 import type {
   FederatedItem,
@@ -18,7 +19,6 @@ import type {
   SourceId,
   SourceStatus
 } from '../../federation/types.js';
-import type { MarketplaceItem } from '../../marketplace.js';
 import {
   detectAgoraDataDir,
   loadAgoraState,

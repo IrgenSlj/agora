@@ -6,8 +6,8 @@
 // inputs must never produce a false-positive warning on these checks, or the
 // gate stops being trusted (brief §5c).
 import { describe, expect, test } from 'vitest';
+import type { PackageMarketplaceItem } from '../../src/catalog/bundled';
 import type { FederatedTool } from '../../src/federation/types';
-import type { PackageMarketplaceItem } from '../../src/marketplace';
 import { scanItem } from '../../src/scan';
 import { descriptionDigest } from '../../src/stack/capability-cache';
 

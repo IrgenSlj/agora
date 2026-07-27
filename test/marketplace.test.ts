@@ -1,5 +1,5 @@
 /**
- * Contract tests for src/marketplace.ts.
+ * Contract tests for src/catalog/bundled.ts.
  * Calls the REAL exported functions — no re-implementation of filtering logic.
  */
 
@@ -7,8 +7,6 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, test } from 'vitest';
-import { sourceBadge } from '../src/cli/pages/search';
-import { samplePackages } from '../src/data';
 import {
   buildOpenCodeConfig,
   clearMarketplaceItemsCache,
@@ -29,8 +27,10 @@ import {
   sortMarketplaceItems,
   starCountLabel,
   trendScore
-} from '../src/marketplace';
-import { describePermissionGlob } from '../src/marketplace/permissions';
+} from '../src/catalog/bundled';
+import { describePermissionGlob } from '../src/catalog/permissions';
+import { sourceBadge } from '../src/cli/pages/search';
+import { samplePackages } from '../src/data';
 
 // ── searchMarketplaceItems ──────────────────────────────────────────────────
 

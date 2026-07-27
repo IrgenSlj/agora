@@ -1,5 +1,5 @@
+import type { MarketplaceItem } from '../../catalog/bundled.js';
 import type { FederatedItem } from '../../federation/types.js';
-import type { MarketplaceItem } from '../../marketplace.js';
 import { observedCapabilities, type ScanResult } from '../../scan.js';
 import type { HealthTone, Verdict } from './components.js';
 

@@ -1,15 +1,15 @@
 import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
 import { type AcquireInput, acquire, renderAcquireResult } from '../acquire.js';
-import { formatConfigJson } from '../config.js';
-import { formatInstalls, formatStars } from '../format.js';
 import {
   createInstallPlan,
   findMarketplaceItem,
   getTrendingItems,
   type MarketplaceItem,
   searchMarketplaceItems
-} from '../marketplace.js';
+} from '../catalog/bundled.js';
+import { formatConfigJson } from '../config.js';
+import { formatInstalls, formatStars } from '../format.js';
 import { readCache } from '../news/cache.js';
 import { rankItems } from '../news/score.js';
 import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../news/types.js';

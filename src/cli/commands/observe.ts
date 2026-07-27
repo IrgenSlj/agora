@@ -1,4 +1,4 @@
-import { getMarketplaceItems } from '../../marketplace.js';
+import { getMarketplaceItems } from '../../catalog/bundled.js';
 import { aggregate, divergences } from '../../observe/profile.js';
 import { readSessions } from '../../observe/session.js';
 import { npmPackageFromCommand } from '../../revocation/installed.js';

@@ -11,10 +11,11 @@
 // search API's repo shape) reusing `toHubItem` from src/hubs/quality.ts so a
 // single-item resolve stays byte-for-byte consistent with search()'s mapping
 // instead of re-deriving it.
+
+import type { PackageMarketplaceItem } from '../../catalog/types.js';
 import { searchGithub } from '../../hubs/github.js';
 import { type RawGithubRepo, toHubItem } from '../../hubs/quality.js';
 import type { HubItem } from '../../hubs/types.js';
-import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 import { fetchWithRetry } from '../../retry.js';
 import type {
   FederatedItem,

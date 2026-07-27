@@ -1,15 +1,15 @@
 import { resolve } from 'node:path';
-import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js';
-import { federatedFetchItem } from './federation/index.js';
-import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
-import type { FetchLike } from './fetch.js';
 import {
   createInstallPlan,
   findMarketplaceItem,
   type InstallPlan,
   type MarketplaceItem,
   searchMarketplaceItems
-} from './marketplace.js';
+} from './catalog/bundled.js';
+import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js';
+import { federatedFetchItem } from './federation/index.js';
+import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
+import type { FetchLike } from './fetch.js';
 import { evaluatePolicy, isConclusive } from './policy/engine.js';
 import { checkRevocations } from './revocation/client.js';
 import { npmPurl } from './revocation/installed.js';

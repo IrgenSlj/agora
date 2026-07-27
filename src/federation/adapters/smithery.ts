@@ -26,7 +26,7 @@
 // flows through the day upstream starts setting them, without this source
 // depending on it.
 
-import type { PackageMarketplaceItem } from '../../marketplace/types.js';
+import type { PackageMarketplaceItem } from '../../catalog/types.js';
 import { fetchWithRetry } from '../../retry.js';
 import type {
   FederatedItem,

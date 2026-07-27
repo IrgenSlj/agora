@@ -1,5 +1,5 @@
+import { getInstallKind, type MarketplaceItem, renderPermissionLines } from '../catalog/bundled.js';
 import { formatNumber } from '../format.js';
-import { getInstallKind, type MarketplaceItem, renderPermissionLines } from '../marketplace.js';
 import type { Pricing } from '../types.js';
 import { renderBanner, renderBox } from '../ui.js';
 import { COMMANDS } from './commands-meta.js';

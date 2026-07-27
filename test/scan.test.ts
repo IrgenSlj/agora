@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
+import type { PackageMarketplaceItem, WorkflowMarketplaceItem } from '../src/catalog/bundled';
 import { samplePackages } from '../src/data';
-import type { PackageMarketplaceItem, WorkflowMarketplaceItem } from '../src/marketplace';
 import { scanItem } from '../src/scan';
 
 function makePackage(overrides: Partial<PackageMarketplaceItem> = {}): PackageMarketplaceItem {

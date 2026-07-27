@@ -1,5 +1,5 @@
-import type { MarketplaceItem } from '../marketplace.js';
-import { getHotItems } from '../marketplace.js';
+import type { MarketplaceItem } from '../catalog/bundled.js';
+import { getHotItems } from '../catalog/bundled.js';
 import { readCache } from '../news/cache.js';
 import type { NewsItem } from '../news/types.js';
 import { hostFromUrl } from '../news/types.js';

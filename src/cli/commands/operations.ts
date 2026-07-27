@@ -1,5 +1,11 @@
 import { execFileSync, execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import {
+  createInstallPlan,
+  findMarketplaceItem,
+  hasPermissions,
+  renderPermissionLines
+} from '../../catalog/bundled.js';
 import { formatConfigJson } from '../../config.js';
 import {
   detectOpenCodeConfigPath,
@@ -8,12 +14,6 @@ import {
   writeOpenCodeConfig
 } from '../../config-files.js';
 import { clearHistory, loadHistory } from '../../history.js';
-import {
-  createInstallPlan,
-  findMarketplaceItem,
-  hasPermissions,
-  renderPermissionLines
-} from '../../marketplace.js';
 import { isOpencodeAvailable } from '../../opencode-exec.js';
 import { loadPreferences, prefsPath, writePreferences } from '../../preferences.js';
 import { type ScanResult, scanItem } from '../../scan.js';

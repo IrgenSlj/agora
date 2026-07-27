@@ -1,4 +1,4 @@
-import { buildOpenCodeConfig, findMarketplaceItem } from '../../marketplace.js';
+import { buildOpenCodeConfig, findMarketplaceItem } from '../../catalog/bundled.js';
 import { type ScanResult, scanItem } from '../../scan.js';
 import { capabilityKey, upsertCapabilities } from '../../stack/capability-cache.js';
 import { type McpProbeResult, probeMcpServer } from '../../stack/mcp-probe.js';

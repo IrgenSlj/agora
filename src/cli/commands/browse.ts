@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { findMarketplaceItem } from '../../marketplace.js';
+import { findMarketplaceItem } from '../../catalog/bundled.js';
 import { ExitCode } from '../exit-codes.js';
 import { usageError, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';

@@ -1,6 +1,6 @@
+import type { MarketplaceItem } from '../../catalog/bundled.js';
+import { getTrendingItems } from '../../catalog/bundled.js';
 import { formatNumber } from '../../format.js';
-import type { MarketplaceItem } from '../../marketplace.js';
-import { getTrendingItems } from '../../marketplace.js';
 import { readCache } from '../../news/cache.js';
 import { rankItems } from '../../news/score.js';
 import type { ScoredNewsItem } from '../../news/types.js';

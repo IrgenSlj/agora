@@ -10,9 +10,10 @@
 // repo" lookup) and maps the raw response with the same shape/rules as
 // searchHuggingFace()'s own (private, unexported) mapper — duplicated here
 // rather than modifying src/hubs/huggingface.ts.
+
+import type { PackageMarketplaceItem } from '../../catalog/types.js';
 import { type RawHfItem, searchHuggingFace } from '../../hubs/huggingface.js';
 import type { HubItem } from '../../hubs/types.js';
-import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 import { fetchWithRetry } from '../../retry.js';
 import type {
   FederatedItem,

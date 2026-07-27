@@ -15,6 +15,7 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
 import { acquire } from '../../src/acquire';
+import type { PackageMarketplaceItem } from '../../src/catalog/bundled';
 import { runCli } from '../../src/cli/app';
 import type {
   FederatedTool,
@@ -23,7 +24,6 @@ import type {
   ServerJson
 } from '../../src/federation/types';
 import type { FetchLike } from '../../src/fetch';
-import type { PackageMarketplaceItem } from '../../src/marketplace';
 import { readManifest } from '../../src/stack/manifest';
 import { readTrustStore, TRUST_META_KEY } from '../../src/trust-store';
 

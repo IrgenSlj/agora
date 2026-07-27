@@ -3,7 +3,7 @@
 // status. This is the only file that knows about canonicalization/merge — a
 // source implementation only ever has to satisfy RegistrySource.
 
-import type { PackageMarketplaceItem } from '../marketplace/types.js';
+import type { PackageMarketplaceItem } from '../catalog/types.js';
 import { githubSource } from './adapters/github.js';
 import { glamaSource } from './adapters/glama.js';
 import { huggingfaceSource } from './adapters/huggingface.js';

@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
-
+import type { MarketplaceItem } from '../../src/catalog/bundled';
 import {
   buildHomeFeed,
   computeOpportunities,
@@ -14,7 +14,6 @@ import {
   getHotRepos,
   summarizeStack
 } from '../../src/home/feed';
-import type { MarketplaceItem } from '../../src/marketplace';
 import { writeCache } from '../../src/news/cache';
 import type { NewsItem } from '../../src/news/types';
 import type { ServerCapabilities } from '../../src/stack/capability-cache';

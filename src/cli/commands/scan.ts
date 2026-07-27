@@ -1,5 +1,5 @@
+import { findMarketplaceItem } from '../../catalog/bundled.js';
 import { createProvenanceResolver } from '../../evidence/resolve-provenance.js';
-import { findMarketplaceItem } from '../../marketplace.js';
 import { scanItem } from '../../scan.js';
 import { ExitCode } from '../exit-codes.js';
 import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';

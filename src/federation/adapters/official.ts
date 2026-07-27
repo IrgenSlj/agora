@@ -8,7 +8,7 @@
 // `updated_since` auto-includes deleted tombstones — that's what src/federation/cache.ts
 // uses for incremental refresh + prune.
 
-import type { PackageMarketplaceItem } from '../../marketplace/types.js';
+import type { PackageMarketplaceItem } from '../../catalog/types.js';
 import { fetchWithRetry } from '../../retry.js';
 import type {
   FederatedItem,

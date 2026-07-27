@@ -5,10 +5,10 @@
 // topics and maps every result as an `agent-skill` candidate (`category: skill`)
 // keyed by its GitHub repository purl in the S2 sync layer.
 
+import type { PackageMarketplaceItem } from '../../catalog/types.js';
 import { searchGithub } from '../../hubs/github.js';
 import { type RawGithubRepo, toHubItem } from '../../hubs/quality.js';
 import type { HubItem } from '../../hubs/types.js';
-import type { PackageMarketplaceItem } from '../../marketplace/types.js';
 import { fetchWithRetry } from '../../retry.js';
 import type {
   FederatedItem,

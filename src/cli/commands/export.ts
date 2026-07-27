@@ -1,4 +1,4 @@
-import { getMarketplaceItems, type MarketplaceItem } from '../../marketplace.js';
+import { getMarketplaceItems, type MarketplaceItem } from '../../catalog/bundled.js';
 import { header } from '../format.js';
 import { numberFlag, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';

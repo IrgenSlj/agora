@@ -2,8 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { atomicWriteFile } from './atomic-write.js';
-import type { MarketplaceItem } from './marketplace.js';
-import { findMarketplaceItem } from './marketplace.js';
+import type { MarketplaceItem } from './catalog/bundled.js';
+import { findMarketplaceItem } from './catalog/bundled.js';
 
 export interface StatePathOptions {
   explicitDir?: string;

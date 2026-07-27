@@ -2,8 +2,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
+import { clearMarketplaceItemsCache } from '../../src/catalog/bundled';
 import { runCli } from '../../src/cli/app';
-import { clearMarketplaceItemsCache } from '../../src/marketplace';
 
 const FAKE_SERVER = join(import.meta.dirname, '../fixtures/mcp-fake-server.js');
 const STDERR_SERVER = join(import.meta.dirname, '../fixtures/mcp-stderr-server.js');
@@ -56,7 +56,7 @@ describe('agora try', () => {
     try {
       const { io, out } = makeIo(cwd);
       // Find a workflow item id from the bundled data
-      const { getMarketplaceItems } = await import('../../src/marketplace');
+      const { getMarketplaceItems } = await import('../../src/catalog/bundled');
       const wf = getMarketplaceItems().find((i) => i.kind === 'workflow');
       if (!wf) {
         // If no workflows in data, skip gracefully
@@ -76,7 +76,9 @@ describe('agora try', () => {
     clearMarketplaceItemsCache();
     const cwd = mkdtempSync(join(tmpdir(), 'agora-try-'));
     try {
-      const { getMarketplaceItems, buildOpenCodeConfig } = await import('../../src/marketplace');
+      const { getMarketplaceItems, buildOpenCodeConfig } = await import(
+        '../../src/catalog/bundled'
+      );
       const mcpItem = getMarketplaceItems().find(
         (i) => i.kind === 'package' && 'npmPackage' in i && i.npmPackage
       );

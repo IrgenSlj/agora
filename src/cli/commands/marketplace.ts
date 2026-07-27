@@ -1,5 +1,6 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { findMarketplaceItem, similarItems, sortMarketplaceItems } from '../../catalog/bundled.js';
 import { federatedSearch } from '../../federation/index.js';
 import type {
   FederatedItem,
@@ -9,7 +10,6 @@ import type {
 } from '../../federation/types.js';
 import { formatNumber } from '../../format.js';
 import { appendHistory } from '../../history.js';
-import { findMarketplaceItem, similarItems, sortMarketplaceItems } from '../../marketplace.js';
 import { isValidPurl } from '../../model/purl.js';
 import { AgoraStore, CASCache } from '../../store/index.js';
 import { ExitCode } from '../exit-codes.js';

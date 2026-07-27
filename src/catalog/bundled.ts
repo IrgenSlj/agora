@@ -1,8 +1,11 @@
 import { join } from 'node:path';
-import type { OpenCodeConfig } from './config.js';
-import { samplePackages, sampleWorkflows, trendingTags } from './data.js';
-import { isHubCacheStale, readHubsCache } from './hubs/cache.js';
-import type { HubItem, InstallKind } from './hubs/types.js';
+import type { OpenCodeConfig } from '../config.js';
+import { samplePackages, sampleWorkflows, trendingTags } from '../data.js';
+import { isHubCacheStale, readHubsCache } from '../hubs/cache.js';
+import type { HubItem, InstallKind } from '../hubs/types.js';
+import type { CatalogIndex } from '../search/catalog-index.js';
+import { buildIndex, searchIndex } from '../search/catalog-index.js';
+import { detectAgoraDataDir } from '../state.js';
 import type {
   FindOptions,
   InstallPlan,
@@ -12,15 +15,12 @@ import type {
   PackageMarketplaceItem,
   SearchOptions,
   WorkflowMarketplaceItem
-} from './marketplace/types.js';
-import type { CatalogIndex } from './search/catalog-index.js';
-import { buildIndex, searchIndex } from './search/catalog-index.js';
-import { detectAgoraDataDir } from './state.js';
+} from './types.js';
 
 export {
   hasPermissions,
   renderPermissionLines
-} from './marketplace/permissions.js';
+} from './permissions.js';
 export type {
   FindOptions,
   InstallPlan,
@@ -30,7 +30,7 @@ export type {
   PackageMarketplaceItem,
   SearchOptions,
   WorkflowMarketplaceItem
-} from './marketplace/types.js';
+} from './types.js';
 
 // ── trendScore tunable weights ────────────────────────────────────────────────
 // Growth + recency intentionally outweigh absolute stars so a young fast riser

@@ -11,8 +11,8 @@
 // visually; this page enforces it functionally too.
 
 import { type AcquireInput, type AcquireResult, acquire, writeLocationFor } from '../../acquire.js';
+import type { MarketplaceItem } from '../../catalog/bundled.js';
 import type { FederatedItem } from '../../federation/types.js';
-import type { MarketplaceItem } from '../../marketplace.js';
 import type { ScanResult } from '../../scan.js';
 import { detectTools } from '../../stack/registry.js';
 import type { AgentToolId, ToolConfigLocation } from '../../stack/types.js';

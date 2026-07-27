@@ -16,7 +16,7 @@
 // `Provenance.verified` (official attribute) and `tags` (hosting attribute)
 // respectively, the only structural homes that fit.
 
-import type { PackageMarketplaceItem } from '../../marketplace/types.js';
+import type { PackageMarketplaceItem } from '../../catalog/types.js';
 import { fetchWithRetry } from '../../retry.js';
 import type {
   FederatedItem,

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
+import type { MarketplaceItem } from '../catalog/types.js';
 import type { FetchLike } from '../fetch.js';
-import type { MarketplaceItem } from '../marketplace/types.js';
 import { type ScanOptions, type ScanResult, scanItem } from '../scan.js';
 import { type CapabilityDriftBlock, findCapabilityDriftBlocks } from './drift-blocks.js';
 import type { ManifestEntry, StackManifest } from './manifest.js';

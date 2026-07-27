@@ -27,12 +27,6 @@ export interface SearchOptions {
   perPage?: number;
 }
 
-export interface TutorialSearchOptions {
-  query?: string;
-  level?: string;
-  limit?: number;
-}
-
 export interface FindOptions {
   type?: string;
 }

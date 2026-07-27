@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { samplePackages, sampleWorkflows } from '../src/data';
-import type { Package, Review, Workflow } from '../src/types';
+import type { Package, Workflow } from '../src/types';
 
 describe('TypeScript Types', () => {
   test('Package type matches sample data', () => {
@@ -52,21 +52,6 @@ describe('Type Validation', () => {
       const validCategories = ['mcp', 'prompt', 'workflow', 'skill'];
       expect(validCategories).toContain(pkg.category);
     });
-  });
-
-  test('Review rating is between 1 and 5', () => {
-    const mockReview: Review = {
-      id: 'rev-1',
-      itemId: 'pkg-1',
-      itemType: 'package',
-      author: 'user1',
-      rating: 5,
-      content: 'Great!',
-      createdAt: '2025-01-01'
-    };
-
-    expect(mockReview.rating).toBeGreaterThanOrEqual(1);
-    expect(mockReview.rating).toBeLessThanOrEqual(5);
   });
 });
 

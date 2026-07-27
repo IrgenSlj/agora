@@ -6,13 +6,13 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
+import { findMarketplaceItem } from '../src/catalog/bundled';
 import {
   detectOpenCodeConfigPath,
   doctorOpenCodeConfig,
   loadOpenCodeConfig,
   writeOpenCodeConfig
 } from '../src/config-files';
-import { findMarketplaceItem } from '../src/marketplace';
 import {
   type AgoraState,
   detectAgoraDataDir,

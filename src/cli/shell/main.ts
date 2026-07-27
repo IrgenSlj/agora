@@ -2,7 +2,7 @@ import { execSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { getMarketplaceItems } from '../../marketplace.js';
+import { getMarketplaceItems } from '../../catalog/bundled.js';
 import { buildOpencodeRunArgs, FREE_MODELS, spawnOpencode } from '../../opencode-exec.js';
 import { detectAgoraDataDir, loadAgoraState, resolveSavedItems } from '../../state.js';
 import {

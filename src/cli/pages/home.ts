@@ -1,9 +1,9 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { getHotItems, getTrendingItems, type MarketplaceItem } from '../../catalog/bundled.js';
 import { formatNumber } from '../../format.js';
 import type { HotRepo, Opportunity, SinceDelta, StackSummary } from '../../home/feed.js';
 import { buildHomeFeed, computeSinceLastSeen, getHotRepos } from '../../home/feed.js';
-import { getHotItems, getTrendingItems, type MarketplaceItem } from '../../marketplace.js';
 import { readCache } from '../../news/cache.js';
 import { rankItems } from '../../news/score.js';
 import type { ScoredNewsItem } from '../../news/types.js';

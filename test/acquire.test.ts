@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 
 import { acquire } from '../src/acquire';
+import type { MarketplaceItem } from '../src/catalog/bundled';
 import { runCli } from '../src/cli/app';
 import type { FetchLike } from '../src/fetch';
-import type { MarketplaceItem } from '../src/marketplace';
 import type { ScanResult } from '../src/scan';
 import { readManifest } from '../src/stack/manifest';
 
