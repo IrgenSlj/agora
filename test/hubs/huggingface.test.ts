@@ -41,8 +41,7 @@ describe('searchHuggingFace()', () => {
     expect(item!.source).toBe('hf');
     expect(item!.name).toBe('Llama-2-7b');
     expect(item!.author).toBe('meta-llama');
-    expect(item!.pricing).toEqual({ kind: 'free' });
-    expect(item!.category).toBe('workflow');
+    expect(item!.category).toBe('other');
     expect(item!.version).toBe('main');
     expect(typeof item!.stars).toBe('number');
     expect(typeof item!.installs).toBe('number');

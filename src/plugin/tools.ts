@@ -194,7 +194,7 @@ Plugin acquire is preview-only. To write config after reviewing the scan gate, r
     agora_browse_category: tool({
       description: 'Browse packages and workflows by category',
       args: {
-        category: tool.schema.string().describe('Category: mcp, prompt, workflow, all'),
+        category: tool.schema.string().describe('Category: mcp, prompt, skill, all'),
         limit: tool.schema.number().optional().describe('Number to show (default: 10)')
       },
       async execute(args) {
@@ -202,16 +202,16 @@ Plugin acquire is preview-only. To write config after reviewing the scan gate, r
         const limit = args.limit || 10;
         const items = searchMarketplaceItems({ category, limit });
         const title =
-          category === 'workflow'
-            ? '🔄 Workflows'
-            : category === 'prompt'
-              ? '💬 Prompts'
+          category === 'prompt'
+            ? '💬 Prompts'
+            : category === 'skill'
+              ? '🧩 Skills'
               : category === 'all'
                 ? '🏛️ Catalog'
                 : '📦 Packages';
 
         if (items.length === 0) {
-          return `No items in category "${category}". Try: mcp, workflow, prompt, all`;
+          return `No items in category "${category}". Try: mcp, prompt, skill, all`;
         }
 
         return `${title} (${items.length} shown, ranked by installs)
@@ -248,23 +248,6 @@ Run \`/agora browse <id>\` for details.`;
           return `Item "${id}" not found. Run \`/agora search <query>\` to find packages.`;
         }
 
-        if (item.kind === 'workflow') {
-          const w = item;
-          return `🔄 **${w.name}** (\`${w.id}\`)
-by ${w.author} | ⭐ ${formatStars(w.stars)} | 🍴 ${w.forks}
-
-${w.description}
-
-**Tags**: ${w.tags.map((t) => `\`${t}\``).join(', ')}
-
-**Prompt**:
-\`\`\`
-${w.prompt}
-\`\`\`
-
-Run \`/agora install ${w.id}\` to use this workflow.`;
-        }
-
         const p = item;
         return `📦 **${p.name}** (\`${p.id}\`)
 v${p.version} by ${p.author} | 📥 ${formatInstalls(p.installs)} installs | ⭐ ${formatStars(p.stars)}
@@ -296,23 +279,6 @@ Run \`/agora install ${p.id}\` to install to your OpenCode config.`;
 
         if (!item) {
           return `Item "${id}" not found. Run \`/agora search <query>\` to find packages.`;
-        }
-
-        if (item.kind === 'workflow') {
-          const w = item;
-          return `🔄 **Workflow**: ${w.name}
-
-To use this workflow as an OpenCode skill, run in your terminal:
-
-\`\`\`bash
-agora use ${w.id}
-\`\`\`
-
-That writes \`.opencode/skills/\` and registers it. Or copy the prompt:
-
-\`\`\`
-${w.prompt}
-\`\`\``;
         }
 
         const plan = createInstallPlan(item);

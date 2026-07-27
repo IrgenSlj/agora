@@ -40,7 +40,6 @@ function toFederatedItem(item: HubItem, fetchedAt: string): FederatedItem {
     repository: item.repository,
     npmPackage: item.npmPackage,
     createdAt: item.createdAt,
-    pricing: item.pricing,
     source: item.source,
     pushedAt: item.pushedAt
   };
@@ -75,7 +74,7 @@ function mapRawHfItem(raw: RawHfItem, endpoint: string, fetchedAt: string): HubI
       : endpoint.slice(0, -1),
     author: author ?? raw.author ?? 'unknown',
     version: 'main',
-    category: 'workflow',
+    category: 'other',
     tags: Array.from(
       new Set([...(raw.tags ?? []), raw.pipeline_tag, raw.library_name].filter(Boolean) as string[])
     ),
@@ -83,7 +82,6 @@ function mapRawHfItem(raw: RawHfItem, endpoint: string, fetchedAt: string): HubI
     installs: raw.downloads ?? 0,
     repository: `https://huggingface.co/${raw.id}`,
     createdAt: raw.createdAt ?? fetchedAt,
-    pricing: { kind: 'free' },
     fetchedAt,
     pushedAt: raw.lastModified ?? fetchedAt,
     license: null,

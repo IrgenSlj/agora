@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { samplePackages, sampleWorkflows } from '../src/data';
-import type { Package, Workflow } from '../src/types';
+import { samplePackages } from '../src/data';
+import type { Package } from '../src/types';
 
 describe('TypeScript Types', () => {
   test('Package type matches sample data', () => {
@@ -24,26 +24,6 @@ describe('TypeScript Types', () => {
     expect(typed.id).toBeDefined();
     expect(typed.category).toBe('mcp');
   });
-
-  test('Workflow type matches sample data', () => {
-    const wf = sampleWorkflows[0];
-
-    const typed: Workflow = {
-      id: wf.id,
-      name: wf.name,
-      description: wf.description,
-      author: wf.author,
-      prompt: wf.prompt,
-      model: wf.model,
-      tags: wf.tags,
-      stars: wf.stars,
-      forks: wf.forks,
-      createdAt: wf.createdAt
-    };
-
-    expect(typed.id).toBeDefined();
-    expect(typed.prompt).toBeDefined();
-  });
 });
 
 describe('Type Validation', () => {
@@ -63,14 +43,5 @@ describe('Type Compatibility', () => {
 
     expect(parsed.id).toBe(pkg.id);
     expect(parsed.name).toBe(pkg.name);
-  });
-
-  test('Workflow can be converted to JSON', () => {
-    const wf = sampleWorkflows[0];
-    const json = JSON.stringify(wf);
-    const parsed = JSON.parse(json);
-
-    expect(parsed.id).toBe(wf.id);
-    expect(parsed.prompt).toBe(wf.prompt);
   });
 });

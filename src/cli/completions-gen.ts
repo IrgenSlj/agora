@@ -88,10 +88,10 @@ const IDS = [
   'wf-new-project'
 ];
 
-const CATEGORIES = ['mcp', 'prompt', 'workflow', 'skill', 'all'];
+const CATEGORIES = ['mcp', 'prompt', 'skill', 'other', 'all'];
 const SORT_ORDERS = ['asc', 'desc'];
 const SORT_BY = ['relevance', 'stars', 'installs', 'name', 'updated'];
-const TYPES = ['package', 'workflow'];
+const TYPES = ['package'];
 const LEVELS = ['beginner', 'intermediate', 'advanced'];
 const NEWS_SOURCES = ['hn', 'gh', 'arxiv', 'rss'];
 
@@ -186,7 +186,7 @@ function zsh(): string {
     '        ;;',
     '      browse|install)',
     '        _arguments \\',
-    "          '--type=[Item type]:type:(package workflow)' \\",
+    "          '--type=[Item type]:type:(package)' \\",
     "          '--json[JSON output]' \\",
     '          ":id:(' + ids + ')"',
     '        ;;',
@@ -202,7 +202,7 @@ function zsh(): string {
     '        ;;',
     '      trending)',
     '        _arguments \\',
-    "          '--category=[Category]:category:(packages workflows all)' \\",
+    "          '--category=[Category]:category:(packages all)' \\",
     "          '--limit=[Max results]:number' \\",
     "          '--sort-by=[Sort field]:sort:(" + SORT_BY.join(' ') + ")' \\",
     "          '--order=[Sort order]:order:(" + SORT_ORDERS.join(' ') + ")' \\",

@@ -132,11 +132,6 @@ async function runSearch(ctx: PageContext, query: string): Promise<void> {
   }
 }
 
-function itemPricing(item: FederatedItem): 'free' | 'paid' {
-  if (item.kind !== 'package') return 'free';
-  return item.pricing?.kind ?? 'free';
-}
-
 function hasOfficial(item: FederatedItem): boolean {
   return item.provenance.some((p) => p.source === 'official');
 }
@@ -284,9 +279,7 @@ export const searchPage: Page = {
         it.provenance.map((p) => p.source),
         theme
       );
-      const pricingBadge = itemPricing(it) === 'paid' ? theme.accent('PAID') + ' ' : '';
       const stats =
-        pricingBadge +
         theme.accent(fmtCount(it.installs).padStart(7)) +
         theme.muted(' installs') +
         '  ' +

@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { OpenCodeConfig } from '../config.js';
-import { samplePackages, sampleWorkflows, trendingTags } from '../data.js';
+import { samplePackages, trendingTags } from '../data.js';
 import { isHubCacheStale, readHubsCache } from '../hubs/cache.js';
 import type { HubItem, InstallKind } from '../hubs/types.js';
 import type { CatalogIndex } from '../search/catalog-index.js';
@@ -11,10 +11,8 @@ import type {
   InstallPlan,
   MarketplaceCategory,
   MarketplaceItem,
-  MarketplaceItemType,
   PackageMarketplaceItem,
-  SearchOptions,
-  WorkflowMarketplaceItem
+  SearchOptions
 } from './types.js';
 
 export {
@@ -26,10 +24,8 @@ export type {
   InstallPlan,
   MarketplaceCategory,
   MarketplaceItem,
-  MarketplaceItemType,
   PackageMarketplaceItem,
-  SearchOptions,
-  WorkflowMarketplaceItem
+  SearchOptions
 } from './types.js';
 
 // ── trendScore tunable weights ────────────────────────────────────────────────
@@ -106,8 +102,7 @@ function hubItemToPackage(item: HubItem): PackageMarketplaceItem {
     installs: item.installs,
     repository: item.repository,
     npmPackage: item.npmPackage,
-    createdAt: item.createdAt,
-    pricing: item.pricing
+    createdAt: item.createdAt
   };
 }
 
@@ -160,14 +155,7 @@ export function getMarketplaceItems(): MarketplaceItem[] {
     kind: 'package' as const
   }));
 
-  const workflowItems: MarketplaceItem[] = sampleWorkflows.map((workflow) => ({
-    ...workflow,
-    kind: 'workflow' as const,
-    category: 'workflow' as const,
-    installs: workflow.forks
-  }));
-
-  const curated: MarketplaceItem[] = [...packageItems, ...workflowItems];
+  const curated: MarketplaceItem[] = packageItems;
 
   let items: MarketplaceItem[] = curated;
 
@@ -299,7 +287,6 @@ export function findMarketplaceItem(id: string, options: FindOptions = {}): Mark
   const type = normalize(options.type || '');
   const items = getMarketplaceItems().filter((item) => {
     if (type === 'package') return item.kind === 'package';
-    if (type === 'workflow') return item.kind === 'workflow';
     return true;
   });
 
@@ -465,18 +452,13 @@ export function createInstallPlan(
     };
   }
 
-  // mcp-config-patch and workflow
+  // mcp-config-patch
   const config = buildOpenCodeConfig([item], existingConfig);
   const commands =
     installKind === 'mcp-config-patch' && item.kind === 'package' && item.npmPackage
       ? [`npm install -g ${item.npmPackage}`]
       : [];
-  const notes =
-    installKind === 'workflow'
-      ? [
-          `Workflow will be registered as plugin ${workflowPluginName(item as WorkflowMarketplaceItem)}.`
-        ]
-      : ['MCP server will be added to the mcp config.'];
+  const notes = ['MCP server will be added to the mcp config.'];
 
   return {
     item,
@@ -521,10 +503,6 @@ export function buildOpenCodeConfig(
         enabled: true
       };
     }
-
-    if (item.kind === 'workflow') {
-      plugin.add(workflowPluginName(item));
-    }
   }
 
   return {
@@ -534,8 +512,7 @@ export function buildOpenCodeConfig(
   };
 }
 
-export function getInstallKind(item: MarketplaceItem): InstallKind | 'workflow' | 'unsupported' {
-  if (item.kind === 'workflow') return 'workflow';
+export function getInstallKind(item: MarketplaceItem): InstallKind | 'unsupported' {
   if (item.kind === 'package' && item.npmPackage) return 'mcp-config-patch';
   if (
     item.kind === 'package' &&
@@ -547,15 +524,10 @@ export function getInstallKind(item: MarketplaceItem): InstallKind | 'workflow' 
   return 'unsupported';
 }
 
-export function workflowPluginName(workflow: WorkflowMarketplaceItem): string {
-  return workflow.id.replace(/^wf-/, 'skill-');
-}
-
 export function normalizeCategory(category: string): MarketplaceCategory {
   const normalized = normalize(category);
   if (normalized === 'packages') return 'package';
-  if (normalized === 'workflows') return 'workflow';
-  if (['all', 'package', 'mcp', 'prompt', 'workflow', 'skill'].includes(normalized)) {
+  if (['all', 'package', 'mcp', 'prompt', 'skill'].includes(normalized)) {
     return normalized as MarketplaceCategory;
   }
   return 'all';
@@ -563,14 +535,13 @@ export function normalizeCategory(category: string): MarketplaceCategory {
 
 export function similarItems(
   id: string,
-  options?: { limit?: number; type?: MarketplaceItemType }
+  options?: { limit?: number; type?: string }
 ): MarketplaceItem[] {
   const target = findMarketplaceItem(id, options ? { type: options.type } : undefined);
   if (!target) return [];
 
   const allItems = getMarketplaceItems().filter((item) => {
     if (options?.type === 'package' && item.kind !== 'package') return false;
-    if (options?.type === 'workflow' && item.kind !== 'workflow') return false;
     return item.id !== target.id;
   });
 
@@ -621,7 +592,6 @@ export function similarItems(
 function matchesCategory(item: MarketplaceItem, category: MarketplaceCategory): boolean {
   if (category === 'all') return true;
   if (category === 'package') return item.kind === 'package';
-  if (category === 'workflow') return item.kind === 'workflow' || item.category === 'workflow';
   return item.category === category;
 }
 

@@ -39,7 +39,6 @@ function toFederatedItem(item: HubItem, fetchedAt: string): FederatedItem {
     repository: item.repository,
     npmPackage: item.npmPackage,
     createdAt: item.createdAt,
-    pricing: item.pricing,
     source: item.source,
     pushedAt: item.pushedAt
   };

@@ -107,7 +107,6 @@ function toHubItem(raw: RawHfItem, endpoint: string, fetchedAt: string): HubItem
     installs: raw.downloads ?? 0,
     repository: `https://huggingface.co/${raw.id}`,
     createdAt: raw.createdAt ?? fetchedAt,
-    pricing: { kind: 'free' },
     fetchedAt,
     pushedAt: raw.lastModified ?? fetchedAt,
     license: null, // HF licenses are buried — leave null for v1
@@ -116,7 +115,7 @@ function toHubItem(raw: RawHfItem, endpoint: string, fetchedAt: string): HubItem
 }
 
 function categorizeHf(_endpoint: string, _raw: RawHfItem): HubItem['category'] {
-  // Models/datasets/spaces all map to 'workflow' for v1 — they're not MCP/skills/prompts.
-  // Refine later if needed.
-  return 'workflow';
+  // Models/datasets/spaces are none of mcp/prompt/skill, and guessing one
+  // would be a classification claim we cannot support.
+  return 'other';
 }

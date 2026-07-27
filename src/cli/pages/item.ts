@@ -20,7 +20,6 @@ import {
   frame,
   kvRow,
   pageHeader,
-  pill,
   provenanceBadges,
   rule,
   spinnerFrame,
@@ -183,11 +182,7 @@ export const itemPage: Page = {
     const prov = item.provenance.map((p) => p.source);
     const body: string[] = [];
 
-    const pricePill =
-      item.kind === 'package' && item.pricing?.kind === 'paid'
-        ? pill('PAID', 'accent', theme) + ' '
-        : '';
-    body.push(' ' + pricePill + theme.bold(theme.accent(item.name)) + theme.muted('  ' + item.id));
+    body.push(' ' + theme.bold(theme.accent(item.name)) + theme.muted('  ' + item.id));
     body.push(' ' + provenanceBadges(prov, theme));
 
     const metaParts: string[] = [];

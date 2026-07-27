@@ -72,7 +72,7 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
     {
       description:
         'Search the multi-source MCP catalog (official MCP Registry + local bundled catalog, ' +
-        'deduped across sources) for MCP servers and workflows. Mirrors `agora search --json`.',
+        'deduped across sources) for MCP servers and Agent Skills. Mirrors `agora search --json`.',
       inputSchema: z.object({
         query: z.string().describe('Search keywords'),
         source: z

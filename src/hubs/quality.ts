@@ -58,7 +58,7 @@ export function categorize(repo: RawGithubRepo): HubItem['category'] {
     return 'mcp';
   if (topics.some((t) => t === 'claude-skill' || t === 'skill')) return 'skill';
   if (topics.some((t) => t === 'prompt' || t === 'prompts')) return 'prompt';
-  return 'workflow';
+  return 'other';
 }
 
 export function toHubItem(repo: RawGithubRepo, fetchedAt: string): HubItem {
@@ -75,7 +75,6 @@ export function toHubItem(repo: RawGithubRepo, fetchedAt: string): HubItem {
     installs: repo.stargazers_count, // proxy for v1
     repository: repo.html_url,
     createdAt: repo.created_at,
-    pricing: { kind: 'free' },
     fetchedAt,
     pushedAt: repo.pushed_at,
     license: repo.license?.spdx_id ?? null,

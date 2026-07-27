@@ -49,28 +49,6 @@ describe('agora try', () => {
     }
   });
 
-  test('workflow item → friendly message, exit 0 (no mcp entry)', async () => {
-    // wf- items are workflows; buildOpenCodeConfig produces no mcp entry for them
-    clearMarketplaceItemsCache();
-    const cwd = mkdtempSync(join(tmpdir(), 'agora-try-'));
-    try {
-      const { io, out } = makeIo(cwd);
-      // Find a workflow item id from the bundled data
-      const { getMarketplaceItems } = await import('../../src/catalog/bundled');
-      const wf = getMarketplaceItems().find((i) => i.kind === 'workflow');
-      if (!wf) {
-        // If no workflows in data, skip gracefully
-        return;
-      }
-      const code = await runCli(['try', wf.id, '--skip-scan'], io);
-      // Workflow items have no MCP entry → friendly message, exit 0
-      expect(code).toBe(0);
-      expect(out()).toMatch(/does not expose an MCP server|nothing to try/i);
-    } finally {
-      rmSync(cwd, { recursive: true, force: true });
-    }
-  });
-
   test('--json with local MCP item: derives command and includes probe result', async () => {
     // Find the first item with an npm package (mcp-config-patch kind)
     clearMarketplaceItemsCache();

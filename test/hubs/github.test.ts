@@ -89,7 +89,6 @@ describe('searchGithub()', () => {
     const item = items[0];
     expect(item.id).toBe('gh:owner/repo-b');
     expect(item.source).toBe('github');
-    expect(item.pricing).toEqual({ kind: 'free' });
     expect(typeof item.stars).toBe('number');
     expect(typeof item.fetchedAt).toBe('string');
   });

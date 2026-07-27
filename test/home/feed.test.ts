@@ -78,27 +78,7 @@ function makeManifest(names: string[]): StackManifest {
   return { mcp };
 }
 
-function makeHotItem(
-  id: string,
-  name: string,
-  kind: 'package' | 'workflow' = 'package'
-): MarketplaceItem {
-  if (kind === 'workflow') {
-    return {
-      id,
-      name,
-      description: `${name} workflow`,
-      author: 'test',
-      kind: 'workflow',
-      category: 'workflow',
-      tags: [],
-      stars: 100,
-      installs: 50,
-      createdAt: '2025-01-01T00:00:00.000Z',
-      forks: 5,
-      prompt: ''
-    };
-  }
+function makeHotItem(id: string, name: string): MarketplaceItem {
   return {
     id,
     name,
@@ -111,8 +91,7 @@ function makeHotItem(
     installs: 500,
     createdAt: '2025-01-01T00:00:00.000Z',
     version: '1.0.0',
-    repository: `https://github.com/test/${id}`,
-    pricing: { kind: 'free' }
+    repository: `https://github.com/test/${id}`
   };
 }
 
@@ -364,22 +343,6 @@ describe('computeOpportunities: gap', () => {
       hot
     });
     expect(ops.find((o) => o.kind === 'gap')).toBeUndefined();
-  });
-
-  test('skips workflow items', () => {
-    const hot = [
-      makeHotItem('wf-some-workflow', 'Some Workflow', 'workflow'),
-      makeHotItem('pkg-real', 'Real Package', 'package')
-    ];
-    const ops = computeOpportunities({
-      servers: [],
-      manifest: makeManifest([]),
-      health: makeHealth(),
-      hot
-    });
-    const gaps = ops.filter((o) => o.kind === 'gap');
-    // workflow is skipped; getting-started fires instead but gap should not include workflow
-    expect(gaps.every((g) => g.command?.includes('pkg-real'))).toBe(true);
   });
 
   test('caps gap suggestions at 2', () => {

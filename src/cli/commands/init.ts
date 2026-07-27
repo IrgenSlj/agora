@@ -273,8 +273,6 @@ export const commandInit: CommandHandler = async (parsed, io, style) => {
         io.stdout,
         '  Agora MCP server registered — `agora mcp` is available as an MCP tool.'
       );
-    if (plan.workflows.length)
-      writeLine(io.stdout, `  ${plan.workflows.length} workflows available via \`agora use\`.`);
     for (const note of plan.notes) writeLine(io.stdout, `  ${note}`);
   } else {
     writeLine(io.stdout, '\n--- Dry run ---');

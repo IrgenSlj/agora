@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import type { PackageMarketplaceItem, WorkflowMarketplaceItem } from '../src/catalog/bundled';
+import type { PackageMarketplaceItem } from '../src/catalog/bundled';
 import { samplePackages } from '../src/data';
 import { scanItem } from '../src/scan';
 
@@ -15,24 +15,6 @@ function makePackage(overrides: Partial<PackageMarketplaceItem> = {}): PackageMa
     tags: ['test'],
     stars: 10,
     installs: 100,
-    createdAt: '2025-01-01T00:00:00Z',
-    ...overrides
-  };
-}
-
-function makeWorkflow(overrides: Partial<WorkflowMarketplaceItem> = {}): WorkflowMarketplaceItem {
-  return {
-    kind: 'workflow',
-    id: 'wf-test',
-    name: 'Test Workflow',
-    description: 'A test workflow',
-    author: 'tester',
-    prompt: 'Do something',
-    tags: ['test'],
-    stars: 5,
-    forks: 2,
-    installs: 2,
-    category: 'workflow',
     createdAt: '2025-01-01T00:00:00Z',
     ...overrides
   };
@@ -329,27 +311,6 @@ describe('flag_count_low', () => {
 
 // ── workflow scan ──────────────────────────────────────────────────────────
 
-describe('workflow scan', () => {
-  test('returns workflow_kind + flag_count_low + description_injection', async () => {
-    const item = makeWorkflow();
-    const result = await scanItem(item);
-    expect(result.itemKind).toBe('workflow');
-    expect(result.checks.length).toBe(3);
-    expect(result.checks[0].name).toBe('workflow_kind');
-    expect(result.checks[0].status).toBe('pass');
-    expect(result.checks[1].name).toBe('flag_count_low');
-    expect(result.checks[2].name).toBe('description_injection');
-  });
-
-  test('workflow flag_count_low pass when no flags', async () => {
-    const item = makeWorkflow();
-    const result = await scanItem(item);
-    const check = result.checks.find((c) => c.name === 'flag_count_low')!;
-    expect(check.status).toBe('pass');
-    expect(check.message).toBe('0 flags');
-  });
-});
-
 // ── summary counts ─────────────────────────────────────────────────────────
 
 describe('summary counts', () => {
@@ -359,13 +320,6 @@ describe('summary counts', () => {
       'registry.npmjs.org': { status: 200, body: { version: '1.0.0' } }
     });
     const result = await scanItem(item, { fetcher });
-    const total = result.summary.pass + result.summary.warn + result.summary.fail;
-    expect(total).toBe(result.checks.length);
-  });
-
-  test('summary adds up for workflow', async () => {
-    const item = makeWorkflow();
-    const result = await scanItem(item);
     const total = result.summary.pass + result.summary.warn + result.summary.fail;
     expect(total).toBe(result.checks.length);
   });

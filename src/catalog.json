@@ -14,9 +14,6 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-filesystem",
       "createdAt": "2024-11-21",
-      "pricing": {
-        "kind": "free"
-      },
       "permissions": {
         "fs": ["./**/*"]
       }
@@ -24,7 +21,7 @@
     {
       "id": "mcp-everything",
       "name": "@modelcontextprotocol/server-everything",
-      "description": "Reference MCP server exercising every protocol feature — tools, resources, prompts, and sampling",
+      "description": "Reference MCP server exercising every protocol feature \u2014 tools, resources, prompts, and sampling",
       "author": "Anthropic, PBC",
       "version": "2026.1.26",
       "category": "mcp",
@@ -33,15 +30,12 @@
       "installs": 82229,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-everything",
-      "createdAt": "2024-11-19",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-11-19"
     },
     {
       "id": "mcp-github",
       "name": "@modelcontextprotocol/server-github",
-      "description": "Full GitHub API integration — issues, PRs, repos, search, file contents, and releases",
+      "description": "Full GitHub API integration \u2014 issues, PRs, repos, search, file contents, and releases",
       "author": "Anthropic, PBC",
       "version": "2025.4.8",
       "category": "mcp",
@@ -50,15 +44,12 @@
       "installs": 119750,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-github",
-      "createdAt": "2024-11-21",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-11-21"
     },
     {
       "id": "mcp-gitlab",
       "name": "@modelcontextprotocol/server-gitlab",
-      "description": "GitLab API integration — projects, merge requests, issues, and file operations",
+      "description": "GitLab API integration \u2014 projects, merge requests, issues, and file operations",
       "author": "GitLab, PBC",
       "version": "2025.4.25",
       "category": "mcp",
@@ -67,15 +58,12 @@
       "installs": 6568,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-gitlab",
-      "createdAt": "2024-12-04",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-12-04"
     },
     {
       "id": "mcp-postgres",
       "name": "@modelcontextprotocol/server-postgres",
-      "description": "Read-only PostgreSQL database access — schema inspection and SQL query execution",
+      "description": "Read-only PostgreSQL database access \u2014 schema inspection and SQL query execution",
       "author": "Anthropic, PBC",
       "version": "0.6.2",
       "category": "mcp",
@@ -84,15 +72,12 @@
       "installs": 182440,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-postgres",
-      "createdAt": "2024-11-19",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-11-19"
     },
     {
       "id": "mcp-redis",
       "name": "@modelcontextprotocol/server-redis",
-      "description": "Redis key-value store operations — get/set, list management, and cache control",
+      "description": "Redis key-value store operations \u2014 get/set, list management, and cache control",
       "author": "Anthropic, PBC",
       "version": "2025.4.25",
       "category": "mcp",
@@ -101,15 +86,12 @@
       "installs": 2888,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-redis",
-      "createdAt": "2025-04-07",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-07"
     },
     {
       "id": "mcp-mongodb",
       "name": "mongodb-mcp-server",
-      "description": "MongoDB and Atlas integration — document queries, aggregation pipelines, and cluster management",
+      "description": "MongoDB and Atlas integration \u2014 document queries, aggregation pipelines, and cluster management",
       "author": "mongodb-js",
       "version": "1.10.0",
       "category": "mcp",
@@ -118,15 +100,12 @@
       "installs": 51183,
       "repository": "https://github.com/mongodb-js/mongodb-mcp-server",
       "npmPackage": "mongodb-mcp-server",
-      "createdAt": "2025-04-23",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-23"
     },
     {
       "id": "mcp-elasticsearch",
       "name": "@elastic/mcp-server-elasticsearch",
-      "description": "Elasticsearch integration — search, indexing, and cluster query management",
+      "description": "Elasticsearch integration \u2014 search, indexing, and cluster query management",
       "author": "Elastic",
       "version": "0.3.1",
       "category": "mcp",
@@ -135,15 +114,12 @@
       "installs": 1007,
       "repository": "https://github.com/elastic/mcp-server-elasticsearch",
       "npmPackage": "@elastic/mcp-server-elasticsearch",
-      "createdAt": "2025-03-24",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-24"
     },
     {
       "id": "mcp-supabase",
       "name": "@supabase/mcp-server-supabase",
-      "description": "Supabase project management — database, auth, storage, and edge functions",
+      "description": "Supabase project management \u2014 database, auth, storage, and edge functions",
       "author": "supabase-community",
       "version": "0.8.1",
       "category": "mcp",
@@ -152,15 +128,12 @@
       "installs": 68083,
       "repository": "https://github.com/supabase-community/supabase-mcp",
       "npmPackage": "@supabase/mcp-server-supabase",
-      "createdAt": "2025-03-28",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-28"
     },
     {
       "id": "mcp-openai",
       "name": "openai-mcp-server",
-      "description": "OpenAI API — GPT completions, embeddings, assistants, and file management",
+      "description": "OpenAI API \u2014 GPT completions, embeddings, assistants, and file management",
       "author": "openai",
       "version": "1.3.0",
       "category": "mcp",
@@ -170,9 +143,6 @@
       "repository": "https://github.com/openai/openai-mcp-server",
       "npmPackage": "openai-mcp-server",
       "createdAt": "2025-01-15",
-      "pricing": {
-        "kind": "free"
-      },
       "permissions": {
         "net": ["api.openai.com", "api.anthropic.com"]
       }
@@ -180,7 +150,7 @@
     {
       "id": "mcp-anthropic",
       "name": "@anthropic/mcp-server",
-      "description": "Anthropic Claude API — completions, messages, and tool use integration",
+      "description": "Anthropic Claude API \u2014 completions, messages, and tool use integration",
       "author": "Anthropic, PBC",
       "version": "0.4.1",
       "category": "mcp",
@@ -188,15 +158,12 @@
       "stars": 5678,
       "installs": 289000,
       "repository": "https://github.com/anthropics/anthropic-mcp-server",
-      "createdAt": "2025-04-01",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-01"
     },
     {
       "id": "mcp-replicate",
       "name": "replicate-mcp-server",
-      "description": "Run ML models via Replicate API — image generation, LLMs, audio, and video",
+      "description": "Run ML models via Replicate API \u2014 image generation, LLMs, audio, and video",
       "author": "Replicate",
       "version": "0.3.0",
       "category": "mcp",
@@ -205,15 +172,12 @@
       "installs": 34560,
       "repository": "https://github.com/replicate/replicate-mcp-server",
       "npmPackage": "replicate-mcp",
-      "createdAt": "2025-02-10",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-02-10"
     },
     {
       "id": "mcp-huggingface",
       "name": "hf-mcp-server",
-      "description": "Hugging Face inference API — text generation, embeddings, and model discovery",
+      "description": "Hugging Face inference API \u2014 text generation, embeddings, and model discovery",
       "author": "huggingface",
       "version": "0.5.0",
       "category": "mcp",
@@ -221,10 +185,7 @@
       "stars": 2340,
       "installs": 56780,
       "repository": "https://github.com/huggingface/hf-mcp-server",
-      "createdAt": "2025-03-05",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-05"
     },
     {
       "id": "mcp-sequential-thinking",
@@ -238,10 +199,7 @@
       "installs": 105931,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-sequential-thinking",
-      "createdAt": "2024-12-03",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-12-03"
     },
     {
       "id": "mcp-memory",
@@ -255,10 +213,7 @@
       "installs": 73433,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-memory",
-      "createdAt": "2024-11-21",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-11-21"
     },
     {
       "id": "mcp-context7",
@@ -272,10 +227,7 @@
       "installs": 1141616,
       "repository": "https://github.com/upstash/context7",
       "npmPackage": "@upstash/context7-mcp",
-      "createdAt": "2025-04-08",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-08"
     },
     {
       "id": "mcp-brave-search",
@@ -290,9 +242,6 @@
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-brave-search",
       "createdAt": "2024-11-21",
-      "pricing": {
-        "kind": "free"
-      },
       "permissions": {
         "net": ["api.brave.com", "api.duckduckgo.com", "serpapi.com"]
       }
@@ -309,15 +258,12 @@
       "installs": 28859,
       "repository": "https://github.com/tavily-ai/tavily-mcp",
       "npmPackage": "tavily-mcp",
-      "createdAt": "2025-01-27",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-01-27"
     },
     {
       "id": "mcp-exa",
       "name": "exa-mcp-server",
-      "description": "Exa AI search — web search, research, and content discovery for LLM contexts",
+      "description": "Exa AI search \u2014 web search, research, and content discovery for LLM contexts",
       "author": "Exa Labs",
       "version": "3.2.1",
       "category": "mcp",
@@ -326,10 +272,7 @@
       "installs": 12842,
       "repository": "https://github.com/exa-labs/exa-mcp-server",
       "npmPackage": "exa-mcp-server",
-      "createdAt": "2024-12-17",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-12-17"
     },
     {
       "id": "mcp-perplexity",
@@ -343,10 +286,7 @@
       "installs": 1452,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "server-perplexity-ask",
-      "createdAt": "2025-02-19",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-02-19"
     },
     {
       "id": "mcp-firecrawl",
@@ -361,9 +301,6 @@
       "repository": "https://github.com/firecrawl/firecrawl-mcp-server",
       "npmPackage": "firecrawl-mcp",
       "createdAt": "2025-02-21",
-      "pricing": {
-        "kind": "free"
-      },
       "permissions": {
         "net": ["*"]
       }
@@ -371,7 +308,7 @@
     {
       "id": "mcp-google-maps",
       "name": "@modelcontextprotocol/server-google-maps",
-      "description": "Google Maps integration — geocoding, places, directions, and distance queries",
+      "description": "Google Maps integration \u2014 geocoding, places, directions, and distance queries",
       "author": "Anthropic, PBC",
       "version": "0.6.2",
       "category": "mcp",
@@ -380,15 +317,12 @@
       "installs": 10487,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-google-maps",
-      "createdAt": "2024-11-21",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-11-21"
     },
     {
       "id": "mcp-puppeteer",
       "name": "@modelcontextprotocol/server-puppeteer",
-      "description": "Headless Chrome browser automation — navigation, screenshots, and JavaScript evaluation",
+      "description": "Headless Chrome browser automation \u2014 navigation, screenshots, and JavaScript evaluation",
       "author": "Anthropic, PBC",
       "version": "2025.5.12",
       "category": "mcp",
@@ -397,15 +331,12 @@
       "installs": 29680,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-puppeteer",
-      "createdAt": "2024-11-19",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-11-19"
     },
     {
       "id": "mcp-playwright",
       "name": "@playwright/mcp",
-      "description": "Official Playwright browser automation — accessibility-tree navigation, multi-page, and network control",
+      "description": "Official Playwright browser automation \u2014 accessibility-tree navigation, multi-page, and network control",
       "author": "Microsoft Corporation",
       "version": "0.0.75",
       "category": "mcp",
@@ -414,15 +345,12 @@
       "installs": 2613994,
       "repository": "https://github.com/microsoft/playwright-mcp",
       "npmPackage": "@playwright/mcp",
-      "createdAt": "2025-03-13",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-13"
     },
     {
       "id": "mcp-playwright-ea",
       "name": "@executeautomation/playwright-mcp-server",
-      "description": "Playwright automation and test code generation — browser control and scraping",
+      "description": "Playwright automation and test code generation \u2014 browser control and scraping",
       "author": "ExecuteAutomation, Ltd",
       "version": "1.0.12",
       "category": "mcp",
@@ -431,15 +359,12 @@
       "installs": 79058,
       "repository": "https://github.com/executeautomation/mcp-playwright",
       "npmPackage": "@executeautomation/playwright-mcp-server",
-      "createdAt": "2024-12-05",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-12-05"
     },
     {
       "id": "mcp-browsermcp",
       "name": "@browsermcp/mcp",
-      "description": "Automate your own browser — control your real Chrome profile, tabs, and sessions",
+      "description": "Automate your own browser \u2014 control your real Chrome profile, tabs, and sessions",
       "author": "Browser MCP",
       "version": "0.1.3",
       "category": "mcp",
@@ -447,15 +372,12 @@
       "stars": 0,
       "installs": 7461,
       "npmPackage": "@browsermcp/mcp",
-      "createdAt": "2025-04-05",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-05"
     },
     {
       "id": "mcp-linear",
       "name": "@linear/mcp-server",
-      "description": "Linear issue tracking — create and update issues, search projects, manage sprints",
+      "description": "Linear issue tracking \u2014 create and update issues, search projects, manage sprints",
       "author": "Linear",
       "version": "1.1.0",
       "category": "mcp",
@@ -463,15 +385,12 @@
       "stars": 6543,
       "installs": 189000,
       "repository": "https://github.com/linear/linear-mcp-server",
-      "createdAt": "2025-02-25",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-02-25"
     },
     {
       "id": "mcp-jira",
       "name": "jira-mcp-server",
-      "description": "Jira and Confluence — issue creation, search, project management, and wiki access",
+      "description": "Jira and Confluence \u2014 issue creation, search, project management, and wiki access",
       "author": "atlassian-labs",
       "version": "0.9.0",
       "category": "mcp",
@@ -480,15 +399,12 @@
       "installs": 98700,
       "repository": "https://github.com/atlassian-labs/jira-mcp-server",
       "npmPackage": "jira-mcp-server",
-      "createdAt": "2025-03-01",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-01"
     },
     {
       "id": "mcp-asana",
       "name": "asana-mcp-server",
-      "description": "Asana task and project management — tasks, projects, teams, and portfolio views",
+      "description": "Asana task and project management \u2014 tasks, projects, teams, and portfolio views",
       "author": "asana-community",
       "version": "0.4.0",
       "category": "mcp",
@@ -496,15 +412,12 @@
       "stars": 450,
       "installs": 12300,
       "repository": "https://github.com/asana-community/asana-mcp-server",
-      "createdAt": "2025-04-10",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-10"
     },
     {
       "id": "mcp-obsidian",
       "name": "obsidian-mcp-server",
-      "description": "Obsidian vault access — read, search, and create notes across your knowledge base",
+      "description": "Obsidian vault access \u2014 read, search, and create notes across your knowledge base",
       "author": "obsidian-mcp",
       "version": "1.5.0",
       "category": "mcp",
@@ -514,9 +427,6 @@
       "repository": "https://github.com/obsidian-mcp/obsidian-mcp-server",
       "npmPackage": "obsidian-mcp-server",
       "createdAt": "2025-01-25",
-      "pricing": {
-        "kind": "free"
-      },
       "permissions": {
         "fs": ["~/.obsidian/**/*", "./**/*.md"]
       }
@@ -524,7 +434,7 @@
     {
       "id": "mcp-confluence",
       "name": "confluence-mcp-server",
-      "description": "Confluence wiki — pages, search, spaces, and content management for documentation",
+      "description": "Confluence wiki \u2014 pages, search, spaces, and content management for documentation",
       "author": "atlassian-labs",
       "version": "0.3.0",
       "category": "mcp",
@@ -533,15 +443,12 @@
       "installs": 23400,
       "repository": "https://github.com/atlassian-labs/confluence-mcp-server",
       "npmPackage": "confluence-mcp-server",
-      "createdAt": "2025-04-05",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-05"
     },
     {
       "id": "mcp-sonarqube",
       "name": "@sonarsource/mcp-server-sonarqube",
-      "description": "SonarQube code quality — issues, metrics, quality gates, and project analysis",
+      "description": "SonarQube code quality \u2014 issues, metrics, quality gates, and project analysis",
       "author": "SonarSource",
       "version": "0.5.0",
       "category": "mcp",
@@ -549,15 +456,12 @@
       "stars": 560,
       "installs": 18900,
       "repository": "https://github.com/SonarSource/sonarqube-mcp-server",
-      "createdAt": "2025-03-20",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-20"
     },
     {
       "id": "mcp-snyk",
       "name": "snyk-mcp-server",
-      "description": "Snyk vulnerability scanning — dependency checks, container scanning, and IaC analysis",
+      "description": "Snyk vulnerability scanning \u2014 dependency checks, container scanning, and IaC analysis",
       "author": "snyk-labs",
       "version": "0.3.0",
       "category": "mcp",
@@ -565,15 +469,12 @@
       "stars": 780,
       "installs": 34500,
       "repository": "https://github.com/snyk-labs/snyk-mcp-server",
-      "createdAt": "2025-04-15",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-15"
     },
     {
       "id": "mcp-aws",
       "name": "@aws/mcp-server-aws",
-      "description": "AWS cloud management — EC2, S3, Lambda, IAM, and cost management across services",
+      "description": "AWS cloud management \u2014 EC2, S3, Lambda, IAM, and cost management across services",
       "author": "Amazon Web Services",
       "version": "0.6.0",
       "category": "mcp",
@@ -581,15 +482,12 @@
       "stars": 4500,
       "installs": 156000,
       "repository": "https://github.com/awslabs/aws-mcp-server",
-      "createdAt": "2025-02-01",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-02-01"
     },
     {
       "id": "mcp-vercel",
       "name": "@vercel/mcp-server",
-      "description": "Vercel deployment management — projects, deployments, domains, and environment variables",
+      "description": "Vercel deployment management \u2014 projects, deployments, domains, and environment variables",
       "author": "Vercel",
       "version": "0.4.0",
       "category": "mcp",
@@ -597,15 +495,12 @@
       "stars": 3400,
       "installs": 89000,
       "repository": "https://github.com/vercel/vercel-mcp-server",
-      "createdAt": "2025-03-01",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-01"
     },
     {
       "id": "mcp-netlify",
       "name": "@netlify/mcp-server",
-      "description": "Netlify deployment management — sites, deploys, functions, and environment config",
+      "description": "Netlify deployment management \u2014 sites, deploys, functions, and environment config",
       "author": "Netlify",
       "version": "0.3.0",
       "category": "mcp",
@@ -614,15 +509,12 @@
       "installs": 23400,
       "repository": "https://github.com/netlify/netlify-mcp-server",
       "npmPackage": "@netlify/mcp",
-      "createdAt": "2025-04-01",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-01"
     },
     {
       "id": "mcp-discord",
       "name": "discord-mcp-server",
-      "description": "Discord integration — messages, channels, server management, and webhook control",
+      "description": "Discord integration \u2014 messages, channels, server management, and webhook control",
       "author": "discord-community",
       "version": "0.6.0",
       "category": "mcp",
@@ -631,15 +523,12 @@
       "installs": 98700,
       "repository": "https://github.com/discord-community/discord-mcp-server",
       "npmPackage": "discord-mcp-server",
-      "createdAt": "2025-03-05",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-05"
     },
     {
       "id": "mcp-email",
       "name": "@sendgrid/mcp-server",
-      "description": "Email delivery via SendGrid — send transactional emails, manage templates, and analytics",
+      "description": "Email delivery via SendGrid \u2014 send transactional emails, manage templates, and analytics",
       "author": "sendgrid-community",
       "version": "0.3.0",
       "category": "mcp",
@@ -648,15 +537,12 @@
       "installs": 23400,
       "repository": "https://github.com/sendgrid-community/sendgrid-mcp-server",
       "npmPackage": "sendgrid-mcp",
-      "createdAt": "2025-04-15",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-15"
     },
     {
       "id": "mcp-slack",
       "name": "@modelcontextprotocol/server-slack",
-      "description": "Slack workspace integration — messaging, channel management, and user presence",
+      "description": "Slack workspace integration \u2014 messaging, channel management, and user presence",
       "author": "Anthropic, PBC",
       "version": "2025.4.25",
       "category": "mcp",
@@ -665,15 +551,12 @@
       "installs": 62239,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-slack",
-      "createdAt": "2024-11-19",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-11-19"
     },
     {
       "id": "mcp-notion",
       "name": "@notionhq/notion-mcp-server",
-      "description": "Official Notion integration — pages, databases, search, and content management",
+      "description": "Official Notion integration \u2014 pages, databases, search, and content management",
       "author": "notionhq",
       "version": "2.2.1",
       "category": "mcp",
@@ -682,15 +565,12 @@
       "installs": 67119,
       "repository": "https://github.com/makenotion/notion-mcp-server",
       "npmPackage": "@notionhq/notion-mcp-server",
-      "createdAt": "2025-04-03",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-03"
     },
     {
       "id": "mcp-gdrive",
       "name": "@modelcontextprotocol/server-gdrive",
-      "description": "Google Drive integration — list, search, and read files across a Drive account",
+      "description": "Google Drive integration \u2014 list, search, and read files across a Drive account",
       "author": "Anthropic, PBC",
       "version": "2025.1.14",
       "category": "mcp",
@@ -699,15 +579,12 @@
       "installs": 8678,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-gdrive",
-      "createdAt": "2024-11-19",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-11-19"
     },
     {
       "id": "mcp-figma",
       "name": "figma-developer-mcp",
-      "description": "Figma layout and design data for AI coding agents — convert designs to code accurately",
+      "description": "Figma layout and design data for AI coding agents \u2014 convert designs to code accurately",
       "author": "GLips",
       "version": "0.11.0",
       "category": "mcp",
@@ -716,10 +593,7 @@
       "installs": 53549,
       "repository": "https://github.com/GLips/Figma-Context-MCP",
       "npmPackage": "figma-developer-mcp",
-      "createdAt": "2025-02-22",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-02-22"
     },
     {
       "id": "mcp-magic",
@@ -733,15 +607,12 @@
       "installs": 11231,
       "repository": "https://github.com/21st-dev/magic-mcp",
       "npmPackage": "@21st-dev/magic",
-      "createdAt": "2025-03-11",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-11"
     },
     {
       "id": "mcp-docker",
       "name": "mcp-docker-server",
-      "description": "Docker container management — images, containers, compose, logs, and exec",
+      "description": "Docker container management \u2014 images, containers, compose, logs, and exec",
       "author": "docker-labs",
       "version": "1.2.0",
       "category": "mcp",
@@ -751,9 +622,6 @@
       "repository": "https://github.com/docker-labs/mcp-docker-server",
       "npmPackage": "mcp-docker-server",
       "createdAt": "2025-01-20",
-      "pricing": {
-        "kind": "free"
-      },
       "permissions": {
         "exec": ["docker"],
         "fs": ["./**/*"]
@@ -762,7 +630,7 @@
     {
       "id": "mcp-sqlite",
       "name": "@sqlite/mcp-server",
-      "description": "SQLite database management — queries, schema inspection, and data migration",
+      "description": "SQLite database management \u2014 queries, schema inspection, and data migration",
       "author": "sqlite-community",
       "version": "0.8.2",
       "category": "mcp",
@@ -771,15 +639,12 @@
       "installs": 128000,
       "repository": "https://github.com/sqlite-community/sqlite-mcp",
       "npmPackage": "@easy-mcps/sqlite-mcp-server",
-      "createdAt": "2025-02-15",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-02-15"
     },
     {
       "id": "mcp-pinecone",
       "name": "pinecone-mcp-server",
-      "description": "Pinecone vector database — index management, upsert, query, and namespace ops",
+      "description": "Pinecone vector database \u2014 index management, upsert, query, and namespace ops",
       "author": "pinecone-io",
       "version": "0.4.0",
       "category": "mcp",
@@ -788,15 +653,12 @@
       "installs": 23450,
       "repository": "https://github.com/pinecone-io/pinecone-mcp-server",
       "npmPackage": "pinecone-mcp",
-      "createdAt": "2025-03-10",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-10"
     },
     {
       "id": "mcp-qdrant",
       "name": "qdrant-mcp-server",
-      "description": "Qdrant vector search — collection management, point operations, and filtering",
+      "description": "Qdrant vector search \u2014 collection management, point operations, and filtering",
       "author": "qdrant",
       "version": "0.6.0",
       "category": "mcp",
@@ -805,15 +667,12 @@
       "installs": 18900,
       "repository": "https://github.com/qdrant/qdrant-mcp-server",
       "npmPackage": "qdrant-mcp-server",
-      "createdAt": "2025-03-15",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-15"
     },
     {
       "id": "mcp-chromadb",
       "name": "chromadb-mcp-server",
-      "description": "ChromaDB vector store — collections, document embeddings, and similarity search",
+      "description": "ChromaDB vector store \u2014 collections, document embeddings, and similarity search",
       "author": "chroma-core",
       "version": "0.3.1",
       "category": "mcp",
@@ -822,15 +681,12 @@
       "installs": 45600,
       "repository": "https://github.com/chroma-core/chromadb-mcp-server",
       "npmPackage": "chromadb-mcp",
-      "createdAt": "2025-04-01",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-01"
     },
     {
       "id": "mcp-neo4j",
       "name": "neo4j-mcp-server",
-      "description": "Neo4j graph database — Cypher queries, schema management, and graph analytics",
+      "description": "Neo4j graph database \u2014 Cypher queries, schema management, and graph analytics",
       "author": "neo4j",
       "version": "0.5.0",
       "category": "mcp",
@@ -838,15 +694,12 @@
       "stars": 2100,
       "installs": 56700,
       "repository": "https://github.com/neo4j/neo4j-mcp-server",
-      "createdAt": "2025-02-20",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-02-20"
     },
     {
       "id": "mcp-cloudflare",
       "name": "@cloudflare/mcp-server-cloudflare",
-      "description": "Cloudflare API — Workers, KV, R2, D1, DNS, and account management",
+      "description": "Cloudflare API \u2014 Workers, KV, R2, D1, DNS, and account management",
       "author": "Cloudflare, Inc.",
       "version": "0.2.0",
       "category": "mcp",
@@ -854,15 +707,12 @@
       "stars": 0,
       "installs": 2249,
       "npmPackage": "@cloudflare/mcp-server-cloudflare",
-      "createdAt": "2024-11-27",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2024-11-27"
     },
     {
       "id": "mcp-kubernetes",
       "name": "mcp-server-kubernetes",
-      "description": "Kubernetes cluster management — pods, deployments, services, logs, and Helm",
+      "description": "Kubernetes cluster management \u2014 pods, deployments, services, logs, and Helm",
       "author": "Flux159",
       "version": "3.5.1",
       "category": "mcp",
@@ -872,9 +722,6 @@
       "repository": "https://github.com/Flux159/mcp-server-kubernetes",
       "npmPackage": "mcp-server-kubernetes",
       "createdAt": "2024-12-10",
-      "pricing": {
-        "kind": "free"
-      },
       "permissions": {
         "exec": ["kubectl", "helm"]
       }
@@ -882,7 +729,7 @@
     {
       "id": "mcp-heroku",
       "name": "@heroku/mcp-server",
-      "description": "Heroku platform management — apps, dynos, add-ons, releases, and config vars",
+      "description": "Heroku platform management \u2014 apps, dynos, add-ons, releases, and config vars",
       "author": "Heroku",
       "version": "1.2.2",
       "category": "mcp",
@@ -891,10 +738,7 @@
       "installs": 5693,
       "repository": "https://github.com/heroku/heroku-mcp-server",
       "npmPackage": "@heroku/mcp-server",
-      "createdAt": "2025-04-07",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-07"
     },
     {
       "id": "mcp-aws-kb",
@@ -908,10 +752,7 @@
       "installs": 403,
       "repository": "https://github.com/modelcontextprotocol/servers",
       "npmPackage": "@modelcontextprotocol/server-aws-kb-retrieval",
-      "createdAt": "2025-01-14",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-01-14"
     },
     {
       "id": "mcp-remote",
@@ -925,15 +766,12 @@
       "installs": 354615,
       "repository": "https://github.com/geelen/mcp-remote",
       "npmPackage": "mcp-remote",
-      "createdAt": "2025-03-17",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-17"
     },
     {
       "id": "mcp-datadog",
       "name": "@datadog/mcp-server",
-      "description": "Datadog monitoring — dashboards, monitors, logs, traces, and incident management",
+      "description": "Datadog monitoring \u2014 dashboards, monitors, logs, traces, and incident management",
       "author": "DataDog",
       "version": "0.5.0",
       "category": "mcp",
@@ -942,15 +780,12 @@
       "installs": 45600,
       "repository": "https://github.com/DataDog/datadog-mcp-server",
       "npmPackage": "datadog-mcp",
-      "createdAt": "2025-03-10",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-10"
     },
     {
       "id": "mcp-grafana",
       "name": "grafana-mcp-server",
-      "description": "Grafana dashboards — query metrics, manage alerts, and explore observability data",
+      "description": "Grafana dashboards \u2014 query metrics, manage alerts, and explore observability data",
       "author": "grafana-community",
       "version": "0.4.0",
       "category": "mcp",
@@ -958,15 +793,12 @@
       "stars": 2340,
       "installs": 67800,
       "repository": "https://github.com/grafana-community/grafana-mcp-server",
-      "createdAt": "2025-02-20",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-02-20"
     },
     {
       "id": "mcp-pagerduty",
       "name": "pagerduty-mcp-server",
-      "description": "PagerDuty incident management — incidents, on-call schedules, and escalation policies",
+      "description": "PagerDuty incident management \u2014 incidents, on-call schedules, and escalation policies",
       "author": "PagerDuty",
       "version": "0.3.5",
       "category": "mcp",
@@ -974,15 +806,12 @@
       "stars": 560,
       "installs": 18900,
       "repository": "https://github.com/PagerDuty/pagerduty-mcp-server",
-      "createdAt": "2025-04-01",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-01"
     },
     {
       "id": "mcp-newrelic",
       "name": "@newrelic/mcp-server",
-      "description": "New Relic observability — APM, infrastructure, logs, and query NRQL across services",
+      "description": "New Relic observability \u2014 APM, infrastructure, logs, and query NRQL across services",
       "author": "New Relic",
       "version": "0.3.0",
       "category": "mcp",
@@ -990,15 +819,12 @@
       "stars": 340,
       "installs": 12300,
       "repository": "https://github.com/newrelic/newrelic-mcp-server",
-      "createdAt": "2025-04-10",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-10"
     },
     {
       "id": "mcp-sentry",
       "name": "@sentry/mcp-server",
-      "description": "Sentry error tracking — issues, events, releases, and performance monitoring",
+      "description": "Sentry error tracking \u2014 issues, events, releases, and performance monitoring",
       "author": "getsentry",
       "version": "0.33.0",
       "category": "mcp",
@@ -1007,15 +833,12 @@
       "installs": 90109,
       "repository": "https://github.com/getsentry/sentry-mcp",
       "npmPackage": "@sentry/mcp-server",
-      "createdAt": "2025-04-24",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-24"
     },
     {
       "id": "mcp-stripe",
       "name": "@stripe/mcp",
-      "description": "Stripe payments — customers, products, prices, invoices, and payment links",
+      "description": "Stripe payments \u2014 customers, products, prices, invoices, and payment links",
       "author": "Stripe",
       "version": "0.3.3",
       "category": "mcp",
@@ -1024,15 +847,12 @@
       "installs": 22628,
       "repository": "https://github.com/stripe/ai",
       "npmPackage": "@stripe/mcp",
-      "createdAt": "2025-02-19",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-02-19"
     },
     {
       "id": "mcp-sequelize",
       "name": "@anthropic/mcp-server-sequelize",
-      "description": "Sequelize ORM integration — model management, migrations, query inspection",
+      "description": "Sequelize ORM integration \u2014 model management, migrations, query inspection",
       "author": "Anthropic, PBC",
       "version": "0.1.0",
       "category": "mcp",
@@ -1040,10 +860,7 @@
       "stars": 2840,
       "installs": 12400,
       "repository": "https://github.com/modelcontextprotocol/servers",
-      "createdAt": "2025-03-10",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-10"
     },
     {
       "id": "prompt-code-review",
@@ -1055,10 +872,7 @@
       "tags": ["review", "security", "best-practices", "quality"],
       "stars": 1200,
       "installs": 8900,
-      "createdAt": "2025-01-10",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-01-10"
     },
     {
       "id": "prompt-api-design",
@@ -1070,10 +884,7 @@
       "tags": ["api", "design", "rest", "graphql"],
       "stars": 560,
       "installs": 3400,
-      "createdAt": "2025-02-20",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-02-20"
     },
     {
       "id": "prompt-refactor-plan",
@@ -1085,25 +896,19 @@
       "tags": ["refactor", "planning", "safety", "testing"],
       "stars": 780,
       "installs": 4500,
-      "createdAt": "2025-03-01",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-03-01"
     },
     {
       "id": "prompt-debug-session",
       "name": "Structured Debugging",
-      "description": "Systematic root-cause analysis — form hypotheses, gather evidence, identify the bug",
+      "description": "Systematic root-cause analysis \u2014 form hypotheses, gather evidence, identify the bug",
       "author": "agora-community",
       "version": "1.0.0",
       "category": "prompt",
       "tags": ["debug", "root-cause", "analysis", "troubleshooting"],
       "stars": 920,
       "installs": 6200,
-      "createdAt": "2025-04-10",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-10"
     },
     {
       "id": "prompt-test-strategy",
@@ -1115,160 +920,19 @@
       "tags": ["testing", "strategy", "quality", "coverage"],
       "stars": 410,
       "installs": 2100,
-      "createdAt": "2025-04-20",
-      "pricing": {
-        "kind": "free"
-      }
+      "createdAt": "2025-04-20"
     },
     {
       "id": "prompt-migration-plan",
       "name": "Migration Plan Generator",
-      "description": "Plan safe, phased migrations — framework upgrades, database migrations, cloud provider moves",
+      "description": "Plan safe, phased migrations \u2014 framework upgrades, database migrations, cloud provider moves",
       "author": "agora-community",
       "version": "1.0.0",
       "category": "prompt",
       "tags": ["migration", "planning", "safety", "rollback"],
       "stars": 340,
       "installs": 1800,
-      "createdAt": "2025-05-01",
-      "pricing": {
-        "kind": "free"
-      }
-    }
-  ],
-  "sampleWorkflows": [
-    {
-      "id": "wf-tdd-cycle",
-      "name": "TDD Development Cycle",
-      "description": "Test-driven development — write failing test, implement, refactor. Repeat.",
-      "author": "testdriven",
-      "prompt": "You are following TDD methodology. For each feature request:\n1. Write a failing test first\n2. Write minimal code to pass the test\n3. Refactor while keeping tests green\n\nAlways start by understanding the requirements and writing tests that describe expected behavior.",
-      "model": "claude-sonnet-4-5",
-      "tags": ["tdd", "testing", "workflow", "methodology"],
-      "stars": 456,
-      "forks": 89,
-      "createdAt": "2025-01-20"
-    },
-    {
-      "id": "wf-security-audit",
-      "name": "Security Audit Workflow",
-      "description": "Thorough security analysis covering OWASP Top 10, secrets, and dependency vulnerabilities",
-      "author": "security-first",
-      "prompt": "Perform a thorough security audit of the codebase:\n1. Check for OWASP Top 10 vulnerabilities\n2. Look for hardcoded secrets and credentials\n3. Validate input sanitization\n4. Check dependency vulnerabilities\n5. Review authentication and authorization\n6. Verify CSRF and XSS protections\n\nReport findings with severity levels (Critical/High/Medium/Low) and suggested fixes.",
-      "tags": ["security", "audit", "owasp", "vulnerability"],
-      "stars": 234,
-      "forks": 45,
-      "createdAt": "2025-02-01"
-    },
-    {
-      "id": "wf-api-design",
-      "name": "API Design Review",
-      "description": "Review API endpoints for RESTful best practices, consistency, and developer experience",
-      "author": "api-craft",
-      "prompt": "Review the API design against these criteria:\n1. RESTful resource naming consistency\n2. HTTP method usage correctness\n3. Request/response structure\n4. Error handling and status codes\n5. Authentication and authorization\n6. Pagination, filtering, and sorting patterns\n7. Rate limiting documentation\n8. Versioning strategy\n\nProvide specific recommendations for each issue found.",
-      "tags": ["api", "design", "review", "rest"],
-      "stars": 189,
-      "forks": 34,
-      "createdAt": "2025-02-15"
-    },
-    {
-      "id": "wf-refactor-large",
-      "name": "Large Scale Refactor",
-      "description": "Safe, incremental refactoring strategy for large codebases with minimal risk",
-      "author": "agora-community",
-      "prompt": "Plan and execute a large-scale refactor:\n1. Map the current architecture and dependencies\n2. Identify refactoring targets by risk level\n3. Break the refactor into small, reversible steps\n4. Ensure test coverage before each change\n5. Execute changes incrementally\n6. Verify no regressions after each step\n7. Update documentation\n\nAlways prioritize keeping the system working over speed of refactoring.",
-      "tags": ["refactor", "large-scale", "safety", "incremental"],
-      "stars": 312,
-      "forks": 67,
-      "createdAt": "2025-02-15"
-    },
-    {
-      "id": "wf-db-migration",
-      "name": "Database Migration Review",
-      "description": "Review SQL migrations for safety, performance, and rollback readiness",
-      "author": "dba-master",
-      "prompt": "Review the database migration:\n1. Check for backward compatibility\n2. Verify index usage and query performance\n3. Ensure rollback script exists and works\n4. Check data type correctness\n5. Validate constraint and foreign key handling\n6. Review for locking concerns\n7. Confirm zero-downtime deploy compatibility\n\nFlag any migration that could cause data loss or extended downtime.",
-      "tags": ["database", "migration", "sql", "safety"],
-      "stars": 156,
-      "forks": 28,
-      "createdAt": "2025-03-01"
-    },
-    {
-      "id": "wf-code-review-arch",
-      "name": "Architecture Review",
-      "description": "High-level architecture review focusing on modularity, coupling, and scalability",
-      "author": "arch-wizard",
-      "prompt": "Review the architecture:\n1. Evaluate module boundaries and separation of concerns\n2. Check for circular dependencies\n3. Review error propagation patterns\n4. Assess scalability of the design\n5. Verify logging and observability\n6. Check configuration management\n7. Review testing strategy completeness\n\nProvide a score (1-10) for each dimension with actionable improvements.",
-      "tags": ["architecture", "review", "design", "scalability"],
-      "stars": 198,
-      "forks": 42,
-      "createdAt": "2025-03-10"
-    },
-    {
-      "id": "wf-doc-generator",
-      "name": "Documentation Generator",
-      "description": "Generate comprehensive documentation for codebases — API docs, README, and inline comments",
-      "author": "doc-master",
-      "prompt": "Generate thorough documentation for the codebase:\n1. Create or update README with setup, usage, and architecture\n2. Document all public APIs with parameter descriptions\n3. Add inline code comments for complex logic\n4. Generate API reference docs from TypeScript types\n5. Create changelog from git history\n6. Add contributing guide\n7. Document environment variables and configuration\n\nFocus on clarity and completeness. The docs should help new contributors onboard quickly.",
-      "tags": ["documentation", "readme", "api-docs", "onboarding"],
-      "stars": 245,
-      "forks": 38,
-      "createdAt": "2025-04-05"
-    },
-    {
-      "id": "wf-postmortem",
-      "name": "Incident Post-Mortem",
-      "description": "Structured incident analysis — timeline, root cause, impact, and action items",
-      "author": "sre-team",
-      "prompt": "Conduct a blameless post-mortem analysis:\n1. Establish incident timeline from logs and metrics\n2. Identify root cause and contributing factors\n3. Document impact (users affected, downtime duration, data loss)\n4. Analyze detection and response time\n5. Identify systemic issues beyond the immediate cause\n6. Propose specific action items with owners\n7. Define monitoring to detect recurrence\n\nThe goal is learning, not blame. Every action item should be specific and testable.",
-      "tags": ["postmortem", "incident", "sre", "analysis"],
-      "stars": 189,
-      "forks": 45,
-      "createdAt": "2025-04-20"
-    },
-    {
-      "id": "wf-dependency-audit",
-      "name": "Dependency Audit",
-      "description": "Audit project dependencies for security, licensing, and maintenance status",
-      "author": "safety-first",
-      "prompt": "Audit all project dependencies:\n1. Check for known CVEs in each dependency\n2. Review license compatibility with your project\n3. Evaluate maintenance activity (last commit, release cadence)\n4. Identify unused or duplicate dependencies\n5. Check for deprecated packages\n6. Verify lockfile integrity\n7. Suggest alternatives for problematic dependencies\n\nPriority order: security issues first, licensing second, maintenance third.",
-      "tags": ["dependencies", "security", "audit", "npm"],
-      "stars": 134,
-      "forks": 23,
-      "createdAt": "2025-03-20"
-    },
-    {
-      "id": "wf-performance-audit",
-      "name": "Performance Audit",
-      "description": "Identify and fix performance bottlenecks in code and database queries",
-      "author": "perf-nerd",
-      "prompt": "Conduct a performance audit:\n1. Identify N+1 query patterns\n2. Review algorithm complexity (Big O)\n3. Check for memory leaks\n4. Review caching strategy\n5. Analyze bundle size and tree-shaking\n6. Check lazy-loading opportunities\n7. Review database query performance with EXPLAIN ANALYZE\n\nQuantify improvements where possible (e.g., \"reduces page load from 3s to 200ms\").",
-      "tags": ["performance", "optimization", "audit", "profiling"],
-      "stars": 167,
-      "forks": 31,
-      "createdAt": "2025-04-01"
-    },
-    {
-      "id": "wf-ci-cd-review",
-      "name": "CI/CD Pipeline Review",
-      "description": "Review CI/CD configuration for speed, reliability, and security best practices",
-      "author": "devops-pro",
-      "prompt": "Review the CI/CD pipeline:\n1. Check build caching effectiveness\n2. Verify test parallelization\n3. Review deployment stages and gates\n4. Check secret management\n5. Verify rollback procedures\n6. Review notification and alerting\n7. Check pipeline security (supply chain)\n\nSuggest specific config changes to reduce pipeline time and improve reliability.",
-      "tags": ["ci-cd", "devops", "pipeline", "automation"],
-      "stars": 112,
-      "forks": 19,
-      "createdAt": "2025-04-10"
-    },
-    {
-      "id": "wf-new-project",
-      "name": "New Project Scaffold",
-      "description": "Scaffold a new project with best-practice structure, tooling, and configuration",
-      "author": "agora-community",
-      "prompt": "Scaffold a new project:\n1. Set up the project structure following community best practices\n2. Configure TypeScript/linting/formatting\n3. Set up testing framework\n4. Configure CI/CD\n5. Add editor config and git hooks\n6. Create README with badges\n7. Set up dependency management\n8. Add Docker support if applicable\n\nAsk about the project type first, then generate a complete scaffold.",
-      "tags": ["scaffold", "new-project", "setup", "boilerplate"],
-      "stars": 278,
-      "forks": 52,
-      "createdAt": "2025-04-15"
+      "createdAt": "2025-05-01"
     }
   ],
   "trendingTags": [

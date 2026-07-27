@@ -1,7 +1,3 @@
-export type Pricing =
-  | { kind: 'free' }
-  | { kind: 'paid'; amountCents: number; currency: string; provider: 'stripe' | 'lemon' };
-
 export type InstallKind = 'git-clone' | 'mcp-config-patch' | 'package-install';
 
 export interface HubItem {
@@ -13,14 +9,13 @@ export interface HubItem {
   description: string;
   author: string;
   version: string; // default latest release tag, or commit short SHA
-  category: 'mcp' | 'prompt' | 'workflow' | 'skill';
+  category: 'mcp' | 'prompt' | 'skill' | 'other';
   tags: string[];
   stars: number;
   installs: number; // approximate; use stars as a proxy until we have download data
   repository: string;
   npmPackage?: string; // derived if topics include 'npm' or package.json was readable; leave undefined otherwise for v1
   createdAt: string; // ISO
-  pricing: Pricing; // always { kind: 'free' } for live items in v1
   fetchedAt: string; // ISO — needed for cache TTL
   // GitHub-specific extras stored on the item for later enrichment:
   pushedAt: string;

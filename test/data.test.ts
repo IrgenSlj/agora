@@ -3,7 +3,7 @@
  * Every assertion covers the FULL dataset, not just the first element.
  */
 import { describe, expect, test } from 'vitest';
-import { samplePackages, sampleWorkflows, trendingTags } from '../src/data';
+import { samplePackages, trendingTags } from '../src/data';
 
 // npm package-name shape: optional scope (@scope/) + package name
 const NPM_PKG_RE = /^@?[a-z0-9][\w.-]*(\/[\w.-]+)?$/;
@@ -99,56 +99,6 @@ describe('samplePackages — data integrity', () => {
     const isoDate = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/;
     for (const pkg of samplePackages) {
       expect(pkg.createdAt).toMatch(isoDate);
-    }
-  });
-});
-
-describe('sampleWorkflows — data integrity', () => {
-  test('ids are unique', () => {
-    const ids = sampleWorkflows.map((w) => w.id);
-    expect(new Set(ids).size).toBe(ids.length);
-  });
-
-  test('every workflow has non-empty required string fields', () => {
-    for (const wf of sampleWorkflows) {
-      expect(wf.id.length).toBeGreaterThan(0);
-      expect(wf.name.length).toBeGreaterThan(0);
-      expect(wf.description.length).toBeGreaterThan(0);
-      expect(wf.author.length).toBeGreaterThan(0);
-      expect(wf.prompt.length).toBeGreaterThan(0);
-    }
-  });
-
-  test('stars and forks are non-negative', () => {
-    for (const wf of sampleWorkflows) {
-      expect(wf.stars).toBeGreaterThanOrEqual(0);
-      expect(wf.forks).toBeGreaterThanOrEqual(0);
-    }
-  });
-
-  test('every workflow has non-empty tags', () => {
-    for (const wf of sampleWorkflows) {
-      expect(Array.isArray(wf.tags)).toBe(true);
-      expect(wf.tags.length).toBeGreaterThan(0);
-    }
-  });
-
-  test('workflow ids are prefixed with wf-', () => {
-    for (const wf of sampleWorkflows) {
-      expect(wf.id.startsWith('wf-')).toBe(true);
-    }
-  });
-
-  test('createdAt values are valid ISO date strings', () => {
-    const isoDate = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/;
-    for (const wf of sampleWorkflows) {
-      expect(wf.createdAt).toMatch(isoDate);
-    }
-  });
-
-  test('prompt field is non-empty for every workflow', () => {
-    for (const wf of sampleWorkflows) {
-      expect(wf.prompt.length).toBeGreaterThan(50);
     }
   });
 });

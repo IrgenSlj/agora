@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { samplePackages, sampleWorkflows, trendingTags } from '../src/data';
+import { samplePackages, trendingTags } from '../src/data';
 
 describe('Agora Data Validation', () => {
   test('samplePackages has required fields', () => {
@@ -11,15 +11,6 @@ describe('Agora Data Validation', () => {
     expect(pkg.author).toBeDefined();
     expect(pkg.stars).toBeGreaterThan(0);
     expect(pkg.category).toBe('mcp');
-  });
-
-  test('sampleWorkflows has required fields', () => {
-    const wf = sampleWorkflows[0];
-    expect(wf).toBeDefined();
-    expect(wf.id).toBeDefined();
-    expect(wf.name).toBeDefined();
-    expect(wf.prompt).toBeDefined();
-    expect(wf.author).toBeDefined();
   });
 
   test('trendingTags is non-empty', () => {
@@ -121,28 +112,6 @@ describe('Packages', () => {
   test('version follows semver', () => {
     samplePackages.forEach((p) => {
       expect(p.version).toMatch(/^\d+\.\d+\.\d+/);
-    });
-  });
-});
-
-describe('Workflows', () => {
-  test('workflows have prompts', () => {
-    sampleWorkflows.forEach((w) => {
-      expect(w.prompt).toBeDefined();
-      expect(w.prompt.length).toBeGreaterThan(0);
-    });
-  });
-
-  test('tags are non-empty arrays', () => {
-    sampleWorkflows.forEach((w) => {
-      expect(Array.isArray(w.tags)).toBe(true);
-      expect(w.tags.length).toBeGreaterThan(0);
-    });
-  });
-
-  test('forks count is non-negative', () => {
-    sampleWorkflows.forEach((w) => {
-      expect(w.forks).toBeGreaterThanOrEqual(0);
     });
   });
 });

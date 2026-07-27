@@ -98,10 +98,10 @@ describe('categorize()', () => {
     ).toBe('prompt');
   });
 
-  test('no matching topic maps to workflow', () => {
+  test('no matching topic maps to other', () => {
     expect(
       categorize(makeRepo({ topics: ['random-tool'], description: 'Some tool for developers' }))
-    ).toBe('workflow');
+    ).toBe('other');
   });
 });
 
@@ -124,7 +124,6 @@ describe('toHubItem()', () => {
     const item = toHubItem(repo, NOW.toISOString());
     expect(item.id).toBe('gh:owner/repo');
     expect(item.source).toBe('github');
-    expect(item.pricing).toEqual({ kind: 'free' });
     expect(item.stars).toBe(50);
     expect(item.installs).toBe(50); // proxy
     expect(item.license).toBe('MIT');

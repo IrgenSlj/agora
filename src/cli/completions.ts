@@ -23,7 +23,7 @@ const PATH_COMMANDS = new Set(['cd', 'ls', 'cat', 'vi', 'vim', 'nano', 'less', '
 const MARKETPLACE_COMMANDS = new Set(['install', 'browse', 'acquire', 'scan']);
 
 const NEWS_SOURCES = ['hn', 'gh', 'arxiv', 'rss'];
-const TYPES = ['package', 'workflow'];
+const TYPES = ['package'];
 
 type FlagCompleter = (token: string) => string[];
 
@@ -33,11 +33,11 @@ const FLAG_VALUE_COMPLETERS: Record<string, FlagCompleter> = {
   '--type': (t) => TYPES.filter((s) => s.startsWith(t)),
   '-t': (t) => TYPES.filter((s) => s.startsWith(t)),
   '--category': (t) => {
-    const cats = ['mcp', 'prompt', 'workflow', 'skill', 'all', 'packages'];
+    const cats = ['mcp', 'prompt', 'skill', 'other', 'all', 'packages'];
     return cats.filter((c) => c.startsWith(t));
   },
   '-c': (t) => {
-    const cats = ['mcp', 'prompt', 'workflow', 'skill', 'all', 'packages'];
+    const cats = ['mcp', 'prompt', 'skill', 'other', 'all', 'packages'];
     return cats.filter((c) => c.startsWith(t));
   },
   '--level': (t) => ['beginner', 'intermediate', 'advanced'].filter((l) => l.startsWith(t))

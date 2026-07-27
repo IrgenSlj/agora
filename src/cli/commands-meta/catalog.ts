@@ -4,7 +4,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'search',
     group: 'Catalog',
-    summary: 'Search the multi-source catalog for MCP servers, packages, and workflows',
+    summary: 'Search the multi-source catalog for MCP servers and Agent Skills',
     usage:
       'agora search <query> [--source official|glama|pulsemcp|skills-github|smithery|github|huggingface|local|all] [--kind mcp-server|agent-skill] [--category mcp|prompt|workflow|skill] [--limit 10] [--json]',
     details:
@@ -23,7 +23,7 @@ export const COMMANDS: CommandMeta[] = [
           'Restrict to one upstream: official, glama, pulsemcp, skills-github, smithery, github, huggingface, local, or all (default all)'
       },
       { flag: '--kind', description: 'Filter by v2 artifact kind: mcp-server or agent-skill' },
-      { flag: '--category, -c', description: 'Filter by category: mcp, prompt, workflow, skill' },
+      { flag: '--category, -c', description: 'Filter by category: mcp, prompt, skill, other' },
       { flag: '--limit, -n', description: 'Maximum number of results (default 10)' },
       { flag: '--offline', description: 'Read local sync/cache data without contacting upstreams' },
       { flag: '--json', description: 'Output results as JSON, including per-item provenance' }
@@ -38,14 +38,11 @@ export const COMMANDS: CommandMeta[] = [
     name: 'browse',
     group: 'Catalog',
     summary: 'View full details for a single catalog item',
-    usage: 'agora browse <id> [--type package|workflow] [--json]',
+    usage: 'agora browse <id> [--json]',
     details:
-      'Fetches and displays the full metadata for a package or workflow by its id. ' +
+      'Fetches and displays the full metadata for a catalog item by its id. ' +
       'Use --type to disambiguate when an id is shared by multiple kinds.',
-    flags: [
-      { flag: '--type, -t', description: 'Item kind: package or workflow' },
-      { flag: '--json', description: 'Output as JSON' }
-    ],
+    flags: [{ flag: '--json', description: 'Output as JSON' }],
     examples: ['agora browse mcp-github', 'agora browse mcp-github --type package']
   },
   {
@@ -82,7 +79,6 @@ export const COMMANDS: CommandMeta[] = [
         description: 'Also record the installed server in agora.toml (requires --write)'
       },
       { flag: '--config', description: 'Path to opencode.json (auto-detected by default)' },
-      { flag: '--type, -t', description: 'Item kind: package or workflow' },
       {
         flag: '--skip-scan',
         description: 'Bypass the pre-install scan gate (use only when you understand the risk)'
@@ -142,17 +138,14 @@ export const COMMANDS: CommandMeta[] = [
     name: 'scan',
     group: 'Catalog',
     summary: 'Pre-install safety scan for a catalog or live item.',
-    usage: 'agora scan <id> [--type package|workflow] [--json]',
+    usage: 'agora scan <id> [--json]',
     details:
       'Runs the same trust gate `agora acquire` enforces before writing config, against the bundled ' +
       'catalog. Exit codes: 0 pass/ok, 1 policy forbid / scan fail, 2 usage error — both --json and the table honor them. ' +
       'Honest limits: this is static heuristics plus live-probe diffing (injection-pattern checks, ' +
       'permission-manifest diffs, registry status, tool-annotation-hint checks) — never a sandbox. It ' +
       'does not execute or formally verify server code. "pass" means no known red flags, not "safe."',
-    flags: [
-      { flag: '--type, -t', description: 'Item kind: package or workflow' },
-      { flag: '--json', description: 'Output result as JSON' }
-    ],
+    flags: [{ flag: '--json', description: 'Output result as JSON' }],
     examples: ['agora scan mcp-github', 'agora scan some-pkg --json']
   },
   {
@@ -230,13 +223,13 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Catalog',
     summary: 'Export catalog data in various formats',
     usage:
-      'agora export [format] [query] [--category all|mcp|prompt|workflow] [--format json|csv|markdown|table] [--limit N]',
+      'agora export [format] [query] [--category all|mcp|prompt|skill] [--format json|csv|markdown|table] [--limit N]',
     details:
       'Exports all catalog items matching the optional query and category filters. ' +
       'Pass the format as the first positional argument (json, csv, markdown, table) or use --format.',
     flags: [
       { flag: '--format, -f', description: 'Output format: json (default), csv, markdown, table' },
-      { flag: '--category, -c', description: 'Filter by category: all, mcp, prompt, workflow' },
+      { flag: '--category, -c', description: 'Filter by category: all, mcp, prompt, skill' },
       { flag: '--limit, -n', description: 'Maximum items to export' },
       { flag: '--json', description: 'Alias for --format json' }
     ],

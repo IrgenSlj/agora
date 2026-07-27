@@ -46,7 +46,6 @@ function toSkillItem(item: HubItem, fetchedAt: string): FederatedItem {
     installs: item.installs,
     repository: item.repository,
     createdAt: item.createdAt,
-    pricing: item.pricing,
     source: item.source,
     pushedAt: item.pushedAt
   };

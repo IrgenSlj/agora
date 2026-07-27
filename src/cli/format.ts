@@ -1,17 +1,9 @@
 import { getInstallKind, type MarketplaceItem, renderPermissionLines } from '../catalog/bundled.js';
 import { formatNumber } from '../format.js';
-import type { Pricing } from '../types.js';
 import { renderBanner, renderBox } from '../ui.js';
 import { COMMANDS } from './commands-meta.js';
-import { kvRow, pill, tagList } from './pages/components.js';
+import { kvRow, tagList } from './pages/components.js';
 import type { Theme } from './theme.js';
-
-function pricingBadge(pricing: Pricing | undefined, theme: Theme): string {
-  if (!pricing) return '';
-  if (pricing.kind === 'free') return ' ' + pill('FREE', 'success', theme);
-  if (pricing.kind === 'paid') return ' ' + pill('PAID', 'accent', theme);
-  return '';
-}
 
 export function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
@@ -33,10 +25,9 @@ export function formatItemList(items: MarketplaceItem[], theme: Theme): string {
         item.kind === 'package'
           ? `${formatNumber(item.installs)} installs · ${formatNumber(item.stars)} ★`
           : `${formatNumber(item.stars)} ★`;
-      const badge = item.kind === 'package' ? pricingBadge(item.pricing, theme) : '';
       return [
         `${theme.accent(item.id.padEnd(idWidth))}  ${theme.dim(metrics)}`,
-        theme.dim(item.name) + badge,
+        theme.dim(item.name),
         truncate(item.description, 88),
         theme.dim(`${item.category} · by ${item.author}`)
       ].join('\n');
@@ -87,9 +78,8 @@ export function formatItemTable(items: MarketplaceItem[], theme: Theme): string 
 const KV_KEY_WIDTH = 10;
 
 export function formatItemDetail(item: MarketplaceItem, theme: Theme): string {
-  const badge = item.kind === 'package' ? pricingBadge(item.pricing, theme) : '';
   const lines = [
-    theme.bold(item.name) + badge,
+    theme.bold(item.name),
     kvRow('id', theme.accent(item.id), KV_KEY_WIDTH, theme),
     kvRow('type', item.kind, KV_KEY_WIDTH, theme),
     kvRow('category', item.category, KV_KEY_WIDTH, theme),
@@ -116,12 +106,6 @@ export function formatItemDetail(item: MarketplaceItem, theme: Theme): string {
         for (const row of permRows.slice(1)) lines.push(row);
       }
     }
-  }
-
-  if (item.kind === 'workflow') {
-    lines.push(kvRow('forks', String(item.forks), KV_KEY_WIDTH, theme));
-    if (item.model) lines.push(kvRow('model', item.model, KV_KEY_WIDTH, theme));
-    lines.push('', theme.dim('prompt'), item.prompt);
   }
 
   return lines.join('\n');

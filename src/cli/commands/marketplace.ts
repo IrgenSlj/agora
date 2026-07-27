@@ -314,10 +314,7 @@ export const commandBrowse: CommandHandler = async (parsed, io, style) => {
   const theme = cliTheme(style, io);
   writeLine(io.stdout, formatItemDetail(item, theme));
 
-  const related = similarItems(id, {
-    limit: 3,
-    type: item.kind === 'workflow' ? 'workflow' : undefined
-  });
+  const related = similarItems(id, { limit: 3 });
   if (related.length > 0) {
     writeLine(io.stdout, '');
     writeLine(io.stdout, style.dim('Related:'));

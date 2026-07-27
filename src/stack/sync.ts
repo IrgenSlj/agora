@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import type { MarketplaceItem } from '../catalog/types.js';
 import type { FetchLike } from '../fetch.js';
-import { type ScanOptions, type ScanResult, scanItem } from '../scan.js';
+import { type ScanOptions, type ScanResult, scanInstructionText, scanItem } from '../scan.js';
 import { type CapabilityDriftBlock, findCapabilityDriftBlocks } from './drift-blocks.js';
 import type { ManifestEntry, StackManifest } from './manifest.js';
 import { hashContent, resolveInstructionContent } from './manifest.js';
@@ -531,27 +531,10 @@ function mcpEntryToScanItem(name: string, entry: ManifestEntry): MarketplaceItem
   } as MarketplaceItem;
 }
 
-function instructionToScanItem(name: string, content: string): MarketplaceItem {
-  return {
-    id: name,
-    kind: 'workflow',
-    name,
-    description: content,
-    author: 'agora-sync-from',
-    prompt: content,
-    tags: [],
-    stars: 0,
-    forks: 0,
-    createdAt: new Date(0).toISOString(),
-    category: 'workflow',
-    installs: 0
-  } as MarketplaceItem;
-}
-
 function failedResolveScan(name: string, message: string): ScanResult {
   return {
     id: name,
-    itemKind: 'workflow',
+    itemKind: 'instruction',
     checks: [
       {
         name: 'content_resolvable',
@@ -601,9 +584,7 @@ export async function gateManifestForSync(
       });
       continue;
     }
-    const item = instructionToScanItem(name, content);
-    const result = await scan(item, { ...opts.scanOptions, fetcher: opts.fetcher });
-    entries.push({ name, kind: 'instruction', scan: result });
+    entries.push({ name, kind: 'instruction', scan: scanInstructionText(name, content) });
   }
 
   const blocked = entries.filter((e) => e.scan.summary.fail > 0);

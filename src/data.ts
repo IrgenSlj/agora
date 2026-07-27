@@ -1,12 +1,11 @@
 import { readFileSync } from 'node:fs';
-import type { Package, Workflow } from './types.js';
+import type { Package } from './types.js';
 
 const CATALOG_PATH = new URL('./catalog.json', import.meta.url);
 
 interface Catalog {
   dataRefreshedAt: string;
   samplePackages: Package[];
-  sampleWorkflows: Workflow[];
   trendingTags: string[];
 }
 
@@ -21,5 +20,4 @@ function catalog(): Catalog {
 
 export const dataRefreshedAt: string = /* @__PURE__ */ (() => catalog().dataRefreshedAt)();
 export const samplePackages: Package[] = /* @__PURE__ */ (() => catalog().samplePackages)();
-export const sampleWorkflows: Workflow[] = /* @__PURE__ */ (() => catalog().sampleWorkflows)();
 export const trendingTags: string[] = /* @__PURE__ */ (() => catalog().trendingTags)();

@@ -151,32 +151,6 @@ describe('generateInitPlan', () => {
       expect(cmd).toMatch(pattern);
     }
   });
-
-  test('workflows array is non-empty (always includes arch review)', () => {
-    const plan = generateInitPlan({
-      type: 'unknown',
-      frameworks: [],
-      hasDocker: false,
-      hasCI: false,
-      hasTests: false,
-      hasDatabase: false,
-      dependencies: []
-    });
-    expect(plan.workflows).toContain('wf-code-review-arch');
-  });
-
-  test('hasTests=true adds TDD workflow', () => {
-    const plan = generateInitPlan({
-      type: 'node',
-      frameworks: [],
-      hasDocker: false,
-      hasCI: false,
-      hasTests: true,
-      hasDatabase: false,
-      dependencies: []
-    });
-    expect(plan.workflows).toContain('wf-tdd-cycle');
-  });
 });
 
 // ── runCommands ──────────────────────────────────────────────────────────────

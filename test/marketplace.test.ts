@@ -60,12 +60,6 @@ describe('searchMarketplaceItems', () => {
     expect(results.length).toBeGreaterThan(0);
   });
 
-  test('category filter — workflow — returns only workflows', () => {
-    const results = searchMarketplaceItems({ category: 'workflow' });
-    expect(results.every((r) => r.kind === 'workflow')).toBe(true);
-    expect(results.length).toBeGreaterThan(0);
-  });
-
   test('limit restricts the result count', () => {
     const results = searchMarketplaceItems({ limit: 3 });
     expect(results.length).toBe(3);
@@ -160,17 +154,6 @@ describe('findMarketplaceItem', () => {
     const item = findMarketplaceItem('wf-tdd-cycle', { type: 'package' });
     expect(item).toBeNull();
   });
-
-  test('type filter — workflow — excludes packages', () => {
-    const item = findMarketplaceItem('mcp-github', { type: 'workflow' });
-    expect(item).toBeNull();
-  });
-
-  test('type filter — workflow — finds a real workflow', () => {
-    const item = findMarketplaceItem('wf-tdd-cycle', { type: 'workflow' });
-    expect(item).not.toBeNull();
-    expect(item!.id).toBe('wf-tdd-cycle');
-  });
 });
 
 // ── getTrendingItems ────────────────────────────────────────────────────────
@@ -216,12 +199,6 @@ describe('getInstallKind', () => {
     expect(getInstallKind(item)).toBe('unsupported');
   });
 
-  test('workflow item → workflow', () => {
-    const item = findMarketplaceItem('wf-tdd-cycle');
-    expect(item).not.toBeNull();
-    expect(getInstallKind(item!)).toBe('workflow');
-  });
-
   test('hub item with repository and source=github and no npmPackage → git-clone', () => {
     const item: PackageMarketplaceItem = {
       kind: 'package',
@@ -237,7 +214,6 @@ describe('getInstallKind', () => {
       repository: 'https://github.com/owner/myrepo',
       npmPackage: undefined,
       createdAt: '2026-01-01T00:00:00Z',
-      pricing: { kind: 'free' },
       source: 'github'
     } as any;
     expect(getInstallKind(item)).toBe('git-clone');
@@ -257,8 +233,7 @@ describe('getInstallKind', () => {
       installs: 0,
       repository: '',
       npmPackage: undefined,
-      createdAt: '2026-01-01T00:00:00Z',
-      pricing: { kind: 'free' }
+      createdAt: '2026-01-01T00:00:00Z'
     };
     expect(getInstallKind(item)).toBe('unsupported');
   });
@@ -288,14 +263,6 @@ describe('buildOpenCodeConfig', () => {
     expect(config.mcp!['my-existing-server']).toBeDefined();
     expect(config.mcp!['mcp-filesystem']).toBeDefined();
     expect(config.plugin).toContain('some-plugin');
-  });
-
-  test('adds workflow plugin name for workflow items', () => {
-    const wf = findMarketplaceItem('wf-tdd-cycle')!;
-    const config = buildOpenCodeConfig([wf]);
-    expect(config.plugin).toContain('skill-tdd-cycle');
-    expect(config.mcp).toBeDefined();
-    expect(Object.keys(config.mcp!).length).toBe(0);
   });
 
   test('handles multiple items in one call', () => {
@@ -332,11 +299,6 @@ describe('similarItems', () => {
   test('respects type filter — package', () => {
     const results = similarItems('wf-tdd-cycle', { type: 'package', limit: 10 });
     expect(results.every((r) => r.kind === 'package')).toBe(true);
-  });
-
-  test('respects type filter — workflow', () => {
-    const results = similarItems('mcp-postgres', { type: 'workflow', limit: 10 });
-    expect(results.every((r) => r.kind === 'workflow')).toBe(true);
   });
 
   test('limit restricts result count', () => {
@@ -380,15 +342,6 @@ describe('createInstallPlan', () => {
     expect(plan.commands).toHaveLength(0);
   });
 
-  test('workflow item produces installable plan with plugin, no commands, kind=workflow', () => {
-    const wf = findMarketplaceItem('wf-tdd-cycle')!;
-    const plan = createInstallPlan(wf);
-    expect(plan.installable).toBe(true);
-    expect(plan.kind).toBe('workflow');
-    expect(plan.commands).toHaveLength(0);
-    expect(plan.config.plugin).toContain('skill-tdd-cycle');
-  });
-
   test('merges with existing config', () => {
     const pkg = findMarketplaceItem('mcp-filesystem') as PackageMarketplaceItem;
     const existing = {
@@ -414,7 +367,6 @@ describe('createInstallPlan', () => {
       repository: 'https://github.com/owner/myrepo',
       npmPackage: undefined,
       createdAt: '2026-01-01T00:00:00Z',
-      pricing: { kind: 'free' },
       source: 'github'
     } as any;
     const plan = createInstallPlan(item, {}, { dataDir: '/tmp/agora-test' });
@@ -441,7 +393,6 @@ describe('createInstallPlan', () => {
       repository: 'https://github.com/owner/myrepo',
       npmPackage: undefined,
       createdAt: '2026-01-01T00:00:00Z',
-      pricing: { kind: 'free' },
       source: 'github'
     } as any;
     const plan = createInstallPlan(item);
@@ -544,7 +495,6 @@ describe('getMarketplaceItems — AGORA_LIVE_HUBS=1', () => {
       installs: 100,
       repository: 'https://github.com/test/hub-repo',
       createdAt: '2026-01-01T00:00:00Z',
-      pricing: { kind: 'free' },
       fetchedAt: new Date().toISOString(),
       pushedAt: '2026-04-01T00:00:00Z',
       license: 'MIT',
@@ -577,7 +527,6 @@ describe('getMarketplaceItems — AGORA_LIVE_HUBS=1', () => {
       installs: 50,
       repository: 'https://github.com/test/should-not-appear',
       createdAt: '2026-01-01T00:00:00Z',
-      pricing: { kind: 'free' },
       fetchedAt: new Date().toISOString(),
       pushedAt: '2026-04-01T00:00:00Z',
       license: 'MIT',
@@ -742,8 +691,7 @@ function makeSharedRepoPkg(
     stars: 1000,
     installs,
     repository,
-    createdAt: '2026-01-01',
-    pricing: { kind: 'free' }
+    createdAt: '2026-01-01'
   };
 }
 
@@ -828,8 +776,7 @@ describe('marketplace source filter logic', () => {
       stars: 1,
       installs: 1,
       repository: '',
-      createdAt: '2026-01-01T00:00:00Z',
-      pricing: { kind: 'free' as const }
+      createdAt: '2026-01-01T00:00:00Z'
     };
     const all = [fakeGhItem, ...getMarketplaceItems()];
     const ghOnly = all.filter((i) => (i as any).source === 'github');
@@ -902,27 +849,8 @@ function makePkg(id: string, stars: number, createdAt: string, pushedAt?: string
     installs: stars,
     repository: '',
     createdAt,
-    pricing: { kind: 'free' },
     ...(pushedAt !== undefined ? { pushedAt } : {})
   } as PackageMarketplaceItem;
-}
-
-// Helper: build a minimal WorkflowMarketplaceItem (no pushedAt field).
-function makeWorkflow(id: string, stars: number, createdAt: string): MarketplaceItem {
-  return {
-    kind: 'workflow',
-    id,
-    name: id,
-    description: 'test',
-    author: 'test',
-    prompt: 'do stuff',
-    tags: [],
-    stars,
-    forks: 0,
-    installs: 0,
-    category: 'workflow',
-    createdAt
-  } as MarketplaceItem;
 }
 
 describe('trendScore', () => {
@@ -945,13 +873,6 @@ describe('trendScore', () => {
     expect(Number.isFinite(scoreOld)).toBe(true);
     expect(Number.isFinite(scoreYoung)).toBe(true);
     expect(scoreYoung).toBeGreaterThan(scoreOld);
-  });
-
-  test('missing pushedAt falls back to createdAt and does not NaN/throw (workflow)', () => {
-    const wf = makeWorkflow('wf-test', 100, '2026-04-01T00:00:00Z');
-    const score = trendScore(wf, NOW);
-    expect(Number.isFinite(score)).toBe(true);
-    expect(score).toBeGreaterThan(0);
   });
 
   test('recency decay — same stars/age, more-recent pushedAt → higher score', () => {
@@ -991,12 +912,6 @@ describe('getHotItems', () => {
     const packages = getHotItems({ category: 'package', limit: 10 });
     expect(packages.every((i) => i.kind === 'package')).toBe(true);
     expect(packages.length).toBeGreaterThan(0);
-  });
-
-  test('category filter — workflow — returns only workflows', () => {
-    const workflows = getHotItems({ category: 'workflow', limit: 10 });
-    expect(workflows.every((i) => i.kind === 'workflow')).toBe(true);
-    expect(workflows.length).toBeGreaterThan(0);
   });
 
   test('items are ranked by trendScore descending', () => {

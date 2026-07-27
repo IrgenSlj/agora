@@ -23,18 +23,7 @@ export interface HotRepo {
   host: string;
 }
 
-const AGENTIC_TOPICS = [
-  'mcp',
-  'agent',
-  'agents',
-  'llm',
-  'ai',
-  'tool',
-  'tools',
-  'cli',
-  'workflow',
-  'prompt'
-];
+const AGENTIC_TOPICS = ['mcp', 'agent', 'agents', 'llm', 'ai', 'tool', 'tools', 'cli', 'prompt'];
 
 export function getHotRepos(
   dataDir: string,

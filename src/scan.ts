@@ -29,7 +29,7 @@ export interface ScanCheck {
 
 export interface ScanResult {
   id: string;
-  itemKind: 'package' | 'workflow';
+  itemKind: 'package' | 'instruction';
   checks: ScanCheck[];
   summary: { pass: number; warn: number; fail: number };
 }
@@ -616,39 +616,32 @@ async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Pro
 }
 
 export async function scanItem(item: MarketplaceItem, opts: ScanOptions = {}): Promise<ScanResult> {
-  let checks: ScanCheck[];
-
-  if (item.kind === 'workflow') {
-    const n = (item as { flagCount?: number }).flagCount ?? 0;
-    checks = [
-      {
-        name: 'workflow_kind',
-        label: 'Workflow kind',
-        status: 'pass',
-        message: 'Workflow items are inert prompts — no install side effects to scan.'
-      },
-      {
-        name: 'flag_count_low',
-        label: 'Flag count low',
-        status: n < 3 ? 'pass' : n < 10 ? 'warn' : 'fail',
-        message:
-          n < 3
-            ? `${n} flags`
-            : n < 10
-              ? `${n} flags — under review threshold`
-              : `${n} flags — would auto-hide`
-      },
-      checkDescriptionInjection(item.description)
-    ];
-  } else {
-    checks = await scanPackage(item, opts);
-    checks.push(checkDescriptionInjection(item.description));
-  }
+  const checks = await scanPackage(item, opts);
+  checks.push(checkDescriptionInjection(item.description));
 
   return {
     id: item.id,
-    itemKind: item.kind,
+    itemKind: 'package',
     checks,
     summary: tally(checks)
   };
+}
+
+/**
+ * Gates a block of instruction text (an AGENTS.md-style file arriving via
+ * `agora sync --from`).
+ *
+ * Instruction files have no package to resolve, no repository to reach, and no
+ * npm entry to verify, so the package checks would all be lookups against
+ * something that does not exist. What *is* worth checking is the text itself:
+ * an instruction file is read straight into a model's context, which makes it
+ * a prompt-injection surface.
+ *
+ * This used to be done by synthesising a fake `workflow` catalog item so it
+ * could be passed to `scanItem`. Naming the operation is both honest and
+ * shorter.
+ */
+export function scanInstructionText(name: string, content: string): ScanResult {
+  const checks = [checkDescriptionInjection(content)];
+  return { id: name, itemKind: 'instruction', checks, summary: tally(checks) };
 }

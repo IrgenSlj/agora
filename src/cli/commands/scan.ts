@@ -19,10 +19,7 @@ function scanExitCode(summary: { pass: number; warn: number; fail: number }): nu
 export const commandScan: CommandHandler = async (parsed, io, style) => {
   const id = parsed.args[0];
   if (!id) {
-    return usageError(
-      io,
-      'scan requires an item id. Usage: agora scan <id> [--type package|workflow]'
-    );
+    return usageError(io, 'scan requires an item id. Usage: agora scan <id>');
   }
 
   const item = findMarketplaceItem(id, { type: stringFlag(parsed, 'type') });

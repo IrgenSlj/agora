@@ -18,7 +18,6 @@ export interface ProjectScan {
 export interface InitPlan {
   config: OpenCodeConfig;
   servers: string[];
-  workflows: string[];
   commands: string[];
   notes: string[];
 }
@@ -92,7 +91,6 @@ export function scanProject(dir: string): ProjectScan {
 
 export function generateInitPlan(scan: ProjectScan): InitPlan {
   const serverIds = new Set<string>();
-  const workflowIds = new Set<string>();
   const commands: string[] = [];
   const notes: string[] = [];
 
@@ -122,9 +120,6 @@ export function generateInitPlan(scan: ProjectScan): InitPlan {
     }
   }
 
-  workflowIds.add('wf-code-review-arch');
-
-  if (scan.hasTests) workflowIds.add('wf-tdd-cycle');
   if (scan.type === 'node')
     notes.push('Node.js project detected — added filesystem, GitHub, and docs MCP servers.');
 
@@ -163,7 +158,6 @@ export function generateInitPlan(scan: ProjectScan): InitPlan {
       plugin: ['opencode-agora']
     },
     servers: servers.map((s) => s.id),
-    workflows: Array.from(workflowIds),
     commands,
     notes
   };
