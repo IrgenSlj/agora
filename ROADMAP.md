@@ -42,9 +42,19 @@ shipped work is in [`CHANGELOG.md`](./CHANGELOG.md).
   `tutorials`, `save`/`saved`/`bookmarks`, `similar`, `compare`, `share`, `author`, `use`, `menu`)
   were removed in v0.6.2 along with `src/auth/` and `src/curator/`. There are no accounts and no
   stored credentials anywhere in the product.
+- **Observe** — `agora run -- <command…>` supervises an MCP server during real use and records
+  what it did (`src/observe/`); `agora observe` reports it. The shim is byte-transparent and
+  records tool *names* and counts only — never arguments, results, or prompt text.
+- **Interactive** — `agora` with no arguments opens a shell where a terminal command, an `agora`
+  command, or plain text (→ chat) all work without a mode switch; `agora tui` is the full-screen
+  browser. Inference is spawned, never hosted: `opencode` is the zero-cost default so it works
+  with no key on first run.
 
-Not yet live: the sandboxed `vet` (S6), the agent-facing `agora serve` discovery tools (S7), and
-the revocation feed's *publishing* half — see the plan below.
+Not yet live: the agent-facing `agora serve` discovery tools (S7), the revocation feed's
+*publishing* half, and a pre-install sandbox (S6 shipped as runtime observation instead). Note
+that `README.md`, `AGENTS.md`, and `docs/ARCHITECTURE.md` currently understate this list —
+they still describe S3/S4/S5 as unbuilt and promise a sandboxed `vet` with canary tokens. That
+is tracked as C2 below; **this table is the accurate one**.
 
 ## Phase status
 
@@ -56,50 +66,129 @@ the revocation feed's *publishing* half — see the plan below.
 | S3 | Provenance & drift | ✅ Complete — live Sigstore verification wired |
 | S4 | Revocation | 🔄 Client complete — needs a pinned key + publishing endpoint |
 | S5 | Policy (Cedar) | ✅ Complete — engine, `agora policy`, acquire gate |
-| S6 | Vet → **Observe** | 🔄 Runtime observation shipped; Docker vet deferred |
+| S6 | Vet → **Observe** | 🔄 Runtime observation shipped; Docker vet deferred, canaries dropped |
 | S7 | Serve (agent-facing) | ⬜ Not started |
 | S8 | Launch hardening | ⬜ Not started |
+| C1–C6 | Consolidation (audit 2026-07-27) | ⬜ Not started — see below |
 
 ## Remaining plan
 
 Ordered by dependency, not ambition. Everything above the line is code; below it is
 work only the owner can do.
 
-### Now — S6 Vet (2 wk, must follow S5)
+Sizing note from the 2026-07-27 audit: `src/` is 32,267 lines. The four planes plus the
+stack manager account for 11,580 of them (36%). The rest is CLI surface, and knowing that
+split is what the cleanup items below are really about.
 
-The last plane with no implementation, and the one that turns the rest honest. Until a
-sandbox observes what a server *actually does*, `divergence_max` is derived from the
-heuristic scan — so the policy plane is still partly grading the thing it replaced — and
-`canary_triggered` is an attribute nothing can ever set.
+**Next session starts at C1a** — it is the largest safe deletion and it unblocks C1c.
+Suggested order: C1 → C2 → C4 → C3 → C6 → C5 → S6 remainder → S7 → S8. Rationale: delete
+first so later work touches less code; fix the docs while the audit is fresh; C4 shrinks
+the surface C3 has to rewire; C5 is the largest and wants a clean base under it.
+Verify each step with `bun run test && bun run typecheck && bun run lint && bun run build`
+(1,647 tests, currently green at `0ed7185`).
 
-- `src/vet/sandbox.ts` — Docker backend (L0/L1 isolation)
-- `src/vet/observer.ts` — record filesystem, network and process activity
-- `src/vet/canary.ts` — mint tokens, inject into env, detect exfiltration
-- `src/vet/profile.ts` — raw logs → `ObservedProfile` (`src/model/observed.ts` already
-  defines the shape)
-- `agora vet <purl>` → observation attestation in the CAS
-- Feeds `observed_*` attributes into the policy entity model, replacing the scan-derived
-  `divergence_max` with real evidence
+### C1 — Delete the v1 remnants the pivot left behind (~1,600 lines)
 
-### Next — retire the legacy catalog path (~2,100 lines)
+Three separate things, in ascending order of care required.
 
-`src/live/` (619) + `src/hubs/` (719) + `src/marketplace.ts` (745) are a pre-federation
-stack still on the install route, in parallel with `src/federation/` (2,433). Brief DA-5
-says it dies; only the account layer went so far. `findMarketplaceSource` /
-`searchMarketplaceSource` are still used by `install`, `browse`, `export`, `live.ts` and
-`live/search.ts`.
+**C1a — `src/live/` (619 lines). Safe, and not what the old plan claimed.** This entry
+previously read "changes `agora install` behaviour — owner sign-off before starting."
+That is **wrong**, and the correction matters. `src/live/search.ts:18` gates every API
+call on `shouldUseApi = useApi && apiUrl`; `apiUrl` comes only from `--api-url` or
+`AGORA_API_URL`, with **no default**. `agora-hub.dev` is unregistered and `workers/api/`
+is a four-file scaffold serving different routes (`/v1/catalog`, not `/api/trending`).
+So every call in practice takes the `offline(...)` branch straight to the bundled
+catalog. **`src/live/` is a client for a server that has never existed.** Deleting it and
+calling the bundled catalog directly is behaviour-preserving; the only loss is an
+undocumented `--api-url` escape hatch that points at nothing.
 
-**This changes `agora install` behaviour** — it currently resolves through the old client
-with a bundled offline fallback, and federation fails differently. Owner sign-off before
-starting.
+**C1b — dead v1 community symbols.** 200 exports are never imported outside their own
+file; most are types, but a real cluster is the community backend that brief D6 deleted:
+`mapDiscussion`/`mapTutorial`/`mapReview`/`mapProfile` (`live/internal.ts`),
+`formatReviewList`/`formatTutorialList`/`formatTutorialStep` (`cli/format.ts`),
+`SavedItem`/`removeItemFromState`, `writeSourceOptions`/`readSourceOptions`. Confined to
+seven files.
 
-### Then — S7 Serve (1 wk)
+**C1c — `src/marketplace.ts` is *not* legacy; it needs renaming, not deleting.** The old
+entry lumped its 671 lines into the kill list. But `MarketplaceItem` is the item type used
+by `scan.ts`, `acquire.ts`, `federation/adapters/local.ts`, and `cli/commands/observe.ts`.
+It is the bundled-catalog reader and it stays. Rename it to say so
+(`src/catalog/bundled.ts`) rather than carrying commerce-era vocabulary into v2. Also
+retires the third artifact kind: `workflow` is live in 11 files and 12 catalog entries,
+but brief D8 locks exactly two kinds (`mcp-server`, `agent-skill`).
+
+### C2 — Make the docs stop contradicting the code
+
+Not drift — inversion. `docs/ARCHITECTURE.md` states "Sigstore online verification …
+is **not wired**" (shipped in S3) and "`src/policy/` does not exist" (shipped in S5), and
+maps `src/federation/sources/` barrels that were deleted. `AGENTS.md` calls Verify and
+Gate "planned." README's status table marks S3/S4/S5 as 🔜. All three still promise a
+*sandboxed* `vet` and *canary-token* detection — both dropped when S6 was reshaped into
+runtime observation. A contributor reading these builds the wrong thing.
+
+### C3 — Inference providers: opencode + Claude (decided 2026-07-27)
+
+Agora ships a built-in free inference reference so the shell works with no key on first
+run, and the shell treats any non-command input as a chat opportunity. That stays.
+`opencode` remains the zero-cost default; Claude becomes the bring-your-own upgrade.
+
+**Build it as an exec shim, not an SDK integration** — see `docs/OPEN_QUESTIONS.md` OQ-1,
+corrected. Spawning `claude -p --output-format json` uses whatever auth the developer's
+Claude Code already has, **subscription included**, and Agora never sees a credential.
+That is strictly better than OQ-1's original API-key adaptation and is the only version
+consistent with "Agora stores no credentials."
+
+- Extract a `Provider` interface from `src/opencode-exec.ts` (the `resolveOnPath` and
+  Windows `.cmd` handling are already generic).
+- `providers/opencode.ts` (default) and `providers/claude.ts`, detected by PATH.
+- Flag mapping: `run --format json` → `-p --output-format json`; `--model opencode/<id>`
+  → `--model <alias>`; `--session <id>` → `--resume <id>`; `--continue` → `-c`.
+- Use model **aliases** (`opus`, `sonnet`, `haiku`, `fable`), not pinned IDs. OQ-1's
+  pinned `claude-opus-4-8` is already stale — that is the argument.
+
+### C4 — Shrink news to `agora today` (decided 2026-07-27, ~950 lines)
+
+Brief D6 retains the feed "read-only with zero new investment" and §9 lists only
+`agora today`. Today the codebase also carries an `agora news` command and an 817-line
+news TUI page — the largest single page in the repo, and the opposite of zero investment.
+Keep `src/news/` sources + scoring feeding `agora today`; drop the duplicate command and
+the page. Resolves `docs/V2_EXECUTION_PLAN.md` §8 open question 2.
+
+### C5 — Wire the interactive surface to the trust plane
+
+The TUI (4,412 lines) and the chat shell (2,837) are **kept** — decided 2026-07-27. The
+shell's zero-mode-switch model (terminal command, `agora` command, or plain text → chat)
+and built-in free inference are deliberate product, not debt.
+
+The real gap is that neither knows the trust plane exists. `src/cli/shell/main.ts:5`
+imports `getMarketplaceItems` — the v1 bundled catalog — and there is no import from
+`evidence/`, `policy/`, `revocation/`, or `observe/` anywhere in `src/cli/shell/`. The
+best-designed, highest-touch surface currently shows catalog rows where it should show
+verdicts. This is the cheapest place to make evidence visible, and it is what converts
+those 7,249 lines from cost into the product's face.
+
+### C6 — Close the brief §9 gaps
+
+41 commands are registered against a 16-command contract. Missing from the code:
+`remove`, `verify` (exists as `scan`), and `quarantine`/`unquarantine` — the quarantine
+*machinery* ships and is enforced by `sync`/`update`, but there is no CLI to list or
+release a quarantined server, so the only exit is editing state by hand.
+
+### S6 remainder — observed divergence into policy
+
+Runtime observation ships, but `divergence_max` in the policy entity model is still
+derived from the heuristic scan, so the Gate plane still partly grades the thing it
+replaced. Feeding `ServerObservation` divergences into the entity model closes that loop.
+Also unbuilt: `agora observe enable/disable` (rewriting host configs to insert the
+`agora run --` shim; wiring is manual today).
+
+### S7 Serve (1 wk)
 
 `src/serve/` — the agent-facing MCP server. `search_tools`, `get_evidence`,
 `check_policy`, `request_install`, with results filtered to `permit` only. Depends on S5
-(done) and is much more useful after S6.
+(done) and is much more useful after the S6 remainder.
 
-### Finally — S8 Launch hardening (1 wk)
+### S8 Launch hardening (1 wk)
 
 `PRIVACY.md`, a comprehensive `agora doctor`, docs site, and the 2.0.0 release. The
 unreleased breaking changes (17 retired commands) land here.

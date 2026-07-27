@@ -23,6 +23,39 @@ Framed in UI as "Claude (advanced — bring your own API key)", not "connect you
 `Provider` interface identical so the auth mechanism can swap to subscription later if Anthropic opens it.
 Current model IDs: `claude-opus-4-8`, `claude-sonnet-5`, `claude-haiku-4-5`, `claude-fable-5`.
 
+### SUPERSEDED 2026-07-27 — build an exec shim, not an SDK integration
+
+**Do not build `agora connect claude` or any API-key flow.** The adaptation above is correct
+for the *Agent SDK* — a library you import, which reads `ANTHROPIC_API_KEY` and cannot see
+Claude Code's login. But Agora does not use an SDK for inference. `src/opencode-exec.ts`
+**spawns a binary**, and that is a different auth story entirely.
+
+Verified 2026-07-27 against the installed `claude` CLI. Its `--bare` flag is documented as:
+
+> Anthropic auth is strictly ANTHROPIC_API_KEY or apiKeyHelper via --settings
+> (**OAuth and keychain are never read**).
+
+That describes what `--bare` *removes* — so without it, OAuth and keychain **are** read.
+Spawning `claude -p` therefore uses whatever auth the developer's Claude Code already has,
+**Pro/Max subscription included**. Agora never sees, stores, or transmits a credential, which
+is the only version consistent with the non-negotiable that Agora stores no credentials.
+Headless `-p`/`--print` is a documented, supported mode, so this is sanctioned use, not a
+workaround.
+
+**Revised adaptation:** extract a `Provider` interface from `src/opencode-exec.ts`; ship
+`providers/opencode.ts` (zero-cost default, so the shell works with no key on first run) and
+`providers/claude.ts`, detected by PATH. Flag mapping:
+
+| opencode | claude |
+|---|---|
+| `run --format json` | `-p --output-format json` |
+| `--model opencode/<id>` | `--model <alias>` |
+| `--session <id>` | `--resume <id>` |
+| `--continue` | `-c` |
+
+**Use model aliases (`opus`, `sonnet`, `haiku`, `fable`), not pinned IDs.** The pinned list
+above is already stale — `claude-opus-4-8` is now `claude-opus-5`. Aliases do not rot.
+
 ## OQ-3 — Federation sources (P1 / P1+): PulseMCP gated, Glama has no tool schemas
 
 Verified live 2026-07-03 against each API; re-verified live 2026-07-04 while building the P1+

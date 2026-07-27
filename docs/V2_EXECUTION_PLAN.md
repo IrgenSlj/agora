@@ -313,9 +313,25 @@ it loads under the compiled binary (`bun build --compile`).
 
 ### S6 — Vet (2 wk) — *must follow S5*
 
-**Objective:** Docker backend L0+L1, strace extraction, canary mint + worker callback, ObservedProfile,
-attestation emission (sigstore keyless in CI / ed25519 local), `agora vet` + `agora export
---attestations`.
+> **RESHAPED 2026-07-26 — the plan below was not built as written.** A sharpen pass before
+> implementation concluded the Docker sandbox was the wrong primary shape for a local-first
+> solo-founder product: it observes a server in a container where there is something to
+> detect and nothing real to do, and it costs a Docker dependency plus canary infrastructure
+> that depends on an unregistered domain. What shipped instead is **runtime observation**:
+> `agora run -- <command…>` is a byte-transparent supervising shim (`src/observe/`) that
+> watches MCP servers during real work, in the real environment. See ROADMAP.md.
+>
+> The evidence model did **not** change — `src/model/observed.ts` `ObservedProfile` and
+> `Divergence` are shared, so a Docker `vet --pre-install` backend can still be added later
+> and will feed the same policy attributes. The observation *point* moved; the shape did not.
+>
+> Two items below are **dropped, not deferred**: canary tokens (item 4) depend on
+> `agora-hub.dev` + a worker callback, and the canary fixture assertion in the gate. Items
+> 5 (attestation emission) and 6 (fixture servers) remain valid and unbuilt.
+
+**Original objective:** Docker backend L0+L1, strace extraction, canary mint + worker callback,
+ObservedProfile, attestation emission (sigstore keyless in CI / ed25519 local), `agora vet` +
+`agora export --attestations`.
 
 **Work items**
 1. **[opus]** `evidence/vet/index.ts` orchestrator contract + backend interface (pluggable; docker is
@@ -433,8 +449,17 @@ evidence summaries; `request_install` never mutates state.
 1. **OpenCode plugin path** — if `opencode-agora` is deprecated (D1), should the OpenCode plugin entry
    become `agora-hub` (which exports `./opencode`), or keep `packages/opencode-agora` alive as a thin
    pinned re-export? (Affects README install copy + `publish.yml`.)
-2. **`agora today` (news)** — brief §3 keeps it read-only, zero investment. Confirm we keep the
-   current news sources as-is (just frozen), not trimmed.
-
 Resolved: Smithery/Hugging Face are retained as non-canonical opt-in sources behind
 `AGORA_ENABLE_NONCANONICAL_SOURCES`, per-source env flags, or `AGORA_NONCANONICAL_SOURCES`.
+
+Resolved 2026-07-27 — **`agora today` (news)**: keep `src/news/` sources + scoring frozen and
+feeding `agora today` only. Drop the duplicate `agora news` command and the 817-line news TUI
+page (`src/cli/pages/news.ts`), which were the opposite of brief D6's "zero new investment" and
+are absent from the §9 surface. Tracked as ROADMAP C4.
+
+Resolved 2026-07-27 — **interactive surface**: the TUI and the chat shell are **kept**. The
+shell's built-in free inference (`opencode` by default, no key required) and its
+zero-mode-switch model — terminal command, `agora` command, or plain text → chat — are
+deliberate product. The open work is wiring them to the trust plane, not removing them
+(ROADMAP C5), plus adding Claude as a bring-your-own provider via an exec shim (ROADMAP C3,
+`docs/OPEN_QUESTIONS.md` OQ-1 as superseded).
