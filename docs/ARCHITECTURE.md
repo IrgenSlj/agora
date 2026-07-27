@@ -6,137 +6,193 @@ execution plan and current status, see [`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_P
 [`../ROADMAP.md`](../ROADMAP.md); for open external-API questions, see
 [`OPEN_QUESTIONS.md`](./OPEN_QUESTIONS.md).
 
+`ROADMAP.md` is the authority on *what is live*. This document describes shape and reasoning; if
+the two ever disagree, the roadmap is right and this file is stale.
+
 ## What Agora is
 
 `agora` is **the trust plane for agentic tooling** — it verifies where MCP servers and Agent
 Skills come from, observes what they actually do, enforces user-defined policy over both, and
 manages them across every host (OpenCode, Claude Code, Cursor, Windsurf).
 
-It is a **customs office over multi-source registries**, never a competing catalog: it does not grow
-its own catalog, it searches upstream registries (the official MCP Registry as canonical, then Glama, PulseMCP, + skills sources) so its effective catalog is the union of all of them. It deals in **evidence** — verifiable, inspectable attestations — never opaque numeric "trust scores." It is host-neutral (OpenCode is one integration among four, not the identity) and local-first with no hosted backend it depends on. ## The four planes
+It is a **customs office over multi-source registries**, never a competing catalog: it does not
+grow its own catalog, it searches upstream registries (the official MCP Registry as canonical,
+then Glama, GitHub, + skills sources) so its effective catalog is the union of all of them. It
+deals in **evidence** — verifiable, inspectable attestations — never opaque numeric "trust
+scores." It is host-neutral (OpenCode is one integration among four, not the identity) and
+local-first with no hosted backend it depends on.
 
-Everything in the codebase serves one of four planes:
+## The planes
 
 ### Federate (`src/federation/`) — live
 
 Adapters behind a `RegistrySource`/`FederatedItem` contract normalize results from upstream
-registries (the official MCP Registry, Glama, GitHub, and non-canonical opt-in sources such as
-Smithery/Hugging Face), deduped and merged into one search. `agora search`/`refresh` read from this.
-Target shape (brief §4): `src/federation/adapters/`
-with per-source files plus `sync.ts` doing dedupe-by-purl and precedence. The old
-`src/federation/sources/` paths are compatibility barrels over the adapter implementations.
+registries, deduped by purl and merged into one search with honest per-source status. `agora
+search` / `refresh` read from this. Eight adapters exist; four query by default (official MCP
+Registry, Glama, GitHub, skills-github) alongside the bundled local catalog. PulseMCP is disabled
+(no self-serve API — OQ-3); Smithery and Hugging Face are non-canonical and opt-in behind
+`AGORA_ENABLE_NONCANONICAL_SOURCES`.
 
-### Verify — evidence (`src/evidence/`) — partial
+A source that cannot answer reports `unreachable` with a reason and falls back to its cache. **It
+never reports an empty result as success** — that distinction is the whole point of the plane.
 
-Live: schema/description hashing (`schemahash.ts`), drift diffing (`diff.ts`), and
-description-poisoning heuristics (`enrich.ts`). `provenance.ts` parses in-toto/DSSE statements and
-npm attestation bundles, but **Sigstore online verification (Fulcio + Rekor) is not wired** — so the
-plane's headline question, "was this signed by its author?", cannot be answered yet.
+### Verify — evidence (`src/evidence/`) — live
 
-Not yet built: the sandboxed `vet` recording what a server actually reads/writes/contacts, and
-canary-token exfiltration detection (brief §6). Today, `src/scan.ts` is the heuristic precursor:
-injection-pattern checks, permission-manifest diffs, and live-probe tool-schema drift, without
-sandboxing or signed attestations.
+- `schemahash.ts` — canonical SHA-256 over sorted tool names + descriptions + input schemas.
+- `diff.ts` — per-tool drift diffing against an approved baseline.
+- `enrich.ts` — description-poisoning heuristics (imperative-to-model phrases, zero-width unicode,
+  HTML comments, base64-looking blobs, cross-tool shadowing). Status `warn`, to avoid false
+  positives.
+- `sigstore.ts` + `resolve-provenance.ts` — **live** Sigstore verification: Fulcio chain, CT log
+  and Rekor inclusion, with the signing certificate's identity bound to the repository the
+  provenance claims. `agora scan mcp-filesystem` reports `✓ Signed provenance — signed by
+  modelcontextprotocol/servers`.
 
-### Gate — policy (`src/policy/`) — planned, heuristic gate live today
+Two traps this code exists to avoid, both learned the hard way:
 
-Not yet built: `src/policy/` does not exist. The Cedar policy engine and the signed revocation feed
-with anti-rollback (brief §7) are unimplemented; `src/model/policy.ts` and `src/model/revocation.ts`
-define their schemas, but nothing consumes them yet. Today, `agora acquire` (`src/acquire.ts`) is the safe
-capability-acquisition gateway: `resolve → install plan → scan gate → config write`. `fail` blocks
-the write and exits non-zero; `warn` requires `--accept-warnings`; `--dry-run` previews without
-writing. **It is not a sandbox and does not execute or formally verify server code** — "passed the
-gate" means *no known red flags*, not "safe," and that distinction is deliberate everywhere the
-verdict is shown. This is what Agora *is*; this plane's code gets the most scrutiny.
+- **Bun cannot verify the Sigstore TUF root** ("root was signed by 0/3 keys"); the same bundle
+  verifies under Node, the shipped runtime. `ProvenanceVerifierUnavailable` exists so a runtime
+  quirk degrades to "could not check" instead of being reported as tampering — which would
+  condemn every correctly-signed package.
+- **Scoped npm purls need `%40`.** npm signs `pkg:npm/%40scope/name@v`; hand-concatenating
+  `pkg:npm/@scope/name@v` fails the subject match, which made every scoped package (most MCP
+  servers) read as `verification-failed`. Always use `buildPurl` with a split namespace.
+
+The gate rule: provenance emits `pass` only when verified *and* identity-bound, `fail` only when a
+signature was checked and failed, and **no row at all** when there is simply no attestation.
+Most of npm has none, and warning on all of them would drain the meaning from every other warning.
+`test/gate/acquire-gate.test.ts` pins that zero-false-positives property.
+
+### Observe (`src/observe/`) — live
+
+`agora run -- <command…>` makes Agora the MCP server's parent process and tees its stdio, so
+behaviour is recorded during real work in the real environment. `agora observe` reports it.
+This replaced the brief's Docker sandbox after a pre-implementation review (see
+`V2_EXECUTION_PLAN.md` S6); the evidence model in `src/model/observed.ts` is unchanged, so a
+pre-install sandbox backend can still be added later and feed the same policy attributes.
+
+**Two invariants that must never regress:**
+
+1. **The shim is byte-transparent.** It fronts every MCP server the user runs, so a corrupted byte
+   does not degrade observation — it breaks their whole agent setup. Bytes are forwarded verbatim
+   in both directions, observation is a tee that can never gate or delay a write, and every
+   recorder call site is wrapped in `safely()`. A test drives a deliberately throwing recorder and
+   asserts the server still works and the exit code still propagates.
+2. **Tool arguments and results are never recorded** — only tool names and counts, advertised
+   tools, and sampled peers. This code sits in the path of real work and sees real file contents,
+   prompts and secrets. A test pushes a real `.ssh/id_rsa` path through the recorder and asserts
+   it appears nowhere on disk.
+
+Connection sampling polls `lsof`, so a connection opened and closed between polls is invisible.
+Sessions therefore carry `networkSampled`, and an empty host list renders as `network: not
+observed` — never as "contacted nothing."
+
+### Gate — policy (`src/policy/`) and revocation (`src/revocation/`) — live
+
+`src/policy/` is a real Cedar engine (`@cedar-policy/cedar-wasm`, lazily imported — it is 12MB)
+evaluated over the evidence above: `agora policy init|check|test`, `[policy] files` in
+`agora.toml`, and a shipped baseline that forbids only what is known-bad.
+
+**The Cedar trap this design is built around:** a rule reading a *missing* attribute is silently
+skipped, and the decision comes back permissive — so an unguarded `forbid` looks like protection
+and is not. Hence every baseline rule guards with `has`; `PolicyDecision` carries `skipped` and
+`isConclusive()`; `policy check` lints before evaluating; and `acquire` refuses on inconclusive as
+well as on deny, because an allow reached with rules switched off is not an allow. Cedar's own
+validator does not catch `resource has typoName` (legal, permanently false), so `engine.ts`
+checks referenced attribute names against the schema itself.
+
+**Entity-model rule:** attributes are *omitted* when unobserved, never defaulted to false. Only 7
+of 67 catalog packages declare permissions, so `exec: false` would have asserted something untrue
+about the other 60.
+
+`src/revocation/` is an ed25519-signed feed over JCS canonicalization with monotonic anti-rollback
+checked *after* the signature holds. `acquire` refuses critical/high matches before any write;
+`doctor` shows `REVOKED`. **No key is pinned yet, so no revocations currently apply** — deliberate
+fail-closed, and owner-gated. Absent feed reads as `unknown`, never "clean"; servers that are not
+purl-addressable are "not checkable", never counted clean.
+
+`src/scan.ts` is the heuristic gate that predates the evidence plane and still runs alongside it:
+injection-pattern checks, permission-manifest diffs, live-probe tool-schema drift. **It is not a
+sandbox and does not execute or formally verify server code** — "passed the gate" means *no known
+red flags*, not "safe," and that distinction is deliberate everywhere a verdict is shown.
 
 ### Manage (`src/stack/`) — live
 
 One `ToolAdapter` per agent tool (opencode, Claude Code, Cursor, Windsurf) normalizes its MCP
 config into a single `ConfiguredServer` shape. `agora installed` / `doctor [--probe]` read across
 all of them; `agora.toml` is the portable, declarative profile; `plan`/`apply` (`sync` =
-`plan && apply`) reconcile it into real config files surgically — every unrelated key is
-preserved, writes are atomic (`src/atomic-write.ts`). S1 adds a committed `agora.lock` schema as
-machine truth (brief §5.5) and a manifest-backed `agora lock verify`; planned: the full drift
-producer in S3 and `agora serve` exposing Agora itself as an MCP server (brief §8).
+`plan && apply`) reconcile it into real config files surgically — every unrelated key preserved,
+writes atomic (`src/atomic-write.ts`). `agora.lock` is machine truth (brief §5.5), with
+`agora lock verify` for CI.
 
 ## Supporting surfaces
 
-- **CLI/TUI** (`src/cli/`) — command dispatch, the interactive shell, the prompter, and the
-  full-screen TUI pages. The primary, standalone experience.
+- **CLI** (`src/cli/`) — command dispatch, the interactive shell, the prompter, and the
+  full-screen TUI pages. Running `agora` with no arguments in a TTY opens the shell, where a
+  terminal command, an `agora` command, or plain text (routed to chat) all work without a mode
+  switch. Inference is **spawned, never hosted**: Agora shells out to a local `opencode` binary
+  so the zero-cost path works with no key on first run.
 - **`agora mcp`** (`src/cli/mcp-server.ts`) — exposes the stack manager and catalog as MCP tools,
   so any MCP-capable harness can call Agora directly. Planned: `src/serve/`, the brief §8
-  agent-facing server with policy-filtered discovery tools (`search_tools`, `get_evidence`,
+  agent-facing server with policy-filtered discovery (`search_tools`, `get_evidence`,
   `check_policy`, `request_install`).
 - **Thin plugins** (`src/plugin/`) — the OpenCode/Claude Code plugin registers explicit named
-  tools (`agora_search`, `agora_acquire`, `agora_config`, …) plus lifecycle hooks
-  (`tool.execute.before` for opt-in capability-gap suggestions, `experimental.session.compacting`
-  for stack-aware context). The plugin never owns a write that bypasses the gate.
-- **News** (`src/news/`) — a feed reader (HN, GitHub Trending, arXiv), retained read-only with zero
-  new investment (brief §3), surfaced via `agora today` / `agora news`.
-
-The v1 catalog surface — `auth`, `curate`, `chat`, `trending`, `workflows`, `tutorials`,
-`save`/`saved`/`bookmarks`, `similar`, `compare`, `share`, `author`, `use`, `menu` — was removed, along
-with `src/auth/` and `src/curator/`. Agora has no accounts, no sessions, and stores no credentials;
-the optional `AGORA_API_URL` catalog mirror is configured by env/flag only.
+  tools (`agora_search`, `agora_acquire`, `agora_config`, …) plus lifecycle hooks. The plugin
+  never owns a write that bypasses the gate.
+- **News** (`src/news/`) — a feed reader (HN, GitHub Trending, arXiv), retained read-only with
+  zero new investment (brief D6), surfaced via `agora today`.
 
 ## Design principles
 
 - **Local-first, no hosted backend.** Every core feature works offline against an on-disk cache —
   degraded, never broken. If a source is unreachable, it says so; it never fabricates counts.
-- **A customs office, not a registry.** Agora never competes on catalog size; searching existing
-  registries means its effective catalog is everyone's combined.
+- **A customs office, not a registry.** Agora never competes on catalog size.
 - **Evidence, not scores.** Every verdict is policy evaluated over verifiable attestations — no
   opaque numeric trust score exists anywhere in the product.
-- **Agent-operable.** `--json` on every command and stable exit codes (brief §9, supersedes the
-  old `0/1/2/3` plan/scan mapping): `0` ok · `1` policy forbid / drift / revocation hit · `2`
-  usage · `3` network · `4` sandbox unavailable. Core CLI paths route through this shared
-  contract — Agora is meant to be driven by agents as a
-  first-class citizen, not just humans.
+- **Never fabricate.** This is enforced, not aspirational: the bundled `workflow` items were
+  deleted in v0.6.2+ precisely because they carried invented star and fork counts that no upstream
+  could refresh. If a number is displayed, it traces to a real source.
+- **Agent-operable.** `--json` on every command and stable exit codes (brief §9): `0` ok · `1`
+  policy forbid / drift / revocation hit · `2` usage · `3` network · `4` sandbox unavailable.
 - **The plugin stays thin.** No gate-bypassing write inside an LLM tool call.
-- **Graceful terminal degradation.** Colour, gradients, and the banner degrade cleanly under
-  `NO_COLOR`, `TERM=dumb`, non-TTY pipes, and narrow terminals.
+- **Graceful terminal degradation** under `NO_COLOR`, `TERM=dumb`, non-TTY pipes, narrow widths.
 
 ## The algorithms (fast, offline, original)
 
 - **BM25 capability/catalog search** (`src/search/catalog-index.ts`) — a no-dependency inverted
-  index with field weighting and query-side synonym expansion, so search stays fast as the
-  federated catalog grows.
-- **Description-drift detection** — `descriptionDigest` (canonical SHA-256 of sorted tool names +
-  descriptions + input schemas) computed per server on probe; re-probe detects drift with a
-  per-tool diff, preserves the approved baseline, records live drift/quarantine metadata, and rewrites
-  affected host configs by disabling/removing the drifted entry. `agora sync` consults that local
-  state before writing so a quarantined server is not reintroduced from `agora.toml`; `agora update`
-  uses the same cache preflight before npm lookup or host writes, including disabled quarantine
-  entries.
-- **Description-poisoning heuristic scan** (`src/evidence/enrich.ts`, surfaced by `src/scan.ts`) —
-  checks tool descriptions for imperative-to-model phrases, zero-width unicode, HTML comments, large
-  base64-looking blobs, and cross-tool shadowing. Status `warn` to avoid false positives.
+  index with field weighting and query-side synonym expansion.
+- **Description-drift detection** — `descriptionDigest` per server on probe; re-probe detects
+  drift with a per-tool diff, preserves the approved baseline, records drift/quarantine metadata,
+  and rewrites affected host configs by disabling the drifted entry. `agora sync` consults that
+  state before writing, so a quarantined server is never silently reintroduced from `agora.toml`;
+  `agora update` uses the same preflight.
+- **Description-poisoning heuristics** (`src/evidence/enrich.ts`, surfaced by `src/scan.ts`).
 
-## Repository layout (today → target)
+## Repository layout
 
 ```
-src/stack/            cross-harness stack manager — adapters, manifest, plan/apply, doctor, probe
-                      → target: src/hosts/ (brief §4)
 src/model/            v2 zod schemas, purl helpers, JCS/SHA-256 hashing
 schemas/              generated JSON Schema output from src/model/
-src/store/            SQLite store + content-addressed blob cache; refresh source-item fallback index
-src/federation/       federated catalog clients (official registry, Glama, GitHub, …)
-                      → target: src/federation/adapters/ + sync.ts
-src/acquire.ts        capability-acquisition gateway (resolve → scan-gate → write)
-src/scan.ts           the heuristic gate — injection/permission/drift heuristics
-                      → target: src/evidence/ + src/policy/ (brief §6, §7)
-src/search/           offline BM25 catalog index over federated results
+src/store/            SQLite store + content-addressed blob cache
+src/federation/       multi-source adapters + dedupe-by-purl sync
+src/evidence/         provenance, schema hashing, drift, poisoning heuristics
+src/policy/           Cedar engine, entity model, shipped baseline
+src/revocation/       signed feed client, matching, installed-purl resolution
+src/observe/          the `agora run` supervising shim + session recording
+src/stack/            stack manager — adapters, manifest, plan/apply, doctor, probe
+src/catalog/          the bundled offline catalog (bundled.ts, types, permissions)
+src/acquire.ts        capability-acquisition gateway (resolve → gate → policy → write)
+src/scan.ts           the heuristic gate
+src/search/           offline BM25 index
 src/news/             feed sources + ranking (read-only, frozen)
 src/cli/              command handlers, dispatch, shell, prompter, TUI pages
-src/plugin/           OpenCode plugin (tools, hooks, SDK-preferring chat)
-src/hubs/             GitHub + HuggingFace connectors + AI README enrichment
-                      → repurposed: src/evidence/enrich.ts (brief §3)
-src/data.ts           curated MCP servers, workflows, tutorials — the offline-cache fallback
+src/plugin/           OpenCode plugin (tools, hooks)
+src/hubs/             GitHub + HuggingFace connectors
+src/fetch.ts          the injectable `FetchLike` every network call takes
+workers/api/          Cloudflare Worker scaffold (not deployed)
 packages/opencode-agora/  thin npm entry re-exporting agora-hub/opencode
 ```
 
-`src/evidence/`, `workers/api/` (Cloudflare Worker scaffold), `src/model/`, `src/store/`, and
-`schemas/` now exist. Still absent from the brief §4 target tree: **`src/policy/`** (Cedar),
-**`src/revocation/`** (signed feed), **`src/vet/`** (sandbox), and **`src/serve/`** (agent-facing
-discovery) — four of the nine phases, and between them most of the Verify + Gate value proposition.
-See [`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_PLAN.md).
+Still absent from the brief §4 target tree: **`src/serve/`** (agent-facing discovery, S7) and a
+pre-install sandbox backend (S6's Docker half, deferred rather than dropped). See
+[`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_PLAN.md) and [`../ROADMAP.md`](../ROADMAP.md).

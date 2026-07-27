@@ -33,8 +33,9 @@ host-neutral and local-first: no accounts, no hosted backend you depend on, `--j
 The agent-tooling ecosystem has 20k+ published MCP servers and a fast-growing skills ecosystem,
 near-zero signing/provenance discipline, a documented 2025–2026 record of supply-chain attacks
 (typosquatted servers, rug-pulls, description poisoning, credential exfiltration) — and **no
-revocation mechanism at all**. Agora is the layer that verifies provenance, observes behaviour in a
-sandbox, enforces policy over evidence, and can actually revoke — at the point of install and run.
+revocation mechanism at all**. Agora is the layer that verifies provenance, observes what a server
+actually does while you use it, enforces policy over that evidence, and can actually revoke — at
+the point of install and run.
 
 ## Install
 
@@ -57,15 +58,17 @@ for the full specification):
   catalog is everyone's, deduped by [purl](https://github.com/package-url/purl-spec). Smithery and
   Hugging Face are available as non-canonical opt-in research sources.
 - **Verify (evidence)** — provenance verification (Sigstore / npm & GitHub attestations),
-  schema-and-description hashing with rug-pull **drift** detection, a sandboxed `vet` that records what
-  a server actually reads / writes / contacts, and canary-token exfiltration detection — all emitted as
-  standard **in-toto / DSSE attestations** you can inspect and export.
+  schema-and-description hashing with rug-pull **drift** detection, and runtime **observation**:
+  `agora run -- <server>` supervises an MCP server while you actually use it and records what it
+  did — all emitted as standard **in-toto / DSSE attestations** you can inspect and export.
 - **Gate (policy)** — a real policy engine ([Cedar](https://www.cedarpolicy.com/)): your `.cedar` rules
   decide what may be installed, synced, or served, evaluated over evidence, per project — plus a signed
   **revocation feed** with anti-rollback (the ecosystem's most glaring absence).
 - **Manage** — a portable `agora.toml` profile and a committed `agora.lock` (machine truth: exactly
-  what's installed, hashed, verified); surgical, atomic writes into each host's config; `agora serve`
+  what's installed, hashed, verified); surgical, atomic writes into each host's config; `agora mcp`
   exposes Agora *itself* to agents as an MCP server, so the agent is a first-class second user.
+  (`agora serve`, the policy-filtered discovery server, is designed but not built — see the status
+  table below.)
 
 ## Status — honestly
 
@@ -76,10 +79,12 @@ is **what is live today**. The phase-by-phase map is [`docs/V2_EXECUTION_PLAN.md
 |---|---|
 | **Manage** — stack manager, multi-host adapters, `plan`/`apply`, `sync --from` | ✅ live |
 | **Federate** — multi-source, offline-first catalog search (`agora search`) | ✅ live *(4 of 8 sources query by default)* |
-| **Gate** — heuristic customs gate on `agora acquire` (injection / drift / permission checks) | ✅ live *(being replaced by evidence + Cedar)* |
-| **Verify** — Sigstore provenance · drift attestations · sandboxed `vet` · attestation export | 🔜 building (S3, S6) |
-| **Gate** — Cedar policy engine · signed revocation feed | 🔜 building (S4, S5) |
-| **Serve** — agent-facing MCP server with policy-filtered discovery | 🔜 building (S7) |
+| **Verify** — live Sigstore provenance (Fulcio + CT + Rekor, identity-bound) · schema drift · poisoning heuristics | ✅ live |
+| **Observe** — `agora run -- <server>` records what a server does in real use | ✅ live *(config wiring is manual)* |
+| **Gate** — heuristic customs gate **plus** a real Cedar policy over the evidence | ✅ live |
+| **Gate** — signed revocation feed with anti-rollback | 🔄 client live; **no key pinned yet, so no revocations apply** |
+| **Serve** — agent-facing MCP server with policy-filtered discovery | ⬜ not started (S7) |
+| **Sandboxed pre-install `vet`** | ⬜ deferred — replaced by runtime observation above |
 
 **"Passed the gate" means *no known red flags*, never "safe."** That distinction is deliberate and
 appears everywhere a verdict is shown. Agora never fabricates data or counts; if a source is
@@ -95,7 +100,12 @@ agora plan                       # Terraform-style diff of your stack vs. agora.
 agora apply                      # reconcile host configs to match the profile
 agora sync --from <git-url>      # clone someone's whole agent setup — every entry runs the gate
 agora integrate --all            # install Agora into every host, using its own stack machinery
+agora run -- npx <server>        # supervise a server and record what it does; agora observe reports
 ```
+
+To observe a server, route it through Agora in your host config —
+`command = ["agora", "run", "--", "npx", "<server>"]`. The shim is byte-transparent, and it records
+tool *names* and counts only: never arguments, results, or prompt text.
 
 `agora.toml` is a portable, declarative profile of your whole installation — commit it and anyone
 reproduces your setup with `agora sync --from <url>`. Writes are **surgical**: adapters preserve every

@@ -10,24 +10,32 @@ phase-by-phase build plan — read all three before making structural changes.
 ## The four planes
 
 - **Federate** (`src/federation/`) — one search across multi-source upstream registries (official
-  MCP Registry as canonical, then Glama, PulseMCP, + skills sources). Agora never competes on
+  MCP Registry as canonical, then Glama, GitHub, + skills sources). Agora never competes on
   catalog size; its effective catalog is everyone's, deduped by purl.
-- **Verify** (`src/evidence/`, planned) — provenance verification (Sigstore / npm & GitHub
-  attestations), schema/description hashing with rug-pull drift detection, a sandboxed `vet` that
-  records what a server actually reads/writes/contacts, canary-token exfiltration detection — all
-  emitted as in-toto/DSSE attestations.
-- **Gate** (`src/policy/`, planned; heuristic gate live today in `src/scan.ts`) — a real policy
-  engine (Cedar) evaluated over evidence, plus a signed revocation feed with anti-rollback. This is
-  what Agora *is*; it gets the most scrutiny.
+- **Verify** (`src/evidence/`) — live Sigstore provenance verification (Fulcio + CT + Rekor, with
+  the signing certificate's identity bound to the claimed repository), schema/description hashing
+  with rug-pull drift detection, and description-poisoning heuristics.
+- **Observe** (`src/observe/`) — `agora run -- <cmd>` supervises an MCP server during real use and
+  records what it did. Replaced the brief's Docker sandbox; same evidence model.
+- **Gate** (`src/policy/` + `src/revocation/`) — a real Cedar engine evaluated over that evidence,
+  plus an ed25519-signed revocation feed with anti-rollback. This is what Agora *is*; it gets the
+  most scrutiny.
 - **Manage** (`src/stack/`) — the stack manager: `agora.toml` profile, `agora.lock` machine
-  truth, per-host adapters, `plan`/`apply`, `agora serve` exposing Agora itself as an MCP server.
+  truth, per-host adapters, `plan`/`apply`.
+
+Not yet built: `src/serve/` (agent-facing discovery, S7) and a pre-install sandbox backend. See
+[`ROADMAP.md`](./ROADMAP.md), which is the authority on what is live.
 
 ## Non-negotiables
 
 - **Local-first.** Every core feature works offline against an on-disk cache. Agora has no hosted
   backend — don't add one, and don't make a feature depend on one being reachable.
 - **Honest output.** No fabricated data, no invented counts. If a source is unreachable, say so.
-  "Passed the gate" means *no known red flags*, not "safe" — never blur that line.
+  "Passed the gate" means *no known red flags*, not "safe" — never blur that line. This is
+  enforced, not aspirational: the bundled `workflow` catalog items were deleted precisely because
+  they carried invented star and fork counts with no upstream to refresh them. Absent evidence is
+  never rendered as a negative finding — an unobserved server is not a well-behaved one, an
+  unknown revocation status is not "clean", and an unsampled network is not "contacted nothing".
 - **Agent-operable.** Every new command should support `--json`, use plan/apply separation where
   it writes anything, and return stable exit codes (brief §9, supersedes the old
   `2=plan-changes/3=scan-fail`): `0` ok · `1` policy forbid / drift / revocation hit · `2` usage ·
@@ -74,7 +82,7 @@ registration — don't re-list them there.
 ## Module splitting
 
 Large files (>500 lines) split into per-domain modules under a subdirectory, with a barrel file at
-the original path (pattern used for `marketplace`, `live`, `shell`, `commands-meta`, `stack`):
+the original path (pattern used for `shell`, `commands-meta`, `stack`):
 
 1. Create `src/module/` with `types.ts`, domain files, and `index.ts` (barrel).
 2. Rewrite the original file as a thin re-export barrel: `export { X } from './module/index.js'`.
