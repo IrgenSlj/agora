@@ -50,11 +50,16 @@ shipped work is in [`CHANGELOG.md`](./CHANGELOG.md).
   browser. Inference is spawned, never hosted: `opencode` is the zero-cost default so it works
   with no key on first run.
 
+- **Trust view** — `agora trust <id>` shows every plane's verdict at once, including what is
+  *not* known: no published attestation is not a failed signature, an allow reached with Cedar
+  rules skipped is not a permit, an uncached revocation feed is not "not revoked", and a server
+  never run has not been shown to behave. Rendered in the TUI item and acquire pages too.
+- **Quarantine CLI** — `agora quarantine [list]` and `agora unquarantine <name> --accept-risk`.
+
 Not yet live: the agent-facing `agora serve` discovery tools (S7), the revocation feed's
-*publishing* half, and a pre-install sandbox (S6 shipped as runtime observation instead). Note
-that `README.md`, `AGENTS.md`, and `docs/ARCHITECTURE.md` currently understate this list —
-they still describe S3/S4/S5 as unbuilt and promise a sandboxed `vet` with canary tokens. That
-is tracked as C2 below; **this table is the accurate one**.
+*publishing* half, `agora observe enable/disable`, and a pre-install sandbox (S6 shipped as
+runtime observation instead). **This section is the authority on what is live**; README,
+AGENTS.md and docs/ARCHITECTURE.md were realigned to it on 2026-07-28.
 
 ## Phase status
 
@@ -66,10 +71,10 @@ is tracked as C2 below; **this table is the accurate one**.
 | S3 | Provenance & drift | ✅ Complete — live Sigstore verification wired |
 | S4 | Revocation | 🔄 Client complete — needs a pinned key + publishing endpoint |
 | S5 | Policy (Cedar) | ✅ Complete — engine, `agora policy`, acquire gate |
-| S6 | Vet → **Observe** | 🔄 Runtime observation shipped; Docker vet deferred, canaries dropped |
+| S6 | Vet → **Observe** | 🔄 Observation shipped + wired into policy; `observe enable/disable` unbuilt |
 | S7 | Serve (agent-facing) | ⬜ Not started |
 | S8 | Launch hardening | ⬜ Not started |
-| C1–C6 | Consolidation (audit 2026-07-27) | ⬜ Not started — see below |
+| C1–C6 | Consolidation (audit 2026-07-27) | ✅ Complete 2026-07-28 |
 
 ## Remaining plan
 
@@ -80,12 +85,25 @@ Sizing note from the 2026-07-27 audit: `src/` is 32,267 lines. The four planes p
 stack manager account for 11,580 of them (36%). The rest is CLI surface, and knowing that
 split is what the cleanup items below are really about.
 
-**Next session starts at C1a** — it is the largest safe deletion and it unblocks C1c.
-Suggested order: C1 → C2 → C4 → C3 → C6 → C5 → S6 remainder → S7 → S8. Rationale: delete
-first so later work touches less code; fix the docs while the audit is fresh; C4 shrinks
-the surface C3 has to rewire; C5 is the largest and wants a clean base under it.
-Verify each step with `bun run test && bun run typecheck && bun run lint && bun run build`
-(1,647 tests, currently green at `0ed7185`).
+**C1–C6 are complete as of 2026-07-28** (11 commits, `4d2c23b`..`eb88af5`). `src/` went
+32,267 → 31,286 lines while the test count held at ~1,630, because most of what left was
+never reachable. What remains below is `agora observe enable/disable`, S7 and S8.
+
+**Next session starts at `agora observe enable/disable`** — it is the last piece of S6 and
+the only reason observation is still opt-in by hand. Then S7.
+
+Three guards now fail the build rather than relying on review, and are worth knowing about
+before changing anything near them:
+
+- `test/setup.ts` blocks real network access. The suite was silently making live HTTP calls;
+  every network call takes an injectable `FetchLike` (`src/fetch.ts`) and forgetting to pass
+  one is now a loud failure.
+- `test/cli/no-dangling-commands.test.ts` greps every user-facing `agora <cmd>` string against
+  the real registry. Four cleanups in a row had found code advertising deleted commands.
+- `test/cli/trust-view.test.ts` pins one honesty rule per plane — each is a collapse of
+  "unknown" into "ok" that would otherwise be tempting.
+
+Verify with `bun run test && bun run typecheck && bun run lint && bun run build`.
 
 ### C1 — Delete the v1 remnants the pivot left behind (~1,600 lines)
 

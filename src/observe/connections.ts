@@ -72,13 +72,3 @@ export async function sampleConnections(pid: number): Promise<string[]> {
     return [];
   }
 }
-
-/** Whether network sampling is possible at all on this machine. */
-export async function connectionSamplingAvailable(): Promise<boolean> {
-  try {
-    await execFileAsync('lsof', ['-v'], { timeout: 3000 });
-    return true;
-  } catch {
-    return false;
-  }
-}

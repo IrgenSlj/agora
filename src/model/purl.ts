@@ -60,27 +60,6 @@ export function isValidPurl(purl: string): boolean {
 }
 
 /**
- * Extract the purl type (e.g. "npm", "github") from a purl string.
- */
-export function getPurlType(purl: string): string {
-  return parsePurl(purl).type;
-}
-
-/**
- * Compare two purls for equality (ignoring version).
- */
-export function purlEquals(a: string, b: string): boolean {
-  const pa = parsePurl(a);
-  const pb = parsePurl(b);
-  return (
-    pa.type === pb.type &&
-    pa.namespace === pb.namespace &&
-    pa.name === pb.name &&
-    pa.subpath === pb.subpath
-  );
-}
-
-/**
  * Create a purl pattern for revocation matching.
  * Matches all versions unless a specific version is provided.
  */

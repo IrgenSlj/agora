@@ -61,10 +61,6 @@ const booleanFlags = new Set([
   'yes'
 ]);
 
-export function normalizeFlag(flag: string): string {
-  return flag.trim().replace(/-([a-z])/g, (_, char: string) => char.toUpperCase());
-}
-
 export function parseArgs(argv: string[]): ParsedArgs {
   const parser = yargs(argv)
     .strict(false)

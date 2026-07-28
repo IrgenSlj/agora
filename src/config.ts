@@ -1,5 +1,3 @@
-import type { Package } from './types.js';
-
 export interface OpenCodeConfig {
   $schema?: string;
   mcp?: Record<
@@ -17,30 +15,6 @@ export interface OpenCodeConfig {
 
 export interface ConfigWriterOptions {
   includeExisting?: boolean;
-}
-
-export function generateMcpConfig(
-  pkg: Package,
-  existingConfig: OpenCodeConfig = {}
-): OpenCodeConfig {
-  if (!pkg.npmPackage) {
-    throw new Error(`${pkg.name} has no npm package to install`);
-  }
-
-  const newConfig: OpenCodeConfig = {
-    $schema: 'https://opencode.ai/config.json',
-    mcp: {
-      ...(existingConfig.mcp || {}),
-      [pkg.id]: {
-        type: 'local',
-        command: ['npx', pkg.npmPackage],
-        enabled: true
-      }
-    },
-    plugin: existingConfig.plugin || []
-  };
-
-  return newConfig;
 }
 
 export function formatConfigJson(config: OpenCodeConfig): string {

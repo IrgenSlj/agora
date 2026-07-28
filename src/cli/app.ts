@@ -1,5 +1,4 @@
 import { readFileSync } from 'node:fs';
-import { getMarketplaceItems, type MarketplaceItem } from '../catalog/bundled.js';
 import { createStyler, type Styler, shouldUseColor, supportsTrueColor } from '../ui.js';
 import * as acquireModule from './commands/acquire.js';
 import * as applyModule from './commands/apply.js';
@@ -240,8 +239,4 @@ export async function commandCompletions(
   }
   writeLine(io.stdout, output);
   return 0;
-}
-
-export function listKnownItems(): MarketplaceItem[] {
-  return getMarketplaceItems();
 }

@@ -45,27 +45,6 @@ export const DEFAULT_NEWS_CONFIG: NewsConfig = {
   weights: { recency: 1.0, engagement: 0.6, topic: 0.8 }
 };
 
-export const NEWS_SOURCE_LABELS: Record<NewsSource, string> = {
-  hn: 'Hacker News',
-  'github-trending': 'GitHub Trending',
-  arxiv: 'arXiv',
-  rss: 'RSS'
-};
-
-export function normalizeNewsSource(s: string): NewsSource | undefined {
-  const map: Record<string, NewsSource> = {
-    hn: 'hn',
-    hackernews: 'hn',
-    'hacker-news': 'hn',
-    gh: 'github-trending',
-    github: 'github-trending',
-    'github-trending': 'github-trending',
-    arxiv: 'arxiv',
-    rss: 'rss'
-  };
-  return map[s.toLowerCase().trim()];
-}
-
 export function hostFromUrl(url: string): string {
   try {
     const u = new URL(url);

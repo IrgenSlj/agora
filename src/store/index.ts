@@ -458,16 +458,3 @@ export class CASCache {
     return join(this.casDir, hash);
   }
 }
-
-let defaultStoreInstance: AgoraStore | undefined;
-let defaultCasInstance: CASCache | undefined;
-
-export function getDefaultStore(): AgoraStore {
-  defaultStoreInstance ??= new AgoraStore();
-  return defaultStoreInstance;
-}
-
-export function getDefaultCas(): CASCache {
-  defaultCasInstance ??= new CASCache();
-  return defaultCasInstance;
-}

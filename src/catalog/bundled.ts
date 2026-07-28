@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import type { OpenCodeConfig } from '../config.js';
-import { samplePackages, trendingTags } from '../data.js';
+import { samplePackages } from '../data.js';
 import { isHubCacheStale, readHubsCache } from '../hubs/cache.js';
 import type { HubItem, InstallKind } from '../hubs/types.js';
 import type { CatalogIndex } from '../search/catalog-index.js';
@@ -130,12 +130,6 @@ export function clearMarketplaceItemsCache(): void {
   _indexMemo = null;
   _warnedEmpty = false;
   _warnedStale = false;
-}
-
-export function getCuratedSource(): 'ai' | 'bundled' {
-  // Curator-as-discovery is gone (brief §3): the bundled catalog is the only
-  // offline fallback, and everything else comes from federated upstreams.
-  return 'bundled';
 }
 
 export function getMarketplaceItems(): MarketplaceItem[] {
@@ -369,10 +363,6 @@ export function getTrendingItems(options: SearchOptions = {}): MarketplaceItem[]
     .filter((item) => matchesCategory(item, category))
     .sort((a, b) => b.installs - a.installs || b.stars - a.stars || a.name.localeCompare(b.name))
     .slice(0, limit);
-}
-
-export function getTrendingTags(limit = 8): string[] {
-  return trendingTags.slice(0, limit);
 }
 
 export function createInstallPlan(

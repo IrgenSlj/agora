@@ -10,13 +10,6 @@ export function truncate(value: string, max: number): string {
   return value.slice(0, max - 1) + '…';
 }
 
-export function formatDate(value: string): string {
-  if (!value) return '';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-}
-
 export function formatItemList(items: MarketplaceItem[], theme: Theme): string {
   const idWidth = Math.max(...items.map((item) => item.id.length));
   return items

@@ -114,14 +114,22 @@ Current as of v0.6.1+. **Do not draw anything not on this list as if it works.**
 - Schema/description hashing and drift detection; description-poisoning heuristics.
 - `agora.lock` as committed machine truth; quarantine for drifted servers.
 
+**Also built (this list was out of date until 2026-07-28 — check ROADMAP.md before drawing):**
+- **Live Sigstore provenance**: Fulcio chain, CT log and Rekor inclusion, with the signing
+  certificate's identity bound to the repository the attestation claims.
+- **Cedar policy engine** evaluated over that evidence, with a shipped baseline.
+- **Runtime observation**: `agora run -- <server>` supervises a server during real use and
+  records what it did. This *replaced* the Docker sandbox — do not draw a sandbox.
+- **Revocation client**: ed25519-signed feed with anti-rollback. Draw it, but note that no
+  public key is pinned yet, so no revocations currently apply.
+
 **Partial — draw as partial:**
-- Provenance. In-toto/DSSE statements and npm attestation bundles parse, but **Sigstore online
-  verification (Fulcio + Rekor) is not wired**. Agora cannot yet answer "was this signed by its
-  author?"
+- Revocation *publishing* (the feed endpoint and signing key) does not exist.
 
 **Not built — draw as planned, or omit:**
-- Cedar policy engine · signed revocation feed with anti-rollback · sandboxed `vet` (Docker) ·
-  canary-token exfiltration detection · agent-facing `agora serve` discovery.
+- Agent-facing `agora serve` discovery (S7).
+- Sandboxed pre-install `vet` and canary-token exfiltration detection. **Both were dropped**
+  when S6 became runtime observation — do not draw either as forthcoming.
 
 **Source counts (exact).** Eight adapters exist. **Four query by default:** the official MCP Registry
 (canonical), Glama, GitHub, and skills-github — plus a bundled local catalog. PulseMCP is disabled

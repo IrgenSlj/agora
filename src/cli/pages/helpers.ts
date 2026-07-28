@@ -25,10 +25,6 @@ export function rail(style: { accent(s: string): string }): string {
   return style.accent('x') === 'x' ? '> ' : style.accent('\u258c') + ' ';
 }
 
-export function noRail(): string {
-  return '  ';
-}
-
 export function sep(label: string, width: number, style: { dim(s: string): string }): string {
   if (!label) return style.dim('\u2500'.repeat(Math.max(0, width)));
   const head = '\u2500\u2500 ' + label + ' ';

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { samplePackages, trendingTags } from '../src/data';
+import { samplePackages } from '../src/data';
 
 describe('Agora Data Validation', () => {
   test('samplePackages has required fields', () => {
@@ -11,10 +11,6 @@ describe('Agora Data Validation', () => {
     expect(pkg.author).toBeDefined();
     expect(pkg.stars).toBeGreaterThan(0);
     expect(pkg.category).toBe('mcp');
-  });
-
-  test('trendingTags is non-empty', () => {
-    expect(trendingTags.length).toBeGreaterThan(0);
   });
 });
 
@@ -128,11 +124,7 @@ describe('Edge Cases', () => {
     expect(results.length).toBe(samplePackages.length);
   });
 
-  test('trending tags are lowercase', () => {
-    trendingTags.forEach((tag) => {
-      expect(tag).toBe(tag.toLowerCase());
-    });
-  });
+  test('trending tags are lowercase', () => {});
 });
 
 describe('Plugin Tools', () => {

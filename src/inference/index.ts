@@ -6,13 +6,9 @@
 
 import { claudeProvider } from './claude.js';
 import { opencodeProvider } from './opencode.js';
-import type { InferenceProvider, ProviderId } from './types.js';
+import type { InferenceProvider } from './types.js';
 
 export const PROVIDERS: readonly InferenceProvider[] = [opencodeProvider, claudeProvider];
-
-export function getProvider(id: ProviderId): InferenceProvider | undefined {
-  return PROVIDERS.find((p) => p.id === id);
-}
 
 export interface SelectProviderOptions {
   env?: NodeJS.ProcessEnv | Record<string, string | undefined>;

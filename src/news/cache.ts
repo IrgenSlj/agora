@@ -48,21 +48,6 @@ export function metaPath(dataDir: string): string {
   return join(dataDir, 'news-meta.json');
 }
 
-export function readNewsMeta(dataDir: string): NewsMeta {
-  const path = metaPath(dataDir);
-  if (!existsSync(path)) return { read: [], saved: [] };
-  try {
-    return JSON.parse(readFileSync(path, 'utf8'));
-  } catch {
-    return { read: [], saved: [] };
-  }
-}
-
-export function writeNewsMeta(dataDir: string, meta: NewsMeta): void {
-  mkdirSync(dataDir, { recursive: true });
-  atomicWriteFile(metaPath(dataDir), JSON.stringify(meta, null, 2));
-}
-
 export function isStale(
   items: NewsItem[],
   source: NewsSource,

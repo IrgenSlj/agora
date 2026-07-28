@@ -3,7 +3,7 @@
  * Every assertion covers the FULL dataset, not just the first element.
  */
 import { describe, expect, test } from 'vitest';
-import { samplePackages, trendingTags } from '../src/data';
+import { samplePackages } from '../src/data';
 
 // npm package-name shape: optional scope (@scope/) + package name
 const NPM_PKG_RE = /^@?[a-z0-9][\w.-]*(\/[\w.-]+)?$/;
@@ -99,20 +99,6 @@ describe('samplePackages — data integrity', () => {
     const isoDate = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?Z?)?$/;
     for (const pkg of samplePackages) {
       expect(pkg.createdAt).toMatch(isoDate);
-    }
-  });
-});
-
-describe('trendingTags', () => {
-  test('is non-empty', () => {
-    expect(trendingTags.length).toBeGreaterThan(0);
-  });
-
-  test('all tags are lowercase non-empty strings', () => {
-    for (const tag of trendingTags) {
-      expect(typeof tag).toBe('string');
-      expect(tag.length).toBeGreaterThan(0);
-      expect(tag).toBe(tag.toLowerCase());
     }
   });
 });

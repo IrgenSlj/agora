@@ -105,22 +105,6 @@ export function saveItemToState(
   };
 }
 
-export function removeItemFromState(
-  state: AgoraState,
-  id: string
-): { state: AgoraState; removed: boolean } {
-  const normalized = normalizeState(state);
-  const nextItems = normalized.savedItems.filter((saved) => saved.id !== id);
-
-  return {
-    state: {
-      ...normalized,
-      savedItems: nextItems
-    },
-    removed: nextItems.length !== normalized.savedItems.length
-  };
-}
-
 export function resolveSavedItems(state: AgoraState): ResolvedSavedItem[] {
   return normalizeState(state).savedItems.map((saved) => ({
     saved,

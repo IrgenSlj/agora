@@ -43,15 +43,6 @@ export function stringFlag(
   return typeof value === 'string' ? value : undefined;
 }
 
-export function requiredStringFlag(
-  parsed: ParsedArgs,
-  longName: string,
-  shortName?: string
-): string | undefined {
-  const value = stringFlag(parsed, longName, shortName);
-  return value?.trim() || undefined;
-}
-
 export function numberFlag(
   parsed: ParsedArgs,
   longName: string,
@@ -61,11 +52,6 @@ export function numberFlag(
   if (!value) return undefined;
   const parsedValue = Number(value);
   return Number.isFinite(parsedValue) ? parsedValue : undefined;
-}
-
-export function envString(io: CliIo, name: string): string | undefined {
-  const value = io.env?.[name];
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 // ── Options helpers ──────────────────────────────────────────────────────────
