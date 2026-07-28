@@ -21,14 +21,18 @@ forbid (principal, action, resource)
 when { resource has revoked && resource.revoked };
 
 // A canary token that left the sandbox is proof of exfiltration, not a hint.
-// Absent until `agora vet` exists (S6) — the guard means this rule simply does
-// not apply yet, rather than silently passing everything.
+// Nothing sets this today — canaries were dropped when S6 became runtime
+// observation — so the guard means the rule simply does not apply, rather
+// than silently passing everything.
 forbid (principal, action, resource)
 when { resource has canary_triggered && resource.canary_triggered };
 
-// Critical divergence: what the evidence shows contradicts what the artifact
-// claims. Scoped to Install — something already present must stay inspectable
-// and removable, so Sync and Serve are unaffected.
+// Critical divergence: what the server was OBSERVED doing contradicts what it
+// declared — for example contacting a host while declaring no network access.
+// This is real evidence from `agora run`, not a heuristic, and it is absent
+// until the server has actually been observed. Scoped to Install: something
+// already present must stay inspectable and removable, so Sync and Serve are
+// unaffected.
 forbid (principal, action == Action::"Install", resource)
 when { resource has divergence_max && resource.divergence_max == "critical" };
 

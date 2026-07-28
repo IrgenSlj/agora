@@ -23,6 +23,7 @@
 // and `permissions_declared` exists so a policy can require evidence rather
 // than merely react to it. See defaults/baseline.cedar.
 
+import type { Divergence as ObservedDivergence } from '../model/observed.js';
 import type { ScanResult } from '../scan.js';
 
 export type AttestationTier = 'sigstore' | 'local' | 'none';
@@ -55,8 +56,15 @@ export interface ArtifactAttributes {
   /** Present only once a sandboxed vet has run (S6). Absent until then. */
   canary_triggered?: boolean;
 
-  /** Present only when a scan was performed. */
+  /**
+   * Worst divergence between what the artifact *declared* and what it was
+   * *observed doing* (`agora run`). Absent until behaviour has actually been
+   * recorded — an unobserved server is not a well-behaved one.
+   */
   divergence_max?: Divergence;
+
+  /** Worst heuristic-scan status. Present only when a scan was performed. */
+  scan_max?: Divergence;
 }
 
 export interface EntityJson {
@@ -88,12 +96,45 @@ export interface BuildEntitiesInput {
    * permissions needed".
    */
   permissions?: { fs?: string[]; net?: string[]; exec?: string[] };
+  /**
+   * Divergences from recorded runs (`src/observe/profile.ts`). Pass `[]` for
+   * "observed and nothing diverged"; omit for "never observed". Those are
+   * different facts and produce different attributes.
+   */
+  observedDivergences?: readonly ObservedDivergence[];
+}
+
+/**
+ * Worst observed divergence. Undefined when observation never ran.
+ *
+ * `[]` maps to `'none'` — a real finding, because the server *was* watched.
+ * `undefined` maps to `undefined`, so a policy guarding with `has` falls
+ * through instead of treating an unobserved server as a clean one.
+ */
+export function divergenceFromObservation(
+  divergences: readonly ObservedDivergence[] | undefined
+): Divergence | undefined {
+  if (divergences === undefined) return undefined;
+  if (divergences.some((d) => d.severity === 'critical')) return 'critical';
+  if (divergences.some((d) => d.severity === 'warn')) return 'warn';
+  if (divergences.some((d) => d.severity === 'info')) return 'info';
+  return 'none';
 }
 
 export const PROJECT_ENTITY_TYPE = 'Project';
 export const ARTIFACT_ENTITY_TYPE = 'Artifact';
 
-/** Worst scan status becomes `divergence_max`. Undefined when no scan ran. */
+/**
+ * Worst heuristic-scan status. Undefined when no scan ran.
+ *
+ * This used to feed `divergence_max`, which was wrong in a way worth
+ * recording: the baseline's rule reads "what the evidence shows contradicts
+ * what the artifact claims", but a scan failure is a *static heuristic*, not
+ * observed behaviour. Two consequences — the policy plane was grading the
+ * thing it was built to replace, and because policy is evaluated before the
+ * scan-fail gate, a failing scan surfaced to the user as a policy denial.
+ * It now feeds `scan_max`, and `divergence_max` means what it says.
+ */
 export function divergenceFromScan(scan: ScanResult | undefined): Divergence | undefined {
   if (!scan) return undefined;
   if (scan.summary.fail > 0) return 'critical';
@@ -132,8 +173,15 @@ export function artifactAttributes(input: BuildEntitiesInput): ArtifactAttribute
   if (input.revoked !== undefined) attrs.revoked = input.revoked;
   if (input.canaryTriggered !== undefined) attrs.canary_triggered = input.canaryTriggered;
 
-  const divergence = divergenceFromScan(input.scan);
-  if (divergence !== undefined) attrs.divergence_max = divergence;
+  const scanMax = divergenceFromScan(input.scan);
+  if (scanMax !== undefined) attrs.scan_max = scanMax;
+
+  // Omitted entirely when nothing has been observed. `none` would assert "we
+  // watched it and it stayed within its declaration"; absence says "we have
+  // not watched it", which is the truth for any server never run through
+  // `agora run`.
+  const observed = divergenceFromObservation(input.observedDivergences);
+  if (observed !== undefined) attrs.divergence_max = observed;
 
   return attrs;
 }

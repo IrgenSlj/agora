@@ -10,9 +10,12 @@ import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js'
 import { federatedFetchItem } from './federation/index.js';
 import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
 import type { FetchLike } from './fetch.js';
+import type { Divergence } from './model/observed.js';
+import { aggregate, divergences as computeDivergences } from './observe/profile.js';
+import { readSessions } from './observe/session.js';
 import { evaluatePolicy, isConclusive, type PolicyDecision } from './policy/engine.js';
 import { checkRevocations, type RevocationStatus } from './revocation/client.js';
-import { npmPurl } from './revocation/installed.js';
+import { npmPackageFromCommand, npmPurl } from './revocation/installed.js';
 import { isBlocking } from './revocation/match.js';
 import { type ScanOptions, type ScanResult, scanItem } from './scan.js';
 import { capabilityKey, descriptionDigest, readCapabilityCache } from './stack/capability-cache.js';
@@ -97,6 +100,34 @@ function revocationPurlsFor(item: MarketplaceItem): string[] {
   const purls = [npmPurl(npmPackage)];
   if (version) purls.push(npmPurl(npmPackage, version));
   return purls;
+}
+
+/**
+ * Divergences recorded for this artifact by `agora run`.
+ *
+ * Returns `undefined` when the server has never been observed — deliberately
+ * distinct from `[]`, which means "observed and nothing diverged". The policy
+ * entity model turns the first into an absent attribute and the second into
+ * `divergence_max: "none"`, so a rule guarding with `has` never treats an
+ * unwatched server as a well-behaved one.
+ */
+function observedDivergencesFor(
+  dataDir: string | undefined,
+  item: MarketplaceItem
+): readonly Divergence[] | undefined {
+  if (!dataDir) return undefined;
+  const npmPackage = item.kind === 'package' ? item.npmPackage : undefined;
+  if (!npmPackage) return undefined;
+
+  const wanted = npmPurl(npmPackage);
+  const observation = aggregate(readSessions(dataDir)).find(
+    (o) => o.key === wanted || npmPackageFromCommand(o.command) === npmPackage
+  );
+  if (!observation) return undefined;
+
+  return computeDivergences(observation, {
+    net: item.kind === 'package' ? item.permissions?.net : undefined
+  });
 }
 
 function federationEnvFrom(input: AcquireInput): FederationEnv {
@@ -322,7 +353,10 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     // not the same as consulted-and-clean.
     revoked: revocation && !revocation.unknown ? revocation.blocked : undefined,
     kind: item.kind === 'package' ? 'mcp-server' : item.kind,
-    permissions: item.kind === 'package' ? item.permissions : undefined
+    permissions: item.kind === 'package' ? item.permissions : undefined,
+    // Real evidence from `agora run`, replacing the scan-derived value that
+    // made the policy plane grade the heuristic it was built to replace.
+    observedDivergences: observedDivergencesFor(input.dataDir, item)
   });
 
   if (policyDecision.decision === 'deny') {

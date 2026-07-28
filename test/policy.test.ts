@@ -12,7 +12,12 @@ import {
   schemaAttributeNames,
   validatePolicyText
 } from '../src/policy/engine';
-import { artifactAttributes, buildEntities, divergenceFromScan } from '../src/policy/entities';
+import {
+  artifactAttributes,
+  buildEntities,
+  divergenceFromObservation,
+  divergenceFromScan
+} from '../src/policy/entities';
 import type { ScanResult } from '../src/scan';
 
 const PURL = 'pkg:npm/thing@1.0.0';
@@ -70,6 +75,20 @@ describe('evidence → Cedar attributes', () => {
     expect(divergenceFromScan(scanWith({ pass: 1, warn: 2, fail: 1 }))).toBe('critical');
   });
 
+  test('divergenceFromObservation distinguishes unobserved from observed-clean', () => {
+    expect(divergenceFromObservation(undefined)).toBeUndefined();
+    expect(divergenceFromObservation([])).toBe('none');
+    expect(
+      divergenceFromObservation([{ kind: 'undeclared-egress', detail: 'x', severity: 'warn' }])
+    ).toBe('warn');
+    expect(
+      divergenceFromObservation([
+        { kind: 'undeclared-egress', detail: 'x', severity: 'warn' },
+        { kind: 'undeclared-egress', detail: 'y', severity: 'critical' }
+      ])
+    ).toBe('critical');
+  });
+
   test('permissions map onto the declared surface', () => {
     const attrs = artifactAttributes({
       purl: PURL,
@@ -110,20 +129,54 @@ describe('the shipped baseline policy', () => {
     expect((await evaluatePolicy({ purl: PURL, canaryTriggered: true })).decision).toBe('deny');
   });
 
-  test('forbids installing something with critical divergence', async () => {
+  test('forbids installing something OBSERVED diverging from its declaration', async () => {
+    const decision = await evaluatePolicy({
+      purl: PURL,
+      action: 'Install',
+      observedDivergences: [
+        {
+          kind: 'undeclared-egress',
+          detail: 'contacted 10.0.0.1:443 while declaring no network access',
+          severity: 'critical'
+        }
+      ]
+    });
+    expect(decision.decision).toBe('deny');
+  });
+
+  test("a failing SCAN alone does not deny — that is the scan gate's job", async () => {
+    // divergence_max used to be derived from the scan, which meant the policy
+    // plane was grading the heuristic it was built to replace — and because
+    // policy runs before the scan-fail gate, a failing scan surfaced to the
+    // user as a *policy denial*. acquire still refuses on scan failure; it
+    // just says so honestly now.
     const decision = await evaluatePolicy({
       purl: PURL,
       action: 'Install',
       scan: scanWith({ pass: 0, warn: 0, fail: 2 })
     });
-    expect(decision.decision).toBe('deny');
+    expect(decision.decision).toBe('allow');
+  });
+
+  test('an unobserved server is not treated as a clean one', async () => {
+    const attrs = artifactAttributes({ purl: PURL, scan: scanWith({ pass: 3, warn: 0, fail: 0 }) });
+    // Absent, not "none" — nobody watched it.
+    expect(attrs.divergence_max).toBeUndefined();
+    expect(attrs.scan_max).toBe('none');
+  });
+
+  test('observed-and-clean is a real finding, distinct from unobserved', async () => {
+    const attrs = artifactAttributes({ purl: PURL, observedDivergences: [] });
+    expect(attrs.divergence_max).toBe('none');
   });
 
   test('critical divergence still permits Sync, so an installed artifact stays visible', async () => {
     const decision = await evaluatePolicy({
       purl: PURL,
       action: 'Sync',
-      scan: scanWith({ pass: 0, warn: 0, fail: 2 })
+      observedDivergences: [
+        { kind: 'undeclared-egress', detail: 'contacted 10.0.0.1:443', severity: 'critical' }
+      ]
     });
     expect(decision.decision).toBe('allow');
   });

@@ -44,12 +44,21 @@ entity Artifact = {
   // Absent means no feed was cached, which is not the same as "not revoked".
   revoked?: Bool,
 
-  // ── present only once a sandboxed vet has run (S6) ───────────────────────
+  // ── present only once a sandboxed vet has run ────────────────────────────
+  // Never set today: canary tokens were dropped when S6 became runtime
+  // observation. The attribute stays so a rule guarding on it is valid.
   canary_triggered?: Bool,
 
-  // ── present only when a scan was performed ───────────────────────────────
+  // ── present only once behaviour was OBSERVED (`agora run`) ───────────────
+  // Worst divergence between what the artifact declared and what it did.
+  // Absent when the server has never been observed — which is not the same
+  // as "none", and every rule reading it must guard with `has`.
   // "none" | "info" | "warn" | "critical"
   divergence_max?: String,
+
+  // ── present only when a heuristic scan was performed ──────────────────────
+  // "none" | "info" | "warn" | "critical"
+  scan_max?: String,
 };
 
 action "Install", "Sync", "Serve" appliesTo {

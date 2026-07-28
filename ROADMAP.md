@@ -179,13 +179,19 @@ v0.6.2 deleted commands but not the code pointing at them — and the guard caug
 on its first run (`agora watch` documented an example using the deleted `agora trending`;
 the shell's `/u` shortcut still ran `agora use`).
 
-### S6 remainder — observed divergence into policy
+### S6 remainder
 
-Runtime observation ships, but `divergence_max` in the policy entity model is still
-derived from the heuristic scan, so the Gate plane still partly grades the thing it
-replaced. Feeding `ServerObservation` divergences into the entity model closes that loop.
-Also unbuilt: `agora observe enable/disable` (rewriting host configs to insert the
-`agora run --` shim; wiring is manual today).
+**Observed divergence into policy — ✅ done 2026-07-28.** `divergence_max` now means what
+the baseline always claimed: the worst divergence between what an artifact *declared* and
+what it was *observed doing*. It is absent until behaviour has been recorded, so a policy
+guarding with `has` never treats an unwatched server as a well-behaved one. The
+scan-derived value moved to `scan_max`. That mattered twice over: the policy plane was
+grading the heuristic it was built to replace, and because policy is evaluated before the
+scan-fail gate, a failing scan surfaced to the user as a *policy denial*.
+
+**Still unbuilt:** `agora observe enable/disable` — rewriting host configs to insert the
+`agora run --` shim. Wiring is manual today
+(`command = ["agora","run","--", …]`).
 
 ### S7 Serve (1 wk)
 
