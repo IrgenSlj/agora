@@ -10,11 +10,13 @@
 // Async fetch happens in `mount()` only; `render()` stays a pure function of
 // state.
 
+import { createProvenanceResolver } from '../../evidence/resolve-provenance.js';
 import { federatedFetchItem } from '../../federation/index.js';
 import type { FederatedItem, FederationEnv } from '../../federation/types.js';
 import { type ScanResult, scanItem } from '../../scan.js';
 import type { Theme } from '../theme.js';
 import { liftStyler } from '../theme.js';
+import { buildTrustRows, type TrustRow } from '../trust-view.js';
 import { seedAcquire } from './acquire.js';
 import {
   frame,
@@ -44,6 +46,7 @@ interface ItemState {
   notFound: boolean;
   item: FederatedItem | null;
   scan: ScanResult | null;
+  planes: TrustRow[] | null;
   seq: number;
   tick: number;
 }
@@ -55,6 +58,7 @@ const state: ItemState = {
   notFound: false,
   item: null,
   scan: null,
+  planes: null,
   seq: 0,
   tick: 0
 };
@@ -87,6 +91,7 @@ async function runFetch(ctx: PageContext, id: string): Promise<void> {
   state.notFound = false;
   state.item = null;
   state.scan = null;
+  state.planes = null;
   ctx.repaint();
 
   const env = federationEnv(ctx);
@@ -108,6 +113,27 @@ async function runFetch(ctx: PageContext, id: string): Promise<void> {
   });
   if (mySeq !== state.seq) return;
   state.scan = scan;
+
+  // Resolve provenance directly rather than reading it back off the scan
+  // check: the gate collapses "nothing published", "could not check" and
+  // "network error" into no row at all, and this page needs them distinct.
+  const npmPackage = item.kind === 'package' ? item.npmPackage : undefined;
+  let provenance: Parameters<typeof buildTrustRows>[0]['provenance'];
+  if (!npmPackage) {
+    provenance = undefined;
+  } else {
+    const evidence = await createProvenanceResolver({ fetcher: ctx.io.fetcher })(npmPackage);
+    if (mySeq !== state.seq) return;
+    provenance = evidence
+      ? {
+          verified: evidence.verified,
+          reason: evidence.reason,
+          sourceRepo: evidence.source_repo?.replace('https://github.com/', '')
+        }
+      : null;
+  }
+
+  state.planes = buildTrustRows({ scan, provenance }).filter((r) => r.plane !== 'scan');
   state.loading = false;
   ctx.repaint();
 }
@@ -227,6 +253,7 @@ export const itemPage: Page = {
         },
         perms: buildPermRows(item, item.tools),
         drift: buildDrift(scan),
+        planes: state.planes ?? [],
         width: width - 2,
         theme
       });

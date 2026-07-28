@@ -10,8 +10,8 @@ import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js'
 import { federatedFetchItem } from './federation/index.js';
 import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
 import type { FetchLike } from './fetch.js';
-import { evaluatePolicy, isConclusive } from './policy/engine.js';
-import { checkRevocations } from './revocation/client.js';
+import { evaluatePolicy, isConclusive, type PolicyDecision } from './policy/engine.js';
+import { checkRevocations, type RevocationStatus } from './revocation/client.js';
 import { npmPurl } from './revocation/installed.js';
 import { isBlocking } from './revocation/match.js';
 import { type ScanOptions, type ScanResult, scanItem } from './scan.js';
@@ -66,6 +66,18 @@ export interface AcquireResult {
   item?: MarketplaceItem;
   plan?: InstallPlan;
   scan?: ScanResult;
+  /**
+   * The Cedar decision, when one was evaluated. Exposed so callers can render
+   * *why* — including the inconclusive case, where an allow was reached with
+   * rules switched off and must not be shown as a permit.
+   */
+  policy?: PolicyDecision;
+  /**
+   * Revocation lookup, when a data dir was available. `unknown: true` means no
+   * feed was cached, which is not the same as "not revoked" and is rendered
+   * differently everywhere it surfaces.
+   */
+  revocation?: RevocationStatus;
   written?: { tool: AgentToolId; configPath: string; serverKey: string };
   nextSteps?: string[];
   reason?: string;
@@ -272,6 +284,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       status: 'blocked',
       item,
       plan,
+      revocation,
       reason:
         `Refusing: ${item.name} is revoked — ${blockingRevocation.entry.id} ` +
         `(${blockingRevocation.entry.reason}, ${blockingRevocation.entry.severity}).` +
@@ -318,6 +331,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       item,
       plan,
       scan,
+      policy: policyDecision,
+      revocation,
       reason: `Refusing: policy denied this install${
         policyDecision.determining.length ? ` (${policyDecision.determining.join(', ')})` : ''
       }. Run \`agora policy check\` to see the rules in force.`
@@ -330,6 +345,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       item,
       plan,
       scan,
+      policy: policyDecision,
+      revocation,
       reason:
         `Refusing: the policy engine could not run (${policyDecision.unavailable}), so no ` +
         'policy was actually enforced. Proceeding would install under rules that were never checked.'
@@ -342,6 +359,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       item,
       plan,
       scan,
+      policy: policyDecision,
+      revocation,
       reason:
         'Refusing: policy evaluation was inconclusive — ' +
         `${policyDecision.skipped.length} rule(s) were skipped because they read evidence Agora ` +
@@ -355,6 +374,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       item,
       plan,
       scan,
+      policy: policyDecision,
+      revocation,
       nextSteps: buildNextSteps(plan),
       reason: 'Dry run only; no files were written.'
     };
@@ -366,6 +387,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       item,
       plan,
       scan,
+      policy: policyDecision,
+      revocation,
       reason: `${scan.summary.fail} scan check(s) failed. Refusing to write config.`
     };
   }
@@ -376,6 +399,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       item,
       plan,
       scan,
+      policy: policyDecision,
+      revocation,
       reason: `${scan.summary.warn} scan warning(s). Re-run with --accept-warnings to proceed.`
     };
   }
@@ -386,6 +411,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       item,
       plan,
       scan,
+      policy: policyDecision,
+      revocation,
       reason: `Acquire can write MCP config patches only; ${item.id} is ${plan.kind}.`
     };
   }
@@ -397,6 +424,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       item,
       plan,
       scan,
+      policy: policyDecision,
+      revocation,
       reason: `${item.name} does not expose an MCP npm package to acquire.`
     };
   }
@@ -408,6 +437,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       item,
       plan,
       scan,
+      policy: policyDecision,
+      revocation,
       reason: `No writable ${tool} config location found.`
     };
   }
@@ -420,6 +451,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       item,
       plan,
       scan,
+      policy: policyDecision,
+      revocation,
       reason: err instanceof Error ? err.message : String(err)
     };
   }

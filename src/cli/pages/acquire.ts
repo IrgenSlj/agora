@@ -19,6 +19,7 @@ import type { AgentToolId, ToolConfigLocation } from '../../stack/types.js';
 import { detectAgoraDataDir } from '../../state.js';
 import type { Theme } from '../theme.js';
 import { liftStyler } from '../theme.js';
+import { buildTrustRows } from '../trust-view.js';
 import {
   bp,
   frame,
@@ -407,6 +408,13 @@ export const acquirePage: Page = {
       },
       perms: buildPermRows(item, (item as Partial<FederatedItem>).tools),
       drift: buildDrift(scan),
+      // acquire() actually evaluates these, so the page shows the real
+      // verdicts — including "inconclusive" when Cedar skipped a rule, which
+      // must never be drawn as a permit.
+      planes: buildTrustRows({
+        policy: result.policy ?? null,
+        revocation: result.revocation ?? null
+      }).filter((r) => r.plane === 'policy' || r.plane === 'revocation'),
       width: width - 2,
       theme
     });

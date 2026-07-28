@@ -331,11 +331,39 @@ export function trustPanel(o: {
     observed?: string;
   }>;
   drift: { changed: boolean; baseline: string };
+  /**
+   * Per-plane verdicts from `src/cli/trust-view.ts`. Rendered above the scan
+   * summary because provenance and revocation answer a bigger question than
+   * the heuristic gate does — and because a row reading `?` needs to be seen,
+   * not buried under passes.
+   */
+  planes?: ReadonlyArray<{
+    label: string;
+    tone: 'ok' | 'warn' | 'bad' | 'unknown';
+    detail: string;
+  }>;
   width: number;
   theme: Theme;
 }): string[] {
   const { scan, perms, drift, width, theme } = o;
   const lines: string[] = [];
+
+  for (const plane of o.planes ?? []) {
+    // `?` for unknown, never a tick or a cross: "we did not establish this" is
+    // its own answer and must not read as either verdict at a glance.
+    const glyph =
+      plane.tone === 'ok'
+        ? theme.tone('success', theme.glyph('ok'))
+        : plane.tone === 'bad'
+          ? theme.tone('error', theme.glyph('err'))
+          : plane.tone === 'warn'
+            ? theme.tone('warning', theme.glyph('warn'))
+            : theme.muted('?');
+    lines.push(
+      padRight(' ' + theme.muted(padRight(plane.label, 12)) + glyph + ' ' + plane.detail, width)
+    );
+  }
+
   const summary = [
     theme.tone('success', theme.glyph('ok') + ' ' + scan.pass + ' pass'),
     theme.tone('warning', theme.glyph('warn') + ' ' + scan.warn + ' warn'),
