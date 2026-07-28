@@ -183,6 +183,24 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora refresh', 'agora refresh --store ~/.agora/agora.db --json']
   },
   {
+    name: 'trust',
+    group: 'Catalog',
+    summary: 'Every plane’s verdict for one artifact — including what is not known',
+    usage: 'agora trust <id> [--offline] [--json]',
+    details:
+      'Shows provenance, the heuristic scan, policy, revocation and observed behaviour side by ' +
+      'side. Checks that did not run are reported as unknown rather than omitted or rounded to ' +
+      'a pass: no published attestation is not a failed signature, an allow reached with Cedar ' +
+      'rules skipped is not a permit, an uncached revocation feed is not "not revoked", and a ' +
+      'server never run through `agora run` has not been shown to behave. Exits 1 on any ' +
+      'blocking finding.',
+    flags: [
+      { flag: '--offline', description: 'Skip network checks (provenance, repo, npm)' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora trust mcp-filesystem', 'agora trust mcp-postgres --json']
+  },
+  {
     name: 'today',
     group: 'Catalog',
     summary: 'Daily digest: top news and trending items from the last 24h',

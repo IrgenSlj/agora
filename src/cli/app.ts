@@ -25,6 +25,7 @@ import * as removeModule from './commands/remove.js';
 import * as scanModule from './commands/scan.js';
 import * as syncModule from './commands/sync.js';
 import * as todayModule from './commands/today.js';
+import * as trustModule from './commands/trust.js';
 import * as tryModule from './commands/try.js';
 import type { CommandMap } from './commands/types.js';
 import * as updateModule from './commands/update.js';
@@ -174,6 +175,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       unquarantine: quarantineModule.commandUnquarantine,
       apply: applyModule.commandApply,
       update: updateModule.commandUpdate,
+      trust: trustModule.commandTrust,
       try: tryModule.commandTry,
       capabilities: capabilitiesModule.commandCapabilities,
       integrate: integrateModule.commandIntegrate,

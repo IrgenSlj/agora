@@ -197,6 +197,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     'type /catalog to open the TUI Search page',
     'type /settings to open the TUI Settings page',
     'run `agora config doctor` to check your OpenCode config',
+    "run `agora trust <id>` to see every plane's verdict — including what is not known",
+    'run `agora observe` to see what your servers actually did while you used them',
     'type VAR=val command to set env vars in bash',
     'pipe output with | or redirect with > as normal in bash',
     'append & to run a command in the background',
