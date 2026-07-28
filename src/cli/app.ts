@@ -35,6 +35,7 @@ import { ExitCode } from './exit-codes.js';
 import { type CliIo, parseArgs } from './flags.js';
 import { usage, welcome } from './format.js';
 import { isInteractive, writeLine } from './helpers.js';
+import { RETIRED_COMMANDS, retiredMessage } from './retired.js';
 import { cliTheme } from './theme.js';
 import { runTui } from './tui.js';
 
@@ -206,6 +207,14 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     if (parsed.command === 'shell') {
       const { runShell } = await import('./shell.js');
       return runShell(io, style);
+    }
+
+    // A command we deliberately removed explains itself. Falling through to
+    // "Unknown command" would read as a broken install rather than a decision.
+    const retired = RETIRED_COMMANDS[parsed.command];
+    if (retired) {
+      writeLine(io.stderr, retiredMessage(parsed.command, retired, VERSION));
+      return ExitCode.USAGE;
     }
 
     writeLine(io.stderr, `Unknown command: ${parsed.command}`);

@@ -2,13 +2,20 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
-## [Unreleased] — surface reduction, honest sources, and a green build
+## [0.7.0] - 2026-07-28 — the trust plane reaches users
 
-**Contains breaking changes.** Not yet published; `agora-hub` on npm remains at 0.6.1.
+**Contains breaking changes.** This is the first release carrying the v2 trust plane. Everything
+published until now (`agora-hub@0.6.1`) was the pre-pivot catalog tool: Sigstore verification,
+the Cedar policy engine, the revocation client and runtime observation had all shipped to `main`
+but never to npm.
+
+**Nineteen commands were removed.** Running one no longer prints `Unknown command` — it names the
+version that removed it, says why, and points at the replacement where there is one. Where nothing
+replaced it, it says so rather than inventing a redirect.
 
 ### Removed — BREAKING
 
-The v1 catalog surface is gone. Seventeen commands were retired, along with the code behind them,
+The v1 catalog surface is gone. Nineteen commands were retired, along with the code behind them,
 so that what `agora --help` lists is the trust plane and nothing else:
 
 `auth` (and its `login` / `logout` / `whoami` aliases) · `curate` · `chat` · `trending` ·
@@ -23,11 +30,15 @@ so that what `agora --help` lists is the trust plane and nothing else:
 - Curator-as-discovery is deleted (`src/curator/`, `scripts/curate.ts`), per brief §3.
 - The discussion and tutorial data paths are deleted from `src/data.ts` and `src/catalog.json`, and
   the `agora_tutorial` / `agora_trending` plugin tools with them.
-- **Kept** per brief §3: `today` / `news` (read-only, zero investment) and the bash+chat shell.
+- **Kept**: the bash+chat shell, and the news feed — narrowed to `agora today` alone (brief D6
+  keeps it read-only with zero investment; `agora news` and its 817-line TUI page were the
+  opposite of that).
 
-`src/` went from 32,909 to 30,334 lines. Migration: `install`, `acquire`, `scan`, `doctor`,
-`freeze`, `plan`, `apply`, `sync`, `search` and `browse` are unchanged. The retired commands have no
-replacements — they belonged to pillars the v2 brief deleted.
+Migration: `install`, `acquire`, `scan`, `doctor`, `freeze`, `plan`, `apply`, `sync`, `search`
+and `browse` are unchanged. `agora news` → `agora today`; `trending` → `today`; `chat` → run
+`agora` with no arguments; `use` → `acquire`; `curate` → `search`; `workflows` →
+`search --kind agent-skill`. The account and community commands have no replacement — those
+pillars were deleted, and Agora stores no credentials.
 
 ### Fixed
 
