@@ -81,7 +81,7 @@ is **what is live today**. The phase-by-phase map is [`docs/V2_EXECUTION_PLAN.md
 | **Manage** — stack manager, multi-host adapters, `plan`/`apply`, `sync --from` | ✅ live |
 | **Federate** — multi-source, offline-first catalog search (`agora search`) | ✅ live *(4 of 8 sources query by default)* |
 | **Verify** — live Sigstore provenance (Fulcio + CT + Rekor, identity-bound) · schema drift · poisoning heuristics | ✅ live |
-| **Observe** — `agora run -- <server>` records what a server does in real use | ✅ live *(config wiring is manual)* |
+| **Observe** — `agora observe enable` records what your servers do in real use | ✅ live |
 | **Gate** — heuristic customs gate **plus** a real Cedar policy over the evidence | ✅ live |
 | **Gate** — signed revocation feed with anti-rollback | 🔄 client live; **no key pinned yet, so no revocations apply** |
 | **Serve** — agent-facing MCP server with policy-filtered discovery | ⬜ not started (S7) |
@@ -101,12 +101,12 @@ agora plan                       # Terraform-style diff of your stack vs. agora.
 agora apply                      # reconcile host configs to match the profile
 agora sync --from <git-url>      # clone someone's whole agent setup — every entry runs the gate
 agora integrate --all            # install Agora into every host, using its own stack machinery
-agora run -- npx <server>        # supervise a server and record what it does; agora observe reports
+agora observe enable             # route every server through the shim; agora observe reports
 ```
 
-To observe a server, route it through Agora in your host config —
-`command = ["agora", "run", "--", "npx", "<server>"]`. The shim is byte-transparent, and it records
-tool *names* and counts only: never arguments, results, or prompt text.
+Turn observation on across every host with `agora observe enable` (`--dry-run` shows the exact
+command diff first; `disable` puts every command back). The shim is byte-transparent, and it
+records tool *names* and counts only: never arguments, results, or prompt text.
 
 `agora.toml` is a portable, declarative profile of your whole installation — commit it and anyone
 reproduces your setup with `agora sync --from <url>`. Writes are **surgical**: adapters preserve every

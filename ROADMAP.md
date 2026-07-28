@@ -71,7 +71,7 @@ AGENTS.md and docs/ARCHITECTURE.md were realigned to it on 2026-07-28.
 | S3 | Provenance & drift | ✅ Complete — live Sigstore verification wired |
 | S4 | Revocation | 🔄 Client complete — needs a pinned key + publishing endpoint |
 | S5 | Policy (Cedar) | ✅ Complete — engine, `agora policy`, acquire gate |
-| S6 | Vet → **Observe** | 🔄 Observation shipped + wired into policy; `observe enable/disable` unbuilt |
+| S6 | Vet → **Observe** | ✅ Complete — observation, policy wiring, and `observe enable/disable` |
 | S7 | Serve (agent-facing) | ⬜ Not started |
 | S8 | Launch hardening | ⬜ Not started |
 | C1–C6 | Consolidation (audit 2026-07-27) | ✅ Complete 2026-07-28 |

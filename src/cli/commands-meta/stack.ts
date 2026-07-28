@@ -33,6 +33,29 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora run -- npx @modelcontextprotocol/server-filesystem']
   },
   {
+    name: 'observe',
+    group: 'Stack',
+    summary: 'See what your servers actually did, and switch observation on across hosts',
+    usage: 'agora observe [status|enable|disable] [--dry-run] [--json]',
+    details:
+      'status (default) reports recorded sessions: tool names and counts, advertised tools, and ' +
+      'sampled network peers. enable rewrites every host config so servers launch through ' +
+      '`agora run --`, which is what makes observation something you switch on rather than wire ' +
+      'by hand; disable puts every command back exactly as it was. Both plan first — run with ' +
+      '--dry-run to see the diff. Remote servers and Agora itself are skipped with a reason. ' +
+      'Tool arguments, results and prompt text are never recorded.',
+    flags: [
+      { flag: '--dry-run', description: 'Show the command diff without writing' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora observe',
+      'agora observe enable --dry-run',
+      'agora observe enable',
+      'agora observe disable'
+    ]
+  },
+  {
     name: 'quarantine',
     group: 'Stack',
     summary: 'List servers held back after their tool descriptions changed',

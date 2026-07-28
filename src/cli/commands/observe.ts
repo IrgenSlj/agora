@@ -1,4 +1,5 @@
 import { getMarketplaceItems } from '../../catalog/bundled.js';
+import { applyObserve, planObserve } from '../../observe/enable.js';
 import { aggregate, divergences } from '../../observe/profile.js';
 import { readSessions } from '../../observe/session.js';
 import { npmPackageFromCommand } from '../../revocation/installed.js';
@@ -21,12 +22,12 @@ export const commandObserve: CommandHandler = async (parsed, io, style) => {
   const theme = cliTheme(style, io);
   const dataDir = detectDataDir(parsed, io);
 
+  if (sub === 'enable' || sub === 'disable') {
+    return observeToggle(sub, parsed, io, style);
+  }
+
   if (sub !== 'status') {
-    return usageError(
-      io,
-      `Unknown observe subcommand: ${sub}. Currently supported: status.\n` +
-        'Wrap a server manually with: agora run -- <command…>'
-    );
+    return usageError(io, `Unknown observe subcommand: ${sub}. Use status, enable, or disable.`);
   }
 
   const sessions = readSessions(dataDir);
@@ -122,6 +123,94 @@ export const commandObserve: CommandHandler = async (parsed, io, style) => {
   return rows.some((r) => r.divergence.some((d) => d.severity === 'critical'))
     ? ExitCode.POLICY_FORBID
     : ExitCode.OK;
+};
+
+/**
+ * `agora observe enable|disable` — rewrite host configs to add or remove the
+ * `agora run --` shim. Plan-then-write, like `agora plan`/`apply`: this edits
+ * the launch command of every MCP server the user depends on, so they see the
+ * exact diff before anything is written.
+ */
+const observeToggle: (
+  mode: 'enable' | 'disable',
+  ...rest: Parameters<CommandHandler>
+) => Promise<number> = async (mode, parsed, io, style) => {
+  const theme = cliTheme(style, io);
+  const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
+  const servers = readAllServers(env);
+  const plan = planObserve(servers, mode);
+  const dryRun = Boolean(parsed.flags.dryRun);
+
+  if (parsed.flags.json) {
+    const result =
+      plan.changes.length > 0 && !dryRun ? applyObserve(plan, servers, env) : undefined;
+    writeJson(io.stdout, { mode, dryRun, ...plan, result });
+    return result?.failed.length ? ExitCode.USAGE : ExitCode.OK;
+  }
+
+  if (plan.changes.length === 0) {
+    writeLine(
+      io.stdout,
+      theme.muted(
+        mode === 'enable'
+          ? 'Nothing to enable — no observable server is unwrapped.'
+          : 'Nothing to disable — no server is currently wrapped.'
+      )
+    );
+    for (const s of plan.skipped) {
+      writeLine(io.stdout, `  ${theme.dim(`skipped ${s.name} (${s.tool}) — ${s.reason}`)}`);
+    }
+    return ExitCode.OK;
+  }
+
+  writeLine(
+    io.stdout,
+    theme.bold(
+      `${mode === 'enable' ? 'Enable' : 'Disable'} observation — ${plan.changes.length} server(s)`
+    )
+  );
+  writeLine(io.stdout, '');
+  for (const c of plan.changes) {
+    writeLine(io.stdout, `  ${theme.accent(c.name)} ${theme.dim(`(${c.tool}, ${c.scope})`)}`);
+    writeLine(io.stdout, `      ${theme.error('-')} ${theme.dim(c.before.join(' '))}`);
+    writeLine(io.stdout, `      ${theme.accent('+')} ${c.after.join(' ')}`);
+  }
+  writeLine(io.stdout, '');
+  for (const s of plan.skipped) {
+    writeLine(io.stdout, `  ${theme.dim(`skipped ${s.name} (${s.tool}) — ${s.reason}`)}`);
+  }
+  if (plan.unchanged.length > 0) {
+    writeLine(io.stdout, `  ${theme.dim(`${plan.unchanged.length} already ${mode}d`)}`);
+  }
+
+  if (dryRun) {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, theme.muted('No changes written (--dry-run).'));
+    return ExitCode.OK;
+  }
+
+  const result = applyObserve(plan, servers, env);
+  writeLine(io.stdout, '');
+  for (const w of result.written) {
+    writeLine(
+      io.stdout,
+      `  ${theme.accent('✓')} ${w.configPath} ${theme.dim(`(${w.servers.length})`)}`
+    );
+  }
+  for (const f of result.failed) {
+    writeLine(io.stderr, `  ${theme.error('✗')} ${f.configPath} — ${f.error}`);
+  }
+
+  if (mode === 'enable') {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, theme.muted('Restart your host to pick up the new command.'));
+    writeLine(
+      io.stdout,
+      theme.muted('Tool names and counts are recorded; arguments and results never are.')
+    );
+  }
+
+  return result.failed.length > 0 ? ExitCode.USAGE : ExitCode.OK;
 };
 
 export const commandRun: CommandHandler = async (parsed, io, _style) => {
