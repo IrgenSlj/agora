@@ -6,7 +6,8 @@ for agentic tooling**. Phase-by-phase execution lives in
 is the *what*.
 
 Verified external-API corrections live in [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md);
-shipped work is in [`CHANGELOG.md`](./CHANGELOG.md).
+shipped work is in [`CHANGELOG.md`](./CHANGELOG.md). **What to build next, and why in that
+order, is [`docs/NEXT.md`](./docs/NEXT.md).**
 
 ## What's live today (v0.7.0, prepared — see the release note below)
 
@@ -89,8 +90,12 @@ split is what the cleanup items below are really about.
 32,267 → 31,286 lines while the test count held at ~1,630, because most of what left was
 never reachable. What remains below is `agora observe enable/disable`, S7 and S8.
 
-**Next session starts at `agora observe enable/disable`** — it is the last piece of S6 and
-the only reason observation is still opt-in by hand. Then S7.
+**S6 is complete as of 2026-07-28** — `agora observe enable` now rewrites host configs, so
+observation is one command rather than four hand-edits.
+
+**Next session starts with [`docs/NEXT.md`](./docs/NEXT.md)**, which ranks the remaining work by
+distance to a user rather than by phase number. Short version: publish 0.7.0 (owner, free, blocks
+everything), pin a revocation key (owner, free, turns on the differentiator), then S7 `src/serve/`.
 
 Three guards now fail the build rather than relying on review, and are worth knowing about
 before changing anything near them:
