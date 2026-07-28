@@ -54,9 +54,10 @@ Agora is organized as four planes over your agent stack (see [`AGORA_BRIEF_v2.md
 for the full specification):
 
 - **Federate** — one search across multi-source upstream registries (the official MCP Registry as
-  canonical, then Glama, PulseMCP, + skills). Agora never competes on catalog size; its effective
-  catalog is everyone's, deduped by [purl](https://github.com/package-url/purl-spec). Smithery and
-  Hugging Face are available as non-canonical opt-in research sources.
+  canonical, then Glama, GitHub, + skills). Agora never competes on catalog size; its effective
+  catalog is everyone's, deduped by [purl](https://github.com/package-url/purl-spec). PulseMCP is
+  wired but disabled — it has no self-serve API. Smithery and Hugging Face are non-canonical,
+  opt-in research sources.
 - **Verify (evidence)** — provenance verification (Sigstore / npm & GitHub attestations),
   schema-and-description hashing with rug-pull **drift** detection, and runtime **observation**:
   `agora run -- <server>` supervises an MCP server while you actually use it and records what it
@@ -110,6 +111,29 @@ tool *names* and counts only: never arguments, results, or prompt text.
 `agora.toml` is a portable, declarative profile of your whole installation — commit it and anyone
 reproduces your setup with `agora sync --from <url>`. Writes are **surgical**: adapters preserve every
 unrelated key and write atomically. No credentials ever live in `agora.toml`.
+
+## Upgrading from 0.6.x
+
+0.7.0 is the first release carrying the trust plane, and it removes nineteen commands from the
+v1 catalog surface — the accounts, community and curation pillars the
+[v2 brief](./AGORA_BRIEF_v2.md) deleted.
+
+Running one of them tells you what happened rather than printing `Unknown command`:
+
+```
+$ agora news
+`agora news` was removed in v0.7.0.
+  The news reader folded into the daily digest.
+
+  Use `agora today` instead.
+```
+
+`news`/`trending` → `today` · `use` → `acquire` · `curate` → `search` · `chat` → run `agora` with
+no arguments · `workflows` → `search --kind agent-skill`. The account and community commands
+(`auth`, `login`, `logout`, `whoami`, `author`, `share`, `save`, `saved`, `bookmarks`, `similar`,
+`compare`, `tutorial`, `tutorials`) have **no replacement** — Agora has no accounts and stores no
+credentials. `install`, `acquire`, `scan`, `doctor`, `freeze`, `plan`, `apply`, `sync`, `search`
+and `browse` are unchanged.
 
 ## Positioning
 

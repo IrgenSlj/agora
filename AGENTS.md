@@ -40,6 +40,10 @@ Not yet built: `src/serve/` (agent-facing discovery, S7) and a pre-install sandb
   it writes anything, and return stable exit codes (brief §9, supersedes the old
   `2=plan-changes/3=scan-fail`): `0` ok · `1` policy forbid / drift / revocation hit · `2` usage ·
   `3` network · `4` sandbox unavailable.
+- **A removal is a promise broken; say so.** When retiring a command, add it to
+  `src/cli/retired.ts` so it names the version that removed it, why, and the replacement — or
+  states plainly that there is none. `Unknown command` reads as a broken install.
+  `test/cli/no-dangling-commands.test.ts` and `test/cli/retired-commands.test.ts` enforce this.
 - **Surgical writes.** Config-writing code (stack adapters, `agora.toml`) must preserve every
   unrelated key and write atomically (see `src/atomic-write.ts`). Never credential-stuff
   `agora.toml` — secrets belong in settings/state, not the portable manifest.

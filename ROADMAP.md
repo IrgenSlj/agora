@@ -8,7 +8,7 @@ is the *what*.
 Verified external-API corrections live in [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md);
 shipped work is in [`CHANGELOG.md`](./CHANGELOG.md).
 
-## What's live today (v0.6.1)
+## What's live today (v0.7.0, prepared — see the release note below)
 
 - **Manage** — stack manager (`src/stack/`): `agora.toml` profile, per-host adapters (OpenCode,
   Claude Code, Cursor, Windsurf), `plan`/`apply`, `sync --from <url>`, `doctor` with drift,
@@ -220,7 +220,7 @@ scan-fail gate, a failing scan surfaced to the user as a *policy denial*.
 ### S8 Launch hardening (1 wk)
 
 `PRIVACY.md`, a comprehensive `agora doctor`, docs site, and the 2.0.0 release. The
-unreleased breaking changes (17 retired commands) land here.
+remaining breaking changes land here; the 19 retired commands shipped in 0.7.0.
 
 ---
 
@@ -233,7 +233,7 @@ unreleased breaking changes (17 retired commands) land here.
 | 3 | Cloudflare Worker + D1 + KV ($5/mo), `wrangler` token in CI | `workers/api/` is a scaffold with no deploy path. Hosts `/v1/revocations`. |
 | 4 | Upload `docs/assets/social-preview.png` | Settings → Social preview. The API cannot set it. |
 | 5 | Commission the five diagrams | `docs/DIAGRAM_BRIEF.md` is written and ready to hand over. |
-| 6 | Decide the release story | 17 removed commands are breaking for anyone on 0.6.1. Either 0.7.0 with a loud note, or sit unreleased until 2.0.0. Nothing is urgent for existing users. |
+| 6 | **Publish 0.7.0** — create a GitHub Release for `v0.7.0`; `publish.yml` fires on it and publishes with `--provenance` | **This is the binding constraint on the whole product, and it costs nothing.** `agora-hub@0.6.1` is live and taking ~117 installs/month, but it is the *pre-pivot catalog tool*: Sigstore, Cedar, revocation and observation have all shipped to `main` and never to a user. Version, changelog and the 19 retired-command messages are ready; only the Release is outstanding. |
 
 ## Execution conventions
 

@@ -44,10 +44,6 @@ export interface NewsMeta {
   saved: string[];
 }
 
-export function metaPath(dataDir: string): string {
-  return join(dataDir, 'news-meta.json');
-}
-
 export function isStale(
   items: NewsItem[],
   source: NewsSource,

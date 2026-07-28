@@ -4,7 +4,7 @@ A commission brief for producing the architectural diagrams that carry the GitHu
 Everything a designer needs to work without reading the codebase is in this file.
 
 **Deliverable:** five SVG diagrams, `docs/assets/diagram-*.svg`, embedded in `README.md`.
-**Status of facts here:** verified against the codebase on 2026-07-25 (v0.6.1+). The honesty rules in
+**Status of facts here:** verified against the codebase on 2026-07-28 (v0.7.0). The honesty rules in
 §5 are product policy, not art direction — they are the one thing that must not be softened.
 
 ---
@@ -103,7 +103,7 @@ no fake sparklines. If a count appears it must be one of the verified figures in
 
 ## 6. Verified facts to draw from
 
-Current as of v0.6.1+. **Do not draw anything not on this list as if it works.**
+Current as of v0.7.0. **Do not draw anything not on this list as if it works.**
 
 **Shipped and working:**
 - Cross-host stack management: one `agora.toml` profile → OpenCode, Claude Code, Cursor, Windsurf.
