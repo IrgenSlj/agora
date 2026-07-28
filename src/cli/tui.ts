@@ -7,7 +7,6 @@ import { keyHintBar, statusLine as statusLineComponent } from './pages/component
 import { padRight, truncate, vlen } from './pages/helpers.js';
 import { homePage } from './pages/home.js';
 import { itemPage } from './pages/item.js';
-import { newsPage } from './pages/news.js';
 import { searchPage } from './pages/search.js';
 import { settingsPage } from './pages/settings.js';
 import { stackPage } from './pages/stack.js';
@@ -36,7 +35,7 @@ const HOME_CUR = '\x1b[H';
 // pre-seeded through module state, not primary tabs — so neither ever
 // consumes a 1-5 shortcut or a tab slot (see test/cli/tui-chrome.test.ts's
 // "1-5" / five-tab assertions).
-const PAGE_ORDER: ReadonlyArray<PageId> = ['home', 'search', 'stack', 'news', 'settings'];
+const PAGE_ORDER: ReadonlyArray<PageId> = ['home', 'search', 'stack', 'settings'];
 
 function getPage(id: PageId): Page {
   switch (id) {
@@ -46,8 +45,6 @@ function getPage(id: PageId): Page {
       return searchPage;
     case 'stack':
       return stackPage;
-    case 'news':
-      return newsPage;
     case 'settings':
       return settingsPage;
     case 'acquire':
@@ -86,25 +83,6 @@ function parseKey(chunk: string): KeyEvent {
   return { raw: chunk, key, ctrl, shift, meta };
 }
 
-function superscript(n: number): string {
-  const m: Record<string, string> = {
-    '0': '\u2070',
-    '1': '\u00b9',
-    '2': '\u00b2',
-    '3': '\u00b3',
-    '4': '\u2074',
-    '5': '\u2075',
-    '6': '\u2076',
-    '7': '\u2077',
-    '8': '\u2078',
-    '9': '\u2079'
-  };
-  return String(n)
-    .split('')
-    .map((c) => m[c] ?? c)
-    .join('');
-}
-
 function fmtTime(d: Date): string {
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');
@@ -134,10 +112,8 @@ export function renderHeader(o: HeaderOpts): [string, string] {
   for (const id of PAGE_ORDER) {
     const p = getPage(id);
     const lab = narrow ? (p.navIcon ?? p.navLabel.slice(0, 1)) : p.navLabel;
-    const badgeN = id === 'news' ? app.unread.news : 0;
-    const badge = badgeN > 0 ? theme.info(superscript(badgeN)) : '';
-    if (id === current) tabParts.push(theme.accent('[' + lab + ']') + badge);
-    else tabParts.push(theme.dim(lab) + badge);
+    if (id === current) tabParts.push(theme.accent('[' + lab + ']'));
+    else tabParts.push(theme.dim(lab));
   }
   const tabs = ' ' + tabParts.join(theme.dim(' \u00b7 ')) + ' ';
 
@@ -219,8 +195,7 @@ export async function runTui(io: CliIo, opts: RunOpts = {}): Promise<number> {
 
   const app: AppState = {
     user: { username: env.USER || env.USERNAME || 'anon' },
-    cwd,
-    unread: { news: 0 }
+    cwd
   };
 
   let current: PageId = opts.initial ?? 'home';

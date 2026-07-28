@@ -139,7 +139,7 @@ function renderNewsColumn(
   if (items.length === 0) {
     return {
       title: 'News',
-      lines: [theme.dim('No news cached yet — run `agora news --refresh`')]
+      lines: [theme.dim('No news cached yet — run `agora today`')]
     };
   }
   const title = isFallback ? 'News' + theme.dim(' · recent') : 'News';
@@ -180,7 +180,7 @@ function renderReposColumn(repos: HotRepo[], ctx: PageContext): RenderColumn {
   if (repos.length === 0) {
     return {
       title,
-      lines: [theme.dim('No trending repos cached — run `agora news --refresh`')]
+      lines: [theme.dim('No trending repos cached — run `agora today`')]
     };
   }
   const lines: string[] = [];
@@ -359,8 +359,6 @@ export const homePage: Page = {
   },
   handleKey(event, _ctx): PageAction {
     switch (event.key) {
-      case 'n':
-        return { kind: 'switch', to: 'news' };
       case 'm':
       case '/':
         return { kind: 'switch', to: 'search' };
@@ -377,10 +375,8 @@ export const homePage: Page = {
       case 'r':
         refreshFeed(_ctx);
         return { kind: 'status', message: 'refreshing' };
-      case 'enter': {
-        if (state.cursor === 0) return { kind: 'switch', to: 'news' };
+      case 'enter':
         return { kind: 'switch', to: 'search' };
-      }
       case 'j':
       case 'down':
         state.cursor = Math.min(1, state.cursor + 1);

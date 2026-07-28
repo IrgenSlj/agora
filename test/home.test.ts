@@ -21,13 +21,6 @@ describe('home page', () => {
     expect(keys).toContain('r');
   });
 
-  test('routes hotkey n → news', () => {
-    const ctx = {} as any;
-    const evt = { key: 'n' } as any;
-    const action = homePage.handleKey!(evt, ctx);
-    expect(action).toEqual({ kind: 'switch', to: 'news' });
-  });
-
   test('routes hotkey m → marketplace', () => {
     const ctx = {} as any;
     const evt = { key: 'm' } as any;

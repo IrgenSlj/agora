@@ -4,7 +4,6 @@ export const TUI_SLASH_ALIASES: Record<string, TuiPageId | 'default'> = {
   '/tui': 'default',
   '/home': 'home',
   '/catalog': 'search',
-  '/news': 'news',
   '/settings': 'settings'
 };
 
@@ -21,7 +20,6 @@ export const LETTER_SHORTCUTS: Record<string, LetterDispatch> = {
   '/k': { kind: 'bash', cmd: 'agora search' },
   '/l': { kind: 'meta', sub: 'last' },
   '/m': { kind: 'tui', page: 'search' },
-  '/n': { kind: 'tui', page: 'news' },
   '/o': { kind: 'bash', cmd: 'agora browse' },
   '/p': { kind: 'bash', cmd: 'agora preferences' },
   '/q': { kind: 'meta', sub: 'quit' },

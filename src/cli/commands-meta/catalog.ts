@@ -183,40 +183,31 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora refresh', 'agora refresh --store ~/.agora/agora.db --json']
   },
   {
-    name: 'news',
-    group: 'Catalog',
-    summary: 'Browse ranked tech news from HN, GitHub, arXiv',
-    usage: 'agora news [query] [--source hn|gh|arxiv] [--limit 20] [--refresh] [--json]',
-    details:
-      'Fetches and ranks news stories from multiple sources using a recency-engagement-topic scoring algorithm. ' +
-      'Cached locally in ~/.config/agora/news-cache.jsonl. ' +
-      'Use --refresh to force re-fetch; --source to filter by source; a positional query to search titles and tags.',
-    flags: [
-      { flag: '--source, -s', description: 'Source filter: hn, gh, arxiv' },
-      { flag: '--limit, -n', description: 'Maximum number of results (default 20)' },
-      { flag: '--refresh', description: 'Force re-fetch all enabled sources' },
-      { flag: '--json', description: 'Output as JSON' }
-    ],
-    examples: [
-      'agora news',
-      'agora news mcp',
-      'agora news --source hn --limit 5',
-      'agora news --refresh'
-    ]
-  },
-  {
     name: 'today',
     group: 'Catalog',
     summary: 'Daily digest: top news and trending items from the last 24h',
-    usage: 'agora today [--section news|market|all] [--json]',
+    usage: 'agora today [--section news|market|all] [--refresh] [--offline] [--json]',
+    details:
+      'Refreshes any news source whose cache has gone stale, then shows the top stories and ' +
+      'trending catalog items. Cached in ~/.config/agora/news-cache.jsonl. ' +
+      'Use --offline to read the cache without touching the network, or --refresh to force a ' +
+      'refetch. A source that cannot be reached keeps its cached items and is named in the ' +
+      'output, so fewer stories never silently reads as a quiet day.',
     flags: [
       {
         flag: '--section, -s',
         description: 'Show only one section: news, market, or all (default all)'
       },
-      { flag: '--json', description: 'Output { at, news, trending } as JSON' }
+      { flag: '--refresh', description: 'Force re-fetch of all enabled news sources' },
+      { flag: '--offline', description: 'Read the cache only; never touch the network' },
+      { flag: '--json', description: 'Output { at, news, unreachableSources, trending } as JSON' }
     ],
-    examples: ['agora today', 'agora today --section news', 'agora today --json']
+    examples: [
+      'agora today',
+      'agora today --section news',
+      'agora today --refresh',
+      'agora today --offline --json'
+    ]
   },
   {
     name: 'export',
@@ -258,7 +249,7 @@ export const COMMANDS: CommandMeta[] = [
     examples: [
       'agora watch 5 agora trending',
       'agora watch 10 agora search filesystem',
-      'agora watch 30 agora news --count 3'
+      'agora watch 30 agora today --section news'
     ]
   },
   {

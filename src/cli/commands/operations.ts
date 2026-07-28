@@ -677,7 +677,7 @@ export const commandConfig: CommandHandler = async (parsed, io, style) => {
       const { readCache } = await import('../../news/cache.js');
       const items = readCache(agoraDir);
       if (items.length === 0) {
-        deepOk.push('news cache: empty (run `agora news` to populate)');
+        deepOk.push('news cache: empty (run `agora today` to populate)');
       } else {
         const newest = items.reduce((m, i) => Math.max(m, new Date(i.fetchedAt).getTime()), 0);
         const ageH = (Date.now() - newest) / 3600000;

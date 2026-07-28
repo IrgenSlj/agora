@@ -251,10 +251,6 @@ describe('classifyInput — TUI slash shortcuts', () => {
     });
   });
 
-  test('/news → tui dispatch on news', () => {
-    expect(classifyInput('/news', neverExecutable)).toEqual({ kind: 'tui', page: 'news' });
-  });
-
   test('/settings → tui dispatch on settings', () => {
     expect(classifyInput('/settings', neverExecutable)).toEqual({ kind: 'tui', page: 'settings' });
   });

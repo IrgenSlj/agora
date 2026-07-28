@@ -99,19 +99,24 @@ describe('agora today', () => {
     }
   });
 
-  test('empty news cache shows actionable hint', async () => {
+  test('empty offline cache points at a command that exists', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-today-'));
     const dataDir = join(temp, 'data');
     mkdirSync(dataDir, { recursive: true });
     const { io, stdout } = createIo(temp, { env: { AGORA_API_URL: '', AGORA_TOKEN: '' } });
 
     try {
-      const code = await runCli(['today', '--section', 'news', '--data-dir', dataDir], io);
+      const code = await runCli(
+        ['today', '--section', 'news', '--offline', '--data-dir', dataDir],
+        io
+      );
       const out = stdout.join('');
 
       expect(code).toBe(0);
       expect(out).toContain('No news cached yet');
-      expect(out).toContain('agora news --refresh');
+      // `agora news` was retired; the hint must never name a deleted command.
+      expect(out).not.toContain('agora news');
+      expect(out).toContain('agora today');
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }

@@ -141,7 +141,7 @@ export const COMMANDS: CommandMeta[] = [
     summary: 'Show a guided onboarding tour of the agora CLI',
     usage: 'agora welcome [--json]',
     details:
-      'Displays a five-section guide covering sign-in, the catalog, news, ' +
+      'Displays a five-section guide covering the catalog, evidence, policy, ' +
       'shell completions, and scaffolding an MCP project. ' +
       'Step 1 adapts to show your saved-items commands when you are already signed in. ' +
       'Use --json to get a machine-readable list of steps.',
@@ -164,7 +164,7 @@ export const COMMANDS: CommandMeta[] = [
     examples: [
       'agora notify "Install complete"',
       'agora notify "Deploy finished" --title "CI" --sound',
-      'agora watch 60 agora news --count 1 && agora notify "News updated"'
+      'agora watch 60 agora today --section news && agora notify "News updated"'
     ]
   }
 ];

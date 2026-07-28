@@ -260,7 +260,7 @@ function fish(): string {
     'complete -c agora -n "__fish_seen_subcommand_from completions" -xa "bash zsh fish"',
     'complete -c agora -n "__fish_seen_subcommand_from init" -l dry-run -d "Preview only"',
     'complete -c agora -n "__fish_seen_subcommand_from init" -l mcp -d "Register MCP server"',
-    'complete -c agora -n "__fish_seen_subcommand_from news" -l source -d "Source" -xa "' +
+    'complete -c agora -n "__fish_seen_subcommand_from today" -l source -d "Source" -xa "' +
       NEWS_SOURCES.join(' ') +
       '"',
     'complete -c agora -n "__fish_seen_subcommand_from config" -l config -r -d "Config path"',

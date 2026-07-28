@@ -53,7 +53,7 @@ function makeCtx(opts: {
     width,
     height,
     trueColor,
-    app: { user: { username: 'test' }, cwd, unread: { news: 0 } },
+    app: { user: { username: 'test' }, cwd },
     repaint: () => {}
   };
 }

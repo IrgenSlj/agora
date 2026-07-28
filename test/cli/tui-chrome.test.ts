@@ -183,22 +183,6 @@ describe('renderHeader active tab', () => {
     expect(plain).not.toContain('Marketplace');
   });
 
-  test('unread news badge appears in header', () => {
-    const { style, theme } = makeTheme(false, false);
-    const app = { ...baseApp, unread: { news: 3 } };
-    const [row1] = renderHeader({
-      width: WIDTH,
-      style,
-      theme,
-      current: 'home',
-      app,
-      narrow: false
-    });
-    const plain = strip(row1);
-    // superscript 3 = ³ (U+00B3)
-    expect(plain).toContain('³');
-  });
-
   test('wordmark AGORA present in header', () => {
     const { style, theme } = makeTheme(false, false);
     const [row1] = renderHeader({

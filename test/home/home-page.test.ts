@@ -343,7 +343,7 @@ describe('home page: Repos lens', () => {
 
     const output = homePage.render(ctx);
     expect(output).toContain('Repos');
-    expect(output).toContain('agora news --refresh');
+    expect(output).toContain('agora today');
   });
 
   test('no line exceeds width in Repos lens', async () => {

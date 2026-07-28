@@ -136,7 +136,7 @@ describe('Edge Cases', () => {
 });
 
 describe('Plugin Tools', () => {
-  test('Agora plugin exports all 11 tools', async () => {
+  test('Agora plugin exports all 10 tools', async () => {
     const plugin = await import('../src/plugin/index');
     const tools = (await plugin.Agora({} as any)).tool!;
     expect(Object.keys(tools).sort()).toEqual([
@@ -147,7 +147,6 @@ describe('Plugin Tools', () => {
       'agora_config',
       'agora_info',
       'agora_install',
-      'agora_news',
       'agora_scan',
       'agora_search',
       'agora_today'

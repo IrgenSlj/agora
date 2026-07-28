@@ -186,33 +186,6 @@ export function createAgoraRuntimeTools(input?: PluginInput): Record<string, Too
       }
     }),
 
-    agora_news: tool({
-      description: 'Get the latest tech news from HN, GitHub, and arXiv',
-      args: {
-        query: tool.schema.string().optional().describe('Search query to filter news'),
-        source: tool.schema.string().optional().describe('Source filter: hn, gh, arxiv'),
-        limit: tool.schema.number().optional().describe('Number of results (default 10)'),
-        refresh: tool.schema.boolean().optional().describe('Force re-fetch all sources')
-      },
-      async execute(args) {
-        const { execSync } = await import('node:child_process');
-        const agoraFlags = [
-          args.query ? `"${args.query}"` : '',
-          args.source ? `--source ${args.source}` : '',
-          args.limit ? `--limit ${args.limit}` : '',
-          args.refresh ? '--refresh' : ''
-        ]
-          .filter(Boolean)
-          .join(' ');
-        try {
-          const out = execSync(`agora news ${agoraFlags}`, { encoding: 'utf8', timeout: 30000 });
-          return out || 'No news found.';
-        } catch (e: any) {
-          return `Failed to fetch news: ${e.message || 'unknown error'}. Try running \`agora news\` directly in your terminal.`;
-        }
-      }
-    }),
-
     agora_info: tool({
       description: 'Show information about Agora plugin',
       args: {},
@@ -224,16 +197,13 @@ The trust plane for agentic tooling.
 Type \`/agora <request>\` in OpenCode and it routes to the right tool:
 - \`/agora search <query> [category]\` - Search the catalog
 - \`/agora today\` - Daily news and catalog highlights
-- \`/agora browse <id>\` - View package or workflow details
+- \`/agora browse <id>\` - View package details
 - \`/agora browse_category <category>\` - Browse a category
-- \`/agora trending [type]\` - See trending packages and workflows
 - \`/agora install <id>\` - Install steps / config for a package
 - \`/agora scan <id>\` - Offline trust scan preview
 - \`/agora acquire <id|query>\` - Preview scan-gated acquisition
-- \`/agora tutorial <id> [step]\` - Interactive tutorials
 - \`/agora chat <message>\` - Free AI chat via opencode run
 - \`/agora config\` - Check OpenCode config health (with optional --fix)
-- \`/agora news\` - Latest tech news from HN, GitHub, arXiv
 - \`/agora info\` - This help
 
 The \`/agora\` slash command is installed by \`agora init\` (or copy
@@ -243,10 +213,12 @@ The \`/agora\` slash command is installed by \`agora init\` (or copy
 **CLI-only features** (not plugin tools):
 - \`agora mcp\` — Run an MCP server exposing Agora tools
 - \`agora shell\` — Interactive bash+chat hybrid shell
-- \`agora init\`, \`agora use\`, \`agora config doctor\`
+- \`agora init\`, \`agora config doctor\`, \`agora doctor\`
+- \`agora run -- <cmd>\` / \`agora observe\` — supervise a server and see what it did
+- \`agora policy check\`, \`agora plan\`, \`agora apply\`, \`agora sync\`
 - \`agora export\`, \`agora watch\`, \`agora completions\`
 
-**Categories:** mcp, prompt, workflow, skill`;
+**Categories:** mcp, prompt, skill, other`;
       }
     })
   };

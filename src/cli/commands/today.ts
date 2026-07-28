@@ -2,8 +2,9 @@ import type { MarketplaceItem } from '../../catalog/bundled.js';
 import { getTrendingItems } from '../../catalog/bundled.js';
 import { formatNumber } from '../../format.js';
 import { readCache } from '../../news/cache.js';
+import { refreshNews } from '../../news/refresh.js';
 import { rankItems } from '../../news/score.js';
-import type { ScoredNewsItem } from '../../news/types.js';
+import type { NewsItem, NewsSource, ScoredNewsItem } from '../../news/types.js';
 import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../../news/types.js';
 import { header } from '../format.js';
 import { detectDataDir, stringFlag, writeJson, writeLine } from '../helpers.js';
@@ -30,10 +31,26 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
 
   let newsItems: ScoredNewsItem[] = [];
   let newsIsFallback = false;
+  let failedSources: NewsSource[] = [];
   let trending: MarketplaceItem[] = [];
 
   if (wantsNews) {
-    const cached = readCache(dataDir);
+    // `today` owns the refresh now that `agora news` is gone. Offline stays
+    // read-only so the command never blocks on the network without being asked.
+    let cached: NewsItem[];
+    if (parsed.flags.offline) {
+      cached = readCache(dataDir);
+    } else {
+      const result = await refreshNews({
+        dataDir,
+        config: DEFAULT_NEWS_CONFIG,
+        force: Boolean(parsed.flags.refresh),
+        fetcher: io.fetcher
+      });
+      cached = result.items;
+      failedSources = result.failed;
+    }
+
     const recent = cached.filter((item) => new Date(item.publishedAt).getTime() > cutoff);
     newsItems = rankItems(recent, DEFAULT_NEWS_CONFIG, new Date()).slice(0, 3);
     if (newsItems.length === 0 && cached.length > 0) {
@@ -50,6 +67,8 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
     writeJson(io.stdout, {
       at: new Date().toISOString(),
       news: wantsNews ? newsItems : undefined,
+      // Named so a consumer can tell "no news" from "a source was unreachable".
+      unreachableSources: wantsNews && failedSources.length > 0 ? failedSources : undefined,
       trending: wantsMarket ? trending : undefined
     });
     return 0;
@@ -72,7 +91,12 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
     const newsHeading = newsIsFallback ? 'News' + theme.dim(' · recent') : 'News';
     writeLine(io.stdout, theme.accent(newsHeading));
     if (newsItems.length === 0) {
-      writeLine(io.stdout, theme.muted('No news cached yet — run `agora news --refresh`'));
+      writeLine(
+        io.stdout,
+        parsed.flags.offline
+          ? theme.muted('No news cached yet — run `agora today` without --offline to fetch.')
+          : theme.muted('No news available.')
+      );
     } else {
       for (const item of newsItems) {
         const src = theme.dim(item.source.toUpperCase().slice(0, 2).padEnd(3));
@@ -81,6 +105,13 @@ export const commandToday: CommandHandler = async (parsed, io, style) => {
         writeLine(io.stdout, src + '  ' + age + '  ' + up + '  ' + item.title);
         writeLine(io.stdout, '         ' + theme.dim(hostFromUrl(item.url)));
       }
+    }
+    // Fewer stories because a source was down is not the same as a quiet day.
+    if (failedSources.length > 0) {
+      writeLine(
+        io.stdout,
+        theme.muted(`${failedSources.join(', ')} unreachable — showing cached items for those.`)
+      );
     }
     writeLine(io.stdout, '');
   }

@@ -62,7 +62,7 @@ function renderToday(directory?: string, section = 'all'): string {
   if (wantsNews) {
     lines.push('**News**');
     if (news.length === 0) {
-      lines.push('No cached news yet. Run `agora news --refresh` in your terminal.');
+      lines.push('No cached news yet. Run `agora today` in your terminal to fetch.');
     } else {
       for (const item of news) {
         lines.push(`- ${item.title} · ${hostFromUrl(item.url)} · ${ageLabel(item.publishedAt)}`);
