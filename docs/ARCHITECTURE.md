@@ -130,8 +130,12 @@ writes atomic (`src/atomic-write.ts`). `agora.lock` is machine truth (brief §5.
 - **CLI** (`src/cli/`) — command dispatch, the interactive shell, the prompter, and the
   full-screen TUI pages. Running `agora` with no arguments in a TTY opens the shell, where a
   terminal command, an `agora` command, or plain text (routed to chat) all work without a mode
-  switch. Inference is **spawned, never hosted**: Agora shells out to a local `opencode` binary
-  so the zero-cost path works with no key on first run.
+  switch. Inference is **spawned, never hosted** (`src/inference/`): providers wrap a coding CLI
+  the user already has — `opencode` by default so the zero-cost path works with no key on first
+  run, or Claude Code via `AGORA_INFERENCE=claude`. Spawning `claude -p` uses the developer's
+  existing login, subscription included, so **no credential ever reaches Agora**. Each provider
+  translates its own stream into the renderer's event vocabulary, which is why
+  `src/cli/chat-renderer.ts` needs to know nothing about who produced a line.
 - **`agora mcp`** (`src/cli/mcp-server.ts`) — exposes the stack manager and catalog as MCP tools,
   so any MCP-capable harness can call Agora directly. Planned: `src/serve/`, the brief §8
   agent-facing server with policy-filtered discovery (`search_tools`, `get_evidence`,
@@ -188,6 +192,7 @@ src/news/             feed sources + ranking (read-only, frozen)
 src/cli/              command handlers, dispatch, shell, prompter, TUI pages
 src/plugin/           OpenCode plugin (tools, hooks)
 src/hubs/             GitHub + HuggingFace connectors
+src/inference/        inference providers (opencode, claude) — spawned, never hosted
 src/fetch.ts          the injectable `FetchLike` every network call takes
 workers/api/          Cloudflare Worker scaffold (not deployed)
 packages/opencode-agora/  thin npm entry re-exporting agora-hub/opencode

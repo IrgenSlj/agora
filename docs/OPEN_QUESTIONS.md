@@ -56,6 +56,27 @@ workaround.
 **Use model aliases (`opus`, `sonnet`, `haiku`, `fable`), not pinned IDs.** The pinned list
 above is already stale — `claude-opus-4-8` is now `claude-opus-5`. Aliases do not rot.
 
+### RESOLVED 2026-07-28 — shipped as `src/inference/`
+
+`InferenceProvider` (`src/inference/types.ts`) with `opencode` and `claude` implementations,
+selected by `selectProvider()`. The free provider is first in `PROVIDERS` order and wins by
+default, so Agora never silently spends a user's Claude quota because the binary happens to be
+installed; `AGORA_INFERENCE=claude` opts in. An explicitly requested provider that is missing is
+*reported*, never substituted.
+
+Two things learned by running the real binary rather than reading docs:
+
+- **`--verbose` is required** alongside `-p --output-format stream-json`. Without it the stream
+  carries only the final result, so an incremental renderer draws nothing until the very end.
+- **Claude splits a tool call from its result** — the call arrives on an `assistant` message, the
+  result on the following `user` message. The renderer only prints tools that reached a terminal
+  status, so the translator holds the call and emits one paired event when the result lands. This
+  is why `StreamTranslator` is created per run (stateful) rather than being a pure function.
+
+Verified end to end against a live `claude` process: prompt in, text out, plus session id, token
+count and cost, with no API key present. Event shapes in `test/inference.test.ts` are captured
+from real output, so an upstream change surfaces as a test failure rather than a silent blank.
+
 ## OQ-3 — Federation sources (P1 / P1+): PulseMCP gated, Glama has no tool schemas
 
 Verified live 2026-07-03 against each API; re-verified live 2026-07-04 while building the P1+

@@ -35,6 +35,8 @@ export function renderMarkdownLine(line: string, style: Styler): string {
 
 export interface ChatRenderer {
   handleLine(line: string): void;
+  /** Feed an already-parsed event (providers translate their own streams). */
+  handleEvent(ev: unknown): void;
   finalize(): void;
   getAssistantText(): string;
   getSessionId(): string | null;
@@ -258,12 +260,18 @@ export function createChatRenderer(opts: ChatRendererOptions): ChatRenderer {
   return {
     handleLine(line: string): void {
       if (!line.trim()) return;
-      let ev: any;
+      let parsed: unknown;
       try {
-        ev = JSON.parse(line);
+        parsed = JSON.parse(line);
       } catch {
         return;
       }
+      this.handleEvent(parsed);
+    },
+
+    handleEvent(raw: unknown): void {
+      const ev = raw as any;
+      if (!ev || typeof ev !== 'object') return;
 
       if (!sessionId && typeof ev.sessionID === 'string') {
         sessionId = ev.sessionID;

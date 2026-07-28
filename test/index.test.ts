@@ -192,7 +192,7 @@ describe('Plugin Tools', () => {
     });
   });
 
-  test('agora_chat returns error when opencode is not available', async () => {
+  test('agora_chat explains itself when no inference provider is installed', async () => {
     const plugin = await import('../src/plugin/index');
     const tools = (await plugin.Agora({} as any)).tool!;
 
@@ -200,7 +200,11 @@ describe('Plugin Tools', () => {
     process.env.PATH = '/dev/null';
     try {
       const result = await tools.agora_chat.execute({ message: 'test' }, {} as any);
-      expect(result).toContain('Failed to run opencode');
+      // Agora hosts no inference, so "nothing installed" must name every
+      // option rather than assuming the user wanted one particular CLI.
+      expect(result).toContain('No inference provider found');
+      expect(result).toContain('opencode.ai');
+      expect(result).toContain('claude-code');
     } finally {
       process.env.PATH = origPath;
     }

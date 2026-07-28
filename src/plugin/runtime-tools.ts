@@ -68,16 +68,22 @@ export function createAgoraRuntimeTools(input?: PluginInput): Record<string, Too
         const clientResponse = await chatWithOpenCodeClient(input, context, message, model);
         if (clientResponse) return clientResponse;
 
-        const { buildOpencodeRunArgs, spawnOpencode } = await import('../opencode-exec.js');
+        const { selectProvider } = await import('../inference/index.js');
+        const selection = selectProvider({ env: process.env });
+        const provider = selection.provider;
+        if (!provider) return selection.problem ?? 'No inference provider available.';
+        const translate = provider.createTranslator();
+
         return new Promise<string>((resolve) => {
-          let child: ReturnType<typeof spawnOpencode>;
+          let child: ReturnType<typeof provider.spawn>;
           try {
-            child = spawnOpencode(buildOpencodeRunArgs({ model, prompt: message }), {
-              stdio: ['ignore', 'pipe', 'pipe']
-            });
+            child = provider.spawn(
+              provider.buildArgs({ model: model || provider.defaultModel, prompt: message }),
+              { stdio: ['ignore', 'pipe', 'pipe'] }
+            );
           } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            resolve(`Failed to run opencode: ${message}. Is opencode installed and in your PATH?`);
+            const detail = err instanceof Error ? err.message : String(err);
+            resolve(`Failed to run ${provider.label}: ${detail}. ${provider.installHint}`);
             return;
           }
 
@@ -92,20 +98,14 @@ export function createAgoraRuntimeTools(input?: PluginInput): Record<string, Too
 
           child.on('close', (code) => {
             if (code !== 0) {
-              resolve(
-                `Error: opencode exited with code ${code}. Try a different model with \`/agora chat model:anthropic/claude-sonnet-4-20250514 "${message}"\``
-              );
+              resolve(`Error: ${provider.label} exited with code ${code}.`);
               return;
             }
 
             for (const line of stdout.split('\n').filter(Boolean)) {
-              try {
-                const ev = JSON.parse(line);
-                if (ev.type === 'text' && ev.part?.text) {
-                  response += ev.part.text;
-                }
-              } catch {
-                /* skip */
+              for (const raw of translate(line)) {
+                const ev = raw as { type?: string; part?: { text?: string } };
+                if (ev.type === 'text' && ev.part?.text) response += ev.part.text;
               }
             }
 
@@ -113,9 +113,7 @@ export function createAgoraRuntimeTools(input?: PluginInput): Record<string, Too
           });
 
           child.on('error', (err) => {
-            resolve(
-              `Failed to run opencode: ${err.message}. Is opencode installed and in your PATH?`
-            );
+            resolve(`Failed to run ${provider.label}: ${err.message}. ${provider.installHint}`);
           });
         });
       }

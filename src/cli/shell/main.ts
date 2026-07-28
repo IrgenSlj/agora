@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from 'n
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { getMarketplaceItems } from '../../catalog/bundled.js';
-import { buildOpencodeRunArgs, FREE_MODELS, spawnOpencode } from '../../opencode-exec.js';
+import { PROVIDERS, selectProvider } from '../../inference/index.js';
 import { detectAgoraDataDir, loadAgoraState, resolveSavedItems } from '../../state.js';
 import {
   appendTranscript,
@@ -41,13 +41,18 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   const env = io.env ?? {};
   const trueColor = supportsTrueColor(env);
 
+  // Chosen once per session: the free provider unless AGORA_INFERENCE says
+  // otherwise. `problem` is kept so chat can explain itself instead of failing
+  // with a bare spawn error.
+  const inference = selectProvider({ env: process.env });
+
   function printHome(): void {
     const banner = renderBanner({ color: true, trueColor });
     const motto = 'The trust plane for agentic tooling - type a command, bash or chat:';
     const mottoLine = gradientText(motto, { trueColor });
-    const model = FREE_MODELS[0];
+    const model = inference.provider?.defaultModel ?? 'no inference provider';
     const infoLine = style.dim(`v${AGORA_VERSION} · ${model} · /abc · /help · /search · /quit`);
-    const slashLine = style.orange('/home · /catalog · /news · /settings');
+    const slashLine = style.orange('/home · /catalog · /settings');
     process.stdout.write(`\n${banner}\n\n${mottoLine}\n\n${infoLine}\n${slashLine}\n\n`);
   }
 
@@ -212,7 +217,7 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
   }
 
   function buildContextLine(): string {
-    const model = FREE_MODELS[0];
+    const model = inference.provider?.defaultModel ?? 'none';
     const turnCount = meta?.turnCount ?? 0;
     const tip = tips[turnCount % tips.length];
     const parts = [`model: ${model}`, `${turnCount} turns`];
@@ -696,11 +701,18 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     if (bashCtx) fullPrompt += `\n${bashCtx}`;
     fullPrompt += `\n<user>\n${userMsg}`;
 
-    const args = buildOpencodeRunArgs({
-      model: FREE_MODELS[0],
+    const provider = inference.provider;
+    if (!provider) {
+      process.stdout.write(`${style.dim(inference.problem ?? 'No inference provider.')}\n\n`);
+      return;
+    }
+
+    const args = provider.buildArgs({
+      model: provider.defaultModel,
       prompt: fullPrompt,
       sessionId: meta!.sessionId
     });
+    const translate = provider.createTranslator();
 
     const renderer = createChatRenderer({
       verbosity,
@@ -721,9 +733,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
     let spawnError: Error | null = null;
 
     await new Promise<void>((res) => {
-      let child: ReturnType<typeof spawnOpencode>;
+      let child: ReturnType<typeof provider.spawn>;
       try {
-        child = spawnOpencode(args, {
+        child = provider.spawn(args, {
           env: env as Record<string, string>,
           stdio: ['ignore', 'pipe', 'pipe']
         });
@@ -737,7 +749,9 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
       child.stdout?.on('data', (chunk: Buffer) => {
         const text = chunk.toString();
         for (const rawLine of text.split('\n').filter(Boolean)) {
-          renderer.handleLine(rawLine);
+          // The provider translates its own stream into the renderer's
+          // vocabulary, so the renderer never learns who produced the line.
+          for (const ev of translate(rawLine)) renderer.handleEvent(ev);
         }
       });
 
@@ -912,8 +926,12 @@ function printHelp(style: Styler): void {
     style.dim('Verbosity:'),
     '  /verbose  /medium  /quiet',
     '',
-    style.dim('Free AI models:'),
-    ...FREE_MODELS.map((m) => `  ${m}`),
+    style.dim('Inference providers (Agora hosts none — it spawns a CLI you have):'),
+    ...PROVIDERS.map(
+      (p) =>
+        `  ${p.id.padEnd(9)} ${p.free ? 'free    ' : 'your plan'}  ${p.models.slice(0, 4).join(', ')}`
+    ),
+    style.dim('  Pick one with AGORA_INFERENCE=<id>; the free provider is the default.'),
     '',
     style.dim('Agora commands (also available as /slash shortcuts):')
   ];
