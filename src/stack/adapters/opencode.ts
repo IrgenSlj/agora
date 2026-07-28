@@ -1,5 +1,4 @@
 import { existsSync, readFileSync, unlinkSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
 import { loadOpenCodeConfig } from '../../config-files.js';
@@ -15,14 +14,7 @@ import type {
   ToolAdapter,
   ToolConfigLocation
 } from '../types.js';
-
-function resolveHome(opts: StackEnv): string {
-  return opts.home ?? homedir();
-}
-
-function resolveCwd(opts: StackEnv): string {
-  return opts.cwd ?? process.cwd();
-}
+import { resolveCwd, resolveHome } from './shared.js';
 
 /**
  * Fix 1: Merge a DesiredServer into an existing opencode entry, preserving unknown keys.

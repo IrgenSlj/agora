@@ -6,8 +6,9 @@ Agora is pre-1.0 and moving quickly against the locked v2 trust-plane brief.
 
 | Version | Supported |
 |---|---|
-| 0.6.x | yes |
-| < 0.6 | security fixes only when practical |
+| 0.7.x | yes |
+| 0.6.x | security fixes only when practical |
+| < 0.6 | no |
 
 ## Reporting A Vulnerability
 
@@ -52,6 +53,5 @@ The v2 build is replacing this with evidence and policy:
 
 ## Known Transitional Risk
 
-Some legacy auth/live-source code is still present while S1/S2 replace the old catalog/account-era
-model with `Artifact` + federation/store contracts. Do not expand those surfaces; remove or route
-around them as their replacement phase lands.
+The v1 catalog surface (19 commands including auth, community, and account features) was removed in
+v0.7.0. Legacy `~/.config/agora/*` state files may still exist and can be safely deleted.

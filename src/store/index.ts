@@ -432,10 +432,23 @@ export class CASCache {
   }
 
   /**
+   * Validate a CAS hash to prevent path traversal attacks.
+   * SHA-256 hashes are exactly 64 lowercase hexadecimal characters.
+   */
+  private static validateHash(hash: string): void {
+    if (!/^[a-f0-9]{64}$/.test(hash)) {
+      throw new Error(
+        `Invalid CAS hash: expected 64 lowercase hex characters, got "${hash.slice(0, 32)}..."`
+      );
+    }
+  }
+
+  /**
    * Retrieve a blob from the CAS by its hash.
    * Returns null if not found.
    */
   get(hash: string): Buffer | null {
+    CASCache.validateHash(hash);
     const blobPath = join(this.casDir, hash);
     if (!existsSync(blobPath)) {
       return null;
@@ -447,6 +460,7 @@ export class CASCache {
    * Check if a blob exists in the CAS.
    */
   has(hash: string): boolean {
+    CASCache.validateHash(hash);
     const blobPath = join(this.casDir, hash);
     return existsSync(blobPath);
   }
@@ -455,6 +469,7 @@ export class CASCache {
    * Get the path to a blob in the CAS.
    */
   path(hash: string): string {
+    CASCache.validateHash(hash);
     return join(this.casDir, hash);
   }
 }

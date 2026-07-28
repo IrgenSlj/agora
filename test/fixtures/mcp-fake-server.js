@@ -30,7 +30,7 @@ process.stdin.on('data', (chunk) => {
           capabilities: {}
         }
       };
-      process.stdout.write(JSON.stringify(response) + '\n');
+      process.stdout.write(`${JSON.stringify(response)}\n`);
     } else if (msg.method === 'notifications/initialized') {
       // Notification — no response
     } else if (msg.method === 'tools/list') {
@@ -52,7 +52,7 @@ process.stdin.on('data', (chunk) => {
           ]
         }
       };
-      process.stdout.write(JSON.stringify(response) + '\n');
+      process.stdout.write(`${JSON.stringify(response)}\n`);
       // After replying to tools/list, we can stay alive (probe will SIGTERM us)
     }
   }

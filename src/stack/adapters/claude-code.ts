@@ -1,5 +1,4 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
 import { hashContent } from '../manifest.js';
@@ -15,35 +14,14 @@ import type {
   ToolConfigLocation
 } from '../types.js';
 import { extractMarkerSections, mergeMarkerSections } from './instruction-markers.js';
-
-function resolveHome(opts: StackEnv): string {
-  return opts.home ?? homedir();
-}
-
-function resolveCwd(opts: StackEnv): string {
-  return opts.cwd ?? process.cwd();
-}
-
-type McpEntry = Record<string, unknown>;
-
-const REMOTE_TYPES = new Set(['sse', 'http', 'streamable-http']);
-const LOCAL_TYPES = new Set(['stdio']);
-
-/** Fix 2: robust transport detection */
-function isRemoteEntry(entry: McpEntry): boolean {
-  const t = typeof entry['type'] === 'string' ? entry['type'] : undefined;
-  const tr = typeof entry['transport'] === 'string' ? entry['transport'] : undefined;
-  const hasUrl = 'url' in entry;
-  const hasCommand = 'command' in entry;
-
-  if (t && REMOTE_TYPES.has(t)) return true;
-  if (tr && REMOTE_TYPES.has(tr)) return true;
-  if (t && LOCAL_TYPES.has(t)) return false;
-  if (tr && LOCAL_TYPES.has(tr)) return false;
-
-  if (hasCommand) return false;
-  return hasUrl;
-}
+import {
+  isRemoteEntry,
+  LOCAL_TYPES,
+  type McpEntry,
+  REMOTE_TYPES,
+  resolveCwd,
+  resolveHome
+} from './shared.js';
 
 function parseEntry(
   name: string,

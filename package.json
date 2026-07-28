@@ -64,15 +64,15 @@
   "author": "IrgenSlj",
   "license": "MIT",
   "dependencies": {
-    "@cedar-policy/cedar-wasm": "4.11.2",
+    "@cedar-policy/cedar-wasm": "^4.11.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "better-sqlite3": "^13.0.1",
     "canonicalize": "^3.0.0",
     "hono": "^4.12.31",
     "packageurl-js": "^2.0.1",
-    "sigstore": "5.0.0",
+    "sigstore": "^5.0.0",
     "smol-toml": "^1.7.0",
-    "yargs": "18",
+    "yargs": "^18",
     "zod": "^4.4.3"
   },
   "devDependencies": {

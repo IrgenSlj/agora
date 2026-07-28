@@ -11,14 +11,6 @@ updates:
     commit-message:
       prefix: 'chore'
       include: 'scope'
-  - package-ecosystem: 'bun'
-    directory: '/backend'
-    schedule:
-      interval: 'weekly'
-    open-pull-requests-limit: 3
-    commit-message:
-      prefix: 'chore'
-      include: 'scope'
   - package-ecosystem: 'github-actions'
     directory: '/'
     schedule:

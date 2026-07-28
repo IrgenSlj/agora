@@ -1,4 +1,4 @@
-import { execSync, spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -345,10 +345,14 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
           const args = dispatch.args.split(/\s+/).filter(Boolean);
           process.stdout.write(style.dim(`╤ dry-run · agora ${args.join(' ')}`) + '\n');
           try {
-            const out = execSync(`agora ${args.join(' ')}`, { timeout: 15000, encoding: 'utf8' });
+            const out = execFileSync(process.execPath, ['dist/cli.js', ...args], {
+              timeout: 15000,
+              encoding: 'utf8'
+            });
             process.stdout.write(out + '\n');
-          } catch (e: any) {
-            process.stdout.write((e.stdout ?? '') + (e.stderr ?? '') + '\n');
+          } catch (e: unknown) {
+            const err = e as { stdout?: string; stderr?: string };
+            process.stdout.write((err.stdout ?? '') + (err.stderr ?? '') + '\n');
           }
           continue;
         }
