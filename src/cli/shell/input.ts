@@ -25,7 +25,6 @@ export const LETTER_SHORTCUTS: Record<string, LetterDispatch> = {
   '/q': { kind: 'meta', sub: 'quit' },
   '/s': { kind: 'tui', page: 'settings' },
   '/t': { kind: 'meta', sub: 'terminal' },
-  '/u': { kind: 'bash', cmd: 'agora use' },
   '/v': { kind: 'meta', sub: 'verbose' },
   '/w': { kind: 'bash', cmd: 'agora watch' },
   '/x': { kind: 'bash', cmd: 'agora export' },

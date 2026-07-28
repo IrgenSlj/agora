@@ -33,6 +33,52 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora run -- npx @modelcontextprotocol/server-filesystem']
   },
   {
+    name: 'quarantine',
+    group: 'Stack',
+    summary: 'List servers held back after their tool descriptions changed',
+    usage: 'agora quarantine [list] [--json]',
+    details:
+      'A server is quarantined when `agora doctor --probe` finds its advertised tools no longer ' +
+      'match the baseline you approved — the rug-pull shape Agora exists to catch. Quarantined ' +
+      'servers are skipped by `agora sync` and `agora apply` so they are never silently ' +
+      'reintroduced from agora.toml. Exits 1 when anything is quarantined, so CI can gate on it. ' +
+      'An empty list means no probe has caught a change; it is not proof of good behaviour.',
+    flags: [{ flag: '--json', description: 'Output as JSON' }],
+    examples: ['agora quarantine', 'agora quarantine list --json']
+  },
+  {
+    name: 'unquarantine',
+    group: 'Stack',
+    summary: 'Release a quarantined server, accepting its changed tool descriptions',
+    usage: 'agora unquarantine <name> --accept-risk [--json]',
+    details:
+      'Approves the drifted tool descriptions as the new baseline and re-enables the server. ' +
+      '--accept-risk is required: releasing means accepting a change that was made to a server ' +
+      'after you approved it. Inspect the drift with `agora doctor --probe` first. ' +
+      'Run `agora sync` afterwards to write it back to your hosts.',
+    flags: [
+      { flag: '--accept-risk', description: 'Required. Accept the changed tool descriptions' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora unquarantine my-server --accept-risk']
+  },
+  {
+    name: 'remove',
+    group: 'Stack',
+    summary: 'Remove an entry from agora.toml',
+    usage: 'agora remove <name> [--dry-run] [--json]',
+    details:
+      'Removes the entry from your agora.toml profile. Agora is declarative: agora.toml is the ' +
+      'source of truth and host configs are reconciled to it, so this does not touch host ' +
+      'configs directly. Run `agora plan` to preview and `agora apply --prune` to propagate ' +
+      'the removal.',
+    flags: [
+      { flag: '--dry-run', description: 'Show what would be removed without writing' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora remove my-server', 'agora remove my-server --dry-run']
+  },
+  {
     name: 'policy',
     group: 'Stack',
     summary: 'Scaffold, lint, and evaluate your Cedar policy over installed servers',

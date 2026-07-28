@@ -167,12 +167,17 @@ best-designed, highest-touch surface currently shows catalog rows where it shoul
 verdicts. This is the cheapest place to make evidence visible, and it is what converts
 those 7,249 lines from cost into the product's face.
 
-### C6 — Close the brief §9 gaps
+### C6 — Close the brief §9 gaps ✅ done 2026-07-28
 
-41 commands are registered against a 16-command contract. Missing from the code:
-`remove`, `verify` (exists as `scan`), and `quarantine`/`unquarantine` — the quarantine
-*machinery* ships and is enforced by `sync`/`update`, but there is no CLI to list or
-release a quarantined server, so the only exit is editing state by hand.
+`agora quarantine [list]`, `agora unquarantine <name> --accept-risk`, `agora remove`, and
+`verify` as an alias for `scan`. The quarantine machinery had shipped and was enforced by
+`sync`/`update`, but with no CLI the only exit was hand-editing `capabilities.json`.
+
+`test/cli/no-dangling-commands.test.ts` now fails the build when any user-facing string
+names a command that is not registered. Four cleanups in a row had turned up the same bug —
+v0.6.2 deleted commands but not the code pointing at them — and the guard caught two more
+on its first run (`agora watch` documented an example using the deleted `agora trending`;
+the shell's `/u` shortcut still ran `agora use`).
 
 ### S6 remainder — observed divergence into policy
 

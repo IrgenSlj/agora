@@ -241,13 +241,13 @@ export const COMMANDS: CommandMeta[] = [
     details:
       'Repeatedly runs an agora command at the given interval in seconds. ' +
       'Clears the screen between runs. Use --count to limit the number of iterations. ' +
-      'Example: agora watch 5 agora trending watches trending every 5 seconds.',
+      'Example: agora watch 5 agora today watches the daily digest every 5 seconds.',
     flags: [
       { flag: '--count, -n', description: 'Stop after N iterations' },
       { flag: '--once', description: 'Run once and exit' }
     ],
     examples: [
-      'agora watch 5 agora trending',
+      'agora watch 5 agora today',
       'agora watch 10 agora search filesystem',
       'agora watch 30 agora today --section news'
     ]

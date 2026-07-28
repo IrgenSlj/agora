@@ -19,7 +19,9 @@ import * as operations from './commands/operations.js';
 import * as outdatedModule from './commands/outdated.js';
 import * as planModule from './commands/plan.js';
 import * as policyModule from './commands/policy.js';
+import * as quarantineModule from './commands/quarantine.js';
 import * as refreshModule from './commands/refresh.js';
+import * as removeModule from './commands/remove.js';
 import * as scanModule from './commands/scan.js';
 import * as syncModule from './commands/sync.js';
 import * as todayModule from './commands/today.js';
@@ -157,15 +159,19 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       today: todayModule.commandToday,
       open: browseModule.commandOpen,
       scan: scanModule.commandScan,
+      verify: scanModule.commandScan,
       acquire: acquireModule.commandAcquire,
       outdated: outdatedModule.commandOutdated,
       refresh: refreshModule.commandRefresh,
+      remove: removeModule.commandRemove,
       installed: installedModule.commandInstalled,
       doctor: doctorModule.commandDoctor,
       freeze: freezeModule.commandFreeze,
       sync: syncModule.commandSync,
       plan: planModule.commandPlan,
       policy: policyModule.commandPolicy,
+      quarantine: quarantineModule.commandQuarantine,
+      unquarantine: quarantineModule.commandUnquarantine,
       apply: applyModule.commandApply,
       update: updateModule.commandUpdate,
       try: tryModule.commandTry,
