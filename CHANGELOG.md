@@ -303,6 +303,20 @@ tool-description poisoning checks, and per-tool drift detection — all wired th
 
 ## [Unreleased]
 
+### Security
+
+- **Shell injection in `notify.ts`** — `notifyDarwin` and `notifyWindows` interpolated user input into shell commands via `execSync`. Replaced with `execFile` using args arrays, eliminating injection vectors in osascript and PowerShell paths.
+- **Shell injection in `/dry-run` handler** — `shell/main.ts` ran `execSync(\`agora ${args}\`)` with unsanitized user input. Replaced with `execFileSync` using the built binary path and args array.
+- **CAS cache path traversal** — `store/index.ts` `get()`/`has()`/`path()` constructed filesystem paths from user-influenced hash values without validation. Added `validateHash()` enforcing the 64-char hex format before any path operation.
+
+### Changed
+
+- **Shared adapter helpers extracted** — `resolveHome()`, `resolveCwd()`, `isRemoteEntry()`, `parseJson()`, `REMOTE_TYPES`, `LOCAL_TYPES`, and `McpEntry` type extracted from 4 adapter files into `src/stack/adapters/shared.ts`, removing ~40 lines of duplication.
+- **Dependency version ranges** — `@cedar-policy/cedar-wasm`, `sigstore`, and `yargs` changed from exact pins to `^` ranges for automatic patch updates.
+- **Removed dead dependabot rule** — The `/backend` directory was deleted in v0.6.0 but its dependabot config persisted.
+- **Removed dead CI job** — `docker-integration` was permanently disabled (`if: false`) and never enforced.
+- **SECURITY.md** — Updated supported versions table for v0.7.0.
+
 _Next (see [`ROADMAP.md`](./ROADMAP.md)): TUI-1 acquire flow, TUI-2 search + item detail._
 
 ## [0.6.0] - 2026-07-04 — the pivot: from terminal marketplace to agentic stack manager
