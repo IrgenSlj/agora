@@ -4,19 +4,29 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'observe',
     group: 'Stack',
-    summary: 'Report what your MCP servers actually did while you used them',
-    usage: 'agora observe [status] [--json]',
+    summary: 'See what your servers actually did, and switch observation on across hosts',
+    usage: 'agora observe [status|enable|disable] [--dry-run] [--json]',
     details:
       'Observation records real behaviour in the real environment, rather than a one-shot ' +
-      'sandbox run a server could detect. Route a server through Agora by setting its host ' +
-      'config command to ["agora", "run", "--", ...original]; Agora becomes its parent process ' +
-      'and tees the MCP protocol stream. Recorded: which tools were called and how often, which ' +
-      'tools the server advertised, and which peers it held connections to. NEVER recorded: tool ' +
-      'arguments, results, or anything derived from them — nothing leaves the machine. Network ' +
+      'sandbox run a server could detect. status (default) reports recorded sessions: tool ' +
+      'names and counts, advertised tools, and sampled network peers. enable rewrites every ' +
+      'host config so servers launch through `agora run --`, which is what makes observation ' +
+      'something you switch on rather than wire by hand; disable puts every command back ' +
+      'exactly as it was. Both plan first — run with --dry-run to see the diff. Remote servers ' +
+      'and Agora itself are skipped with a reason. NEVER recorded: tool arguments, results, ' +
+      'prompt text, or anything derived from them — nothing leaves the machine. Network ' +
       'sampling polls, so a connection opened and closed between polls is not seen; an empty ' +
       'result means "nothing observed", never "nothing happened".',
-    flags: [{ flag: '--json', description: 'Output observations as JSON' }],
-    examples: ['agora observe', 'agora observe status --json']
+    flags: [
+      { flag: '--dry-run', description: 'Show the command diff without writing' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora observe',
+      'agora observe enable --dry-run',
+      'agora observe enable',
+      'agora observe disable'
+    ]
   },
   {
     name: 'run',
@@ -31,29 +41,6 @@ export const COMMANDS: CommandMeta[] = [
       'rather than by hand.',
     flags: [],
     examples: ['agora run -- npx @modelcontextprotocol/server-filesystem']
-  },
-  {
-    name: 'observe',
-    group: 'Stack',
-    summary: 'See what your servers actually did, and switch observation on across hosts',
-    usage: 'agora observe [status|enable|disable] [--dry-run] [--json]',
-    details:
-      'status (default) reports recorded sessions: tool names and counts, advertised tools, and ' +
-      'sampled network peers. enable rewrites every host config so servers launch through ' +
-      '`agora run --`, which is what makes observation something you switch on rather than wire ' +
-      'by hand; disable puts every command back exactly as it was. Both plan first — run with ' +
-      '--dry-run to see the diff. Remote servers and Agora itself are skipped with a reason. ' +
-      'Tool arguments, results and prompt text are never recorded.',
-    flags: [
-      { flag: '--dry-run', description: 'Show the command diff without writing' },
-      { flag: '--json', description: 'Output as JSON' }
-    ],
-    examples: [
-      'agora observe',
-      'agora observe enable --dry-run',
-      'agora observe enable',
-      'agora observe disable'
-    ]
   },
   {
     name: 'quarantine',

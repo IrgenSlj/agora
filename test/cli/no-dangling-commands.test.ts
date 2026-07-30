@@ -94,6 +94,26 @@ describe('no user-facing string names a command that does not exist', () => {
     expect(unroutable).toEqual([]);
   });
 
+  test('no command is registered twice', () => {
+    // S6 added `agora observe enable/disable` by appending a second `observe`
+    // entry instead of editing the existing one. Both showed in `agora --help`
+    // with contradictory summaries, and `agora help observe` matched the stale
+    // one first — so the help told users to hand-wire host configs, the exact
+    // chore `observe enable` was built to remove. The feature shipped and was
+    // undiscoverable.
+    //
+    // The tests above check that advertised commands exist. This checks the
+    // other failure: a command existing twice, where the loser is invisible.
+    const seen = new Map<string, number>();
+    for (const meta of COMMANDS) seen.set(meta.name, (seen.get(meta.name) ?? 0) + 1);
+
+    const duplicates = [...seen.entries()]
+      .filter(([, count]) => count > 1)
+      .map(([name, count]) => `${name} (${count}x)`);
+
+    expect(duplicates).toEqual([]);
+  });
+
   test('the brief §9 contract surface is present', () => {
     // AGORA_BRIEF_v2.md §9 is the locked CLI contract. These were missing:
     // quarantine/unquarantine had shipping machinery but no CLI, so the only
