@@ -14,7 +14,7 @@
   "keywords": ["opencode", "opencode-plugin", "mcp", "agora", "agora-hub"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/IrgenSlj/agora.git"
+    "url": "git+https://github.com/IrgenSlj/agora.git"
   },
   "homepage": "https://github.com/IrgenSlj/agora#readme",
   "license": "MIT",

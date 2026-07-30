@@ -68,4 +68,24 @@ describe('release integrity', () => {
       expect(publish, `publish.yml should run \`${script}\``).toContain(script);
     }
   });
+
+  test('no workflow splices an event input into a shell script', () => {
+    // `run: npm publish --tag ${{ github.event.inputs.tag }}` interpolates
+    // attacker-controllable text into the shell before bash ever sees it.
+    // Inputs belong in `env:`, where they arrive as data.
+    const offenders: string[] = [];
+    for (const wf of ['.github/workflows/publish.yml', '.github/workflows/ci.yml']) {
+      for (const line of readText(wf).split('\n')) {
+        if (
+          /\$\{\{\s*(github\.event\.inputs|inputs|github\.event\.(issue|pull_request))\b/.test(line)
+        ) {
+          // Fine in `env:` bindings and `if:` conditions; not inside a script.
+          if (!/^\s*(-?\s*)?(if|[A-Z_][A-Z0-9_]*):\s/.test(line)) {
+            offenders.push(`${wf}: ${line.trim()}`);
+          }
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });

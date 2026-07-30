@@ -1,7 +1,7 @@
 {
   "name": "agora-hub",
   "version": "0.7.0",
-  "description": "The trust plane for agentic tooling \u2014 local-first federation, evidence, policy, and stack management for MCP servers and Agent Skills.",
+  "description": "The trust plane for agentic tooling — local-first federation, evidence, policy, and stack management for MCP servers and Agent Skills.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/IrgenSlj/agora.git"
+    "url": "git+https://github.com/IrgenSlj/agora.git"
   },
   "homepage": "https://github.com/IrgenSlj/agora",
   "bugs": "https://github.com/IrgenSlj/agora/issues",
