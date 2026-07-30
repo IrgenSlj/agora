@@ -1,0 +1,56 @@
+name: Sign and publish the revocation feed
+
+# The publishing half of the revocation plane. Editing feed/entries.json and
+# pushing is the whole act of publishing a revocation: this signs the entries
+# and commits feed/revocations.json, which clients read straight from
+# raw.githubusercontent.com. No domain, no server, no account to lapse.
+#
+# Requires the AGORA_FEED_SIGNING_KEY secret. Without it this workflow fails
+# loudly rather than committing an unsigned feed — clients would reject that
+# anyway, and silently.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'feed/entries.json'
+      - 'scripts/sign-feed.ts'
+  workflow_dispatch:
+
+# One signer at a time: two concurrent runs would both read the same
+# feed_version and emit two different feeds claiming to be the same version.
+concurrency:
+  group: revocation-feed
+  cancel-in-progress: false
+
+jobs:
+  sign:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      - name: Sign the feed
+        run: bun scripts/sign-feed.ts
+        env:
+          AGORA_FEED_SIGNING_KEY: ${{ secrets.AGORA_FEED_SIGNING_KEY }}
+          AGORA_FEED_KEY_ID: ${{ vars.AGORA_FEED_KEY_ID }}
+
+      - name: Commit the signed feed
+        run: |
+          if git diff --quiet feed/revocations.json; then
+            echo "Feed unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add feed/revocations.json
+          git commit -m "Sign revocation feed $(node -p "require('./feed/revocations.json').feed_version")"
+          git push

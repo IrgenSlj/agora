@@ -1,0 +1,16 @@
+{
+  "$comment": [
+    "Source of truth for the revocation feed. Hand-edited; signed into",
+    "feed/revocations.json by scripts/sign-feed.ts, which CI runs on push.",
+    "Never edit revocations.json directly — it carries a signature over these",
+    "bytes and any manual change invalidates it.",
+    "",
+    "Each entry: id, purl_pattern, reason, severity (critical|high|advisory),",
+    "refs (advisory URLs), added_at (ISO), and optionally versions ('<=1.0.16').",
+    "critical and high block an acquire; advisory is reported and does not.",
+    "",
+    "Empty is the honest state: no revocation has been published yet. It is not",
+    "a claim that nothing in the ecosystem is malicious."
+  ],
+  "entries": []
+}

@@ -14,7 +14,22 @@ import type { RevocationEntry, RevocationFeed } from '../model/revocation.js';
 import { verifyFeed } from './feed.js';
 import { isBlocking, matchRevocations, type RevocationMatch } from './match.js';
 
-export const DEFAULT_FEED_URL = 'https://api.agora-hub.dev/v1/revocations';
+/**
+ * Where the signed feed is served from.
+ *
+ * A file in this repository, not an API. `api.agora-hub.dev` was the original
+ * plan and blocked the whole plane for weeks on a domain that was never
+ * registered and a Worker that was never deployed — for a document that is
+ * static, signed, and read a few times a day per user. Serving it from raw
+ * githubusercontent costs nothing, has no account to lapse, and removes the
+ * only piece of Agora that would have failed when someone else's server did.
+ *
+ * The signature is what makes this safe: the bytes are verified against a key
+ * pinned in the binary, so the host is untrusted by construction. GitHub can
+ * withhold the feed, which the staleness check surfaces; it cannot forge one.
+ */
+export const DEFAULT_FEED_URL =
+  'https://raw.githubusercontent.com/IrgenSlj/agora/main/feed/revocations.json';
 
 /** Refresh at most this often; the feed is polled opportunistically, never on a hot path. */
 export const REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
