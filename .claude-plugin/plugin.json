@@ -1,7 +1,7 @@
 {
   "name": "agora",
   "description": "The trust plane for agentic tooling. Verify where MCP servers and Agent Skills come from, gate what gets installed against your policy, and manage your stack across every host — all via the bundled agora MCP server, no separate install required.",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "author": {
     "name": "IrgenSlj",
     "url": "https://github.com/IrgenSlj"

@@ -28,8 +28,13 @@ jobs:
       - name: Typecheck
         run: bun run typecheck:cli
 
+      # `bun run test` (vitest), never `bun test`. Bun's native runner panics on
+      # this suite (NAPI fatal error, exit 132) and that is exactly how v0.7.0
+      # failed to publish: the release fired, this step crashed, and npm stayed
+      # on 0.6.1 for weeks with the entire trust plane sitting in main.
+      # test/release/publish-workflow.test.ts pins this against ci.yml.
       - name: Tests
-        run: bun test
+        run: bun run test
 
       - name: Build
         run: bun run build
