@@ -5,15 +5,15 @@
     "": {
       "name": "agora-hub",
       "dependencies": {
-        "@cedar-policy/cedar-wasm": "4.11.2",
+        "@cedar-policy/cedar-wasm": "^4.11.2",
         "@modelcontextprotocol/sdk": "^1.29.0",
         "better-sqlite3": "^13.0.1",
         "canonicalize": "^3.0.0",
         "hono": "^4.12.31",
         "packageurl-js": "^2.0.1",
-        "sigstore": "5.0.0",
+        "sigstore": "^5.0.0",
         "smol-toml": "^1.7.0",
-        "yargs": "18",
+        "yargs": "^18",
         "zod": "^4.4.3",
       },
       "devDependencies": {
@@ -492,7 +492,7 @@
 
     "hasown": ["hasown@2.0.3", "", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-ej4AhfhfL2Q2zpMmLo7U1Uv9+PyhIZpgQLGT1F9miIGmiCJIoCgSmczFdrc97mWT4kVY72KA+WnnhJ5pghSvSg=="],
 
-    "hono": ["hono@4.12.31", "", {}, "sha512-zJIHFrl6bq3RDd2YusFNCDlM8qUprxKswyi/OPzPyzKDdyBXDqWx8bZlZ7R+saTdSTatUmb3O7K4SspGPaEOQg=="],
+    "hono": ["hono@4.12.32", "", {}, "sha512-XcuyW9qE2kJn07PkecMOBd5Vq/hMy7mmGw+idz1yblbg9N17ijJODrvPkn7/dwL3Kulj8LcRJ69DLOWf91dRUg=="],
 
     "http-cache-semantics": ["http-cache-semantics@4.2.0", "", {}, "sha512-dTxcvPXqPvXBQpq5dUr6mEMJX4oIEFv6bwom3FDwKRDsuIjjJGANqhBuoAn9c1RQJIdAKav33ED65E2ys+87QQ=="],
 
