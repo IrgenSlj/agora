@@ -43,6 +43,23 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora run -- npx @modelcontextprotocol/server-filesystem']
   },
   {
+    name: 'audit',
+    group: 'Stack',
+    summary: 'Check your configured MCP servers against published security advisories',
+    usage: 'agora audit [--json]',
+    details:
+      'Reads every MCP server configured across your hosts and looks each one up in OSV.dev, ' +
+      'the free public vulnerability database. This is a surface no other tool covers: MCP ' +
+      'servers are spawned commands in host configs, not dependencies, so they appear in no ' +
+      'package.json and `npm audit`, Dependabot and Snyk cannot see them by construction. ' +
+      'Exit codes: 0 nothing blocking, 1 a MALWARE/CRITICAL/HIGH advisory was found. Servers ' +
+      'that cannot be identified as an npm package (remote, or a custom launcher) are reported ' +
+      'as unchecked rather than counted clean, and an unreachable OSV is reported as unreachable ' +
+      '— "no known advisories" means only what has been published, never "safe".',
+    flags: [{ flag: '--json', description: 'Output findings as JSON' }],
+    examples: ['agora audit', 'agora audit --json']
+  },
+  {
     name: 'quarantine',
     group: 'Stack',
     summary: 'List servers held back after their tool descriptions changed',

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { createStyler, type Styler, shouldUseColor, supportsTrueColor } from '../ui.js';
 import * as acquireModule from './commands/acquire.js';
 import * as applyModule from './commands/apply.js';
+import * as auditModule from './commands/audit.js';
 import * as browseModule from './commands/browse.js';
 import * as capabilitiesModule from './commands/capabilities.js';
 import * as doctorModule from './commands/doctor.js';
@@ -175,6 +176,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       unquarantine: quarantineModule.commandUnquarantine,
       apply: applyModule.commandApply,
       update: updateModule.commandUpdate,
+      audit: auditModule.commandAudit,
       trust: trustModule.commandTrust,
       try: tryModule.commandTry,
       capabilities: capabilitiesModule.commandCapabilities,
