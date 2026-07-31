@@ -48,6 +48,15 @@ describe('release integrity', () => {
     expect(plugin.dependencies['agora-hub']).toBe(root.version);
   });
 
+  test('the generated schemas ship with the package', () => {
+    // 39 JSON Schemas are generated from src/model/ and CI-guarded against
+    // drift, but `files: ["dist"]` kept them out of the tarball — so the one
+    // artifact that lets someone else read Agora's evidence format without
+    // trusting Agora was visible only to people already reading the repo.
+    // "Evidence, not scores" is only checkable if the format is published.
+    expect(root.files).toContain('schemas');
+  });
+
   test('publish.yml runs the vitest suite, not bun test', () => {
     const publish = readText('.github/workflows/publish.yml');
 

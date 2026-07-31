@@ -30,7 +30,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "files": ["dist"],
+  "files": ["dist", "schemas"],
   "scripts": {
     "build": "rm -rf dist && tsc && cp src/catalog.json dist/catalog.json && mkdir -p dist/policy/defaults && cp src/policy/defaults/* dist/policy/defaults/ && chmod +x dist/cli.js",
     "build:binary": "bun build src/cli.ts --compile --outfile dist/agora",
