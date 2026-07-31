@@ -162,7 +162,10 @@ last signed feed.
 **Honest limit to encode in the UI:** this is *known-bad*, never *safe*. A novel malicious server
 nobody has reported yet will not appear. Same rule as everywhere else in the product.
 
-Blocked only on minting the signing key (`feed/README.md`, owner action, ~1 hour).
+**Shipped 2026-07-31.** `src/osv/`, `scripts/sync-feed.ts` and `.github/workflows/sync-feed.yml`
+are live; the first run found 10 advisories across 5 catalog packages. Still blocked only on
+minting the signing key (`feed/README.md`, owner action, ~1 hour) — until then the workflow syncs
+entries and skips signing, so no revocation applies yet.
 
 ## 4. `agora audit` — the one command that demonstrates the gap
 
@@ -184,8 +187,9 @@ Mechanically it is `agora doctor`'s host-config discovery joined to the OSV look
 thin command over machinery that will already exist. Its value is not technical; it is that the
 side-by-side is the entire argument, reproducible by a stranger in thirty seconds.
 
-Whether this is a new verb or a flag on `doctor` is an open question. A separate name that
-deliberately rhymes with `npm audit` is probably worth more than the tidiness of one fewer command.
+**Shipped 2026-07-31** as a separate verb — the name rhyming with `npm audit` is worth more than
+the tidiness of one fewer command. Verified side by side in one directory against a real
+lockfile: `npm audit` → 0 vulnerabilities, `agora audit` → 8 advisories across 3 servers.
 
 ## 5. Distribution — when it is due, not before
 

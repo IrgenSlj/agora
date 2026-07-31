@@ -59,6 +59,12 @@ order, is [`docs/NEXT.md`](./docs/NEXT.md).**
   rules skipped is not a permit, an uncached revocation feed is not "not revoked", and a server
   never run has not been shown to behave. Rendered in the TUI item and acquire pages too.
 - **Quarantine CLI** — `agora quarantine [list]` and `agora unquarantine <name> --accept-risk`.
+- **Advisories** — `agora audit` checks every configured MCP server against OSV.dev and exits
+  non-zero on a malware/critical/high finding. This is a surface nothing else covers: MCP servers
+  are spawned commands in host configs, never declared dependencies, so `npm audit`, Dependabot
+  and Snyk cannot see them by construction. The revocation feed is filled from the same source by
+  `scripts/sync-feed.ts` on a daily schedule — 10 real advisories across 5 catalog packages on
+  the first run, and no human curation anywhere in the loop.
 - **Exportable evidence** — `agora export --attestations <id>` emits an in-toto/DSSE bundle: a
   statement per plane that produced evidence, and an explicit `not_established` entry for every
   plane that did not. Unsigned by design (`tier: "none"`) — Agora has no attestation-signing
