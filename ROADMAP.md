@@ -34,9 +34,12 @@ order, is [`docs/NEXT.md`](./docs/NEXT.md).**
   what is known-bad. `check` lints before evaluating, because a Cedar rule reading a missing
   attribute is silently skipped and returns permissive. `acquire` refuses on deny **and** on
   inconclusive — an allow reached with rules switched off is not an allow.
-- **Revocation (client half)** — ed25519-signed feed with monotonic anti-rollback, offline
-  lookups, `acquire` refusing critical/high matches before any write, `doctor` showing `REVOKED`.
-  **No key is pinned yet, so no revocations currently apply** — see the owner-gated table.
+- **Revocation** — ed25519-signed feed with monotonic anti-rollback, offline lookups, `acquire`
+  refusing critical/high matches before any write, `doctor` showing `REVOKED`. Both halves now
+  exist: the feed is a signed file in this repo (`feed/`), served from raw.githubusercontent.com
+  and signed by `scripts/sign-feed.ts` in CI, so publishing a revocation is a commit — no domain
+  and no server, which is what had been blocking this since S4. **No key is pinned yet, so no
+  revocations currently apply**; minting it is an owner action (`feed/README.md`).
 - **Integration** — `agora mcp` (MCP server exposing the stack + catalog as tools),
   `agora integrate --all` (installs Agora into every host via its own stack machinery).
 - **Surface** — the v1 catalog commands (`auth`, `curate`, `chat`, `trending`, `workflows`,
@@ -57,10 +60,14 @@ order, is [`docs/NEXT.md`](./docs/NEXT.md).**
   never run has not been shown to behave. Rendered in the TUI item and acquire pages too.
 - **Quarantine CLI** — `agora quarantine [list]` and `agora unquarantine <name> --accept-risk`.
 
-Not yet live: the agent-facing `agora serve` discovery tools (S7), the revocation feed's
-*publishing* half, `agora observe enable/disable`, and a pre-install sandbox (S6 shipped as
-runtime observation instead). **This section is the authority on what is live**; README,
+Not yet live: the agent-facing `agora serve` discovery tools (S7), and a pre-install sandbox (S6
+shipped as runtime observation instead). **This section is the authority on what is live**; README,
 AGENTS.md and docs/ARCHITECTURE.md were realigned to it on 2026-07-28.
+
+**Nothing here has reached npm.** `agora-hub@0.6.1` is the published version and predates the
+entire trust plane. v0.7.0 was tagged and released on 2026-07-29 and the publish workflow failed;
+so had every publish run before it, back to v0.2.2 — the repo had no npm credential at all. The
+workflow is fixed as of 2026-07-30, but authenticating it is an owner action (see below).
 
 ## Phase status
 
@@ -70,7 +77,7 @@ AGENTS.md and docs/ARCHITECTURE.md were realigned to it on 2026-07-28.
 | S1 | Data model & lockfile | ✅ Complete |
 | S2 | Multi-source search | ✅ Complete |
 | S3 | Provenance & drift | ✅ Complete — live Sigstore verification wired |
-| S4 | Revocation | 🔄 Client complete — needs a pinned key + publishing endpoint |
+| S4 | Revocation | 🔄 Both halves built — needs only a pinned key (owner) |
 | S5 | Policy (Cedar) | ✅ Complete — engine, `agora policy`, acquire gate |
 | S6 | Vet → **Observe** | ✅ Complete — observation, policy wiring, and `observe enable/disable` |
 | S7 | Serve (agent-facing) | ⬜ Not started |

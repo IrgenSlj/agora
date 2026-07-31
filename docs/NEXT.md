@@ -11,6 +11,18 @@ ranked by distance to a user, not by how interesting it is to build.
 
 ---
 
+> **Update 2026-07-30.** §0 and §1 were both written on a wrong assumption, found by checking
+> rather than reading. §0 said publishing was purely an owner action with everything prepared —
+> in fact the release *was* cut on 2026-07-29 and the workflow **failed**, as had every publish
+> run in the project's history, back to v0.2.2. The repo has never had an npm credential. §1's
+> blocker was likewise not a decision but a domain nobody had registered, which turned out not
+> to be needed at all.
+>
+> Fixed since: the publish workflow's `bun test` panic, version drift across four manifests, a
+> shell-injection vector in the same file, and the revocation feed's entire publishing half
+> (`feed/`, signed from git — no domain, no server). What genuinely remains owner-only is now
+> two credentials: npm auth, and the feed signing key.
+
 ## 0. Publish 0.7.0 — the only thing that matters this week
 
 **Owner action. Costs nothing. Blocks everything.**
