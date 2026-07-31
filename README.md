@@ -61,7 +61,10 @@ for the full specification):
 - **Verify (evidence)** — provenance verification (Sigstore / npm & GitHub attestations),
   schema-and-description hashing with rug-pull **drift** detection, and runtime **observation**:
   `agora run -- <server>` supervises an MCP server while you actually use it and records what it
-  did — all emitted as standard **in-toto / DSSE attestations** you can inspect and export.
+  did — all emitted as standard **in-toto / DSSE attestations** you can inspect and export with
+  `agora export --attestations <id>`. The format, including how Agora reports what it does *not*
+  know, is specified in [`docs/EVIDENCE.md`](./docs/EVIDENCE.md); the JSON Schemas ship in the
+  package under `schemas/`.
 - **Gate (policy)** — a real policy engine ([Cedar](https://www.cedarpolicy.com/)): your `.cedar` rules
   decide what may be installed, synced, or served, evaluated over evidence, per project — plus a signed
   **revocation feed** with anti-rollback (the ecosystem's most glaring absence).
