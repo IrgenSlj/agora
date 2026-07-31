@@ -2,7 +2,7 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
-## [0.7.0] - 2026-07-28 — the trust plane reaches users
+## [0.7.0] - 2026-07-31 — the trust plane reaches users
 
 **Contains breaking changes.** This is the first release carrying the v2 trust plane. Everything
 published until now (`agora-hub@0.6.1`) was the pre-pivot catalog tool: Sigstore verification,
@@ -203,14 +203,62 @@ Network sampling polls `lsof`, so a connection opened and closed between polls i
 therefore carry `networkSampled` rather than letting an empty host list stand in for a clean result —
 "nothing observed" is not "nothing happened".
 
+### Added — exportable evidence (S8, partial)
+
+`agora export --attestations <id>` emits the evidence for one artifact as an in-toto/DSSE bundle:
+one statement per plane that produced evidence, and an explicit `not_established` entry for every
+plane that did not. The second half is the part no other tool in this ecosystem ships — an
+exporter that dropped the unknowns would turn "never observed" into "no adverse observations" the
+moment the file left the machine.
+
+Envelopes are unsigned (`tier: "none"`). Agora has no attestation-signing identity, and the
+revocation feed key is not reused to make evidence look endorsed: the bundle attests to what Agora
+observed, not to who Agora is. Statements bind to a content digest from `agora.lock`; an unpinned
+artifact yields no statements rather than a placeholder hash.
+
+The 39 generated JSON Schemas now ship in the npm package under `schemas/` — they were CI-guarded
+but excluded from the tarball, so the one artifact that lets someone read Agora's evidence format
+without trusting Agora was visible only to people already reading the repo. Format specified in
+[`docs/EVIDENCE.md`](./docs/EVIDENCE.md).
+
+### Added — the revocation feed's publishing half (S4)
+
+The feed is now a signed file in this repository, served from `raw.githubusercontent.com` and
+signed by `scripts/sign-feed.ts` in CI. Publishing a revocation is a commit to
+`feed/entries.json`. `api.agora-hub.dev` had been blocking this plane for weeks on a domain nobody
+registered and a Worker nobody deployed, for a document that is static, signed, and read a few
+times a day — the signature is what makes the host untrusted by construction, so the host may as
+well be one that already exists and costs nothing.
+
+### Fixed — the release path, which had never worked
+
+Every publish run in this project's history had failed, back to v0.2.2; the two versions on npm
+were pushed by hand. `publish.yml` ran `bun test` — Bun's native runner, which panics on this
+suite with a NAPI fatal error — and underneath that, the repository had no npm credential at all.
+The workflow now supports npm trusted publishing (OIDC) or `NPM_TOKEN`, and
+`test/release/release-integrity.test.ts` pins the whole path on every push.
+
+Also fixed in the same area: version drift that left three of four manifests on 0.6.1 with the
+OpenCode plugin pinning the version it was meant to replace; a workflow input interpolated
+directly into a shell script; a `repository.url` missing the `git+` prefix that npm provenance
+validates; and `engines.node` claiming `>=20` support while `better-sqlite3` and the entire
+sigstore tree require Node 22 or newer — a Node 20 user would have installed on that claim and got
+a Verify plane that cannot verify.
+
+### Fixed — `agora observe` documented the chore it removed
+
+`observe` was registered twice in the command table, and `agora help observe` matched the stale
+entry first: it documented `agora observe [status]` and told users to hand-edit host configs to
+`["agora", "run", "--", …]` — precisely the work `observe enable` exists to do. The feature
+shipped invisible. The entries are merged and a duplicate-name guard now fails the build.
+
 ### Known
 
 - Glama's upstream endpoint returns HTTP 504; reported as `unreachable`.
-- Observation is opt-in and currently wired by hand (set a host config command to
-  `["agora", "run", "--", …]`); `agora observe enable/disable` to rewrite configs automatically is
-  not built yet.
-- The revocation feed has no publishing endpoint yet (the Cloudflare Worker route is unbuilt), and
-  no signing key is pinned — the client half is complete and tested, the operational half is not.
+- No feed signing key is pinned yet, so every revocation feed reads `unverifiable` and **no
+  revocations apply**. Both halves of the plane are built; minting the key is an owner action
+  documented in [`feed/README.md`](./feed/README.md). This is a deliberate fail-closed default —
+  a feed nobody can authenticate is a vector, not a safety net.
 - Provenance verification requires Node (the shipped runtime). Under `bun run`, it degrades to
   "could not check" rather than reporting a false failure.
 
