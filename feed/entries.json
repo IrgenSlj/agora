@@ -12,5 +12,155 @@
     "Empty is the honest state: no revocation has been published yet. It is not",
     "a claim that nothing in the ecosystem is malicious."
   ],
-  "entries": []
+  "entries": [
+    {
+      "id": "GHSA-4xqg-gf5c-ghwq",
+      "purl_pattern": "pkg:npm/mcp-server-kubernetes",
+      "versions": "<3.5.0",
+      "reason": "MCP Server Kubernetes has an Argument Injection in port_forward tool via space-splitting",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-4xqg-gf5c-ghwq",
+        "https://github.com/Flux159/mcp-server-kubernetes/security/advisories/GHSA-4xqg-gf5c-ghwq",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-39884",
+        "https://github.com/Flux159/mcp-server-kubernetes",
+        "https://github.com/Flux159/mcp-server-kubernetes/releases/tag/v3.5.0"
+      ],
+      "added_at": "2026-04-14T22:32:15Z"
+    },
+    {
+      "id": "GHSA-6fg3-hvw7-2fwq",
+      "purl_pattern": "pkg:npm/%40playwright/mcp",
+      "versions": "<0.0.40",
+      "reason": "Microsoft Playwright MCP Server vulnerable to DNS Rebinding Attack; Allows Attackers Access to All Server Tools",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-6fg3-hvw7-2fwq",
+        "https://github.com/JLLeitschuh/security-research/security/advisories/GHSA-8rgw-6xp9-2fg3",
+        "https://nvd.nist.gov/vuln/detail/CVE-2025-9611",
+        "https://github.com/microsoft/playwright-mcp/issues/1206",
+        "https://github.com/microsoft/playwright/commit/1313fbd"
+      ],
+      "added_at": "2026-01-07T12:31:25Z"
+    },
+    {
+      "id": "GHSA-6mx4-4h42-r8vh",
+      "purl_pattern": "pkg:npm/mcp-server-kubernetes",
+      "versions": "<3.7.0",
+      "reason": "MCP Server Kubernetes: kubectl-generic flag injection enables Kubernetes bearer token exfiltration",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-6mx4-4h42-r8vh",
+        "https://github.com/Flux159/mcp-server-kubernetes/security/advisories/GHSA-6mx4-4h42-r8vh",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-47250",
+        "https://github.com/Flux159/mcp-server-kubernetes",
+        "https://github.com/Flux159/mcp-server-kubernetes/releases/tag/v3.7.0"
+      ],
+      "added_at": "2026-06-05T15:40:00Z"
+    },
+    {
+      "id": "GHSA-6xpm-ggf7-wc3p",
+      "purl_pattern": "pkg:npm/mcp-remote",
+      "versions": ">=0.0.5 <0.1.16",
+      "reason": "mcp-remote exposed to OS command injection via untrusted MCP server connections",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-6xpm-ggf7-wc3p",
+        "https://nvd.nist.gov/vuln/detail/CVE-2025-6514",
+        "https://github.com/geelen/mcp-remote/commit/607b226a356cb61a239ffaba2fb3db1c9dea4bac",
+        "https://github.com/geelen/mcp-remote",
+        "https://jfrog.com/blog/2025-6514-critical-mcp-remote-rce-vulnerability"
+      ],
+      "added_at": "2025-07-09T15:30:44Z"
+    },
+    {
+      "id": "GHSA-cr22-wjx7-2w6m",
+      "purl_pattern": "pkg:npm/mcp-server-kubernetes",
+      "versions": "<3.6.0",
+      "reason": "MCP Server Kubernetes: Tool Access Control Bypass via Presentation-Layer Filtering Without Execution-Layer Enforcement",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-cr22-wjx7-2w6m",
+        "https://github.com/Flux159/mcp-server-kubernetes/security/advisories/GHSA-cr22-wjx7-2w6m",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-46519",
+        "https://github.com/Flux159/mcp-server-kubernetes",
+        "https://github.com/Flux159/mcp-server-kubernetes/releases/tag/v3.6.0"
+      ],
+      "added_at": "2026-05-21T20:33:46Z"
+    },
+    {
+      "id": "GHSA-gjv4-ghm7-q58q",
+      "purl_pattern": "pkg:npm/mcp-server-kubernetes",
+      "versions": "<2.5.0",
+      "reason": "MCP Server Kubernetes vulnerable to command injection in several tools",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-gjv4-ghm7-q58q",
+        "https://github.com/Flux159/mcp-server-kubernetes/security/advisories/GHSA-gjv4-ghm7-q58q",
+        "https://nvd.nist.gov/vuln/detail/CVE-2025-53355",
+        "https://github.com/Flux159/mcp-server-kubernetes/commit/ab165f5a0eea917fef5dbae954506fff6f4bf514",
+        "https://github.com/cyanheads/git-mcp-server/commit/0dbd6995ccdf76ab770b58013034365b2d06c4d9"
+      ],
+      "added_at": "2025-07-08T20:47:53Z"
+    },
+    {
+      "id": "GHSA-gxw4-4fc5-9gr5",
+      "purl_pattern": "pkg:npm/figma-developer-mcp",
+      "versions": "<0.6.3",
+      "reason": "figma-developer-mcp vulnerable to command injection in get_figma_data tool",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-gxw4-4fc5-9gr5",
+        "https://github.com/GLips/Figma-Context-MCP/security/advisories/GHSA-gxw4-4fc5-9gr5",
+        "https://github.com/GLips/Figma-Context-MCP/commit/7f4b5859454b0567c2121ff22c69a0344680b124",
+        "https://github.com/GLips/Figma-Context-MCP"
+      ],
+      "added_at": "2025-09-30T17:01:42Z"
+    },
+    {
+      "id": "GHSA-hc55-p739-j48w",
+      "purl_pattern": "pkg:npm/%40modelcontextprotocol/server-filesystem",
+      "versions": "<=0.6.2",
+      "reason": "@modelcontextprotocol/server-filesystem vulnerability allows for path validation bypass via colliding path prefix",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-hc55-p739-j48w",
+        "https://github.com/modelcontextprotocol/servers/security/advisories/GHSA-hc55-p739-j48w",
+        "https://nvd.nist.gov/vuln/detail/CVE-2025-53110",
+        "https://github.com/modelcontextprotocol/servers/commit/cc99bdabdcad93a58877c5f3ab20e21d4394423d",
+        "https://github.com/modelcontextprotocol/servers"
+      ],
+      "added_at": "2025-07-01T20:14:00Z"
+    },
+    {
+      "id": "GHSA-q66q-fx2p-7w4m",
+      "purl_pattern": "pkg:npm/%40modelcontextprotocol/server-filesystem",
+      "versions": "<=0.6.2",
+      "reason": "@modelcontextprotocol/server-filesystem allows for path validation bypass via prefix matching and symlink handling",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-q66q-fx2p-7w4m",
+        "https://github.com/modelcontextprotocol/servers/security/advisories/GHSA-q66q-fx2p-7w4m",
+        "https://nvd.nist.gov/vuln/detail/CVE-2025-53109",
+        "https://github.com/modelcontextprotocol/servers/commit/d00c60df9d74dba8a3bb13113f8904407cda594f",
+        "https://github.com/modelcontextprotocol/servers"
+      ],
+      "added_at": "2025-07-01T20:13:56Z"
+    },
+    {
+      "id": "GHSA-wvxp-jp4w-w8wg",
+      "purl_pattern": "pkg:npm/mcp-server-kubernetes",
+      "versions": "<2.9.8",
+      "reason": "mcp-server-kubernetes has potential security issue in exec_in_pod tool",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-wvxp-jp4w-w8wg",
+        "https://github.com/Flux159/mcp-server-kubernetes/security/advisories/GHSA-wvxp-jp4w-w8wg",
+        "https://nvd.nist.gov/vuln/detail/CVE-2025-66404",
+        "https://github.com/Flux159/mcp-server-kubernetes/commit/47d3136dd272c947464524f11f47bb519814698e",
+        "https://github.com/Flux159/mcp-server-kubernetes/commit/d091107ff92d9ffad1b3c295092f142d6578c48b"
+      ],
+      "added_at": "2025-12-03T20:44:45Z"
+    }
+  ]
 }

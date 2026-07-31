@@ -1,0 +1,79 @@
+name: Sync the revocation feed from OSV
+
+# The half of the revocation plane that used to need a human. Queries OSV for
+# every MCP server in the catalog, rewrites feed/entries.json, and — when a
+# signing key exists — signs and commits the result.
+#
+# Daily rather than hourly on purpose: advisories are published on human
+# timescales, OSV is a free service Agora should not hammer, and a feed that
+# churns every hour produces noise rather than signal. Clients poll every 6h and
+# tolerate a stale feed by design.
+
+on:
+  schedule:
+    # 06:15 UTC. Off the hour because every cron in the world fires on it.
+    - cron: '15 6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: revocation-feed
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+
+      # Exits non-zero if any OSV lookup failed. That is deliberate: a partial
+      # view of the world should surface as a failed job, not as a quietly
+      # shortened feed. Existing entries for unreachable packages are kept.
+      - name: Query OSV
+        run: bun scripts/sync-feed.ts
+
+      - name: Check for a signing key
+        id: key
+        run: |
+          if [ -n "${AGORA_FEED_SIGNING_KEY}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Feed synced but not signed"
+              echo
+              echo 'Entries were refreshed from OSV, but no `AGORA_FEED_SIGNING_KEY`'
+              echo 'secret is set, so nothing was signed or committed. Until a key is'
+              echo 'pinned, clients read every feed as `unverifiable` and apply no'
+              echo 'revocations. See `feed/README.md`.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+        env:
+          AGORA_FEED_SIGNING_KEY: ${{ secrets.AGORA_FEED_SIGNING_KEY }}
+
+      - name: Sign the feed
+        if: steps.key.outputs.present == 'true'
+        run: bun scripts/sign-feed.ts
+        env:
+          AGORA_FEED_SIGNING_KEY: ${{ secrets.AGORA_FEED_SIGNING_KEY }}
+          AGORA_FEED_KEY_ID: ${{ vars.AGORA_FEED_KEY_ID }}
+
+      - name: Commit
+        if: steps.key.outputs.present == 'true'
+        run: |
+          if git diff --quiet feed/; then
+            echo "Feed unchanged; nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add feed/
+          git commit -m "Sync revocation feed from OSV ($(node -p "require('./feed/entries.json').entries.length") entries)"
+          git push
