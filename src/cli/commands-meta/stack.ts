@@ -60,6 +60,27 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora audit', 'agora audit --json']
   },
   {
+    name: 'approve',
+    group: 'Stack',
+    summary: 'Review and act on install requests an agent has made',
+    usage: 'agora approve [id] [--deny] [--tool <host>] [--dry-run] [--json]',
+    details:
+      'An agent connected to `agora serve` can request an install; it cannot perform one. This ' +
+      'is where a request becomes an action, and it runs in your terminal on purpose — a channel ' +
+      'no injected text in a web page or tool result can reach. With no id, lists what is ' +
+      'pending. With an id, shows the request and then runs the full acquire gate: scan, policy, ' +
+      'revocation. The evidence the agent saw is displayed for context and never used as the ' +
+      'decision, because a request may be hours old and an allow computed against stale evidence ' +
+      'is not an allow. A blocked request stays pending rather than being discarded.',
+    flags: [
+      { flag: '--deny', description: 'Discard the request without installing' },
+      { flag: '--tool', description: 'Override the target host the agent named' },
+      { flag: '--dry-run', description: 'Run the gate and report, but write nothing' },
+      { flag: '--json', description: 'Output pending requests as JSON' }
+    ],
+    examples: ['agora approve', 'agora approve k7m2xq', 'agora approve k7m2xq --deny']
+  },
+  {
     name: 'quarantine',
     group: 'Stack',
     summary: 'List servers held back after their tool descriptions changed',
