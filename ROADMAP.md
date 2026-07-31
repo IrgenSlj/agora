@@ -2,14 +2,14 @@
 
 **Direction: LOCKED** by [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md) — Agora is **the trust plane
 for agentic tooling**. Phase-by-phase execution lives in
-[`docs/V2_EXECUTION_PLAN.md`](./docs/V2_EXECUTION_PLAN.md); that document is the *how*, the brief
+[`docs/NEXT.md`](./docs/NEXT.md); that document is the *how*, the brief
 is the *what*.
 
 Verified external-API corrections live in [`docs/OPEN_QUESTIONS.md`](./docs/OPEN_QUESTIONS.md);
 shipped work is in [`CHANGELOG.md`](./CHANGELOG.md). **What to build next, and why in that
 order, is [`docs/NEXT.md`](./docs/NEXT.md).**
 
-## What's live today (v0.7.0, prepared — see the release note below)
+## What's live today (v0.7.0, published to npm 2026-07-31)
 
 - **Manage** — stack manager (`src/stack/`): `agora.toml` profile, per-host adapters (OpenCode,
   Claude Code, Cursor, Windsurf), `plan`/`apply`, `sync --from <url>`, `doctor` with drift,
@@ -69,10 +69,15 @@ Not yet live: the agent-facing `agora serve` discovery tools (S7), and a pre-ins
 shipped as runtime observation instead). **This section is the authority on what is live**; README,
 AGENTS.md and docs/ARCHITECTURE.md were realigned to it on 2026-07-28.
 
-**Nothing here has reached npm.** `agora-hub@0.6.1` is the published version and predates the
-entire trust plane. v0.7.0 was tagged and released on 2026-07-29 and the publish workflow failed;
-so had every publish run before it, back to v0.2.2 — the repo had no npm credential at all. The
-workflow is fixed as of 2026-07-30, but authenticating it is an owner action (see below).
+**`agora-hub@0.7.0` is live on npm as of 2026-07-31** — the first release carrying the trust
+plane. Getting there took repairing a release path that had never once succeeded: every publish
+run back to v0.2.2 had failed, and both versions previously on npm were pushed by hand.
+
+Two consequences worth knowing. **0.7.0 has no provenance attestation**, because it was published
+from a laptop and npm can only attest builds it runs itself — so Agora currently cannot verify
+Agora, and the next release must go through `publish.yml`. And **`opencode-agora` is retired**: it
+had drifted into a separate pre-pivot product with its own users, and everything is `agora-hub`
+now (see `docs/NEXT.md` §1).
 
 ## Phase status
 
@@ -91,23 +96,12 @@ workflow is fixed as of 2026-07-30, but authenticating it is an owner action (se
 
 ## Remaining plan
 
-Ordered by dependency, not ambition. Everything above the line is code; below it is
-work only the owner can do.
+**[`docs/NEXT.md`](./docs/NEXT.md) is the authority on what to build next and why in that order.**
+Short version: consolidate on `agora-hub`, automate the revocation feed from OSV, `agora gate`,
+cut the TUI, then S7 `src/serve/`.
 
-Sizing note from the 2026-07-27 audit: `src/` is 32,267 lines. The four planes plus the
-stack manager account for 11,580 of them (36%). The rest is CLI surface, and knowing that
-split is what the cleanup items below are really about.
-
-**C1–C6 are complete as of 2026-07-28** (11 commits, `4d2c23b`..`eb88af5`). `src/` went
-32,267 → 31,286 lines while the test count held at ~1,630, because most of what left was
-never reachable. What remains below is `agora observe enable/disable`, S7 and S8.
-
-**S6 is complete as of 2026-07-28** — `agora observe enable` now rewrites host configs, so
-observation is one command rather than four hand-edits.
-
-**Next session starts with [`docs/NEXT.md`](./docs/NEXT.md)**, which ranks the remaining work by
-distance to a user rather than by phase number. Short version: publish 0.7.0 (owner, free, blocks
-everything), pin a revocation key (owner, free, turns on the differentiator), then S7 `src/serve/`.
+Sizing note: `src/` is ~32k lines maintained by one person. The four planes plus the stack manager
+account for roughly a third; the rest is CLI surface, which is what the cleanup items are about.
 
 Three guards now fail the build rather than relying on review, and are worth knowing about
 before changing anything near them:
@@ -187,7 +181,7 @@ Brief D6 retains the feed "read-only with zero new investment" and §9 lists onl
 `agora today`. Today the codebase also carries an `agora news` command and an 817-line
 news TUI page — the largest single page in the repo, and the opposite of zero investment.
 Keep `src/news/` sources + scoring feeding `agora today`; drop the duplicate command and
-the page. Resolves `docs/V2_EXECUTION_PLAN.md` §8 open question 2.
+the page.
 
 ### C5 — Wire the interactive surface to the trust plane
 

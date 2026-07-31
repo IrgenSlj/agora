@@ -151,11 +151,21 @@ export function generateInitPlan(scan: ProjectScan): InitPlan {
 
   notes.push(...notesList);
 
+  // No `plugin` entry. This used to write `["opencode-agora"]`, which names a
+  // package that has not been rebuilt since the v2 pivot — so `agora init` was
+  // wiring every new project to a pre-pivot plugin with none of the trust
+  // plane, and pinning them there.
+  //
+  // Removing it is strictly better than pointing at stale code. Agora reaches
+  // OpenCode through `agora integrate` as an MCP server, which is the path the
+  // README documents and the one that actually carries the planes. Restoring a
+  // real plugin entry needs a specifier OpenCode can resolve to *this*
+  // package's plugin export, and that is an open design decision — see
+  // docs/NEXT.md, "Consolidate on agora-hub".
   return {
     config: {
       $schema: 'https://opencode.ai/config.json',
-      mcp,
-      plugin: ['opencode-agora']
+      mcp
     },
     servers: servers.map((s) => s.id),
     commands,

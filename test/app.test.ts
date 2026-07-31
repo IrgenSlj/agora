@@ -122,8 +122,8 @@ describe('agora init --dry-run', () => {
       await runCli(['init', '--json', '--dry-run'], io);
       const payload = JSON.parse(stdout.join(''));
       expect(payload.config.$schema).toBe('https://opencode.ai/config.json');
-      expect(Array.isArray(payload.config.plugin)).toBe(true);
-      expect(payload.config.plugin).toContain('opencode-agora');
+      // No plugin entry: it named a package that predates the v2 pivot.
+      expect(payload.config.plugin).toBeUndefined();
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

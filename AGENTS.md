@@ -4,7 +4,7 @@
 Skills come from, observes what they actually do, enforces user-defined policy over both, and
 manages them across every host (OpenCode, Claude Code, Cursor, Windsurf). See
 [`README.md`](./README.md) for the pitch, [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md) for the
-locked specification, and [`docs/V2_EXECUTION_PLAN.md`](./docs/V2_EXECUTION_PLAN.md) for the
+locked specification, and [`docs/NEXT.md`](./docs/NEXT.md) for the
 phase-by-phase build plan — read all three before making structural changes.
 
 ## The four planes

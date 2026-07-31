@@ -5,7 +5,7 @@ collects evidence, gates installs through policy, and manages MCP servers and Ag
 OpenCode, Claude Code, Cursor, and Windsurf. There is no hosted backend dependency in the core.
 
 Before structural changes, read [`README.md`](./README.md), [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md),
-and [`docs/V2_EXECUTION_PLAN.md`](./docs/V2_EXECUTION_PLAN.md).
+and [`docs/NEXT.md`](./docs/NEXT.md).
 
 ## Quick Start
 
@@ -26,7 +26,7 @@ requires `bun run lint`.
 ## Workflow
 
 External contributions should use focused branches and PRs. The owner execution plan currently lands
-coherent chunks directly on `main`; phase gates in `docs/V2_EXECUTION_PLAN.md` still decide when the
+coherent chunks directly on `main`; the ordering in `docs/NEXT.md` still decides when the
 project is ready to move forward.
 
 For every behavior change:
@@ -78,6 +78,6 @@ If the command writes anything, preserve unrelated keys and write atomically.
 
 ## Help Wanted
 
-The current scheduled work is S1/S2 from [`docs/V2_EXECUTION_PLAN.md`](./docs/V2_EXECUTION_PLAN.md):
+The current scheduled work is in [`docs/NEXT.md`](./docs/NEXT.md):
 finish the lockfile/store contract, complete schema snapshots, migrate federation to purl-first
 adapters, and continue retiring legacy account/catalog-era surfaces.

@@ -1,172 +1,183 @@
 # What to build next
 
-Written 2026-07-28, after S0–S6 and the C1–C6 consolidation. `ROADMAP.md` is the authority on
-what is *live*; this document is the authority on what to do *next* and, more usefully, why the
-order is what it is.
+Written 2026-07-31, the day `agora-hub@0.7.0` reached npm. `ROADMAP.md` is the authority on what
+is *live*; `CHANGELOG.md` is the authority on what *shipped*; this document is the authority on
+what to do *next* and why in that order.
 
-One rule governs everything below: **the product's value is gated by whether anyone can use it,
-not by how much of it exists.** Agora spent three months building four planes that no user has
-ever seen, because the published package is still the pre-pivot catalog tool. Every item here is
-ranked by distance to a user, not by how interesting it is to build.
+**The constraint changed today.** For three months it was "does the trust plane exist." It exists
+and it is installable, so the constraint is now *"does anyone care, and can you tell?"* Everything
+below is ranked against that.
 
----
+Two standing rules that decide most arguments here:
 
-> **Update 2026-07-30.** §0 and §1 were both written on a wrong assumption, found by checking
-> rather than reading. §0 said publishing was purely an owner action with everything prepared —
-> in fact the release *was* cut on 2026-07-29 and the workflow **failed**, as had every publish
-> run in the project's history, back to v0.2.2. The repo has never had an npm credential. §1's
-> blocker was likewise not a decision but a domain nobody had registered, which turned out not
-> to be needed at all.
->
-> Fixed since: the publish workflow's `bun test` panic, version drift across four manifests, a
-> shell-injection vector in the same file, and the revocation feed's entire publishing half
-> (`feed/`, signed from git — no domain, no server). What genuinely remains owner-only is now
-> two credentials: npm auth, and the feed signing key.
-
-## 0. Publish 0.7.0 — the only thing that matters this week
-
-**Owner action. Costs nothing. Blocks everything.**
-
-`agora-hub@0.6.1` is live on npm and taking ~117 installs a month. It predates the trust plane:
-Sigstore verification, the Cedar engine, the revocation client, runtime observation, `agora trust`
-and `agora observe enable` have all shipped to `main` and **never to a user**.
-
-Everything is prepared — version bumped, changelog finalised, all 19 removed commands give a real
-message. Create a GitHub Release for `v0.7.0`; `publish.yml` fires on it and publishes with
-`--provenance`.
-
-Until this happens, every item below is worth exactly zero to anyone.
+- **Least maintenance wins.** One person maintains 32k lines. A feature that needs weekly human
+  attention is a feature that will be stale in a month and lying by month three.
+- **Inference may describe a verdict, never produce one.** An LLM deciding whether a package is
+  malicious is "scores, not evidence" — nondeterministic, unauditable, unexportable. Every gate
+  stays deterministic: Cedar, hashes, signatures, OSV. Inference is for *explaining* what the
+  deterministic layer already decided.
 
 ---
 
-## 1. Pin a revocation key (owner) — turn on the differentiator
+## 1. Consolidate on `agora-hub` — one name, one package
 
-**Owner action. Costs nothing but a decision.**
+**Decided 2026-07-31.** `opencode-agora` is retired. Everything ships as `agora-hub`.
 
-Revocation is the thing no other tool in this ecosystem has, and it is currently **inert**: no
-public key is pinned, so every feed reads `unverifiable` and no revocation applies. The client
-half is done and tested; the plane produces `unknown` on every lookup, which the UI honestly
-reports and which is worth very little.
+The two names had quietly become two *products*: what sat on npm as `opencode-agora@0.4.5` was
+never the thin re-export the repo described — it was a standalone pre-pivot plugin with its own
+dependency tree and no reference to `agora-hub` at all. It had roughly as many downloads as
+`agora-hub` itself, meaning about half of Agora's users were running May's code with none of the
+trust plane, and no upgrade path pointed anywhere.
 
-1. `bun scripts/generate-feed-key.ts`
-2. Public key → `PINNED_FEED_KEYS` in `src/revocation/feed.ts`, shipped in the next release
-3. Private key → a CI secret
+Done already:
 
-A feed can then be published as a signed JSON file in this repo — **no domain and no server
-required**, served from raw.githubusercontent.com. That is worth doing precisely because it
-removes the dependency on `agora-hub.dev`, which has been "blocking" for weeks without moving.
+- `packages/opencode-agora/` deleted; `publish.yml` publishes one package.
+- `agora init` no longer writes `plugin: ["opencode-agora"]`. It had been wiring every scaffolded
+  project to that stale package and pinning them there.
 
-**Do this before S7.** A trust plane whose most distinctive capability is switched off is a
-weaker demo than one with three working planes and an honest gap.
+Still to do:
 
----
+- **`npm deprecate opencode-agora "renamed → agora-hub; see npm agora-hub"`** (owner action). This
+  is the only thing that reaches the people still on 0.4.5.
+- **Restore a working OpenCode plugin path.** This needs a decision, because it is not free:
 
-## 2. `src/serve/` — S7, the agent-facing MCP server
+  OpenCode resolves plugin specifiers as npm package names, `file://` URLs, or absolute/relative
+  paths — **not** subpath exports, so `"plugin": ["agora-hub/opencode"]` cannot work. That leaves
+  two options, and both have a real cost:
 
-**~1 week. The largest remaining piece of the brief.**
+  | Option | Cost |
+  |---|---|
+  | Export the plugin from the package root so `"plugin": ["agora-hub"]` resolves | `src/index.ts` is the *library* surface. Re-exporting the plugin makes `import('agora-hub')` require `@opencode-ai/plugin`, which is an optional peer — library consumers without it would break. |
+  | `agora integrate` writes an absolute `file://` path to the installed plugin entry | Machine-specific path; wrong in a committed project `opencode.json`, fine in host-level config. |
 
-Agora currently exposes itself to agents through `agora mcp` (stack + catalog tools). The brief's
-§8 server is different: discovery filtered through *policy*, so an agent only ever sees artifacts
-it is permitted to install.
+  Leaning toward the second, scoped to host-level config only. **Verify against a live OpenCode
+  before shipping either** — see the note below about what that verification already turned up.
+
+**Note, and a live bug:** OpenCode has been failing to load Agora's plugin on the developer's own
+machine since 2026-07-28 — `~/.config/opencode/opencode.json` points at
+`file:///Users/admin/agora/dist/index.js`, which is the library root and exports no plugin. The
+log shows a `failed to load plugin` error on every run. Whatever specifier is chosen, `agora
+integrate` should write it rather than leaving it hand-maintained.
+
+**OpenCode inference is unaffected and stays.** `src/inference/opencode.ts` spawns the `opencode`
+binary and is the zero-cost default that makes the shell work with no API key on first run. That
+is a separate mechanism from the plugin and one of the better arguments for installing Agora at
+all.
+
+## 2. Automate the revocation feed from OSV — turn the differentiator on
+
+**The highest value-per-effort item left, and it needs no ongoing human attention.**
+
+Revocation is the one capability nothing else in this ecosystem has, and it is currently inert: no
+key is pinned, so every feed reads `unverifiable` and no revocation applies. Both halves are now
+built (`feed/`, `scripts/sign-feed.ts`) — what was missing was *content*, and the answer is not to
+curate it by hand.
+
+[OSV.dev](https://osv.dev) already does the curation, for free, and **speaks purl** — the same
+identifier Agora's data model uses. Verified 2026-07-31:
+
+- `POST /v1/query` accepts `{"package": {"purl": "pkg:npm/…"}}` directly.
+- `POST /v1/querybatch` handles the whole catalog in one call, scoped packages included.
+- No API key. No rate limits.
+- Carries `MAL-*` malware advisories from the `ghsa-malware` feed.
+- `@modelcontextprotocol/server-filesystem` — the flagship MCP server — has two open GHSA
+  advisories right now. The feed would not be empty on day one.
+
+**Design:** a scheduled GitHub Action reads every MCP server purl in the catalog, batch-queries
+OSV, maps severity (`MAL-*` → critical, GHSA high/critical → high, rest → advisory), signs, and
+commits. Zero curation, zero cost, no inference. If it breaks it fails loudly and clients keep the
+last signed feed.
+
+**What makes this Agora's and not a mirror of OSV:** OSV knows about npm packages. Agora knows
+*which npm packages are MCP servers*. That intersection — the advisory feed for the MCP ecosystem
+— is a thing nobody publishes, generated automatically.
+
+**Honest limit to encode in the UI:** this is *known-bad*, never *safe*. A novel malicious server
+nobody has reported yet will not appear. Same rule as everywhere else in the product.
+
+Blocked only on minting the signing key (`feed/README.md`, owner action, ~1 hour).
+
+## 3. `agora gate` — the CI wedge
+
+One command that evaluates every installed artifact against the project's Cedar policy and exits
+non-zero on failure. Cheap: the policy engine, the lockfile, and the trust view all exist; this is
+mostly wiring plus an exit-code contract.
+
+The reason it matters is retention. A developer who tries a CLI may never run it twice; a team
+with it in their pipeline cannot casually remove it. This is the shortest path from "interesting
+tool" to "load-bearing".
+
+## 4. Cut the TUI
+
+`src/cli/tui.ts` + `src/cli/pages/` is **3,590 lines** outside the v2 brief — a second UI for
+things the CLI already does, and a surface every trust-plane change has to be threaded through
+(wiring plane verdicts in during C5 meant doing the work three times).
+
+**Keep** the shell (`src/cli/shell/`, 1,630 lines) and `src/inference/` (351). The zero-mode-switch
+shell with free inference on first run is a real onboarding argument and costs a fraction as much.
+
+Reversible via git, so this is a judgement call rather than a risk. Stop adding to the TUI now.
+
+## 5. S7 — `agora serve`, the agent-facing surface
+
+The largest remaining piece of the brief, and the most future-proof: discovery filtered through
+*policy*, so an agent only ever sees artifacts it is permitted to install.
 
 - `search_tools` — capability search, results filtered through Cedar's `Serve` action
-- `get_evidence` — the `agora trust` rows, as structured data
+- `get_evidence` — the `agora trust` rows as structured data, `unknown` states included
 - `check_policy` — dry-run a decision without acting
 - `request_install` — writes an *intent* and prints `agora approve <id>`. **Never mutates the
   stack.** This is the load-bearing constraint: an agent that could install its own tools is the
   attack this product exists to prevent.
 
-The view model from C5 (`src/cli/trust-view.ts`) is already the right shape for `get_evidence` —
-including its `unknown` states, which an agent needs even more than a human does.
+`src/cli/trust-view.ts` is already the right shape for `get_evidence`.
 
-**Skip the embeddings.** The brief specifies `@xenova/transformers` + `sqlite-vec` for semantic
-search. That is a large model download on first run for a product with no users. The existing
-BM25 index (`src/search/catalog-index.ts`) is good enough to prove the shape; revisit only if
-someone complains about recall.
+**Skip the embeddings.** The brief specifies `@xenova/transformers` + `sqlite-vec`; that is a large
+model download on first run to improve recall nobody has complained about. The existing BM25 index
+(`src/search/catalog-index.ts`) proves the shape.
 
----
+Deferred below the items above because it serves agents that do not exist yet, while 2–4 serve
+users who do.
 
-## 3. Make the evidence exportable — the spec is the marketing
+## 6. Smaller, still worth doing
 
-**~3 days. High leverage for a product nobody has heard of.**
-
-The brief's S8 says "the evidence-format spec IS the marketing", and it is right. Agora's claim is
-*evidence, not scores*. The way to make that credible is to let people inspect and carry the
-evidence:
-
-- `agora export --attestations` — a DSSE bundle for one artifact or the whole stack
-- Publish the generated `schemas/` (39 JSON Schema files already exist and are CI-guarded)
-- One page documenting the attestation format
-
-This is the cheapest thing on the list that would make a security-minded reader take the project
-seriously, and it needs no infrastructure.
-
----
-
-## 4. Reduce what has to be maintained
-
-**A judgement call, deferred deliberately — revisit once real users exist.**
-
-`src/` is 31,382 lines maintained by one person. Roughly 7,000 of those are the TUI and the chat
-shell, which sit outside the v2 brief entirely. They are kept on purpose: built-in free inference
-and the zero-mode-switch shell are a real onboarding argument, and C5 wired them to the trust
-plane so they now show verdicts rather than catalog rows.
-
-But that decision was made without evidence. **After 0.7.0 ships, look at whether anyone uses
-them.** If the TUI sees no use, deleting it removes ~4,400 lines of surface that every future
-refactor has to thread through. Do not decide this before there is data — that is exactly the
-premature call this document is trying to avoid.
-
----
-
-## 5. Smaller things worth doing, roughly in value order
-
-- **`agora doctor` secrets scan** (brief §9) — flag plaintext API keys in host configs with
-  `file:line` and a keychain/env remediation hint. Small, obviously useful, and fits the existing
-  doctor output.
-- **`agora observe` → richer divergence.** Only `undeclared-egress` is computed today. The
-  `Divergence` model supports more kinds; filesystem and process divergence would need the
-  observer to see more than MCP frames.
+- **`agora doctor --secrets`** (brief §9) — flag plaintext API keys in host configs with
+  `file:line` and a keychain/env remediation hint. Small and obviously useful.
+- **`agora why <artifact>`** — plain-language explanation of which Cedar rule decided and which
+  evidence attribute drove it. The diagnostics are already structured; this is the one place
+  inference earns its keep, because it *describes* a verdict it did not produce.
+- **`agora diff <artifact>`** — "what changed since I approved this?". `evidence/diff.ts` already
+  detects schema drift; this promotes it to the question users actually ask at upgrade time.
 - **Windows verification.** The stack adapters and `opencode-exec.ts` have Windows handling that
-  has never run on Windows. Either test it in CI or say plainly in the README that Windows is
-  unverified.
-- **A second inference provider** beyond opencode and Claude, if users ask. The `Provider`
-  interface (`src/inference/types.ts`) makes this ~80 lines.
-- **Release-lag visibility.** Nothing told anyone that `main` had drifted 33 commits ahead of
-  npm with the entire product thesis among them; it was found by accident. A check is speculative
-  infrastructure for a product with no release cadence — but if a second silent divergence
-  happens, build it rather than trusting vigilance twice.
-
----
+  has never run on Windows. Either test it in CI or say plainly in the README that it is unverified.
+- **Provenance for Agora itself.** `agora-hub@0.7.0` shipped without a provenance attestation
+  because it was published from a laptop, where npm cannot do OIDC. Agora currently cannot verify
+  Agora. The next release must go through `publish.yml`.
 
 ## Explicitly not doing
 
-- **A hosted backend.** Non-negotiable in `AGENTS.md`, and the one dependency that would make
-  Agora fail when someone else's server does. The Cloudflare Worker scaffold in `workers/api/`
-  serves the revocation feed *only*, and even that can be a signed file in git.
-- **The Docker sandbox `vet`.** Replaced by runtime observation after a pre-implementation review
-  (see `V2_EXECUTION_PLAN.md` S6). The `ObservedProfile` model is unchanged, so a pre-install
-  backend can be added later if a real need appears — but do not build it speculatively.
-- **Canary tokens.** Dropped with the sandbox. They need a callback endpoint on a domain that
-  does not exist, and the attribute `canary_triggered` remains only so a policy guarding on it
-  stays valid.
-- **Semantic search.** See §2.
-- **Anything requiring recurring spend** until there is a reason. The founder is funding this
-  personally; a $5/mo Worker and a $12/yr domain are real decisions, not rounding errors.
-
----
+- **A hosted backend.** Non-negotiable in `AGENTS.md`. The Cloudflare Worker scaffold was deleted
+  on 2026-07-31 — the revocation feed is a signed file in git, which is strictly better: no
+  domain, no account, no bill, and nothing that fails when someone else's server does.
+- **`agora-hub.dev`.** Not needed. Attestation predicate types use the URI as an identifier, which
+  does not have to resolve.
+- **The Docker sandbox `vet`.** Replaced by runtime observation. `ObservedProfile` is unchanged, so
+  a pre-install backend can be added later if a real need appears.
+- **Canary tokens.** Dropped with the sandbox; they need a callback endpoint on a domain that does
+  not exist.
+- **Semantic search.** See §5.
+- **Hand-curated advisories.** See §2 — if it needs weekly human attention it will be stale in a
+  month, and a stale advisory feed is worse than none.
+- **Anything with recurring spend** until there is a reason.
 
 ## How to work on this
 
-Conventions that held up over 16 commits and are worth keeping:
-
 - **Everything lands on `main`, pushed often.** CI green at every push.
-- **Verify against the built binary, not the tests.** Three real bugs this session were found by
-  running `node dist/cli.js` and reading the output — a provenance row that said "no attestation"
-  for a signed package, a test suite making live network calls, and two commands advertising
-  things that no longer existed.
-- **After deleting a module, re-run the dead-export scan.** Three times in one session, removing
-  a module stranded its helper one commit later.
-- **Absence of evidence is never a positive finding.** This is the product's whole differentiator
-  and the easiest thing to erode by accident. `src/cli/trust-view.ts` documents the rule;
-  `test/cli/trust-view.test.ts` enforces one case per plane.
+- **Verify against the built binary, not the tests.** This has now caught real bugs in three
+  consecutive sessions — a duplicate `observe` command, an evidence bundle that silently dropped
+  planes, and an `engines.node` claim the dependency tree could not honour.
+- **Check the published artifact, not the config that produced it.** Installing the packed tarball
+  into a clean project is what surfaced the Node 20 claim and the missing plugin peer dependency.
+- **Absence of evidence is never a positive finding.** The product's whole differentiator and the
+  easiest thing to erode by accident. `src/cli/trust-view.ts` documents the rule;
+  `test/cli/trust-view.test.ts` and `test/evidence-bundle.test.ts` enforce it per plane.

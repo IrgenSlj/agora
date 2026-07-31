@@ -77,7 +77,7 @@ for the full specification):
 ## Status — honestly
 
 Agora is mid-build against the v2.0 brief. The plane descriptions above are the **design**; this table
-is **what is live today**. The phase-by-phase map is [`docs/V2_EXECUTION_PLAN.md`](./docs/V2_EXECUTION_PLAN.md).
+is **what is live today**. What comes next, and why in that order, is [`docs/NEXT.md`](./docs/NEXT.md).
 
 | Capability | State |
 |---|---|
@@ -172,7 +172,7 @@ bun src/cli.ts <cmd> # run from source, no build needed
 ```
 
 Node ≥ 20, ESM only. Direction is locked by [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md); the execution
-plan is [`docs/V2_EXECUTION_PLAN.md`](./docs/V2_EXECUTION_PLAN.md). PRs welcome — see
+plan is [`docs/NEXT.md`](./docs/NEXT.md). PRs welcome — see
 [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## License

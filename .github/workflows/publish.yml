@@ -60,18 +60,12 @@ jobs:
       # `tag` goes through env, never string-interpolation into the script: a
       # workflow_dispatch input is attacker-controllable text and `${{ }}` would
       # splice it straight into the shell.
+      # One package. `opencode-agora` was a second npm name for the same
+      # product; what shipped under it was never a re-export but a pre-pivot
+      # standalone plugin, so the two names had drifted into two products with
+      # separate users. Everything is `agora-hub` now.
       - name: Publish agora-hub to npm
         run: bash .github/scripts/npm-publish.sh
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          TAG: ${{ github.event.inputs.tag || 'latest' }}
-
-      # The OpenCode plugin entry is a thin re-export that pins agora-hub to the
-      # exact version above — publish it second so the pair stays atomic.
-      # test/release/release-integrity.test.ts keeps that pin honest.
-      - name: Publish opencode-agora (plugin entry) to npm
-        working-directory: packages/opencode-agora
-        run: bash "$GITHUB_WORKSPACE/.github/scripts/npm-publish.sh"
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           TAG: ${{ github.event.inputs.tag || 'latest' }}

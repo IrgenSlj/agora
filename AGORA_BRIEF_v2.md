@@ -571,7 +571,7 @@ S3 if desired; S6 must follow S5 (attestations feed policy entities).
 *(Claude Code: append dated entries here when implementation forces a deviation;
 never silently diverge.)*
 
-**Execution plan:** `docs/V2_EXECUTION_PLAN.md` (the *how* for §13). Owner directive 2026-07-06:
+**Execution plan:** `docs/NEXT.md` (the *how* for §13). Owner directive 2026-07-06:
 plan the whole build first, prepare the repo, then implement — **everything on `main`, push often,
 delegate where possible.**
 

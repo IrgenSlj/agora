@@ -28,24 +28,13 @@ describe('release integrity', () => {
   test('every manifest carries the same version as package.json', () => {
     // Each of these is a separate distribution channel for the same release.
     // A stale one ships the old version number to that channel's users.
-    const manifests = [
-      '.claude-plugin/plugin.json',
-      'gemini-extension.json',
-      'packages/opencode-agora/package.json'
-    ];
+    const manifests = ['.claude-plugin/plugin.json', 'gemini-extension.json'];
 
     const drift = manifests
       .map((rel) => ({ rel, version: readJson(rel).version as string }))
       .filter((m) => m.version !== root.version);
 
     expect(drift, `these manifests disagree with package.json (${root.version})`).toEqual([]);
-  });
-
-  test('the opencode plugin pins the exact agora-hub version being published', () => {
-    // publish.yml publishes the pair back to back and calls them atomic. That
-    // is only true if the pin tracks the bump.
-    const plugin = readJson('packages/opencode-agora/package.json');
-    expect(plugin.dependencies['agora-hub']).toBe(root.version);
   });
 
   test('the declared node engine is not below what the dependencies require', () => {

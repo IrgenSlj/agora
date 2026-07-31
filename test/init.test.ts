@@ -89,10 +89,14 @@ describe('generateInitPlan', () => {
     });
     expect(plan.config.$schema).toBe('https://opencode.ai/config.json');
     expect(plan.config.mcp).toBeDefined();
-    expect(Array.isArray(plan.config.plugin)).toBe(true);
+    expect(plan.config.plugin).toBeUndefined();
   });
 
-  test('config always contains the opencode-agora plugin', () => {
+  test('no plugin entry is written — it used to name a pre-pivot package', () => {
+    // `agora init` wrote `plugin: ["opencode-agora"]`, a package that has not
+    // been rebuilt since the v2 pivot. Every scaffolded project was wired to a
+    // plugin with none of the trust plane, and pinned there. Agora reaches
+    // OpenCode via `agora integrate` as an MCP server instead.
     for (const type of ['node', 'python', 'rust', 'go', 'ruby', 'java', 'unknown'] as const) {
       const plan = generateInitPlan({
         type,
@@ -103,7 +107,8 @@ describe('generateInitPlan', () => {
         hasDatabase: false,
         dependencies: []
       });
-      expect(plan.config.plugin).toContain('opencode-agora');
+      expect(plan.config.plugin).toBeUndefined();
+      expect(JSON.stringify(plan.config)).not.toContain('opencode-agora');
     }
   });
 
