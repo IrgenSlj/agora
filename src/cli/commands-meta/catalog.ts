@@ -230,13 +230,25 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'export',
     group: 'Catalog',
-    summary: 'Export catalog data in various formats',
+    summary: 'Export catalog rows, or one artifact’s evidence as an in-toto bundle',
     usage:
-      'agora export [format] [query] [--category all|mcp|prompt|skill] [--format json|csv|markdown|table] [--limit N]',
+      'agora export [format] [query] [--category all|mcp|prompt|skill] [--format json|csv|markdown|table] [--limit N]\n' +
+      '  agora export --attestations <id>',
     details:
-      'Exports all catalog items matching the optional query and category filters. ' +
-      'Pass the format as the first positional argument (json, csv, markdown, table) or use --format.',
+      'Two jobs. By default, exports catalog items matching the optional query and category ' +
+      'filters — pass the format as the first positional argument (json, csv, markdown, table) ' +
+      'or use --format. With --attestations, exports one artifact’s evidence instead, as an ' +
+      'in-toto/DSSE bundle other tooling can read: a statement per plane that produced evidence, ' +
+      'and an explicit not_established entry for every plane that did not. Envelopes are ' +
+      'unsigned (tier "none") — Agora has no attestation-signing identity, and the bundle ' +
+      'attests to what Agora observed, not to who Agora is. Statements bind to a content digest ' +
+      'from agora.lock; an artifact that is not pinned yields no statements at all rather than a ' +
+      'made-up hash.',
     flags: [
+      {
+        flag: '--attestations',
+        description: 'Export one artifact’s evidence as an in-toto bundle'
+      },
       { flag: '--format, -f', description: 'Output format: json (default), csv, markdown, table' },
       { flag: '--category, -c', description: 'Filter by category: all, mcp, prompt, skill' },
       { flag: '--limit, -n', description: 'Maximum items to export' },
@@ -247,8 +259,8 @@ export const COMMANDS: CommandMeta[] = [
       'agora export json',
       'agora export csv mcp',
       'agora export --format csv',
-      'agora export --format markdown',
-      'agora export --category mcp --limit 20'
+      'agora export --category mcp --limit 20',
+      'agora export --attestations mcp-filesystem'
     ]
   },
   {

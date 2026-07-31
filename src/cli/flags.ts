@@ -32,6 +32,7 @@ const booleanFlags = new Set([
   'accept-risk',
   'acceptWarnings',
   'accept-warnings',
+  'attestations',
   'clear',
   'continue',
   'down',

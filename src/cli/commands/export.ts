@@ -1,10 +1,34 @@
-import { getMarketplaceItems, type MarketplaceItem } from '../../catalog/bundled.js';
+import { readFileSync } from 'node:fs';
+import {
+  findMarketplaceItem,
+  getMarketplaceItems,
+  type MarketplaceItem
+} from '../../catalog/bundled.js';
+import { buildEvidenceBundle } from '../../evidence/bundle.js';
+import { createProvenanceResolver } from '../../evidence/resolve-provenance.js';
+import { aggregate, divergences } from '../../observe/profile.js';
+import { readSessions } from '../../observe/session.js';
+import { npmPackageFromCommand, npmPurl } from '../../revocation/installed.js';
+import { scanItem } from '../../scan.js';
 import { header } from '../format.js';
-import { numberFlag, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
+import {
+  detectDataDir,
+  numberFlag,
+  stringFlag,
+  usageError,
+  writeJson,
+  writeLine
+} from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 type ExportFormat = 'json' | 'csv' | 'markdown' | 'table';
+
+// Read directly rather than imported from app.ts: app.ts imports this module,
+// and the cycle would be resolved by whichever side loaded first.
+const pkg = JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url), 'utf8')) as {
+  version: string;
+};
 
 function toCsv(items: MarketplaceItem[]): string {
   const headerRow = 'id,name,kind,category,author,stars,installs,tags,description';
@@ -65,7 +89,109 @@ function toTable(items: MarketplaceItem[], _style: unknown): string {
   return [hr, hdr, hr, ...rows, hr].join('\n');
 }
 
+/**
+ * `agora export --attestations <id>` — the evidence for one artifact as an
+ * in-toto/DSSE bundle. The rest of this file exports *catalog rows*, which is a
+ * different and much older job; this is the one that carries verdicts.
+ */
+async function exportAttestations(
+  parsed: Parameters<CommandHandler>[0],
+  io: Parameters<CommandHandler>[1],
+  version: string
+): Promise<number> {
+  const id = parsed.args[0];
+  if (!id) {
+    return usageError(
+      io,
+      'export --attestations requires an item id: agora export --attestations <id>'
+    );
+  }
+
+  const item = findMarketplaceItem(id);
+  if (!item) {
+    return usageError(io, `Item not found: ${id}. Run \`agora search <query>\` to find one.`);
+  }
+
+  const offline = Boolean(parsed.flags.offline);
+  const dataDir = detectDataDir(parsed, io);
+  const resolveProvenance = createProvenanceResolver({ fetcher: io.fetcher, offline });
+
+  const scan = await scanItem(item, {
+    fetcher: io.fetcher,
+    githubToken: io.env?.AGORA_GITHUB_TOKEN,
+    offline,
+    provenance: resolveProvenance
+  });
+
+  // Resolved directly rather than read off the scan, for the reason documented
+  // in commands/trust.ts: the gate collapses "nothing published" and "could not
+  // look" into no row at all, and that difference is the point of an export.
+  let provenance: Parameters<typeof buildEvidenceBundle>[0]['evidence']['provenance'];
+  if (!item.npmPackage) {
+    provenance = undefined;
+  } else {
+    const evidence = await resolveProvenance(item.npmPackage);
+    provenance = evidence
+      ? {
+          verified: evidence.verified,
+          reason: evidence.reason,
+          sourceRepo: evidence.source_repo?.replace('https://github.com/', '')
+          // No rekorLogIndex: the resolver summary does not carry one, and a
+          // transparency-log index is exactly the kind of field that must not
+          // be guessed — it is what someone else would use to check us.
+        }
+      : null;
+  }
+
+  let observation: Parameters<typeof buildEvidenceBundle>[0]['evidence']['observation'] = null;
+  if (item.npmPackage) {
+    const wanted = npmPurl(item.npmPackage);
+    const observed = aggregate(readSessions(dataDir)).find(
+      (o) => o.key === wanted || npmPackageFromCommand(o.command) === item.npmPackage
+    );
+    if (observed) {
+      observation = {
+        sessions: observed.sessions,
+        toolCalls: Object.values(observed.toolCalls).reduce((a, b) => a + b, 0),
+        networkSampled: observed.networkSampled,
+        hostsContacted: observed.hostsContacted,
+        divergences: divergences(observed, {})
+      };
+    }
+  }
+
+  const bundle = buildEvidenceBundle({
+    version,
+    subject: {
+      name: item.npmPackage ? npmPurl(item.npmPackage) : `pkg:generic/${item.id}`
+      // sha256 is deliberately absent: it comes from agora.lock, and this
+      // command does not install. buildEvidenceBundle reports the gap.
+    },
+    evidence: {
+      provenance,
+      scan: {
+        pass: scan.summary.pass,
+        warn: scan.summary.warn,
+        fail: scan.summary.fail,
+        checks: scan.checks.map((c) => ({
+          id: c.name,
+          status: c.status,
+          detail: c.message
+        }))
+      },
+      observation
+    }
+  });
+
+  writeJson(io.stdout, bundle);
+  return 0;
+}
+
 export const commandExport: CommandHandler = async (parsed, io, style) => {
+  if (parsed.flags.attestations) {
+    return exportAttestations(parsed, io, pkg.version);
+  }
+
   const validFormats: ExportFormat[] = ['json', 'csv', 'markdown', 'table'];
   const flagFormat = stringFlag(parsed, 'format', 'f');
   let positional = parsed.args;
