@@ -21,11 +21,19 @@
   "bugs": "https://github.com/IrgenSlj/agora/issues",
   "engines": {
     "bun": ">=1.0.0",
-    "node": ">=20"
+    "node": ">=22.22.2"
   },
   "overrides": {
     "qs": "6.15.2",
     "uuid": "13.0.1"
+  },
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.18.4"
+  },
+  "peerDependenciesMeta": {
+    "@opencode-ai/plugin": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"

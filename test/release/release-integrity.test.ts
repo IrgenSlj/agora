@@ -48,6 +48,21 @@ describe('release integrity', () => {
     expect(plugin.dependencies['agora-hub']).toBe(root.version);
   });
 
+  test('the declared node engine is not below what the dependencies require', () => {
+    // `>=20` was declared while `better-sqlite3` requires `>=22` and the entire
+    // sigstore tree requires `^22.22.2 || ^24.15.0 || >=26.0.0`. A Node 20 user
+    // would have installed on the strength of that claim and got a Verify plane
+    // that could not verify — the one thing the product is for.
+    //
+    // Deliberately a floor rather than a mirror of sigstore's exact range:
+    // sigstore excludes odd-numbered Node releases, but Agora is verified
+    // working on them, and claiming otherwise would be a false negative.
+    const declared = (root.engines?.node ?? '') as string;
+    const floor = declared.match(/^>=\s*(\d+)/)?.[1];
+    expect(floor, `engines.node should be a ">=<major>" floor, got "${declared}"`).toBeDefined();
+    expect(Number(floor)).toBeGreaterThanOrEqual(22);
+  });
+
   test('the generated schemas ship with the package', () => {
     // 39 JSON Schemas are generated from src/model/ and CI-guarded against
     // drift, but `files: ["dist"]` kept them out of the tarball — so the one
