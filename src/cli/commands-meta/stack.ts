@@ -65,7 +65,7 @@ export const COMMANDS: CommandMeta[] = [
     summary: 'Review and act on install requests an agent has made',
     usage: 'agora approve [id] [--deny] [--tool <host>] [--dry-run] [--json]',
     details:
-      'An agent connected to `agora serve` can request an install; it cannot perform one. This ' +
+      'An agent can request an install through Agora; it cannot perform one. This ' +
       'is where a request becomes an action, and it runs in your terminal on purpose — a channel ' +
       'no injected text in a web page or tool result can reach. With no id, lists what is ' +
       'pending. With an id, shows the request and then runs the full acquire gate: scan, policy, ' +
