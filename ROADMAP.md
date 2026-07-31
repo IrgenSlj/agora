@@ -59,6 +59,11 @@ order, is [`docs/NEXT.md`](./docs/NEXT.md).**
   rules skipped is not a permit, an uncached revocation feed is not "not revoked", and a server
   never run has not been shown to behave. Rendered in the TUI item and acquire pages too.
 - **Quarantine CLI** — `agora quarantine [list]` and `agora unquarantine <name> --accept-risk`.
+- **Exportable evidence** — `agora export --attestations <id>` emits an in-toto/DSSE bundle: a
+  statement per plane that produced evidence, and an explicit `not_established` entry for every
+  plane that did not. Unsigned by design (`tier: "none"`) — Agora has no attestation-signing
+  identity. Format specified in [`docs/EVIDENCE.md`](./docs/EVIDENCE.md); the 39 generated JSON
+  Schemas now ship in the npm package under `schemas/`.
 
 Not yet live: the agent-facing `agora serve` discovery tools (S7), and a pre-install sandbox (S6
 shipped as runtime observation instead). **This section is the authority on what is live**; README,
@@ -81,7 +86,7 @@ workflow is fixed as of 2026-07-30, but authenticating it is an owner action (se
 | S5 | Policy (Cedar) | ✅ Complete — engine, `agora policy`, acquire gate |
 | S6 | Vet → **Observe** | ✅ Complete — observation, policy wiring, and `observe enable/disable` |
 | S7 | Serve (agent-facing) | ⬜ Not started |
-| S8 | Launch hardening | ⬜ Not started |
+| S8 | Launch hardening | 🔄 Evidence export, schemas and format spec shipped 2026-07-31 |
 | C1–C6 | Consolidation (audit 2026-07-27) | ✅ Complete 2026-07-28 |
 
 ## Remaining plan
