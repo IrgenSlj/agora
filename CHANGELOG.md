@@ -2,6 +2,74 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
+## [0.7.1] - 2026-07-31 — revocation actually applies
+
+0.7.0 shipped a revocation plane that was complete, tested, and **inert**: no key was pinned, so
+every feed read `unverifiable` and nothing was ever blocked. This release makes it work, and does
+it by removing the requirement rather than satisfying it.
+
+### Added — advisories for a surface nothing else audits
+
+`agora audit` checks every MCP server configured across your hosts against
+[OSV.dev](https://osv.dev) and exits non-zero on a malware/critical/high finding.
+
+MCP servers are spawned commands in host configs, not declared dependencies — they appear in no
+`package.json`, so `npm audit`, Dependabot and Snyk cannot see them by construction. Verified side
+by side in one directory against a real lockfile: `npm audit` reports 0 vulnerabilities,
+`agora audit` reports 8 advisories across 3 servers.
+
+The revocation feed is filled from the same source. `scripts/sync-feed.ts` queries OSV for every
+MCP server in the catalog and a daily workflow commits the result — **no human curation anywhere
+in the loop**. First run: 10 advisories across 5 packages, including Microsoft's `@playwright/mcp`
+(DNS rebinding, CVE-2025-9611) and `mcp-server-kubernetes` (command injection, CVE-2026-39884).
+
+### Changed — the feed no longer needs a signing key
+
+A signature was the original design and bought less than it cost: the key would have lived as a
+secret in the same repository that serves the feed, so anyone able to rewrite the feed could
+usually sign it too. The feed is also not secret — every entry carries a public `osv.dev`
+reference. What it provides is *availability*, and the attack that matters is **suppression**: an
+entry quietly going missing.
+
+Two mechanisms replace it, and together they stop suppression outright:
+
+- The feed **ships inside the npm package**, so it is covered by that package's provenance
+  attestation, and it is authoritative.
+- A fetched copy is merged **monotonically** — it may add entries and may never remove one,
+  weaken one, or outrank one (`src/revocation/merge.ts`).
+
+The worst a compromised host achieves is adding noise. The ed25519 path remains implemented and
+tested, because a signature is still the only way to *withdraw* an entry between releases.
+
+### Fixed — over-blocking that only appeared once the feed had content
+
+A version-less purl matches every entry by design ("we cannot rule it out"), which was harmless
+while the feed was empty. With real data it meant `agora acquire mcp-filesystem` would be refused
+because of a CVE fixed in 0.6.3 — and the same for `@playwright/mcp` and `mcp-server-kubernetes`,
+three of the most-used servers in the ecosystem, all patched.
+
+A match now blocks only when the version was **confirmed** in range, or the entry covers every
+version. Malware entries carry no range, so they still block unconditionally; unconfirmed matches
+warn instead.
+
+### Fixed
+
+- `engines.node` claimed `>=20` while `better-sqlite3` and the entire sigstore tree require Node
+  22 or newer — a Node 20 user would have installed on that claim and got a Verify plane that
+  cannot verify.
+- `@opencode-ai/plugin` was imported at runtime but declared only as a devDependency, so
+  `import('agora-hub/opencode')` threw in a clean install. Now an optional peer dependency.
+- `agora init` no longer writes `plugin: ["opencode-agora"]`, which named a package that has not
+  been rebuilt since the v2 pivot, nor claims to have registered it.
+
+### Removed
+
+- **`opencode-agora`** is retired and deprecated on npm. What shipped under that name was never
+  the thin re-export this repo described but a standalone pre-pivot plugin with its own dependency
+  tree — two names that had become two products. Everything is `agora-hub`.
+- The Cloudflare Worker scaffold (`workers/`), along with `hono`, `wrangler` and
+  `@cloudflare/workers-types`. The feed is a file in git; there was never going to be a server.
+
 ## [0.7.0] - 2026-07-31 — the trust plane reaches users
 
 **Contains breaking changes.** This is the first release carrying the v2 trust plane. Everything
