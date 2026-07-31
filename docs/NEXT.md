@@ -4,7 +4,7 @@ Written 2026-07-31, the day `agora-hub@0.7.0` reached npm. `ROADMAP.md` is the a
 is *live*; `CHANGELOG.md` is the authority on what *shipped*; this document is the authority on
 what to do *next* and why in that order.
 
-## The fact that reorders everything
+## A number worth correcting
 
 **Agora has approximately zero human users.** Measured 2026-07-31, not assumed:
 
@@ -19,14 +19,23 @@ The ~123 downloads/month that earlier planning documents treated as an audience 
 publish-day spike plus noise. This was never checked; it was inferred from a number that looked
 like adoption and was not.
 
-**So the constraint is not "does anyone care."** Nobody has been given the chance to. It is
-distribution, and it has been all along — hidden behind three months of build work that always
-felt more urgent.
+**This is not a failure to distribute. It is pre-launch, on purpose.** The owner's stated intent
+(2026-07-31): Agora doubles as an educational project, it goes public when it is genuinely worth
+marketing, and there is no timeline. So "nobody uses it" is a *fact to stop mis-citing*, not a
+problem to solve this week — earlier documents treated 117 installs a month as an audience and
+reasoned from it, and that was the actual error.
 
-Everything below is ranked against a single test: **does this either make the product's claim
-true and checkable, or put it in front of someone?** Work that presupposes users — retention
-features, agent-facing surfaces, maintenance reduction — is deferred, not because it is bad but
-because it optimises a funnel with no traffic.
+What it does change: **stop ranking work by proximity to adoption.** There is no funnel to
+optimise yet. Rank instead by the owner's actual goals — *make the thing genuinely good, and
+learn something building it*:
+
+1. **Is it true?** Claims the product makes about itself must hold. This outranks everything.
+2. **Does it stay cheap?** One maintainer. Anything needing weekly attention is a future lie.
+3. **Is it interesting to build?** Explicitly a criterion, not a guilty pleasure — learning is
+   half the point of this project.
+4. **Would it matter on the day this goes public?** Not "does it get users now."
+
+Distribution work is listed last not because it is unimportant but because it is *not yet due*.
 
 ## The claim, sharpened
 
@@ -42,9 +51,11 @@ while OSV reports **two GHSA advisories** against `@modelcontextprotocol/server-
 server that a developer may well be running right now.
 
 That gap is the product. It also corrects an error in the previous version of this document,
-which sold the revocation feed as a data moat. It is not: OSV is public and anyone can query it.
-**The moat is the surface, not the data** — knowing which npm packages are MCP servers, and
-looking at a place nothing else looks.
+which argued the revocation feed would be hard for anyone else to copy. It would not be: OSV is
+public and anyone can query it. What is actually distinctive is the *surface* — knowing which npm
+packages are MCP servers, and looking in host config files, where no other tool looks. (Being
+copyable is a mild concern anyway for a project with no competitors and a learning goal; it is
+noted here to keep the reasoning honest, not because it should drive decisions.)
 
 Two standing rules that decide most arguments here:
 
@@ -176,12 +187,13 @@ side-by-side is the entire argument, reproducible by a stranger in thirty second
 Whether this is a new verb or a flag on `doctor` is an open question. A separate name that
 deliberately rhymes with `npm audit` is probably worth more than the tidiness of one fewer command.
 
-## 5. Put it in front of someone
+## 5. Distribution — when it is due, not before
 
-**The actual constraint. No code.**
+**No code. Deliberately last.**
 
-Zero users is not a product problem — nothing about the trust plane is missing. It is that the
-product has never been shown to anyone. Cheapest first:
+This is a pre-launch project by choice; going public happens when the owner judges it worth
+marketing. Recording the options now so the decision is ready when that day comes, rather than
+improvised:
 
 - **List on the official MCP Registry.** Where people already look for MCP tooling.
 - **Write the `npm audit` piece** — §4 is the demo, `not_established` is the philosophy, and the
@@ -192,10 +204,10 @@ product has never been shown to anyone. Cheapest first:
 - **The OpenCode and Claude Code communities**, where the audience is definitionally people who
   run MCP servers.
 
-Do §2–§4 first so there is something true to point at. But do not let build work keep deferring
-this again — that is the pattern that produced three months of planes nobody has seen.
+§2–§4 are the prerequisites: they are what makes the pitch true rather than aspirational. There
+is no rush on this section, and no reason to treat a quiet npm graph as a verdict on the work.
 
-## 6. `agora gate` — the CI wedge *(deferred: presupposes users)*
+## 6. `agora gate` — one command for CI
 
 One command that evaluates every installed artifact against the project's Cedar policy and exits
 non-zero on failure. Cheap: the policy engine, the lockfile, and the trust view all exist; this is
@@ -205,7 +217,7 @@ The reason it matters is retention. A developer who tries a CLI may never run it
 with it in their pipeline cannot casually remove it. This is the shortest path from "interesting
 tool" to "load-bearing".
 
-## 7. Cut the TUI *(deferred: produces no information)*
+## 7. Cut the TUI
 
 `src/cli/tui.ts` + `src/cli/pages/` is **3,590 lines** outside the v2 brief — a second UI for
 things the CLI already does, and a surface every trust-plane change has to be threaded through
@@ -216,7 +228,7 @@ shell with free inference on first run is a real onboarding argument and costs a
 
 Reversible via git, so this is a judgement call rather than a risk. Stop adding to the TUI now.
 
-## 8. S7 — `agora serve`, the agent-facing surface *(deferred: presupposes agent users)*
+## 8. S7 — `agora serve`, the agent-facing surface
 
 The largest remaining piece of the brief, and the most future-proof: discovery filtered through
 *policy*, so an agent only ever sees artifacts it is permitted to install.

@@ -98,13 +98,15 @@ now (see `docs/NEXT.md` §1).
 
 **[`docs/NEXT.md`](./docs/NEXT.md) is the authority on what to build next and why in that order.**
 
-It opens with a fact measured on 2026-07-31 rather than assumed: **Agora has approximately zero
-human users.** 0 stars, 1 unique repo visitor, and an npm curve that is one publish-day spike
-plus noise — the "~117 installs a month" earlier documents treated as an audience was mirror
-traffic. So the constraint is distribution, not product, and the ordering follows: consolidate on
-`agora-hub`, make Agora verifiable by Agora, automate the feed from OSV, ship `agora audit`, and
-put it in front of someone. `agora gate`, the TUI cut and S7 are deferred — each presupposes users
-who do not yet exist.
+It opens with a number worth correcting: the "~117 installs a month" earlier documents treated as
+an audience was mirror and scanner traffic. Agora has approximately zero human users — which is
+**pre-launch by design**, not a failure. This project doubles as an educational one and goes
+public when it is judged worth marketing.
+
+So work is ranked by *is it true · does it stay cheap · is it interesting to build · would it
+matter on launch day* — not by proximity to adoption. Order: consolidate on `agora-hub`, make
+Agora verifiable by Agora, automate the feed from OSV, ship `agora audit`, then `agora gate`, the
+TUI cut, and S7. Distribution is listed last because it is not yet due.
 
 Sizing note: `src/` is ~32k lines maintained by one person. The four planes plus the stack manager
 account for roughly a third; the rest is CLI surface, which is what the cleanup items are about.
