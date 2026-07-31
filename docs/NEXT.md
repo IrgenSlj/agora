@@ -4,9 +4,47 @@ Written 2026-07-31, the day `agora-hub@0.7.0` reached npm. `ROADMAP.md` is the a
 is *live*; `CHANGELOG.md` is the authority on what *shipped*; this document is the authority on
 what to do *next* and why in that order.
 
-**The constraint changed today.** For three months it was "does the trust plane exist." It exists
-and it is installable, so the constraint is now *"does anyone care, and can you tell?"* Everything
-below is ranked against that.
+## The fact that reorders everything
+
+**Agora has approximately zero human users.** Measured 2026-07-31, not assumed:
+
+| Signal | Value | Reading |
+|---|---|---|
+| npm downloads | 103 on publish day, then 0–3/day | Mirrors and scanners pulling a new version |
+| GitHub stars / forks / watchers | 0 / 0 / 0 | — |
+| Repo page views | 22 views, **1 unique** | Nobody is looking |
+| Clones | 484 from 140 "uniques" | CI and crawlers, not people |
+
+The ~123 downloads/month that earlier planning documents treated as an audience is one
+publish-day spike plus noise. This was never checked; it was inferred from a number that looked
+like adoption and was not.
+
+**So the constraint is not "does anyone care."** Nobody has been given the chance to. It is
+distribution, and it has been all along — hidden behind three months of build work that always
+felt more urgent.
+
+Everything below is ranked against a single test: **does this either make the product's claim
+true and checkable, or put it in front of someone?** Work that presupposes users — retention
+features, agent-facing surfaces, maintenance reduction — is deferred, not because it is bad but
+because it optimises a funnel with no traffic.
+
+## The claim, sharpened
+
+> **Your agent runs code that `npm audit` can't see. Agora audits it.**
+
+This is the positioning, and it is structurally true rather than a slogan. MCP servers live in
+`opencode.json` and host configs as *spawned commands* — `npx @modelcontextprotocol/server-filesystem`
+— and are never declared in any `package.json`. npm audit, Dependabot and Snyk are blind to them
+by construction: they audit dependency trees, and this is not one.
+
+Verified 2026-07-31: `npm audit` over a tree containing `agora-hub` reports **0 vulnerabilities**,
+while OSV reports **two GHSA advisories** against `@modelcontextprotocol/server-filesystem` — a
+server that a developer may well be running right now.
+
+That gap is the product. It also corrects an error in the previous version of this document,
+which sold the revocation feed as a data moat. It is not: OSV is public and anyone can query it.
+**The moat is the surface, not the data** — knowing which npm packages are MCP servers, and
+looking at a place nothing else looks.
 
 Two standing rules that decide most arguments here:
 
@@ -64,9 +102,27 @@ binary and is the zero-cost default that makes the shell work with no API key on
 is a separate mechanism from the plugin and one of the better arguments for installing Agora at
 all.
 
-## 2. Automate the revocation feed from OSV — turn the differentiator on
+## 2. Make Agora verifiable by Agora
 
-**The highest value-per-effort item left, and it needs no ongoing human attention.**
+**Cheap, and it closes a hole in the core claim.**
+
+`agora-hub@0.7.0` shipped with **no provenance attestation**, because it was published from a
+laptop and npm can only attest builds it runs itself. So `agora trust agora-hub` would report
+*"no published attestation"* about Agora — a supply-chain tool that cannot demonstrate its own
+supply chain. Every argument this product makes is weaker while that is true, and it is the first
+thing a security-minded reader will check.
+
+- Wire npm trusted publishing (OIDC) so the next release goes through `publish.yml` and carries
+  `--provenance`. Owner action, browser-only, free.
+- Then **dogfood it**: commit Agora's own evidence bundle
+  (`agora export --attestations`) into the repo and regenerate it on release. It is simultaneously
+  the proof, the demo, and the worked example the format spec needs.
+
+This is the cheapest credibility available and it doubles as documentation.
+
+## 3. Automate the revocation feed from OSV — make the invisible surface visible
+
+**The item that turns the positioning above into working software, with no ongoing human attention.**
 
 Revocation is the one capability nothing else in this ecosystem has, and it is currently inert: no
 key is pinned, so every feed reads `unverifiable` and no revocation applies. Both halves are now
@@ -97,7 +153,49 @@ nobody has reported yet will not appear. Same rule as everywhere else in the pro
 
 Blocked only on minting the signing key (`feed/README.md`, owner action, ~1 hour).
 
-## 3. `agora gate` — the CI wedge
+## 4. `agora audit` — the one command that demonstrates the gap
+
+**The smallest artifact that makes the positioning self-evident, and the thing to point people at.**
+
+Today, proving the claim takes a paragraph. It should take a command:
+
+```
+$ npm audit
+found 0 vulnerabilities
+
+$ agora audit
+⚠ @modelcontextprotocol/server-filesystem  2 advisories (GHSA-hc55-p739-j48w, GHSA-q66q-fx2p-7w4m)
+  configured in ~/.config/opencode/opencode.json — not in any package.json,
+  which is why npm audit cannot see it.
+```
+
+Mechanically it is `agora doctor`'s host-config discovery joined to the OSV lookup from §3 — a
+thin command over machinery that will already exist. Its value is not technical; it is that the
+side-by-side is the entire argument, reproducible by a stranger in thirty seconds.
+
+Whether this is a new verb or a flag on `doctor` is an open question. A separate name that
+deliberately rhymes with `npm audit` is probably worth more than the tidiness of one fewer command.
+
+## 5. Put it in front of someone
+
+**The actual constraint. No code.**
+
+Zero users is not a product problem — nothing about the trust plane is missing. It is that the
+product has never been shown to anyone. Cheapest first:
+
+- **List on the official MCP Registry.** Where people already look for MCP tooling.
+- **Write the `npm audit` piece** — §4 is the demo, `not_established` is the philosophy, and the
+  two GHSA advisories on the flagship server are the hook. This is the highest-leverage artifact
+  available and it needs no code.
+- **Tell the MCP server maintainers whose packages carry advisories.** A useful, non-promotional
+  message that happens to demonstrate the product.
+- **The OpenCode and Claude Code communities**, where the audience is definitionally people who
+  run MCP servers.
+
+Do §2–§4 first so there is something true to point at. But do not let build work keep deferring
+this again — that is the pattern that produced three months of planes nobody has seen.
+
+## 6. `agora gate` — the CI wedge *(deferred: presupposes users)*
 
 One command that evaluates every installed artifact against the project's Cedar policy and exits
 non-zero on failure. Cheap: the policy engine, the lockfile, and the trust view all exist; this is
@@ -107,7 +205,7 @@ The reason it matters is retention. A developer who tries a CLI may never run it
 with it in their pipeline cannot casually remove it. This is the shortest path from "interesting
 tool" to "load-bearing".
 
-## 4. Cut the TUI
+## 7. Cut the TUI *(deferred: produces no information)*
 
 `src/cli/tui.ts` + `src/cli/pages/` is **3,590 lines** outside the v2 brief — a second UI for
 things the CLI already does, and a surface every trust-plane change has to be threaded through
@@ -118,7 +216,7 @@ shell with free inference on first run is a real onboarding argument and costs a
 
 Reversible via git, so this is a judgement call rather than a risk. Stop adding to the TUI now.
 
-## 5. S7 — `agora serve`, the agent-facing surface
+## 8. S7 — `agora serve`, the agent-facing surface *(deferred: presupposes agent users)*
 
 The largest remaining piece of the brief, and the most future-proof: discovery filtered through
 *policy*, so an agent only ever sees artifacts it is permitted to install.
@@ -139,7 +237,7 @@ model download on first run to improve recall nobody has complained about. The e
 Deferred below the items above because it serves agents that do not exist yet, while 2–4 serve
 users who do.
 
-## 6. Smaller, still worth doing
+## 9. Smaller, still worth doing
 
 - **`agora doctor --secrets`** (brief §9) — flag plaintext API keys in host configs with
   `file:line` and a keychain/env remediation hint. Small and obviously useful.
@@ -150,9 +248,6 @@ users who do.
   detects schema drift; this promotes it to the question users actually ask at upgrade time.
 - **Windows verification.** The stack adapters and `opencode-exec.ts` have Windows handling that
   has never run on Windows. Either test it in CI or say plainly in the README that it is unverified.
-- **Provenance for Agora itself.** `agora-hub@0.7.0` shipped without a provenance attestation
-  because it was published from a laptop, where npm cannot do OIDC. Agora currently cannot verify
-  Agora. The next release must go through `publish.yml`.
 
 ## Explicitly not doing
 
@@ -165,8 +260,8 @@ users who do.
   a pre-install backend can be added later if a real need appears.
 - **Canary tokens.** Dropped with the sandbox; they need a callback endpoint on a domain that does
   not exist.
-- **Semantic search.** See §5.
-- **Hand-curated advisories.** See §2 — if it needs weekly human attention it will be stale in a
+- **Semantic search.** See §8.
+- **Hand-curated advisories.** See §3 — if it needs weekly human attention it will be stale in a
   month, and a stale advisory feed is worse than none.
 - **Anything with recurring spend** until there is a reason.
 
