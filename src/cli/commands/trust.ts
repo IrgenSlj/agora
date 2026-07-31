@@ -9,6 +9,7 @@ import { findMarketplaceItem } from '../../catalog/bundled.js';
 import { createProvenanceResolver } from '../../evidence/resolve-provenance.js';
 import { aggregate, divergences } from '../../observe/profile.js';
 import { readSessions } from '../../observe/session.js';
+import { checkRevocations } from '../../revocation/client.js';
 import { npmPackageFromCommand, npmPurl } from '../../revocation/installed.js';
 import { scanItem } from '../../scan.js';
 import { ExitCode } from '../exit-codes.js';
@@ -98,14 +99,25 @@ export const commandTrust: CommandHandler = async (parsed, io, style) => {
       : null;
   }
 
+  // Revocation is answered here now. It used to be left `undefined` because
+  // there was no feed to answer from — with no key pinned, nothing applied. A
+  // feed now ships inside the package, so this is a local, offline, instant
+  // lookup, and omitting it from the one command whose job is "every plane's
+  // verdict" would understate what Agora knows. The opposite failure to the
+  // one that comment was guarding against, and just as bad.
+  const revocation = item.npmPackage
+    ? checkRevocations(dataDir, [npmPurl(item.npmPackage)])
+    : undefined;
+
   const rows: TrustRow[] = buildTrustRows({
     scan,
     provenance,
+    revocation,
     observation: observationFor(dataDir, item.npmPackage)
-    // policy and revocation are left `undefined` — "not evaluated here" —
-    // rather than being faked. `agora acquire` runs both as gates; claiming a
-    // verdict this command did not compute would be exactly the failure this
-    // view exists to prevent.
+    // policy is still left `undefined` — "not evaluated here" — rather than
+    // faked. `agora acquire` runs it as a gate against a real target config;
+    // claiming a verdict this command did not compute would be exactly the
+    // failure this view exists to prevent.
   });
   const summary = summarizeTrust(rows);
 
@@ -127,7 +139,7 @@ export const commandTrust: CommandHandler = async (parsed, io, style) => {
   writeLine(io.stdout, `  ${theme.dim(summary.headline)}`);
   writeLine(
     io.stdout,
-    theme.muted('  Run `agora acquire ' + item.id + '` to evaluate policy and revocation too.')
+    theme.muted('  Run `agora acquire ' + item.id + '` to evaluate policy against a real target.')
   );
 
   return summary.tone === 'bad' ? ExitCode.POLICY_FORBID : ExitCode.OK;

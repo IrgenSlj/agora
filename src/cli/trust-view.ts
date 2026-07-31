@@ -156,13 +156,13 @@ function revocationRow(status: RevocationStatus | null | undefined): TrustRow {
     return { plane: 'revocation', label, tone: 'unknown', detail: 'not checked' };
   }
   if (status.unknown) {
-    // No feed cached — and with no key pinned yet, this is the normal state.
-    // "Not revoked" would be a claim nothing supports.
+    // No feed at all — neither bundled nor cached, which means a broken
+    // install. "Not revoked" would be a claim nothing supports.
     return {
       plane: 'revocation',
       label,
       tone: 'unknown',
-      detail: 'no feed cached — nothing has been checked against it'
+      detail: 'no feed available — nothing has been checked against it'
     };
   }
   if (status.blocked) {
@@ -176,11 +176,20 @@ function revocationRow(status: RevocationStatus | null | undefined): TrustRow {
   }
   const age = status.ageMs === undefined ? '' : ` (feed ${hoursAgo(status.ageMs)})`;
   if (status.matches.length > 0) {
+    const n = status.matches.length;
+    // An unconfirmed match is a real finding about the *package* and an open
+    // question about *your copy* — the advisory exists, but no version was
+    // pinned so Agora cannot say whether it applies to you. Reporting that as
+    // a plain "advisory match" would overstate it; hiding it would understate
+    // it much worse.
+    const unconfirmed = status.matches.every((m) => !m.confirmed);
     return {
       plane: 'revocation',
       label,
       tone: 'warn',
-      detail: `${status.matches.length} advisory match${status.matches.length === 1 ? '' : 'es'}${age}`
+      detail: unconfirmed
+        ? `${n} advisor${n === 1 ? 'y' : 'ies'} for this package — no version pinned, so it is unknown whether yours is affected${age}`
+        : `${n} advisory match${n === 1 ? '' : 'es'}${age}`
     };
   }
   if (status.stale) {

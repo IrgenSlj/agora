@@ -232,4 +232,36 @@ describe('summarizeTrust', () => {
     });
     expect(summarizeTrust(rows).tone).toBe('bad');
   });
+
+  test('an unconfirmed advisory says the version is unknown, not that you are hit', () => {
+    // A package-level advisory with no pinned version is two facts, and both
+    // must survive: the advisory is real, and whether it applies to *this*
+    // copy was never established. Rendering it as a plain "advisory match"
+    // overstates it; dropping it understates it far worse.
+    const row = buildTrustRows({
+      revocation: {
+        matches: [
+          {
+            entry: {
+              id: 'GHSA-1',
+              purl_pattern: 'pkg:npm/x',
+              versions: '<=0.6.2',
+              reason: 'path traversal',
+              severity: 'high',
+              refs: [],
+              added_at: '2026-01-01T00:00:00Z'
+            },
+            purl: 'pkg:npm/x',
+            confirmed: false
+          }
+        ],
+        blocked: false,
+        unknown: false,
+        stale: false
+      }
+    }).find((r) => r.plane === 'revocation');
+
+    expect(row?.tone).toBe('warn');
+    expect(row?.detail).toContain('unknown whether yours is affected');
+  });
 });
