@@ -15,8 +15,8 @@
       "description": "ISO timestamp when the feed was generated"
     },
     "key_id": {
-      "type": "string",
-      "description": "Identifier of the signing key (rotated with new release)"
+      "description": "Identifier of the signing key, when the feed is signed",
+      "type": "string"
     },
     "entries": {
       "type": "array",
@@ -76,17 +76,15 @@
       "description": "Revocation entries"
     },
     "signature": {
-      "type": "string",
-      "description": "Base64-encoded ed25519 signature over JCS(feed sans signature)"
+      "description": "Base64-encoded ed25519 signature over JCS(feed sans signature)",
+      "type": "string"
     }
   },
   "required": [
     "feed_version",
     "generated_at",
-    "key_id",
-    "entries",
-    "signature"
+    "entries"
   ],
   "additionalProperties": false,
-  "description": "Signed revocation feed (AGORA_BRIEF_v2.md §5.6)"
+  "description": "Revocation feed (AGORA_BRIEF_v2.md §5.6)"
 }

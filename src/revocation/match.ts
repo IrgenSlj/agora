@@ -105,6 +105,17 @@ export function purlPatternMatches(pattern: string, purl: string): boolean {
 export interface RevocationMatch {
   entry: RevocationEntry;
   purl: string;
+  /**
+   * True when the artifact's version was known and fell inside the entry's
+   * range — or when the entry covers every version, so no version was needed.
+   *
+   * False means "this package has a revocation for *some* versions and we could
+   * not tell which one you have." That is a real warning and a bad block: three
+   * of the most-used MCP servers carry a fixed CVE, and blocking every install
+   * of them because a catalog purl has no version pinned would make Agora wrong
+   * far more often than right.
+   */
+  confirmed: boolean;
 }
 
 /** Every entry in the feed that covers `purl`. */
@@ -122,11 +133,18 @@ export function matchRevocations(
   return entries
     .filter((entry) => {
       if (!purlPatternMatches(entry.purl_pattern, purl)) return false;
-      // No version on the artifact means we cannot rule the entry out.
+      // No version on the artifact means we cannot rule the entry out. It is
+      // still reported — as unconfirmed, see `confirmed` below.
       if (!version) return true;
       return versionInRange(version, entry.versions);
     })
-    .map((entry) => ({ entry, purl }));
+    .map((entry) => ({
+      entry,
+      purl,
+      // An entry with no range covers every version, so nothing is left to
+      // confirm. With a range, we need the artifact's version to say anything.
+      confirmed: !entry.versions?.trim() || Boolean(version)
+    }));
 }
 
 /**
@@ -135,4 +153,17 @@ export function matchRevocations(
  */
 export function isBlocking(entry: RevocationEntry): boolean {
   return entry.severity === 'critical' || entry.severity === 'high';
+}
+
+/**
+ * Whether a *match* should stop an install, as opposed to warn about one.
+ *
+ * Severity alone is not enough. A high-severity entry scoped to `<=0.6.2` says
+ * nothing about the version a user is about to install if that version is
+ * unknown, and treating it as a block would refuse every install of three of
+ * the most widely used MCP servers — all of which have shipped fixes. Malware
+ * entries carry no version range, so they still block unconditionally.
+ */
+export function isBlockingMatch(match: RevocationMatch): boolean {
+  return isBlocking(match.entry) && match.confirmed;
 }

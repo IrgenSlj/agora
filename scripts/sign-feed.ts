@@ -33,15 +33,13 @@ function fail(message: string): never {
   process.exit(1);
 }
 
+// Signing is optional. The feed's integrity comes from two other places first:
+// the copy bundled in the npm package is covered by that package's provenance,
+// and a fetched copy is merged monotonically so it can add revocations but
+// never remove one (src/revocation/merge.ts). A signature is the third and
+// strongest option — it is what would let a fetched feed *withdraw* an entry —
+// and remains supported for whenever the feed outgrows those two.
 const privateKey = process.env.AGORA_FEED_SIGNING_KEY;
-if (!privateKey) {
-  fail(
-    'AGORA_FEED_SIGNING_KEY is not set.\n' +
-      '  Mint a keypair with `bun scripts/generate-feed-key.ts`, pin the public\n' +
-      '  half in src/revocation/feed.ts, and store the private half as the\n' +
-      '  AGORA_FEED_SIGNING_KEY repository secret.'
-  );
-}
 
 const keyId = process.env.AGORA_FEED_KEY_ID ?? `agora-feed-${new Date().getFullYear()}-a`;
 
@@ -81,34 +79,36 @@ if (existsSync(FEED_PATH)) {
   }
 }
 
-const feed = signFeed(
-  {
-    feed_version: previousVersion + 1,
-    generated_at: new Date().toISOString(),
-    key_id: keyId,
-    entries
-  },
-  privateKey
-);
+const unsigned = {
+  feed_version: previousVersion + 1,
+  generated_at: new Date().toISOString(),
+  entries
+};
+
+const feed = privateKey ? signFeed({ ...unsigned, key_id: keyId }, privateKey) : unsigned;
 
 // --- verify what we are about to publish -----------------------------------
 
-// Sign then verify with the same code path the client uses. A feed that fails
-// here would fail on every machine that fetched it, and the failure mode is
-// silent: clients reject it and keep applying nothing.
+// Verify through the same code path the client uses. A feed that fails here
+// would fail on every machine that fetched it, and the failure mode is silent:
+// clients reject it and go on applying nothing.
 const verdict = verifyFeed(feed, {
-  keys: { [keyId]: derivePublicKey(privateKey) },
+  ...(privateKey ? { keys: { [keyId]: derivePublicKey(privateKey) } } : {}),
   cachedVersion: previousVersion || undefined
 });
-if (verdict.status !== 'valid') {
-  fail(`refusing to publish a feed that does not verify: ${verdict.status} — ${verdict.reason}`);
+const acceptable = privateKey ? 'valid' : 'unsigned';
+if (verdict.status !== acceptable) {
+  fail(
+    `refusing to publish a feed that does not verify: ${verdict.status} — ${'reason' in verdict ? verdict.reason : ''}`
+  );
 }
 
 atomicWriteFile(FEED_PATH, `${JSON.stringify(feed, null, 2)}\n`);
 
 console.log(
-  `signed feed v${feed.feed_version} — ${entries.length} ` +
-    `${entries.length === 1 ? 'entry' : 'entries'}, key_id ${keyId}`
+  `${privateKey ? 'signed' : 'wrote unsigned'} feed v${feed.feed_version} — ` +
+    `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}` +
+    (privateKey ? `, key_id ${keyId}` : ' (integrity via bundling + monotonic merge)')
 );
 
 function derivePublicKey(privatePem: string): string {

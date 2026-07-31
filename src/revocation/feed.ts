@@ -36,6 +36,8 @@ export const PINNED_FEED_KEYS: Readonly<Record<string, string>> = Object.freeze(
 
 export type FeedVerdict =
   | { status: 'valid'; feed: RevocationFeed }
+  /** Well-formed but carries no signature — usable for additions only. */
+  | { status: 'unsigned'; feed: RevocationFeed }
   | { status: 'invalid-signature'; reason: string }
   | { status: 'unverifiable'; reason: string }
   | { status: 'malformed'; reason: string }
@@ -80,6 +82,15 @@ export function verifyFeed(document: unknown, options: VerifyFeedOptions = {}): 
     return { status: 'malformed', reason: parsed.error.issues[0]?.message ?? 'invalid feed shape' };
   }
   const feed = parsed.data;
+
+  // An unsigned feed is a valid feed with a weaker guarantee, not a broken one.
+  // The caller decides what to do with it: `mergeFeeds` accepts it for
+  // *additions* only, because a feed nobody can authenticate must never be able
+  // to withdraw a revocation. Reporting it as malformed would have thrown away
+  // usable data; reporting it as verified would have overstated it.
+  if (!feed.signature || !feed.key_id) {
+    return { status: 'unsigned', feed };
+  }
 
   const keys = options.keys ?? PINNED_FEED_KEYS;
   const publicKeyPem = keys[feed.key_id];

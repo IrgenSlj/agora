@@ -16,7 +16,7 @@ import { readSessions } from './observe/session.js';
 import { evaluatePolicy, isConclusive, type PolicyDecision } from './policy/engine.js';
 import { checkRevocations, type RevocationStatus } from './revocation/client.js';
 import { npmPackageFromCommand, npmPurl } from './revocation/installed.js';
-import { isBlocking } from './revocation/match.js';
+import { isBlockingMatch } from './revocation/match.js';
 import { type ScanOptions, type ScanResult, scanItem } from './scan.js';
 import { capabilityKey, descriptionDigest, readCapabilityCache } from './stack/capability-cache.js';
 import { manifestPath, readManifest, type StackManifest, writeManifest } from './stack/manifest.js';
@@ -309,7 +309,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
   const revocation = input.dataDir
     ? checkRevocations(input.dataDir, revocationPurlsFor(item))
     : undefined;
-  const blockingRevocation = revocation?.matches.find((m) => isBlocking(m.entry));
+  const blockingRevocation = revocation?.matches.find(isBlockingMatch);
   if (blockingRevocation) {
     return {
       status: 'blocked',

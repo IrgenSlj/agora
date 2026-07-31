@@ -41,11 +41,23 @@ GitHub can withhold the feed — which the staleness check surfaces — but cann
 they hold, so an attacker who can serve traffic cannot roll a user back past the entry naming
 their package.
 
-## One-time setup (owner)
+## Do I need a signing key?
 
-Until a key is pinned, **every feed reads `unverifiable` and no revocations apply.** That is a
-deliberate fail-closed default — a feed nobody can authenticate is a vector, not a safety net —
-but it does mean the plane is inert until these three steps happen:
+**No.** Revocations apply today, unsigned. The integrity comes from two places instead:
+
+1. **The bundled copy.** `revocations.json` ships inside the npm package, so it is covered by that
+   package's own provenance attestation. Nothing extra to sign.
+2. **Monotonic merge.** A copy fetched over the network may *add* entries and may never *remove*
+   one (`src/revocation/merge.ts`). So the attack that actually matters — an entry quietly going
+   missing so a user installs something known-malicious — is impossible regardless of who controls
+   the host.
+
+A signature was the original design and it bought less than it cost: the key would have lived as a
+secret in this same repository, so anyone able to rewrite the feed could usually sign it too.
+
+The one thing a signature *would* buy is the ability to **withdraw** an entry between releases —
+useful if an advisory is retracted. Today a withdrawal waits for the next release, which is
+fail-closed and fine. The ed25519 path stays implemented and tested for when that changes:
 
 ```
 bun scripts/generate-feed-key.ts
@@ -62,8 +74,17 @@ bun scripts/generate-feed-key.ts
 Rotation: add the new key alongside the old one, release, wait for clients to update, then drop
 the old entry in the release after.
 
-## Why this is empty
+A signed feed becomes *authoritative* rather than additive — it may remove entries as well as add
+them. That is the whole difference.
 
-No revocation has been published yet. An empty feed is the honest state — it is not a claim that
-nothing in the ecosystem is malicious, and Agora reports an uncached or empty feed as *unknown*
-rather than as a clean bill of health.
+## Where the entries come from
+
+Nobody writes them. `scripts/sync-feed.ts` queries [OSV.dev](https://osv.dev) for every MCP server
+in the catalog and rewrites `entries.json`; `.github/workflows/sync-feed.yml` runs it daily. OSV
+is free, needs no API key, and is keyed by purl — the identifier Agora already uses.
+
+This covers a surface nothing else does: MCP servers are spawned commands in host configs, never
+declared dependencies, so `npm audit`, Dependabot and Snyk cannot see them at all.
+
+An empty result is still reported as "nothing published", never as "safe" — and an unreachable OSV
+never empties the feed, because entries for packages that could not be checked are carried over.

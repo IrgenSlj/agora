@@ -297,13 +297,42 @@ describe('checkRevocations', () => {
     rmSync(dataDir, { recursive: true, force: true });
   });
 
-  test('no cached feed reports `unknown`, not a clean bill of health', () => {
+  test('with no cache, the bundled feed still answers — that is the point of bundling', () => {
+    // This test used to assert `unknown: true` for an empty data dir, which was
+    // correct when the only source was a fetched cache. A feed now ships inside
+    // the package, so a user who has never been online still gets every
+    // revocation known at the time they installed. `unknown` is now reserved
+    // for a build with no bundled feed at all, i.e. a broken install.
     const empty = mkdtempSync(join(tmpdir(), 'agora-revoke-empty-'));
     const status = checkRevocations(empty, ['pkg:npm/postmark-mcp@1.0.16']);
 
-    expect(status.unknown).toBe(true);
+    expect(status.unknown).toBe(false);
+    expect(status.origins).toContain('bundled');
+    // postmark-mcp is not in the real feed, so this specific purl is clean.
     expect(status.blocked).toBe(false);
-    expect(status.matches).toHaveLength(0);
+    rmSync(empty, { recursive: true, force: true });
+  });
+
+  test('a known-vulnerable version is blocked with no network and no cache', () => {
+    // The end-to-end claim: offline, first run, revocation applies.
+    const empty = mkdtempSync(join(tmpdir(), 'agora-revoke-offline-'));
+    const status = checkRevocations(empty, ['pkg:npm/mcp-server-kubernetes@2.0.0']);
+
+    expect(status.blocked).toBe(true);
+    expect(status.matches.length).toBeGreaterThan(0);
+    rmSync(empty, { recursive: true, force: true });
+  });
+
+  test('an unpinned version is reported but does not block', () => {
+    // Three of the most-used MCP servers carry a fixed CVE. Blocking every
+    // install of them because the purl has no version would make Agora wrong
+    // far more often than right — so an unconfirmed match warns instead.
+    const empty = mkdtempSync(join(tmpdir(), 'agora-revoke-unpinned-'));
+    const status = checkRevocations(empty, ['pkg:npm/mcp-server-kubernetes']);
+
+    expect(status.matches.length).toBeGreaterThan(0);
+    expect(status.matches.every((m) => m.confirmed)).toBe(false);
+    expect(status.blocked).toBe(false);
     rmSync(empty, { recursive: true, force: true });
   });
 

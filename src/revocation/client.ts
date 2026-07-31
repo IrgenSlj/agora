@@ -8,11 +8,14 @@
 
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { atomicWriteFile } from '../atomic-write.js';
 import type { FetchLike } from '../fetch.js';
 import type { RevocationEntry, RevocationFeed } from '../model/revocation.js';
+import { RevocationFeed as RevocationFeedSchema } from '../model/revocation.js';
 import { verifyFeed } from './feed.js';
-import { isBlocking, matchRevocations, type RevocationMatch } from './match.js';
+import { isBlockingMatch, matchRevocations, type RevocationMatch } from './match.js';
+import { type FeedSource, mergeFeeds } from './merge.js';
 
 /**
  * Where the signed feed is served from.
@@ -24,9 +27,12 @@ import { isBlocking, matchRevocations, type RevocationMatch } from './match.js';
  * githubusercontent costs nothing, has no account to lapse, and removes the
  * only piece of Agora that would have failed when someone else's server did.
  *
- * The signature is what makes this safe: the bytes are verified against a key
- * pinned in the binary, so the host is untrusted by construction. GitHub can
- * withhold the feed, which the staleness check surfaces; it cannot forge one.
+ * What makes an untrusted host safe here is not a signature but the merge rule
+ * (`./merge.ts`): this copy is *additive only*. It can contribute revocations
+ * the bundled feed has not seen yet, and it can never remove one. So the worst
+ * a compromised host achieves is adding noise — loud, visible, recoverable —
+ * rather than the attack that would actually matter, which is making a real
+ * revocation quietly disappear.
  */
 export const DEFAULT_FEED_URL =
   'https://raw.githubusercontent.com/IrgenSlj/agora/main/feed/revocations.json';
@@ -44,6 +50,36 @@ interface CachedFeed {
 
 export function feedCachePath(dataDir: string): string {
   return join(dataDir, 'revocations.json');
+}
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+
+/** The feed shipped inside the package, in both src and dist layouts. */
+export function bundledFeedPath(): string {
+  const candidates = [
+    join(HERE, '..', 'revocations.json'), // dist/revocations.json
+    join(HERE, '..', '..', 'feed', 'revocations.json') // repo checkout
+  ];
+  return candidates.find((p) => existsSync(p)) ?? candidates[0]!;
+}
+
+/**
+ * Reads the feed that shipped with this build.
+ *
+ * This is the floor the whole design rests on: it arrives inside the npm
+ * tarball, so it is covered by that package's provenance attestation, and a
+ * fetched feed can add to it but never take from it. No signature of its own is
+ * needed or expected — the package's own signature already covers these bytes.
+ */
+export function readBundledFeed(): RevocationFeed | null {
+  const path = bundledFeedPath();
+  if (!existsSync(path)) return null;
+  try {
+    const parsed = RevocationFeedSchema.safeParse(JSON.parse(readFileSync(path, 'utf8')));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 }
 
 export function readCachedFeed(dataDir: string): CachedFeed | null {
@@ -118,7 +154,11 @@ export async function refreshFeed(options: RefreshOptions): Promise<RefreshOutco
     cachedVersion: cached?.feed.feed_version
   });
 
-  if (verdict.status !== 'valid') {
+  // `unsigned` is accepted here and constrained later: `checkRevocations` merges
+  // it as an additive source, so it can contribute revocations but never remove
+  // one. Rejecting it outright is what kept this plane inert — it meant no feed
+  // applied at all unless a key existed.
+  if (verdict.status !== 'valid' && verdict.status !== 'unsigned') {
     return { status: 'rejected', reason: `${verdict.status}: ${verdict.reason}` };
   }
 
@@ -146,11 +186,17 @@ export interface RevocationStatus {
   /** True when the cache is older than STALE_AFTER_MS. */
   stale: boolean;
   feedVersion?: number;
+  /** Which sources contributed — `bundled` alone still means revocations apply. */
+  origins?: string[];
 }
 
 /**
- * Looks up purls against the cached feed. Offline-safe and synchronous — this
+ * Looks up purls against the merged feed. Offline-safe and synchronous — this
  * is what gets called on the install path, so it must never wait on a network.
+ *
+ * Sources are merged monotonically (`./merge.ts`): the feed bundled with this
+ * build is the authoritative floor, and a fetched feed may add to it but never
+ * remove from it. That is what lets an unsigned feed be used at all.
  */
 export function checkRevocations(
   dataDir: string,
@@ -158,23 +204,42 @@ export function checkRevocations(
   now: Date = new Date()
 ): RevocationStatus {
   const cached = readCachedFeed(dataDir);
-  if (!cached) {
+  const bundled = readBundledFeed();
+
+  const sources: FeedSource[] = [];
+  if (bundled) sources.push({ origin: 'bundled', feed: bundled });
+  if (cached) {
+    // A cached feed that verified against a pinned key was stored as such; with
+    // no key pinned it is `fetched`, and therefore additive only.
+    const verdict = verifyFeed(cached.feed);
+    sources.push({ origin: verdict.status === 'valid' ? 'signed' : 'fetched', feed: cached.feed });
+  }
+
+  // Nothing at all is genuinely unknown. Note this is now reachable only when
+  // the bundled feed is missing too, which means a broken install.
+  if (!sources.length) {
     return { matches: [], blocked: false, unknown: true, stale: false };
   }
 
-  const ageMs = now.getTime() - new Date(cached.fetchedAt).getTime();
-  const entries: readonly RevocationEntry[] = cached.feed.entries;
+  const merged = mergeFeeds(sources);
+  const ageMs = cached ? now.getTime() - new Date(cached.fetchedAt).getTime() : undefined;
+  const entries: readonly RevocationEntry[] = merged.entries.map((m) => m.entry);
 
   const matches = purls
     .flatMap((purl) => matchRevocations(entries, purl))
-    .sort((a, b) => Number(isBlocking(b.entry)) - Number(isBlocking(a.entry)));
+    .sort((a, b) => Number(isBlockingMatch(b)) - Number(isBlockingMatch(a)));
 
   return {
     matches,
-    blocked: matches.some((m) => isBlocking(m.entry)),
-    ageMs,
+    blocked: matches.some(isBlockingMatch),
+    ...(ageMs !== undefined ? { ageMs } : {}),
     unknown: false,
-    stale: ageMs > STALE_AFTER_MS,
-    feedVersion: cached.feed.feed_version
+    // Staleness is a property of the *fetched* copy. A build running purely on
+    // its bundled feed is not stale — it is exactly as current as the release
+    // the user installed, and saying otherwise would nag about a state they
+    // cannot fix without an update they may not want.
+    stale: ageMs !== undefined && ageMs > STALE_AFTER_MS,
+    ...(merged.feedVersion !== undefined ? { feedVersion: merged.feedVersion } : {}),
+    origins: [...new Set(merged.origins)]
   };
 }

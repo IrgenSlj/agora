@@ -1,7 +1,7 @@
 {
   "name": "agora-hub",
   "version": "0.7.0",
-  "description": "The trust plane for agentic tooling — local-first federation, evidence, policy, and stack management for MCP servers and Agent Skills.",
+  "description": "The trust plane for agentic tooling \u2014 local-first federation, evidence, policy, and stack management for MCP servers and Agent Skills.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -40,7 +40,7 @@
   },
   "files": ["dist", "schemas"],
   "scripts": {
-    "build": "rm -rf dist && tsc && cp src/catalog.json dist/catalog.json && mkdir -p dist/policy/defaults && cp src/policy/defaults/* dist/policy/defaults/ && chmod +x dist/cli.js",
+    "build": "rm -rf dist && tsc && cp src/catalog.json dist/catalog.json && cp feed/revocations.json dist/revocations.json && mkdir -p dist/policy/defaults && cp src/policy/defaults/* dist/policy/defaults/ && chmod +x dist/cli.js",
     "build:binary": "bun build src/cli.ts --compile --outfile dist/agora",
     "build:schemas": "bun scripts/generate-schemas.ts",
     "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
