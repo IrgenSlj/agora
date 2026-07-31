@@ -2,7 +2,10 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
-## [0.7.1] - 2026-07-31 — revocation actually applies
+## [Unreleased] — revocation actually applies
+
+*Accumulating since 0.7.0. No version number yet: the release comes when several fronts are ready,
+not when one is.*
 
 0.7.0 shipped a revocation plane that was complete, tested, and **inert**: no key was pinned, so
 every feed read `unverifiable` and nothing was ever blocked. This release makes it work, and does

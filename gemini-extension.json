@@ -1,6 +1,6 @@
 {
   "name": "agora",
-  "version": "0.7.1",
+  "version": "0.7.0",
   "description": "The trust plane for agentic tooling \u2014 multi-source catalog search, evidence-backed inspection, a policy gate on install, and cross-host stack management, via the agora MCP server (zero-install: npx -y agora-hub mcp).",
   "mcpServers": {
     "agora": {
