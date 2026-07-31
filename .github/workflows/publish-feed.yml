@@ -37,13 +37,37 @@ jobs:
 
       - run: bun install --frozen-lockfile
 
+      # No key yet is the expected state, not a failure: minting it is an owner
+      # action (feed/README.md). Failing red on every push that touches these
+      # files would train everyone to ignore this workflow by the time it
+      # matters. Skip loudly instead, and say what is missing.
+      - name: Check for a signing key
+        id: key
+        run: |
+          if [ -n "${AGORA_FEED_SIGNING_KEY}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Revocation feed not signed"
+              echo
+              echo 'No `AGORA_FEED_SIGNING_KEY` secret is set, so the feed was not signed.'
+              echo 'Until a key is pinned, clients read every feed as `unverifiable`'
+              echo 'and apply no revocations. See `feed/README.md` for the three steps.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+        env:
+          AGORA_FEED_SIGNING_KEY: ${{ secrets.AGORA_FEED_SIGNING_KEY }}
+
       - name: Sign the feed
+        if: steps.key.outputs.present == 'true'
         run: bun scripts/sign-feed.ts
         env:
           AGORA_FEED_SIGNING_KEY: ${{ secrets.AGORA_FEED_SIGNING_KEY }}
           AGORA_FEED_KEY_ID: ${{ vars.AGORA_FEED_KEY_ID }}
 
       - name: Commit the signed feed
+        if: steps.key.outputs.present == 'true'
         run: |
           if git diff --quiet feed/revocations.json; then
             echo "Feed unchanged; nothing to commit."
