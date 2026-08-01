@@ -34,12 +34,13 @@ order, is [`docs/NEXT.md`](./docs/NEXT.md).**
   what is known-bad. `check` lints before evaluating, because a Cedar rule reading a missing
   attribute is silently skipped and returns permissive. `acquire` refuses on deny **and** on
   inconclusive — an allow reached with rules switched off is not an allow.
-- **Revocation** — ed25519-signed feed with monotonic anti-rollback, offline lookups, `acquire`
-  refusing critical/high matches before any write, `doctor` showing `REVOKED`. Both halves now
-  exist: the feed is a signed file in this repo (`feed/`), served from raw.githubusercontent.com
-  and signed by `scripts/sign-feed.ts` in CI, so publishing a revocation is a commit — no domain
-  and no server, which is what had been blocking this since S4. **No key is pinned yet, so no
-  revocations currently apply**; minting it is an owner action (`feed/README.md`).
+- **Revocation — live.** Entries are generated from OSV.dev daily with no human curation
+  (`src/osv/`, `scripts/sync-feed.ts`); the feed ships *inside the npm package* and a fetched copy
+  is merged monotonically, so it can add revocations but never remove one
+  (`src/revocation/merge.ts`). **No signing key is needed** — that requirement was removed rather
+  than satisfied, because the key would have lived in the same repo as the feed. `acquire` refuses
+  confirmed critical/high matches before any write; an advisory whose version range cannot be
+  confirmed against the artifact warns instead of blocking.
 - **Integration** — `agora mcp` (MCP server exposing the stack + catalog as tools),
   `agora integrate --all` (installs Agora into every host via its own stack machinery).
 - **Surface** — the v1 catalog commands (`auth`, `curate`, `chat`, `trending`, `workflows`,
@@ -60,7 +61,9 @@ order, is [`docs/NEXT.md`](./docs/NEXT.md).**
   never run has not been shown to behave. Rendered in the TUI item and acquire pages too.
 - **Quarantine CLI** — `agora quarantine [list]` and `agora unquarantine <name> --accept-risk`.
 - **Advisories** — `agora audit` checks every configured MCP server against OSV.dev and exits
-  non-zero on a malware/critical/high finding. This is a surface nothing else covers: MCP servers
+  non-zero on a malware/critical/high finding. `agora trust` shows the same advisories per
+  artifact, distinguishing a confirmed hit from "this package has advisories but your version is
+  not pinned, so it is unknown whether they apply". This is a surface nothing else covers: MCP servers
   are spawned commands in host configs, never declared dependencies, so `npm audit`, Dependabot
   and Snyk cannot see them by construction. The revocation feed is filled from the same source by
   `scripts/sync-feed.ts` on a daily schedule — 10 real advisories across 5 catalog packages on
@@ -74,6 +77,11 @@ order, is [`docs/NEXT.md`](./docs/NEXT.md).**
 Not yet live: the agent-facing `agora serve` discovery tools (S7), and a pre-install sandbox (S6
 shipped as runtime observation instead). **This section is the authority on what is live**; README,
 AGENTS.md and docs/ARCHITECTURE.md were realigned to it on 2026-07-28.
+
+**Everything below `0.7.0` on npm is unreleased.** The version is held at 0.7.0 deliberately and
+the changelog accumulates under `[Unreleased]`; the next release ships several fronts at once.
+So the trust plane described here is *on main* — the revocation feed, `agora audit`, `agora
+approve` and the evidence export have **not** reached users yet.
 
 **`agora-hub@0.7.0` is live on npm as of 2026-07-31** — the first release carrying the trust
 plane. Getting there took repairing a release path that had never once succeeded: every publish
@@ -93,10 +101,10 @@ now (see `docs/NEXT.md` §1).
 | S1 | Data model & lockfile | ✅ Complete |
 | S2 | Multi-source search | ✅ Complete |
 | S3 | Provenance & drift | ✅ Complete — live Sigstore verification wired |
-| S4 | Revocation | 🔄 Both halves built — needs only a pinned key (owner) |
+| S4 | Revocation | ✅ Complete — OSV-fed, bundled, monotonic; no key required |
 | S5 | Policy (Cedar) | ✅ Complete — engine, `agora policy`, acquire gate |
 | S6 | Vet → **Observe** | ✅ Complete — observation, policy wiring, and `observe enable/disable` |
-| S7 | Serve (agent-facing) | ⬜ Not started |
+| S7 | Serve (agent-facing) | 🔄 Intent + `agora approve` built; MCP server not started |
 | S8 | Launch hardening | 🔄 Evidence export, schemas and format spec shipped 2026-07-31 |
 | C1–C6 | Consolidation (audit 2026-07-27) | ✅ Complete 2026-07-28 |
 

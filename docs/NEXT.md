@@ -86,8 +86,8 @@ Done already:
 
 Still to do:
 
-- **`npm deprecate opencode-agora "renamed → agora-hub; see npm agora-hub"`** (owner action). This
-  is the only thing that reaches the people still on 0.4.5.
+- ~~`npm deprecate opencode-agora`~~ — **done 2026-07-31.** npm now serves the deprecation notice
+  pointing at `agora-hub`.
 - **Restore a working OpenCode plugin path.** This needs a decision, because it is not free:
 
   OpenCode resolves plugin specifiers as npm package names, `file://` URLs, or absolute/relative
@@ -123,13 +123,38 @@ laptop and npm can only attest builds it runs itself. So `agora trust agora-hub`
 supply chain. Every argument this product makes is weaker while that is true, and it is the first
 thing a security-minded reader will check.
 
-- Wire npm trusted publishing (OIDC) so the next release goes through `publish.yml` and carries
-  `--provenance`. Owner action, browser-only, free.
+- ~~Wire npm trusted publishing (OIDC)~~ — **done 2026-07-31** (owner). Configured on npmjs.com
+  against this repo and `publish.yml`. **Unverified until a release actually runs through it** —
+  the first thing to check after the next publish is whether `npm view agora-hub dist.attestations`
+  returns something.
 - Then **dogfood it**: commit Agora's own evidence bundle
   (`agora export --attestations`) into the repo and regenerate it on release. It is simultaneously
   the proof, the demo, and the worked example the format spec needs.
 
 This is the cheapest credibility available and it doubles as documentation.
+
+## 2a. Why the feed has no signing key *(decided 2026-07-31)*
+
+Recorded because it will look like an omission otherwise, and because the reasoning took two
+passes to get right.
+
+The original design pinned an ed25519 public key in the binary and signed the feed with the
+private half. That was dropped. The key would have lived as a GitHub Actions secret **in the same
+repository that serves the feed**, so whoever could rewrite the feed could usually sign it too —
+it bought authenticity against a narrow attacker while leaving the realistic one untouched, and
+cost a permanent key-custody obligation.
+
+What replaced it stops the attack that actually matters (**suppression** — an entry quietly going
+missing):
+
+- The feed **ships inside the npm package**, so it is covered by that package's provenance
+  attestation, and is authoritative.
+- A fetched copy is merged **monotonically** (`src/revocation/merge.ts`): it may add entries and
+  may never remove, weaken, or outrank one.
+
+`test/revocation-merge.test.ts` is the security argument, including the subtler suppression routes.
+The ed25519 path stays implemented and tested — a signature is still the only way to *withdraw* an
+entry between releases, which is the one thing bundling cannot do.
 
 ## 3. Automate the revocation feed from OSV — make the invisible surface visible
 
@@ -162,10 +187,11 @@ last signed feed.
 **Honest limit to encode in the UI:** this is *known-bad*, never *safe*. A novel malicious server
 nobody has reported yet will not appear. Same rule as everywhere else in the product.
 
-**Shipped 2026-07-31.** `src/osv/`, `scripts/sync-feed.ts` and `.github/workflows/sync-feed.yml`
-are live; the first run found 10 advisories across 5 catalog packages. Still blocked only on
-minting the signing key (`feed/README.md`, owner action, ~1 hour) — until then the workflow syncs
-entries and skips signing, so no revocation applies yet.
+**Shipped and live.** `src/osv/`, `scripts/sync-feed.ts` and `.github/workflows/sync-feed.yml`
+run daily; the first run found 10 advisories across 5 catalog packages.
+
+**No signing key is needed, and none should be minted.** That requirement was removed rather than
+satisfied — see §2a. Revocations apply today.
 
 ## 4. `agora audit` — the one command that demonstrates the gap
 
@@ -211,15 +237,17 @@ improvised:
 §2–§4 are the prerequisites: they are what makes the pitch true rather than aspirational. There
 is no rush on this section, and no reason to treat a quiet npm graph as a verdict on the work.
 
-## 6. `agora gate` — one command for CI
+## 6. `agora gate` — probably already exists under other names
 
-One command that evaluates every installed artifact against the project's Cedar policy and exits
-non-zero on failure. Cheap: the policy engine, the lockfile, and the trust view all exist; this is
-mostly wiring plus an exit-code contract.
+**Checked 2026-07-31, and largely redundant.** `agora policy check --ci` already evaluates every
+installed artifact against Cedar and exits non-zero; `agora audit` does the same for advisories;
+`agora quarantine` exits 1 when anything is held back. A `gate` command would be a wrapper over
+three commands that already work.
 
-The reason it matters is retention. A developer who tries a CLI may never run it twice; a team
-with it in their pipeline cannot casually remove it. This is the shortest path from "interesting
-tool" to "load-bearing".
+What it would genuinely add is a *single* CI entry point, which is a real documentation and
+adoption argument rather than a technical one — "put `agora gate` in your pipeline" beats a
+three-command incantation. ~30 lines if it is wanted. Not built, deliberately, because adding
+surface that duplicates working commands is the opposite of the maintenance posture here.
 
 ## 7. Cut the TUI
 
@@ -232,10 +260,26 @@ shell with free inference on first run is a real onboarding argument and costs a
 
 Reversible via git, so this is a judgement call rather than a risk. Stop adding to the TUI now.
 
-## 8. S7 — `agora serve`, the agent-facing surface
+## 8. S7 — `agora serve`, the agent-facing surface — **IN PROGRESS**
 
-The largest remaining piece of the brief, and the most future-proof: discovery filtered through
-*policy*, so an agent only ever sees artifacts it is permitted to install.
+The only one of Agora's five planes that does not exist. Discovery filtered through *policy*, so
+an agent only ever sees artifacts it is permitted to install.
+
+**Built and tested (2026-07-31):**
+
+- `src/serve/intent.ts` — the install-intent record. An agent may *ask*; only a human may install.
+- `agora approve` — the human half, reviewing requests and re-running the real gate.
+
+**Not built yet — this is where to pick up:**
+
+- `src/serve/` MCP server hosting four tools: `search_tools` (capability search filtered through
+  Cedar's `Serve` action), `get_evidence` (the `agora trust` rows as structured data, unknowns
+  included), `check_policy` (dry-run a decision), `request_install` (writes an intent via
+  `writeIntent`, returns `agora approve <id>`, **mutates nothing**).
+- `agora serve` to host it. `src/cli/mcp-server.ts` is the pattern to follow.
+- When it exists, restore the `agora serve` mention in `approve`'s help text in
+  `src/cli/commands-meta/stack.ts` — it was reworded because the dangling-command guard correctly
+  refuses to advertise a command that does not exist.
 
 - `search_tools` — capability search, results filtered through Cedar's `Serve` action
 - `get_evidence` — the `agora trust` rows as structured data, `unknown` states included
@@ -244,7 +288,8 @@ The largest remaining piece of the brief, and the most future-proof: discovery f
   stack.** This is the load-bearing constraint: an agent that could install its own tools is the
   attack this product exists to prevent.
 
-`src/cli/trust-view.ts` is already the right shape for `get_evidence`.
+`src/cli/trust-view.ts` is already the right shape for `get_evidence`, and it now includes a real
+revocation row.
 
 **Skip the embeddings.** The brief specifies `@xenova/transformers` + `sqlite-vec`; that is a large
 model download on first run to improve recall nobody has complained about. The existing BM25 index
@@ -264,6 +309,16 @@ users who do.
   detects schema drift; this promotes it to the question users actually ask at upgrade time.
 - **Windows verification.** The stack adapters and `opencode-exec.ts` have Windows handling that
   has never run on Windows. Either test it in CI or say plainly in the README that it is unverified.
+
+## Release policy *(set 2026-07-31)*
+
+**Version stays at 0.7.0 and the changelog accumulates under `[Unreleased]`.** The next release
+comes when several fronts are ready together, not when one lands — the owner's call, and it
+matches a long-standing preference for sculpting heavily before shipping.
+
+Practically: do not bump manifests as a matter of course. A manifest claiming a version npm does
+not serve is the same drift that cost this project a failed release. Pick the number on the day,
+and it is more likely to be 0.8.0 than 0.7.1.
 
 ## Explicitly not doing
 
