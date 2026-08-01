@@ -50,7 +50,18 @@ agora search <query> [--source official|local] [--json]     # multi-source catal
 agora browse <id> [--json]                                    # full item detail
 agora doctor [--tool <id>] [--probe] [--strict] [--json]       # health-check the configured stack
 agora capabilities [query] [--json]                            # search tools your servers expose
+agora audit [--json]                                           # advisories against configured servers
+agora trust <id> [--json]                                      # every plane's verdict for one artifact
+agora export --attestations <id>                               # the evidence as an in-toto/DSSE bundle
 ```
+
+`agora audit` covers ground nothing else does: MCP servers are spawned commands in host configs,
+not declared dependencies, so they appear in no `package.json` and `npm audit` cannot see them.
+Exit `1` means a malware/critical/high advisory was found. Advisories come from OSV.dev.
+
+`agora trust <id>` is the one to reach for when the question is "should this be trusted?" — it
+reports every plane at once *including what is not known*, which is usually the load-bearing part
+of the answer.
 
 `search`/`browse` results are deduped across upstream registries (official MCP Registry today;
 more sources land over time) — the same server found in two registries collapses to one item with
@@ -132,3 +143,12 @@ new to write.
   and is the only path that can detect description drift.
 - Never report a scan/gate result as "safe" — report it as what it literally says: pass/warn/fail
   against a fixed set of heuristic checks.
+- `agora audit` finding nothing means "no advisory has been *published*", never "this is safe". An
+  unreachable OSV is reported as unchecked, and unchecked is not clean.
+- An advisory against a package whose version is not pinned is reported but does not block: the
+  advisory is real, and whether it applies to *this* copy was never established. Both halves of
+  that are true and neither should be dropped when summarising.
+- **You cannot install anything.** If a capability is missing, `agora acquire` is a human's
+  command. Where an install-intent flow is available, requesting one writes a record and nothing
+  else — a person runs `agora approve <id>` in their own terminal. Never present a requested
+  install as a completed one.

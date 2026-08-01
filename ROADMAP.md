@@ -146,7 +146,7 @@ Three separate things, in ascending order of care required.
 previously read "changes `agora install` behaviour — owner sign-off before starting."
 That is **wrong**, and the correction matters. `src/live/search.ts:18` gates every API
 call on `shouldUseApi = useApi && apiUrl`; `apiUrl` comes only from `--api-url` or
-`AGORA_API_URL`, with **no default**. `agora-hub.dev` is unregistered and `workers/api/`
+`AGORA_API_URL`, with **no default**. `agora-hub.dev` is unregistered and the Worker scaffold
 is a four-file scaffold serving different routes (`/v1/catalog`, not `/api/trending`).
 So every call in practice takes the `offline(...)` branch straight to the bundled
 catalog. **`src/live/` is a client for a server that has never existed.** Deleting it and
@@ -263,9 +263,8 @@ remaining breaking changes land here; the 19 retired commands shipped in 0.7.0.
 |---|---|---|
 | 1 | Mint the revocation feed key (`bun scripts/generate-feed-key.ts`) | Until a public key is pinned, every feed is `unverifiable` and **no revocations apply**. S4's client half is inert without it. |
 | 2 | Register `agora-hub.dev` (~$12/yr) | The feed endpoint, canary callbacks, and attestation predicate URLs all hardcode it. Blocks S4's publishing half and S6's canaries. |
-| 3 | Cloudflare Worker + D1 + KV ($5/mo), `wrangler` token in CI | `workers/api/` is a scaffold with no deploy path. Hosts `/v1/revocations`. |
 | 4 | Upload `docs/assets/social-preview.png` | Settings → Social preview. The API cannot set it. |
-| 5 | Commission the five diagrams | `docs/DIAGRAM_BRIEF.md` is written and ready to hand over. |
+| 5 | Commission the five README diagrams | The brief was deleted 2026-08-01; rewrite it if the diagrams are wanted. |
 | 6 | **Publish 0.7.0** — create a GitHub Release for `v0.7.0`; `publish.yml` fires on it and publishes with `--provenance` | **This is the binding constraint on the whole product, and it costs nothing.** `agora-hub@0.6.1` is live and taking ~117 installs/month, but it is the *pre-pivot catalog tool*: Sigstore, Cedar, revocation and observation have all shipped to `main` and never to a user. Version, changelog and the 19 retired-command messages are ready; only the Release is outstanding. |
 
 ## Execution conventions

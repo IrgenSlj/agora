@@ -592,6 +592,35 @@ delegate where possible.**
 - **DA-5 (2026-07-06) — S0 kills framing + `src/auth/` only; legacy commerce _data model_ retired in
   S1/S2.** The pre-pivot `Pricing`/`MarketplaceItem`/`Discussion` model is *superseded* by the
   `Artifact` model (S1) and federation catalog (S2) rather than hand-deleted in S0, to avoid throwaway
-  churn. See `docs/V2_EXECUTION_PLAN.md` §7.
+  churn.
+- **DA-6 (2026-07-30) — the revocation feed is a file in this repo, not a hosted API.** §5.6 assumed
+  `api.agora-hub.dev` behind a Cloudflare Worker. The domain was never registered and the Worker
+  never deployed, and the plane sat inert for weeks as a result — for a document that is static and
+  read a few times a day. It is now served from `raw.githubusercontent.com`. `workers/api/` and the
+  `agora-hub.dev` dependency are deleted. Attestation predicate types still *use* the URI as an
+  identifier, which does not have to resolve.
+- **DA-7 (2026-07-31) — the feed is not signed, and needs no pinned key.** §5.6's ed25519 signature
+  was dropped after the threat model was stated properly. The key would have lived as a secret in
+  the same repository that serves the feed, so whoever could rewrite the feed could usually sign it
+  too: it bought authenticity against a narrow attacker while leaving **suppression** — an entry
+  quietly going missing — untouched. Replaced by two mechanisms that do stop suppression: the feed
+  ships *inside the npm package* (covered by its provenance attestation) and a fetched copy is
+  merged **monotonically**, able to add entries but never remove, weaken or outrank one
+  (`src/revocation/merge.ts`). The signing path stays implemented and tested, because a signature
+  is still the only way to *withdraw* an entry between releases.
+- **DA-8 (2026-07-31) — feed contents are generated, never curated.** §5.6 did not say where entries
+  come from. They are queried from OSV.dev daily (`src/osv/`), which is free, keyed by purl, and
+  already curated by someone else. Owner directive: least maintenance wins — a feed needing weekly
+  human attention would be stale in a month and lying by month three.
+- **DA-9 (2026-07-31) — a revocation blocks only on a *confirmed* version match.** §5.6 implied
+  severity alone decides. With real data that refused every install of three of the most-used MCP
+  servers, all of which had shipped fixes, because a catalog purl carries no version. An entry with
+  a version range now blocks only when the artifact's version is known to fall inside it; malware
+  entries carry no range and still block unconditionally. Unconfirmed matches warn.
+- **DA-10 (2026-08-01) — `opencode-agora` retired; one package.** §D1 planned to deprecate it while
+  keeping a thin re-export. What was actually on npm under that name was never a re-export but a
+  standalone pre-pivot plugin with its own dependency tree — two names that had become two products
+  with separate users. Everything is `agora-hub`. The OpenCode *plugin* specifier is unresolved
+  (OpenCode does not resolve subpath exports); OpenCode *inference* is unaffected.
 
 — END OF BRIEF —

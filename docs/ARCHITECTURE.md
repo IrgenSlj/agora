@@ -2,7 +2,7 @@
 
 This document captures *what Agora is* and the reasoning behind the shape of the code. For the
 locked specification, see [`../AGORA_BRIEF_v2.md`](../AGORA_BRIEF_v2.md); for the phase-by-phase
-execution plan and current status, see [`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_PLAN.md) and
+what to build next and current status, see [`NEXT.md`](./NEXT.md) and
 [`../ROADMAP.md`](../ROADMAP.md); for open external-API questions, see
 [`OPEN_QUESTIONS.md`](./OPEN_QUESTIONS.md).
 
@@ -68,7 +68,7 @@ Most of npm has none, and warning on all of them would drain the meaning from ev
 `agora run -- <command…>` makes Agora the MCP server's parent process and tees its stdio, so
 behaviour is recorded during real work in the real environment. `agora observe` reports it.
 This replaced the brief's Docker sandbox after a pre-implementation review (see
-`V2_EXECUTION_PLAN.md` S6); the evidence model in `src/model/observed.ts` is unchanged, so a
+brief S6); the evidence model in `src/model/observed.ts` is unchanged, so a
 pre-install sandbox backend can still be added later and feed the same policy attributes.
 
 **Two invariants that must never regress:**
@@ -194,10 +194,9 @@ src/plugin/           OpenCode plugin (tools, hooks)
 src/hubs/             GitHub + HuggingFace connectors
 src/inference/        inference providers (opencode, claude) — spawned, never hosted
 src/fetch.ts          the injectable `FetchLike` every network call takes
-workers/api/          Cloudflare Worker scaffold (not deployed)
-packages/opencode-agora/  thin npm entry re-exporting agora-hub/opencode
+feed/                 revocation feed: entries.json (OSV-generated) + revocations.json (bundled)
 ```
 
 Still absent from the brief §4 target tree: **`src/serve/`** (agent-facing discovery, S7) and a
 pre-install sandbox backend (S6's Docker half, deferred rather than dropped). See
-[`V2_EXECUTION_PLAN.md`](./V2_EXECUTION_PLAN.md) and [`../ROADMAP.md`](../ROADMAP.md).
+[`NEXT.md`](./NEXT.md) and [`../ROADMAP.md`](../ROADMAP.md).

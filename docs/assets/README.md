@@ -61,4 +61,4 @@ configs. Beats 2 and 3 hit the network on purpose (live registry search, and the
 checks), so the exact rows differ between takes.
 
 Still to come: the five architecture diagrams specified in
-[`../DIAGRAM_BRIEF.md`](../DIAGRAM_BRIEF.md), which land here as `diagram-*.svg`.
+a diagram brief (deleted 2026-08-01 as a commission never placed); they would land here as `diagram-*.svg`.

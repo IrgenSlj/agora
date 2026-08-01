@@ -17,13 +17,18 @@ phase-by-phase build plan — read all three before making structural changes.
   with rug-pull drift detection, and description-poisoning heuristics.
 - **Observe** (`src/observe/`) — `agora run -- <cmd>` supervises an MCP server during real use and
   records what it did. Replaced the brief's Docker sandbox; same evidence model.
-- **Gate** (`src/policy/` + `src/revocation/`) — a real Cedar engine evaluated over that evidence,
-  plus an ed25519-signed revocation feed with anti-rollback. This is what Agora *is*; it gets the
+- **Gate** (`src/policy/` + `src/revocation/` + `src/osv/`) — a real Cedar engine evaluated over
+  that evidence, plus a revocation feed generated from OSV.dev daily with no human curation. The
+  feed ships bundled in the package and a fetched copy is merged *monotonically* — it may add
+  revocations, never remove one — which is why it needs no signing key. This is what Agora *is*; it gets the
   most scrutiny.
 - **Manage** (`src/stack/`) — the stack manager: `agora.toml` profile, `agora.lock` machine
   truth, per-host adapters, `plan`/`apply`.
 
-Not yet built: `src/serve/` (agent-facing discovery, S7) and a pre-install sandbox backend. See
+Partly built: `src/serve/` — the install-intent record and `agora approve` exist; the MCP server
+hosting `search_tools` / `get_evidence` / `check_policy` / `request_install` does not. The rule it
+enforces: **an agent may ask, only a human may install.** Not built: a pre-install sandbox
+backend. See
 [`ROADMAP.md`](./ROADMAP.md), which is the authority on what is live.
 
 ## Non-negotiables

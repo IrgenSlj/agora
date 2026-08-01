@@ -71,8 +71,9 @@ for the full specification):
 - **Manage** — a portable `agora.toml` profile and a committed `agora.lock` (machine truth: exactly
   what's installed, hashed, verified); surgical, atomic writes into each host's config; `agora mcp`
   exposes Agora *itself* to agents as an MCP server, so the agent is a first-class second user.
-  (`agora serve`, the policy-filtered discovery server, is designed but not built — see the status
-  table below.)
+  (`agora serve`, the policy-filtered discovery server, is partly built: an agent can already be
+  given an install-*intent* flow it cannot bypass — `agora approve` is the human half — but the
+  server itself is not written. See the status table below.)
 
 ## Status — honestly
 
@@ -86,9 +87,13 @@ is **what is live today**. What comes next, and why in that order, is [`docs/NEX
 | **Verify** — live Sigstore provenance (Fulcio + CT + Rekor, identity-bound) · schema drift · poisoning heuristics | ✅ live |
 | **Observe** — `agora observe enable` records what your servers do in real use | ✅ live |
 | **Gate** — heuristic customs gate **plus** a real Cedar policy over the evidence | ✅ live |
-| **Gate** — signed revocation feed with anti-rollback | 🔄 client live; **no key pinned yet, so no revocations apply** |
-| **Serve** — agent-facing MCP server with policy-filtered discovery | ⬜ not started (S7) |
+| **Gate** — revocation feed, generated from OSV daily, bundled with the package | ✅ live *(not yet on npm — see below)* |
+| **Gate** — `agora audit`: advisories against the servers you actually run | ✅ live *(not yet on npm)* |
+| **Serve** — agent-facing MCP server with policy-filtered discovery | 🔄 install-intent flow + `agora approve` built; the server itself is not |
 | **Sandboxed pre-install `vet`** | ⬜ deferred — replaced by runtime observation above |
+
+> **The last three are on `main`, not on npm.** `agora-hub@0.7.0` is the published version and
+> predates them. The next release ships several fronts at once rather than one at a time.
 
 **"Passed the gate" means *no known red flags*, never "safe."** That distinction is deliberate and
 appears everywhere a verdict is shown. Agora never fabricates data or counts; if a source is
@@ -105,7 +110,31 @@ agora apply                      # reconcile host configs to match the profile
 agora sync --from <git-url>      # clone someone's whole agent setup — every entry runs the gate
 agora integrate --all            # install Agora into every host, using its own stack machinery
 agora observe enable             # route every server through the shim; agora observe reports
+agora audit                      # advisories against every MCP server you have configured
+agora trust mcp-filesystem       # every plane's verdict for one artifact, including the unknowns
+agora export --attestations <id> # the evidence as a portable in-toto/DSSE bundle
 ```
+
+### The one that explains why Agora exists
+
+```console
+$ npm audit
+found 0 vulnerabilities
+
+$ agora audit
+✗ filesystem   HIGH  GHSA-hc55-p739-j48w  path validation bypass
+✗ k8s          HIGH  GHSA-gjv4-ghm7-q58q  command injection
+✗ playwright   HIGH  GHSA-6fg3-hvw7-2fwq  DNS rebinding
+None of these appear in any package.json, which is why `npm audit` reports nothing.
+```
+
+Same directory, same machine. `npm audit` is not deficient — **MCP servers are spawned commands in
+host configs, not declared dependencies**, so anything that walks a dependency tree cannot see them
+by construction. That gap is the product.
+
+Advisories come from [OSV.dev](https://osv.dev) and are refreshed daily by a workflow; nobody
+curates a list. The same data fills the revocation feed, which ships *inside* the package — so it
+works offline, on first run, with no key to manage.
 
 Turn observation on across every host with `agora observe enable` (`--dry-run` shows the exact
 command diff first; `disable` puts every command back). The shim is byte-transparent, and it

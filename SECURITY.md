@@ -40,8 +40,9 @@ baseline exists. It is not a sandbox and does not formally verify code.
 The v2 build is replacing this with evidence and policy:
 
 - S1: zod schemas, JSON Schema export, purl handling, SQLite/CAS, `agora lock verify`.
-- S3/S6: provenance, schema/description hashing, sandboxed `vet`, DSSE attestations.
-- S4/S5: signed revocation feed and Cedar policy enforcement.
+- S3/S6: provenance, schema/description hashing, runtime observation (which replaced the
+  sandboxed `vet`), and exportable DSSE attestations.
+- S4/S5: revocation feed (OSV-generated, bundled, monotonic) and Cedar policy enforcement.
 
 ## Execution Safety
 
