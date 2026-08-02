@@ -111,12 +111,16 @@ const DEFAULT_TOOL: AgentToolId = 'opencode';
  * forms are queried so an entry written against either shape still matches.
  */
 /** The artifact's exact, version-pinned identity, when it has one. */
-function resolvedPurlFor(item: MarketplaceItem): string | undefined {
+export function resolvedPurlFor(item: MarketplaceItem): string | undefined {
   if (item.kind !== 'package' || !item.npmPackage) return undefined;
   return npmPurl(item.npmPackage, item.version);
 }
 
-function revocationPurlsFor(item: MarketplaceItem): string[] {
+/**
+ * Both the unversioned and versioned purls, because a revocation may name
+ * either the package or one release of it.
+ */
+export function revocationPurlsFor(item: MarketplaceItem): string[] {
   const npmPackage = item.kind === 'package' ? item.npmPackage : undefined;
   if (!npmPackage) return [];
   const version = item.kind === 'package' ? item.version : undefined;

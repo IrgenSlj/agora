@@ -215,6 +215,52 @@ export function authorizeAcquireIdentity(
   });
 }
 
+/** Scan evidence that was never gathered, kept distinct from scan evidence that came back clean. */
+export function skippedScanSignal(): AuthorizationSignal {
+  return {
+    source: 'scan',
+    verdict: 'unknown',
+    detail: 'the pre-install scan was skipped, so nothing is known about this artifact'
+  };
+}
+
+export interface LegacyMutationAuthorizationInput {
+  action: string;
+  actor: AuthorizationActor;
+  effects: MutationEffect[];
+  /** Absent when the caller skipped it; the gate then has an unknown, not a pass. */
+  scan?: ScanResult;
+  policy: PolicyDecision;
+  revocation?: RevocationStatus;
+  /** Sources a human explicitly accepted, typically `['scan']` via --accept-risk. */
+  acknowledged?: string[];
+}
+
+/**
+ * The decision for the older command paths that used to reach a write with a
+ * bypass flag instead of a gate.
+ *
+ * Revocation is *required* here, unlike primary acquire, because these paths
+ * always have a data directory to look one up in — there is no honest reason
+ * for them to proceed without checking whether the artifact is known bad.
+ */
+export function authorizeLegacyMutation(
+  input: LegacyMutationAuthorizationInput
+): AuthorizationDecision {
+  return authorizeMutation({
+    action: input.action,
+    actor: input.actor,
+    effects: input.effects,
+    requiredSignals: ['scan', 'revocation', 'policy'],
+    signals: [
+      input.scan ? scanAuthorizationSignal(input.scan) : skippedScanSignal(),
+      revocationAuthorizationSignal(input.revocation),
+      policyAuthorizationSignal(input.policy)
+    ],
+    ...(input.acknowledged ? { acknowledged: input.acknowledged } : {})
+  });
+}
+
 /** Fast-path decision when a blocking revocation is known before scan/Cedar. */
 export function authorizeAcquireRevocationPreflight(
   actor: AuthorizationActor,

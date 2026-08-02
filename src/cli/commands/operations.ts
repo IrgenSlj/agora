@@ -6,6 +6,7 @@ import {
   hasPermissions,
   renderPermissionLines
 } from '../../catalog/bundled.js';
+import { resolvedPurlFor, revocationPurlsFor } from '../../acquire.js';
 import { formatConfigJson } from '../../config.js';
 import {
   detectOpenCodeConfigPath,
@@ -13,7 +14,11 @@ import {
   loadOpenCodeConfig,
   writeOpenCodeConfig
 } from '../../config-files.js';
+import { authorizeLegacyMutation } from '../../gate/adapters.js';
+import { appendGateAudit, auditRecordFor } from '../../gate/audit.js';
 import { clearHistory, loadHistory } from '../../history.js';
+import { evaluatePolicy } from '../../policy/engine.js';
+import { checkRevocations } from '../../revocation/client.js';
 import { isOpencodeAvailable } from '../../opencode-exec.js';
 import { loadPreferences, prefsPath, writePreferences } from '../../preferences.js';
 import { type ScanResult, scanItem } from '../../scan.js';
@@ -62,11 +67,44 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
   if (!plan.installable) return usageError(io, plan.reason || `${item.name} is not installable`);
 
   const skipScan = Boolean(parsed.flags.skipScan);
-  const wantScan = Boolean(parsed.flags.write) && !skipScan;
+  const write = Boolean(parsed.flags.write);
+  const wantScan = write && !skipScan;
   const scanResult: ScanResult | null = wantScan
     ? await scanItem(item, {
         fetcher: io.fetcher,
         githubToken: io.env?.AGORA_GITHUB_TOKEN
+      })
+    : null;
+
+  // ── The gate ────────────────────────────────────────────────────────────
+  //
+  // `install` predates the trust plane and used to reach a write with nothing
+  // but this scan, which `--skip-scan` turned off entirely. Every write now
+  // goes through the same decision as `acquire`: revocation and the project's
+  // Cedar policy are always evaluated, and skipping the heuristic scan leaves
+  // an explicit *unknown* rather than an implied pass. A preview writes
+  // nothing, so it stays free of all of this and offline-friendly.
+  const revocation = write ? checkRevocations(dataDir, revocationPurlsFor(item)) : undefined;
+  const authorization = write
+    ? authorizeLegacyMutation({
+        action: 'Install',
+        actor: 'human-cli',
+        effects: parsed.flags.save
+          ? ['host-config', 'portable-manifest', 'external-process']
+          : ['host-config', 'external-process'],
+        ...(scanResult ? { scan: scanResult } : {}),
+        policy: await evaluatePolicy({
+          purl: revocationPurlsFor(item)[0] ?? `pkg:generic/${item.id}`,
+          action: 'Install',
+          policyFiles: readManifest(manifestPath({ cwd: io.cwd, env: io.env }))?.policy?.files ?? [],
+          cwd: io.cwd,
+          ...(scanResult ? { scan: scanResult } : {}),
+          revoked: revocation && !revocation.unknown ? revocation.blocked : undefined,
+          kind: item.kind === 'package' ? 'mcp-server' : item.kind,
+          permissions: item.kind === 'package' ? item.permissions : undefined
+        }),
+        ...(revocation ? { revocation } : {}),
+        ...(skipScan && parsed.flags.acceptRisk === true ? { acknowledged: ['scan'] } : {})
       })
     : null;
 
@@ -92,11 +130,13 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
       cloneTarget: plan.cloneTarget,
       postInstallHint: plan.postInstallHint,
       scan: scanResult,
+      authorization,
       savedToManifest: parsed.flags.save
         ? { path: mPathPreview, servers: newServersPreview ?? [] }
         : undefined
     });
     if (scanResult && scanResult.summary.fail > 0) return ExitCode.POLICY_FORBID;
+    if (authorization && authorization.verdict !== 'allow') return ExitCode.POLICY_FORBID;
     return ExitCode.OK;
   }
 
@@ -114,17 +154,53 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
     const { pass, warn, fail } = scanResult.summary;
     writeLine(io.stdout, `  ${pass} pass · ${warn} warning(s) · ${fail} failure(s)`);
     writeLine(io.stdout, '');
+  }
 
-    if (fail > 0) {
-      writeLine(
-        io.stderr,
-        `${style.bold('Refusing install')} — ${fail} scan check(s) failed. Re-run with --skip-scan to override.`
-      );
+  if (authorization && authorization.verdict !== 'allow') {
+    // `--skip-scan` no longer overrides anything. A scan failure is a deny, and
+    // a deny is not a thing the person running the command gets to wave past;
+    // the only non-conclusive result they can accept is one that was never
+    // established, and that is what --accept-risk says.
+    const headline =
+      authorization.verdict === 'deny'
+        ? 'Refusing install'
+        : authorization.verdict === 'inconclusive'
+          ? 'Refusing install — nothing was established'
+          : 'Install needs review';
+    writeLine(io.stderr, `${style.bold(headline)} — ${authorization.reasons.join('; ')}.`);
+    writeLine(
+      io.stderr,
+      authorization.verdict === 'review'
+        ? 'Re-run with --accept-warnings to proceed.'
+        : authorization.verdict === 'inconclusive' && skipScan
+          ? 'Re-run with --skip-scan --accept-risk to install without a scan, and the acceptance will be recorded.'
+          : `Run \`agora trust ${item.id}\` to see the evidence behind this.`
+    );
+    if (!(authorization.verdict === 'review' && parsed.flags.acceptWarnings === true)) {
       return ExitCode.POLICY_FORBID;
     }
   }
 
   if (parsed.flags.write) {
+    if (authorization) {
+      // An acceptance that leaves no trace is a bypass with better manners.
+      const recorded = authorization.acknowledged.length
+        ? appendGateAudit(
+            dataDir,
+            auditRecordFor(authorization, {
+              actor: 'human-cli',
+              subject: item.id,
+              ...(resolvedPurlFor(item) ? { purl: resolvedPurlFor(item) as string } : {})
+            })
+          )
+        : true;
+      for (const accepted of authorization.acknowledged) {
+        writeLine(io.stdout, style.dim(`Accepted risk — ${accepted}`));
+      }
+      if (!recorded) {
+        writeLine(io.stderr, `Warning: the risk acceptance could not be recorded in ${dataDir}.`);
+      }
+    }
     if (hasPermissions(plan.permissions)) {
       if (!parsed.flags.yes && !parsed.flags.y) {
         for (const line of renderPermissionLines(plan.permissions)) writeLine(io.stdout, line);
