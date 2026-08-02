@@ -92,6 +92,17 @@ function levenshtein(a: string, b: string): number {
 // caller's stream + env; defaults to plain so any direct formatter use is safe.
 let style: Styler = createStyler(false);
 
+/**
+ * Every CLI token that can reach a handler. Most come from user-facing command
+ * metadata; the remainder are compatibility aliases or the help router. Gate
+ * inventory tests consume this so a newly documented command cannot appear
+ * without an explicit mutation classification.
+ */
+export const HIDDEN_CLI_ENTRYPOINTS = ['help', 'show', 'edit', 'diff', 'verify', 'mcp'] as const;
+export const ACTIVE_CLI_ENTRYPOINTS = [
+  ...new Set([...COMMANDS.map((command) => command.name), ...HIDDEN_CLI_ENTRYPOINTS])
+].sort();
+
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
   const env = io.env ?? {};

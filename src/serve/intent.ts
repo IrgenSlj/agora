@@ -58,6 +58,19 @@ export interface InstallIntent {
   status: 'pending';
 }
 
+/**
+ * Render agent-controlled rationale as inert, single-line terminal text.
+ * The raw value remains evidence in the intent; control bytes must never be
+ * allowed to operate the review terminal.
+ */
+export function displayIntentText(value: string, maxLength = 500): string {
+  return value
+    .replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
 export function intentsDir(dataDir: string): string {
   return join(dataDir, 'intents');
 }

@@ -88,7 +88,7 @@ Agora is mid-build against the v2.0 brief. The plane descriptions above are the 
 | **Gate** — revocation feed, generated from OSV daily, bundled with the package | ✅ live *(not yet on npm — see below)* |
 | **Gate** — `agora audit`: advisories against the servers you actually run | ✅ live *(not yet on npm)* |
 | **Lock/export** — digest-bound machine truth and schema-valid portable evidence | 🔄 models/verifier/export exist; acquisition transaction incomplete |
-| **Serve** — agent-facing MCP server with policy-filtered discovery | 🔄 intent + approve built; request-only server and consent boundary pending |
+| **Serve** — agent-facing MCP acquisition | 🔄 preview + request-only intent live; policy/evidence tools and strong consent boundary pending |
 | **Sandboxed pre-install `vet`** | ⬜ deferred — replaced by runtime observation above |
 
 > **The last three are on `main`, not on npm.** `agora-hub@0.7.0` is the published version and

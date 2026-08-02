@@ -5,6 +5,8 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { describe, expect, test } from 'vitest';
 import { createAgoraMcpServer } from '../src/cli/mcp-server';
+import { MCP_MUTATION_INVENTORY } from '../src/gate/mutations';
+import { listIntents } from '../src/serve/intent';
 import { writeCapabilityCache } from '../src/stack/capability-cache';
 import { manifestPath, type StackManifest, writeManifest } from '../src/stack/manifest';
 
@@ -41,13 +43,7 @@ describe('Agora MCP Server — tool surface', () => {
     const { client } = await createTestClient();
     const result = await client.listTools();
     const toolNames = result.tools.map((t) => t.name).sort();
-    expect(toolNames).toEqual([
-      'agora_acquire',
-      'agora_browse',
-      'agora_plan',
-      'agora_search',
-      'agora_stack_status'
-    ]);
+    expect(toolNames).toEqual(Object.keys(MCP_MUTATION_INVENTORY).sort());
   });
 
   test('server identity is "agora", not "agora-marketplace"', async () => {
@@ -67,7 +63,8 @@ describe('Agora MCP Server — tool surface', () => {
     expect(byName.get('agora_stack_status')?.readOnlyHint).toBe(true);
     expect(byName.get('agora_plan')?.readOnlyHint).toBe(true);
     expect(byName.get('agora_plan')?.idempotentHint).toBe(true);
-    expect(byName.get('agora_acquire')?.destructiveHint).toBe(true);
+    expect(byName.get('agora_acquire')?.readOnlyHint).toBe(false);
+    expect(byName.get('agora_acquire')?.destructiveHint).toBe(false);
   });
 });
 
@@ -287,44 +284,51 @@ describe('agora_acquire — the gate never bypasses on confirm', () => {
     }
   });
 
-  test('confirm alone does not bypass a warn verdict', async () => {
+  test('an agent confirmation records a request but cannot write host config', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-mcp-acquire-'));
     const configPath = join(temp, 'opencode.json');
+    const dataDir = join(temp, 'data');
     try {
       const { client } = await createTestClient({
         federation: { fetcher: emptyOfficialFetcher },
         scan: { fetcher: fakeFetcher },
-        stack: { cwd: temp, env: { HOME: temp } }
+        stack: { cwd: temp, env: { HOME: temp }, dataDir }
       });
       const result = await client.callTool({
         name: 'agora_acquire',
         arguments: { id: 'mcp-postgres', configPath, confirm: true }
       });
       const payload = extractJson(result);
-      expect(payload.status).toBe('needs_confirmation');
+      expect(payload.status).toBe('requested');
+      expect(payload.authorization.verdict).toBe('review');
+      expect(payload.approvalCommand).toMatch(/^agora approve [a-z2-9]{6}$/);
+      expect(listIntents(dataDir)).toHaveLength(1);
       expect(existsSync(configPath)).toBe(false);
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }
   });
 
-  test('confirm + acceptWarnings writes config after a warn (not fail) verdict', async () => {
+  test('agent-controlled confirm + acceptWarnings only creates an inert request', async () => {
     const temp = mkdtempSync(join(tmpdir(), 'agora-mcp-acquire-'));
     const configPath = join(temp, 'opencode.json');
+    const dataDir = join(temp, 'data');
     try {
       const { client } = await createTestClient({
         federation: { fetcher: emptyOfficialFetcher },
         scan: { fetcher: fakeFetcher },
-        stack: { cwd: temp, env: { HOME: temp } }
+        stack: { cwd: temp, env: { HOME: temp }, dataDir }
       });
       const result = await client.callTool({
         name: 'agora_acquire',
         arguments: { id: 'mcp-postgres', configPath, confirm: true, acceptWarnings: true }
       });
       const payload = extractJson(result);
-      expect(payload.status).toBe('installed');
-      expect(payload.written.configPath).toBe(configPath);
-      expect(existsSync(configPath)).toBe(true);
+      expect(payload.status).toBe('requested');
+      expect(payload.authorization.verdict).toBe('review');
+      expect(payload.written).toBeUndefined();
+      expect(listIntents(dataDir)).toHaveLength(1);
+      expect(existsSync(configPath)).toBe(false);
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }

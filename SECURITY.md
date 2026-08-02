@@ -35,10 +35,11 @@ literal environment values remain backward-readable but must not contain credent
 
 ## Gate Semantics
 
-Today's gate combines heuristics, Sigstore evidence, revocation checks, and Cedar on the primary
-acquire path. Not every mutation command uses the full combination yet; central gate unification is
-a current security task, so local `apply`/`sync`/`update` must not be described as fully governed.
-It is not a sandbox and does not formally verify code.
+Today's gate adapts heuristic/Sigstore scan results, revocation state, and Cedar into one typed
+authorization decision on the primary acquire path. Not every mutation command uses the full
+combination yet; central gate unification is a current security task, so local
+`apply`/`sync`/`update` must not be described as fully governed. It is not a sandbox and does not
+formally verify code.
 
 **"Passed the gate" means "no known red flags," not "safe."**
 
@@ -52,9 +53,11 @@ The v2 build is integrating these into one mandatory authorization service:
 ## Execution Safety
 
 - Every config-writing command must support preview/plan separation or an explicit dry run.
-- The intended boundary is request-only agent access and human-authorized writes. Current MCP/plugin
-  confirmation paths are transitional and must be treated as security-sensitive until AGENT-001/002
-  in `docs/NEXT.md` are complete.
+- MCP acquisition is request-only: confirmation records an inert intent and returns an approval
+  command; no model-controlled field can write the stack. Agent rationale remains untrusted,
+  length-bounded text and is stripped of terminal control bytes when displayed. The OpenCode plugin
+  config write and terminal approval channel remain security-sensitive until GATE-003/AGENT-002 in
+  `docs/NEXT.md` are complete.
 - Network failures must degrade honestly; do not fabricate source counts or trust results.
 - Runtime observation records MCP tool names/counts and sampled network peers only. Sampling is
   direct-process, polling-based, and fallible; unavailable or unsampled is never “contacted nothing.”
@@ -67,5 +70,6 @@ The v1 catalog surface (19 commands including auth, community, and account featu
 v0.7.0. Legacy `~/.config/agora/*` state files may still exist and can be safely deleted.
 
 The remaining high-priority risks are maintained in [`docs/STATUS.md`](./docs/STATUS.md): incomplete
-gate coverage, agent-callable confirmation, a partial acquire/lock transaction, predicate/schema
+gate coverage outside primary acquire, the agent-callable plugin config path, the weak terminal
+approval boundary for shell-capable agents, a partial acquire/lock transaction, predicate/schema
 mismatch, and non-round-trip `agora.toml` rewriting.

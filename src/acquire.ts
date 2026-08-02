@@ -10,6 +10,8 @@ import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js'
 import { federatedFetchItem } from './federation/index.js';
 import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
 import type { FetchLike } from './fetch.js';
+import { authorizeAcquireEvidence, authorizeAcquireRevocationPreflight } from './gate/adapters.js';
+import type { AuthorizationActor, AuthorizationDecision } from './gate/authorization.js';
 import type { Divergence } from './model/observed.js';
 import { aggregate, divergences as computeDivergences } from './observe/profile.js';
 import { readSessions } from './observe/session.js';
@@ -40,6 +42,8 @@ export interface AcquireInput {
   acceptWarnings?: boolean;
   save?: boolean;
   dryRun?: boolean;
+  /** Security principal making the request. Agent callers may preview but never install. */
+  actor?: AuthorizationActor;
   cwd?: string;
   /** Project `.cedar` files from `agora.toml → [policy] files`. */
   policyFiles?: readonly string[];
@@ -81,6 +85,8 @@ export interface AcquireResult {
    * differently everywhere it surfaces.
    */
   revocation?: RevocationStatus;
+  /** Shared gate decision over the evidence above and the caller's authority. */
+  authorization?: AuthorizationDecision;
   written?: { tool: AgentToolId; configPath: string; serverKey: string };
   nextSteps?: string[];
   reason?: string;
@@ -248,6 +254,7 @@ function buildNextSteps(plan: InstallPlan): string[] {
 }
 
 export async function acquire(input: AcquireInput): Promise<AcquireResult> {
+  const actor = input.actor ?? 'human-cli';
   const resolved = await findRequestedItem(input);
   if (!resolved) {
     const target = input.id ?? input.query ?? '';
@@ -312,12 +319,14 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     ? checkRevocations(input.dataDir, revocationPurlsFor(item))
     : undefined;
   const blockingRevocation = revocation?.matches.find(isBlockingMatch);
-  if (blockingRevocation) {
+  if (blockingRevocation && revocation) {
+    const authorization = authorizeAcquireRevocationPreflight(actor, revocation, input.save);
     return {
       status: 'blocked',
       item,
       plan,
       revocation,
+      authorization,
       reason:
         `Refusing: ${item.name} is revoked — ${blockingRevocation.entry.id} ` +
         `(${blockingRevocation.entry.reason}, ${blockingRevocation.entry.severity}).` +
@@ -361,6 +370,14 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     observedDivergences: observedDivergencesFor(input.dataDir, item)
   });
 
+  const authorization = authorizeAcquireEvidence({
+    actor,
+    scan,
+    policy: policyDecision,
+    revocation,
+    save: input.save
+  });
+
   if (policyDecision.decision === 'deny') {
     return {
       status: 'blocked',
@@ -369,6 +386,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       scan,
       policy: policyDecision,
       revocation,
+      authorization,
       reason: `Refusing: policy denied this install${
         policyDecision.determining.length ? ` (${policyDecision.determining.join(', ')})` : ''
       }. Run \`agora policy check\` to see the rules in force.`
@@ -383,6 +401,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       scan,
       policy: policyDecision,
       revocation,
+      authorization,
       reason:
         `Refusing: the policy engine could not run (${policyDecision.unavailable}), so no ` +
         'policy was actually enforced. Proceeding would install under rules that were never checked.'
@@ -397,6 +416,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       scan,
       policy: policyDecision,
       revocation,
+      authorization,
       reason:
         'Refusing: policy evaluation was inconclusive — ' +
         `${policyDecision.skipped.length} rule(s) were skipped because they read evidence Agora ` +
@@ -412,6 +432,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       scan,
       policy: policyDecision,
       revocation,
+      authorization,
       nextSteps: buildNextSteps(plan),
       reason: 'Dry run only; no files were written.'
     };
@@ -425,11 +446,41 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       scan,
       policy: policyDecision,
       revocation,
+      authorization,
       reason: `${scan.summary.fail} scan check(s) failed. Refusing to write config.`
     };
   }
 
-  if (scan.summary.warn > 0 && !input.acceptWarnings) {
+  // A model-controlled boolean is not human consent. Agent callers retain the
+  // complete dry-run path above, but no combination of parameters can cross
+  // this boundary and rewrite host configuration or the portable manifest.
+  if (authorization.verdict === 'deny') {
+    return {
+      status: 'blocked',
+      item,
+      plan,
+      scan,
+      policy: policyDecision,
+      revocation,
+      authorization,
+      reason: `Refusing: ${authorization.reasons.join('; ')}. Ask the user to run \`agora acquire ${item.id}\` in their terminal.`
+    };
+  }
+
+  if (authorization.verdict === 'inconclusive') {
+    return {
+      status: 'blocked',
+      item,
+      plan,
+      scan,
+      policy: policyDecision,
+      revocation,
+      authorization,
+      reason: `Refusing: authorization was inconclusive (${authorization.reasons.join('; ')}).`
+    };
+  }
+
+  if (authorization.verdict === 'review' && !input.acceptWarnings) {
     return {
       status: 'needs_confirmation',
       item,
@@ -437,7 +488,11 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       scan,
       policy: policyDecision,
       revocation,
-      reason: `${scan.summary.warn} scan warning(s). Re-run with --accept-warnings to proceed.`
+      authorization,
+      reason:
+        scan.summary.warn > 0
+          ? `${scan.summary.warn} scan warning(s). Gate review: ${authorization.reasons.join('; ')}. Re-run with --accept-warnings to proceed.`
+          : `Authorization requires review: ${authorization.reasons.join('; ')}. Re-run with --accept-warnings to proceed.`
     };
   }
 
@@ -449,6 +504,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       scan,
       policy: policyDecision,
       revocation,
+      authorization,
       reason: `Acquire can write MCP config patches only; ${item.id} is ${plan.kind}.`
     };
   }
@@ -462,6 +518,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       scan,
       policy: policyDecision,
       revocation,
+      authorization,
       reason: `${item.name} does not expose an MCP npm package to acquire.`
     };
   }
@@ -475,6 +532,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       scan,
       policy: policyDecision,
       revocation,
+      authorization,
       reason: `No writable ${tool} config location found.`
     };
   }
@@ -489,6 +547,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       scan,
       policy: policyDecision,
       revocation,
+      authorization,
       reason: err instanceof Error ? err.message : String(err)
     };
   }
@@ -522,6 +581,9 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     item,
     plan,
     scan,
+    policy: policyDecision,
+    revocation,
+    authorization,
     written: { tool, configPath: location.path, serverKey: desired.name },
     nextSteps: buildNextSteps(plan)
   };

@@ -5,6 +5,7 @@ import { acquire } from '../acquire.js';
 import { federatedFetchItem, federatedSearch, SOURCES } from '../federation/index.js';
 import type { FederationEnv, SourceId } from '../federation/types.js';
 import { type ScanOptions, scanItem } from '../scan.js';
+import { requestInstall } from '../serve/request.js';
 import { readCapabilityCache } from '../stack/capability-cache.js';
 import { checkStack } from '../stack/doctor.js';
 import { loadManifestFromSource, manifestPath, readManifest } from '../stack/manifest.js';
@@ -21,8 +22,8 @@ import { AGORA_VERSION } from './app.js';
  * and honest: every tool's result mirrors the matching CLI `--json` shape
  * 1:1, sourced directly from `src/federation` + `src/stack` (no re-derived
  * logic living only in this file). `agora_acquire` can never bypass the
- * trust gate — `confirm` only toggles dry-run; the gate inside `acquire()`
- * still decides whether a confirmed call is allowed to write.
+ * trust gate: unconfirmed calls preview; the retained `confirm` field creates
+ * an inert install intent for human review and never edits the stack.
  */
 
 export interface AgoraMcpServerOptions {
@@ -258,11 +259,10 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
     {
       description:
         'Gated capability acquisition: resolve an item by id or capability query, build an install ' +
-        'plan, and run the trust gate. Without `confirm`, this call is always a dry run — it returns ' +
-        'the plan and gate verdict and writes nothing. To actually install, call again with ' +
-        '`confirm: true`; the gate still decides — a `fail` verdict never writes, and a `warn` ' +
-        'verdict additionally requires `acceptWarnings: true` on the confirming call. `confirm` can ' +
-        'never bypass the gate. Mirrors `agora acquire --json`.',
+        'plan, and run the trust gate. Without `confirm` it returns a preview and writes nothing. ' +
+        'With `confirm: true` it records only an inert install request and returns the `agora approve ' +
+        '<request-id>` command for a human; it never writes host configuration or agora.toml. The ' +
+        '`acceptWarnings` field remains accepted for older clients but cannot grant authority.',
       inputSchema: z.object({
         id: z.string().optional().describe('Exact item id to acquire, e.g. mcp-postgres'),
         query: z
@@ -287,34 +287,39 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
           .optional()
           .default(false)
           .describe(
-            'Proceed when the gate has warnings but no failures — only takes effect together with confirm: true'
+            'Deprecated compatibility field; agent-supplied warning acceptance cannot authorize an install'
           ),
         save: z
           .boolean()
           .optional()
           .default(false)
-          .describe('Also record the acquired server in agora.toml'),
+          .describe(
+            'Compatibility field for previews; agent calls never write or request changes to agora.toml'
+          ),
         confirm: z
           .boolean()
           .optional()
           .default(false)
           .describe(
-            'Second-call confirmation. Without it, the call is always a dry run (plan + gate ' +
-              'verdict, nothing written). The gate decides whether a confirmed call is allowed to write.'
+            'Record an inert install request for later human approval; never installs directly'
+          ),
+        rationale: z
+          .string()
+          .max(1000)
+          .optional()
+          .describe(
+            'Why this capability is needed; stored as untrusted text for the human reviewer'
           )
       }),
-      annotations: { destructiveHint: true }
+      annotations: { readOnlyHint: false, destructiveHint: false }
     },
-    async ({ id, query, source, tool, configPath, acceptWarnings, save, confirm }) => {
-      const result = await acquire({
+    async ({ id, query, source, tool, configPath, acceptWarnings, save, confirm, rationale }) => {
+      const common = {
         id,
         query,
         source,
         tool,
         configPath,
-        acceptWarnings,
-        save,
-        dryRun: !confirm,
         cwd: opts.stack?.cwd,
         env: opts.stack?.env,
         dataDir: stackDataDir,
@@ -325,10 +330,19 @@ export function createAgoraMcpServer(opts: AgoraMcpServerOptions = {}): McpServe
         // injected DI fetcher wins, keeping resolution hermetic (no live fan-out
         // to the six sources on `agora_acquire`).
         deps: {
-          fetchFederatedItem: (ref, env, o) =>
-            federatedFetchItem(ref, { ...env, ...federationEnv }, o)
+          fetchFederatedItem: (...args: Parameters<typeof federatedFetchItem>) =>
+            federatedFetchItem(args[0], { ...args[1], ...federationEnv }, args[2])
         }
-      });
+      };
+      const result = confirm
+        ? await requestInstall({ ...common, rationale })
+        : await acquire({
+            ...common,
+            acceptWarnings,
+            save,
+            dryRun: true,
+            actor: 'agent'
+          });
       return jsonContent(result);
     }
   );

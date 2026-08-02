@@ -28,12 +28,16 @@ integration. Only explicitly legacy surfaces may be retired.
 
 ## Next — one gate for every mutation
 
-- [ ] **GATE-001 — mutation inventory.** Add a test-owned registry of all commands and plugin/MCP
-  tools that can write files or state.
-- [ ] **GATE-002 — central authorization service.** Compose scan, provenance, drift, revocation,
-  and Cedar into one typed decision with evidence and explanation.
-- [ ] **GATE-003 — route writes.** Use it from acquire, install compatibility, apply, sync, update,
-  approve, integrate where applicable, plugins, and MCP. Preserve every command and preview mode.
+- [x] **GATE-001 — mutation inventory.** Every active CLI entry point (including hidden compatibility
+  aliases), MCP tool, and plugin tool has a machine-readable effect/gate/consent declaration.
+  Completeness tests fail when a new surface is added without classification.
+- [ ] **GATE-002 — central authorization service.** The pure decision kernel is implemented: deny
+  dominates, missing/unknown required evidence is inconclusive, warnings require review, and agents
+  cannot authorize host/project/manifest writes. Scan, revocation, and Cedar adapters now drive the
+  primary acquire path; provenance/drift need first-class signals beyond their aggregate scan state.
+- [ ] **GATE-003 — route writes.** Primary human acquire is routed, and MCP acquisition is
+  request-only. Next route install compatibility, apply, sync, update, approve, integrate where
+  applicable, and plugin writes. Preserve every command and preview mode.
 - [ ] **GATE-004 — eliminate bypass semantics.** Replace `--skip-scan` write behavior with a
   policy-governed, auditable risk acknowledgement or make it preview-only.
 - [ ] **GATE-005 — all-or-nothing tests.** Prove every mutation writes nothing on deny,
@@ -57,8 +61,9 @@ integration. Only explicitly legacy surfaces may be retired.
 
 ## Then — agent/human authorization
 
-- [ ] **AGENT-001 — request-only agent acquisition.** Preserve agent discovery and planning, but
-  replace confirming writes in `agora mcp` and plugins with an install-intent request.
+- [x] **AGENT-001 — request-only agent acquisition.** `agora mcp` preserves acquire preview and
+  converts confirmation into an inert, evidence-bearing install intent; it returns `agora approve
+  <id>` and cannot write host config or `agora.toml`. Plugin acquisition remains preview-only.
 - [ ] **AGENT-002 — consent boundary.** Define and implement approval that an agent with ordinary
   tool access cannot self-assert. Document platform limitations honestly.
 - [ ] **AGENT-003 — unified serve surface.** Complete policy-filtered search, evidence, policy

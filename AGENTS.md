@@ -20,7 +20,8 @@ making structural changes.
 - **Observe** (`src/observe/`) — `agora run -- <cmd>` supervises an MCP server during real use and
   records MCP tool names/counts and sampled network peers. It does not claim complete behavior
   coverage. Replaced the brief's Docker sandbox; a stronger backend remains possible.
-- **Gate** (`src/policy/` + `src/revocation/` + `src/osv/`) — a real Cedar engine evaluated over
+- **Gate** (`src/gate/` + `src/policy/` + `src/revocation/` + `src/osv/`) — a mutation inventory and
+  central authorization contract over a real Cedar engine evaluated over
   that evidence, plus a revocation feed generated from OSV.dev daily with no human curation. The
   feed ships bundled in the package and a fetched copy is merged *monotonically* — it may add
   revocations, never remove one — which is why it needs no signing key. This is what Agora *is*; it gets the

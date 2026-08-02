@@ -439,6 +439,39 @@ describe('the acquire gate refuses a revoked artifact', () => {
     rmSync(dataDir, { recursive: true, force: true });
   });
 
+  test('an advisory revocation requires explicit warning acceptance', async () => {
+    const dataDir = mkdtempSync(join(tmpdir(), 'agora-revoke-advisory-review-'));
+    const configPath = join(dataDir, 'opencode.json');
+    const feed = makeFeed(1, [
+      entry({
+        id: 'AGR-2026-0003',
+        purl_pattern: 'pkg:npm/%40modelcontextprotocol/server-filesystem',
+        versions: undefined,
+        severity: 'advisory'
+      })
+    ]);
+    await refreshFeed({
+      dataDir,
+      fetcher: (async () => new Response(JSON.stringify(feed), { status: 200 })) as FetchLike,
+      keys: KEYS,
+      force: true
+    });
+
+    const result = await acquire({
+      query: 'mcp-filesystem',
+      configPath,
+      dataDir,
+      scanOptions: { offline: true },
+      deps: { fetchFederatedItem: async () => null }
+    });
+
+    expect(result.status).toBe('needs_confirmation');
+    expect(result.authorization?.verdict).toBe('review');
+    expect(result.reason).toContain('revocation');
+    expect(existsSync(configPath)).toBe(false);
+    rmSync(dataDir, { recursive: true, force: true });
+  });
+
   test('with no feed cached, acquire proceeds — absence of data is not a block', async () => {
     const dataDir = mkdtempSync(join(tmpdir(), 'agora-revoke-nofeed-'));
     const configPath = join(dataDir, 'opencode.json');

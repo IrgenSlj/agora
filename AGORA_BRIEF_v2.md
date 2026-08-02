@@ -631,5 +631,12 @@ delegate where possible.**
   → platform and release hardening. `docs/STATUS.md` is the authority on what the code proves;
   `docs/NEXT.md` is the ordered backlog; `docs/DEVELOPMENT.md` carries multi-session handoffs. This
   amendment changes execution order and status discipline, not the trust-plane product intent.
+- **DA-12 (2026-08-02) — agent acquisition is request-only at the shared service boundary.** The
+  existing `agora mcp` acquire surface remains available for compatibility: an unconfirmed call is
+  a full gate preview, and confirmation creates only an evidence-bearing install intent plus an
+  `agora approve <id>` handoff. Model-controlled confirmation and warning-acceptance fields are not
+  consent and cannot mutate host configuration or the portable manifest. Human CLI acquisition is
+  preserved. Strong approval still requires a host-native or out-of-band boundary when agents have
+  ordinary shell access.
 
 — END OF BRIEF —

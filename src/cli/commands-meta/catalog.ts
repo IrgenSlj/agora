@@ -101,9 +101,9 @@ export const COMMANDS: CommandMeta[] = [
     details:
       'Resolves an item id or capability query — against the multi-source catalog (official MCP Registry ' +
       'first, then the bundled offline catalog) as well as the bundled catalog directly — creates an ' +
-      'install plan, runs the pre-install scan gate, and writes the MCP server to the target config only ' +
-      'when the scan has no failures. Warnings require --accept-warnings; --dry-run prints the plan and ' +
-      'scan without writing. With --save, the scan verdict and description-drift baseline are recorded ' +
+      'install plan, runs scan, revocation, and Cedar through the shared authorization gate, and writes ' +
+      'the MCP server to the target config only when no signal denies. Gate warnings require ' +
+      '--accept-warnings; --dry-run prints the plan and decision without writing. With --save, the scan verdict and description-drift baseline are recorded ' +
       'alongside agora.toml under a namespaced trust key so a later re-acquire or a cloned profile can ' +
       'detect drift. Exit codes: 0 ok/dry-run, 1 policy forbid / scan fail, 2 usage or missing confirmation. ' +
       'Honest limits: the gate is static heuristics plus live-probe diffing — pattern checks, manifest ' +
@@ -121,7 +121,7 @@ export const COMMANDS: CommandMeta[] = [
       },
       {
         flag: '--accept-warnings',
-        description: 'Proceed when the scan has warnings but no failures'
+        description: 'Proceed when the authorization gate has warnings but no failures'
       },
       { flag: '--save', description: 'Also record the server (and its trust data) in agora.toml' },
       { flag: '--dry-run', description: 'Plan and scan only; write nothing' },

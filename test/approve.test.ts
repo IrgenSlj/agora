@@ -75,6 +75,20 @@ describe('agora approve', () => {
     expect(existsSync(join(dir, 'opencode.json'))).toBe(false);
   });
 
+  test("the agent's rationale cannot inject terminal control sequences", async () => {
+    intent('k7m2xq', {
+      rationale: '\u001b]2;forged title\u0007need access\nnext line\u202erorrim'
+    });
+    const { io: cliIo, out } = io();
+
+    await runCli(['approve'], cliIo as never);
+
+    expect(out()).not.toContain('\u001b');
+    expect(out()).not.toContain('\u0007');
+    expect(out()).not.toContain('\u202e');
+    expect(out()).toContain('forged title need access next line');
+  });
+
   test('--deny discards the request and installs nothing', async () => {
     intent('k7m2xq');
     const { io: cliIo, out } = io();

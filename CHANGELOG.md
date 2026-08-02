@@ -24,6 +24,19 @@ not when one is.*
   gate, atomic evidence/lock production, and human/agent authorization.
 - Working non-legacy features are preserved and improved in place. Consolidation is no longer
   described as deleting the shell, TUI, news/today, inference, plugins, sources, or host adapters.
+- Added a machine-checked mutation inventory covering CLI entry points, MCP tools, and plugin tools,
+  including honest markers for incomplete gate coverage and agent-callable writes.
+- Added the pure central authorization decision contract: deny dominates, missing required evidence
+  is inconclusive, warnings require review, and agent callers cannot authorize host, project, or
+  portable-manifest mutations.
+- Routed primary acquire through typed scan, revocation, and Cedar authorization signals. Installed
+  results now retain the policy, revocation, and central decision that authorized the write.
+- Agent-facing MCP acquisition is request-only: preview still works, while confirmation writes an
+  evidence-bearing pending intent and returns `agora approve <id>`. Model-controlled confirmation or
+  warning-acceptance fields can no longer edit host configuration or `agora.toml`.
+- Agent-supplied install rationale is length-bounded and rendered without terminal control bytes;
+  revocation advisories and stale-feed warnings now require the same explicit warning review as scan
+  warnings before a human acquire can write.
 
 0.7.0 shipped a revocation plane that was complete, tested, and **inert**: no key was pinned, so
 every feed read `unverifiable` and nothing was ever blocked. This release makes it work, and does

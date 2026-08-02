@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { samplePackages } from '../src/data';
+import { PLUGIN_MUTATION_INVENTORY } from '../src/gate/mutations';
 
 describe('Agora Data Validation', () => {
   test('samplePackages has required fields', () => {
@@ -131,18 +132,7 @@ describe('Plugin Tools', () => {
   test('Agora plugin exports all 10 tools', async () => {
     const plugin = await import('../src/plugin/index');
     const tools = (await plugin.Agora({} as any)).tool!;
-    expect(Object.keys(tools).sort()).toEqual([
-      'agora_acquire',
-      'agora_browse',
-      'agora_browse_category',
-      'agora_chat',
-      'agora_config',
-      'agora_info',
-      'agora_install',
-      'agora_scan',
-      'agora_search',
-      'agora_today'
-    ]);
+    expect(Object.keys(tools).sort()).toEqual(Object.keys(PLUGIN_MUTATION_INVENTORY).sort());
   });
 
   test('agora_chat accepts message and optional model args', async () => {

@@ -1,9 +1,10 @@
 // `agora approve` — the human half of the agent install flow.
 //
 // An agent using `agora serve` can request an install; it cannot perform one.
-// This is where a request becomes an action, and it runs in the user's own
-// terminal on purpose: that is a channel no amount of injected text in a web
-// page or a tool result can reach.
+// This is the human-oriented review path where a request may become an action.
+// A terminal invocation is useful friction, not proof of human presence: an
+// agent with ordinary shell access may be able to invoke it too. A host-native
+// or out-of-band consent boundary remains required for a strong guarantee.
 //
 // The intent carries a snapshot of the evidence the agent saw. That snapshot is
 // shown for context and **never** used as the decision. Approval re-runs the
@@ -14,7 +15,7 @@
 import { acquire, renderAcquireResult } from '../../acquire.js';
 import { findMarketplaceItem } from '../../catalog/bundled.js';
 import { createProvenanceResolver } from '../../evidence/resolve-provenance.js';
-import { deleteIntent, listIntents, readIntent } from '../../serve/intent.js';
+import { deleteIntent, displayIntentText, listIntents, readIntent } from '../../serve/intent.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
@@ -48,7 +49,7 @@ export const commandApprove: CommandHandler = async (parsed, io, style) => {
         // Agent-supplied text. Displayed as a quotation, never interpreted —
         // it is an argument for installing something, written by the party
         // that wants it installed.
-        writeLine(io.stdout, theme.muted(`      “${intent.rationale.slice(0, 120)}”`));
+        writeLine(io.stdout, theme.muted(`      “${displayIntentText(intent.rationale, 120)}”`));
       }
       writeLine(io.stdout, theme.dim(`      requested ${intent.requestedAt}`));
     }
@@ -84,7 +85,7 @@ export const commandApprove: CommandHandler = async (parsed, io, style) => {
     `${theme.bold(intent.item)} ${theme.dim(`(requested ${intent.requestedAt})`)}`
   );
   if (intent.rationale) {
-    writeLine(io.stdout, theme.muted(`  agent's reason: “${intent.rationale}”`));
+    writeLine(io.stdout, theme.muted(`  agent's reason: “${displayIntentText(intent.rationale)}”`));
   }
   writeLine(io.stdout, '');
 

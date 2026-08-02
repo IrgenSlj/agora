@@ -52,7 +52,8 @@ cannot be presented as a clean result.
 
 ## Phase B — one authorization choke point
 
-Status: **next**.
+Status: **in progress**. The mutation inventory, decision kernel, scan/revocation/Cedar adapters,
+and primary acquire routing are live; the remaining mutating commands still need migration.
 
 - Introduce a central authorization service over scan, provenance, drift, revocation, and Cedar.
 - Route `acquire`, legacy-compatible `install`, `apply`, `sync`, `update`, `approve`, plugins, and
@@ -79,7 +80,9 @@ quarantine with no fabricated evidence.
 
 ## Phase D — human and agent boundaries
 
-Status: **partial intent flow exists**.
+Status: **partial request-only flow is enforced**. MCP acquire confirmation creates an inert intent,
+never a stack write; terminal approval is not yet a strong consent boundary against shell-capable
+agents.
 
 - Consolidate the current MCP and planned serve surfaces without losing search, evidence, status,
   plan, or request functionality.

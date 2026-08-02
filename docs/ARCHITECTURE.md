@@ -88,7 +88,16 @@ and closed between polls or made only by a descendant can be invisible. Sessions
 `networkSampled` and an explicit sampling state; missing/failed `lsof` is `unavailable`, never an
 empty successful observation. Trust output describes sampled peers, not complete network behavior.
 
-### Gate — policy (`src/policy/`) and revocation (`src/revocation/`) — live
+### Gate — authorization (`src/gate/`), policy (`src/policy/`), and revocation (`src/revocation/`) — partial
+
+`src/gate/mutations.ts` classifies every active CLI, MCP, and plugin entry point by its effects,
+consent surface, need for a trust decision, and honest current coverage. Tests compare those maps to
+the actual registered surfaces, so a new tool cannot silently create an unclassified write path.
+`src/gate/authorization.ts` is the pure decision kernel: deny dominates, required missing/unknown
+signals are inconclusive, warnings require review, and an agent cannot authorize host, project, or
+portable-manifest changes. `src/gate/adapters.ts` preserves scan pass/warn/fail, Cedar
+deny/inconclusive, and revocation clean/advisory/stale/unknown/block states in that vocabulary.
+Primary `acquire` is routed through this decision; other mutation paths are not yet.
 
 `src/policy/` is a real Cedar engine (`@cedar-policy/cedar-wasm`, lazily imported — it is 12MB)
 evaluated over the evidence above: `agora policy init|check|test`, `[policy] files` in
@@ -140,10 +149,10 @@ or update complete lock entries; the lock is still a partial implementation of b
   translates its own stream into the renderer's event vocabulary, which is why
   `src/cli/chat-renderer.ts` needs to know nothing about who produced a line.
 - **`agora mcp`** (`src/cli/mcp-server.ts`) — exposes the stack manager and catalog as MCP tools,
-  so any MCP-capable harness can call Agora directly. Its confirming acquire tool is transitional:
-  model-supplied booleans are not human authorization. `src/serve/` has intent records and approval
-  scaffolding; the target surface is policy-filtered `search_tools`, `get_evidence`, `check_policy`,
-  and request-only `request_install`.
+  so any MCP-capable harness can call Agora directly. Acquire without confirmation is a full gate
+  preview; confirmation calls `src/serve/request.ts`, which can write only an evidence-bearing
+  pending intent and returns `agora approve <id>`. It never writes host config or `agora.toml`.
+  The target surface still adds first-class policy-filtered evidence and policy-check tools.
 - **Thin plugins** (`src/plugin/`) — the OpenCode/Claude Code plugin registers explicit named
   tools (`agora_search`, `agora_acquire`, `agora_config`, …) plus lifecycle hooks. The plugin
   never owns a write that bypasses the gate.
@@ -186,9 +195,11 @@ schemas/              generated JSON Schema output from src/model/
 src/store/            SQLite store + content-addressed blob cache
 src/federation/       multi-source adapters + dedupe-by-purl sync
 src/evidence/         provenance, schema hashing, drift, poisoning heuristics
+src/gate/             mutation inventory and central authorization decision contract
 src/policy/           Cedar engine, entity model, shipped baseline
 src/revocation/       bundled/additive feed client, matching, installed-purl resolution
 src/observe/          the `agora run` supervising shim + session recording
+src/serve/            request-only install intents and human review workflow
 src/stack/            stack manager — adapters, manifest, plan/apply, doctor, probe
 src/catalog/          the bundled offline catalog (bundled.ts, types, permissions)
 src/acquire.ts        capability-acquisition gateway (resolve → gate → policy → write)

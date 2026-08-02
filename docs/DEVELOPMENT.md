@@ -77,6 +77,41 @@ existing by itself is not completion.
 
 ## Latest handoff
 
+### 2026-08-02 — hardening session 2
+
+Intent: make every write surface visible before routing behavior through one gate.
+
+Completed:
+
+- Pushed hardening session 1 to `origin/main` as `01a3b7e`.
+- `GATE-001`: added `src/gate/mutations.ts`, classifying all 47 active CLI entry points (public
+  commands plus compatibility/help routers), all five MCP tools, and all ten plugin tools by effect,
+  consent, gate requirement, and honest current coverage.
+- Completeness tests compare the inventory with actual CLI metadata/aliases and registered MCP/plugin
+  surfaces. The first run caught `agora mcp` as an active hidden entry point.
+- `GATE-002` foundation: added the pure authorization kernel. It implements deny dominance,
+  inconclusive required evidence, warning review, and the request-only agent boundary.
+- Added typed adapters for scan, Cedar, and revocation states. Primary `acquire` now records and
+  enforces the shared decision while retaining human warning acceptance and dry-run behavior.
+- `AGENT-001`: MCP acquire preview remains read-only; confirmation now creates only an inert,
+  evidence-bearing install intent and returns `agora approve <id>`. Even confirmation plus warning
+  acceptance cannot edit host config or `agora.toml`.
+- Added focused all-or-nothing tests for clean/warning/failure evidence, actor authority, intent-only
+  filesystem effects, and the in-memory MCP surface.
+
+Focused verification:
+
+- `bunx vitest run test/gate/adapters.test.ts test/gate/authorization.test.ts test/gate/mutations.test.ts test/acquire.test.ts test/gate/acquire-gate.test.ts test/serve-intent.test.ts test/serve-request.test.ts test/approve.test.ts test/mcp-server.test.ts`
+- 63 tests passed.
+- `bun run typecheck`, `bun run lint`, and `bun run build` passed.
+- Full `bun run test` passed: 1,744 tests passed, one skipped.
+
+Next:
+
+1. Route `approve` through an explicit human-consent actor boundary and the same decision service.
+2. Route `apply`/`sync` and update/install compatibility paths, then remove their bypass semantics.
+3. Close the agent-callable plugin `agora_config` write gap.
+
 ### 2026-08-02 — hardening session 1
 
 Intent: preserve all current non-legacy product surfaces, reconcile documentation, and begin with
