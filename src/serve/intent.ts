@@ -12,9 +12,10 @@
 // no human in the loop at any point.
 //
 // So `request_install` writes one of these and stops. It touches no host config,
-// no agora.toml, no lockfile. The record is inert until a person runs
-// `agora approve <id>` in their own terminal — a channel the agent cannot reach
-// and injected text cannot forge.
+// no agora.toml, no lockfile. `agora approve <id>` is the human-oriented review
+// path, but a terminal is not automatically a security boundary when the agent
+// also has shell access. A host-native or out-of-band consent mechanism is still
+// required before the rule above is cryptographically or operationally strong.
 //
 // The evidence and policy verdict are snapshotted at request time so the human
 // reviewing later sees what the agent saw. They are recorded, never trusted:

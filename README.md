@@ -3,8 +3,8 @@
 </p>
 
 > **The trust plane for agentic tooling.** Agora verifies where your MCP servers and Agent Skills
-> come from, watches what they actually do, enforces *your* policy over both, and manages them across
-> every host — OpenCode, Claude Code, Cursor, Windsurf.
+> come from, records MCP activity and sampled network peers during use, enforces *your* policy over
+> both, and manages them across every host — OpenCode, Claude Code, Cursor, Windsurf.
 
 <p>
   <a href="https://www.npmjs.com/package/agora-hub"><img src="https://img.shields.io/npm/v/agora-hub" alt="npm"></a>
@@ -33,9 +33,9 @@ host-neutral and local-first: no accounts, no hosted backend you depend on, `--j
 The agent-tooling ecosystem has 20k+ published MCP servers and a fast-growing skills ecosystem,
 near-zero signing/provenance discipline, a documented 2025–2026 record of supply-chain attacks
 (typosquatted servers, rug-pulls, description poisoning, credential exfiltration) — and **no
-revocation mechanism at all**. Agora is the layer that verifies provenance, observes what a server
-actually does while you use it, enforces policy over that evidence, and can actually revoke — at
-the point of install and run.
+revocation mechanism at all**. Agora is the layer that verifies provenance, samples observable MCP
+and network behavior while you use a server, enforces policy over that evidence, and can revoke —
+at the point of install and run. Sampling is evidence, not complete behavior coverage.
 
 ## Install
 
@@ -61,35 +61,34 @@ for the full specification):
 - **Verify (evidence)** — provenance verification (Sigstore / npm & GitHub attestations),
   schema-and-description hashing with rug-pull **drift** detection, and runtime **observation**:
   `agora run -- <server>` supervises an MCP server while you actually use it and records what it
-  did — all emitted as standard **in-toto / DSSE attestations** you can inspect and export with
-  `agora export --attestations <id>`. The format, including how Agora reports what it does *not*
-  know, is specified in [`docs/EVIDENCE.md`](./docs/EVIDENCE.md); the JSON Schemas ship in the
-  package under `schemas/`.
+  advertised and which tools were called, plus sampled network peers. Evidence export uses standard
+  **in-toto / DSSE envelopes**, with explicit unknowns; digest resolution and predicate-specific
+  schema enforcement are still being completed. See [`docs/EVIDENCE.md`](./docs/EVIDENCE.md).
 - **Gate (policy)** — a real policy engine ([Cedar](https://www.cedarpolicy.com/)): your `.cedar` rules
-  decide what may be installed, synced, or served, evaluated over evidence, per project — plus a signed
-  **revocation feed** with anti-rollback (the ecosystem's most glaring absence).
-- **Manage** — a portable `agora.toml` profile and a committed `agora.lock` (machine truth: exactly
-  what's installed, hashed, verified); surgical, atomic writes into each host's config; `agora mcp`
-  exposes Agora *itself* to agents as an MCP server, so the agent is a first-class second user.
-  (`agora serve`, the policy-filtered discovery server, is partly built: an agent can already be
-  given an install-*intent* flow it cannot bypass — `agora approve` is the human half — but the
-  server itself is not written. See the status table below.)
+  evaluate evidence per project, alongside a bundled OSV-derived **revocation feed**. Network copies
+  are unsigned and additive-only: they may add findings but cannot suppress bundled ones.
+- **Manage** — a portable `agora.toml` profile, per-host surgical writes, and an `agora.lock` model
+  intended to record exact installed artifacts. Lock verification exists; automatic lock creation
+  during acquisition is still being completed. `agora mcp` exposes Agora to agents, but its current
+  confirming acquire path is transitional until the request-only human approval boundary lands.
 
 ## Status — honestly
 
-Agora is mid-build against the v2.0 brief. The plane descriptions above are the **design**; this table
-is **what is live today**. What comes next, and why in that order, is [`docs/NEXT.md`](./docs/NEXT.md).
+Agora is mid-build against the v2.0 brief. The plane descriptions above are the **design**;
+[`docs/STATUS.md`](./docs/STATUS.md) is the detailed authority on what the current code proves, and
+[`docs/NEXT.md`](./docs/NEXT.md) is the ordered backlog.
 
 | Capability | State |
 |---|---|
 | **Manage** — stack manager, multi-host adapters, `plan`/`apply`, `sync --from` | ✅ live |
 | **Federate** — multi-source, offline-first catalog search (`agora search`) | ✅ live *(4 of 8 sources query by default)* |
 | **Verify** — live Sigstore provenance (Fulcio + CT + Rekor, identity-bound) · schema drift · poisoning heuristics | ✅ live |
-| **Observe** — `agora observe enable` records what your servers do in real use | ✅ live |
-| **Gate** — heuristic customs gate **plus** a real Cedar policy over the evidence | ✅ live |
+| **Observe** — `agora observe enable` records MCP activity and sampled direct-process network peers | ✅ live, limited sampling |
+| **Gate** — heuristic customs gate **plus** Cedar, provenance, drift, and revocation | 🔄 primary acquire path live; all-write unification pending |
 | **Gate** — revocation feed, generated from OSV daily, bundled with the package | ✅ live *(not yet on npm — see below)* |
 | **Gate** — `agora audit`: advisories against the servers you actually run | ✅ live *(not yet on npm)* |
-| **Serve** — agent-facing MCP server with policy-filtered discovery | 🔄 install-intent flow + `agora approve` built; the server itself is not |
+| **Lock/export** — digest-bound machine truth and schema-valid portable evidence | 🔄 models/verifier/export exist; acquisition transaction incomplete |
+| **Serve** — agent-facing MCP server with policy-filtered discovery | 🔄 intent + approve built; request-only server and consent boundary pending |
 | **Sandboxed pre-install `vet`** | ⬜ deferred — replaced by runtime observation above |
 
 > **The last three are on `main`, not on npm.** `agora-hub@0.7.0` is the published version and
@@ -138,11 +137,14 @@ works offline, on first run, with no key to manage.
 
 Turn observation on across every host with `agora observe enable` (`--dry-run` shows the exact
 command diff first; `disable` puts every command back). The shim is byte-transparent, and it
-records tool *names* and counts only: never arguments, results, or prompt text.
+records tool *names* and counts plus sampled network peers: never arguments, results, or prompt
+text. A missed or unavailable network sample stays unknown.
 
 `agora.toml` is a portable, declarative profile of your whole installation — commit it and anyone
 reproduces your setup with `agora sync --from <url>`. Writes are **surgical**: adapters preserve every
-unrelated key and write atomically. No credentials ever live in `agora.toml`.
+unrelated host-config key and write atomically. `agora freeze` writes `env_from` names rather than
+host environment values; those names resolve locally during plan/apply and a missing value stops the
+write. Do not put credential literals in a hand-authored manifest.
 
 ## Upgrading from 0.6.x
 
@@ -200,9 +202,11 @@ bun run build       # tsc + copy catalog + chmod +x dist/cli.js
 bun src/cli.ts <cmd> # run from source, no build needed
 ```
 
-Node ≥ 20, ESM only. Direction is locked by [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md); the execution
-plan is [`docs/NEXT.md`](./docs/NEXT.md). PRs welcome — see
-[`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Node ≥ 22.22.2, ESM only. Direction is locked by
+[`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md); current truth is
+[`docs/STATUS.md`](./docs/STATUS.md), the execution plan is [`docs/NEXT.md`](./docs/NEXT.md), and
+multi-session handoffs live in [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md). Working non-legacy
+features are preserved and improved in place. PRs welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## License
 

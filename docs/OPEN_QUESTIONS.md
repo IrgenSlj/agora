@@ -2,6 +2,28 @@
 
 Log of decisions where the locked v2 direction in [`AGORA_BRIEF_v2.md`](../AGORA_BRIEF_v2.md)
 meets third-party reality. Direction stays locked; these record the smallest-change adaptation.
+Current implementation status belongs in [`STATUS.md`](./STATUS.md), not in historical resolution
+notes here.
+
+## OQ-4 — What counts as human approval for an agent-requested install?
+
+**Open as of 2026-08-02.** A second MCP/plugin call containing `confirm: true` is not human
+authorization: the model can supply that boolean. Likewise, “run `agora approve` in a terminal” is
+not a security boundary when the same coding agent has shell access.
+
+The required behavior is clear even though the portable mechanism is not:
+
+- Agent surfaces may search, inspect evidence, check policy, plan, and create an install intent.
+- Human CLI acquisition remains supported.
+- An agent-callable tool may not turn its own intent into a stack mutation.
+- Approval must be explicit, reviewable, bound to the exact artifact/digest/target/decision, and
+  expire or become invalid when any of those inputs change.
+
+Candidate boundaries are host-native user-consent UI, a separate local approval socket owned by an
+interactive user process, or an out-of-band signed approval record. TTY detection alone improves
+accidental safety but is not a strong boundary. `AGENT-001/002` in [`NEXT.md`](./NEXT.md) tracks the
+implementation; documentation must describe the current MCP confirmation flow as transitional until
+one candidate is proven across supported hosts.
 
 ## OQ-1 — Claude inference tier (P4/D7): subscription auth is NOT available to third parties
 

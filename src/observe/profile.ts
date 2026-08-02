@@ -1,10 +1,10 @@
 // Aggregates recorded sessions into a per-server picture, and works out where
 // observed behaviour diverges from what the server declared.
 //
-// The divergence vocabulary is shared with the sandbox design
-// (`src/model/observed.ts`), so if a Docker-based pre-install `vet` is added
-// later it produces the same shape and feeds the same policy attributes. The
-// observation *point* changed; the evidence model did not.
+// The divergence vocabulary is shared with the older sandbox design
+// (`src/model/observed.ts`). Runtime sessions and sandbox profiles are distinct
+// evidence shapes; a future backend may share policy attributes, but must use a
+// versioned predicate that matches the data it actually records.
 
 import type { Divergence } from '../model/observed.js';
 import type { ObservedSession } from './session.js';

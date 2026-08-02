@@ -3,6 +3,7 @@
  */
 import { describe, expect, test } from 'vitest';
 import {
+  opencodeEntryToManifest,
   parseManifest,
   type StackManifest,
   serializeManifest,
@@ -53,6 +54,22 @@ describe('round-trip: serializeManifest → parseManifest', () => {
     const parsed = parseManifest(serializeManifest(m));
     expect(parsed.skills?.['my-skill']).toEqual({ url: 'https://example.com/skill' });
     expect(parsed.workflows?.['my-wf']).toEqual({ command: ['python', 'wf.py'] });
+  });
+
+  test('environment references round-trip without secret values', () => {
+    const m: StackManifest = {
+      mcp: {
+        github: {
+          command: ['npx', 'github-mcp'],
+          envFrom: { GITHUB_TOKEN: 'AGORA_GITHUB_TOKEN' }
+        }
+      }
+    };
+
+    const serialized = serializeManifest(m);
+    expect(serialized).toContain('[mcp.github.env_from]');
+    expect(serialized).toContain('GITHUB_TOKEN = "AGORA_GITHUB_TOKEN"');
+    expect(parseManifest(serialized)).toEqual(m);
   });
 
   test('empty sections are omitted from output', () => {
@@ -244,19 +261,22 @@ describe('serverToEntry', () => {
     expect(entry.command).toBeUndefined();
   });
 
-  test('includes env when non-empty', () => {
+  test('turns configured env values into portable references', () => {
     const entry = serverToEntry(makeServer({ env: { FOO: 'bar' } }));
-    expect(entry.env).toEqual({ FOO: 'bar' });
+    expect(entry.env).toBeUndefined();
+    expect(entry.envFrom).toEqual({ FOO: 'FOO' });
   });
 
   test('omits env when empty', () => {
     const entry = serverToEntry(makeServer({ env: {} }));
     expect(entry.env).toBeUndefined();
+    expect(entry.envFrom).toBeUndefined();
   });
 
   test('omits env when absent', () => {
     const entry = serverToEntry(makeServer({ env: undefined }));
     expect(entry.env).toBeUndefined();
+    expect(entry.envFrom).toBeUndefined();
   });
 
   test('sets enabled:false when server is disabled', () => {
@@ -267,5 +287,19 @@ describe('serverToEntry', () => {
   test('omits enabled when server is enabled', () => {
     const entry = serverToEntry(makeServer({ enabled: true }));
     expect(entry.enabled).toBeUndefined();
+  });
+});
+
+describe('opencodeEntryToManifest', () => {
+  test('turns environment values into references without copying them', () => {
+    const entry = opencodeEntryToManifest({
+      type: 'local',
+      command: ['node', 'server.js'],
+      environment: { API_TOKEN: 'must-not-enter-manifest' }
+    });
+
+    expect(entry.env).toBeUndefined();
+    expect(entry.envFrom).toEqual({ API_TOKEN: 'API_TOKEN' });
+    expect(JSON.stringify(entry)).not.toContain('must-not-enter-manifest');
   });
 });

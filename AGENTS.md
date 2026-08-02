@@ -4,8 +4,10 @@
 Skills come from, observes what they actually do, enforces user-defined policy over both, and
 manages them across every host (OpenCode, Claude Code, Cursor, Windsurf). See
 [`README.md`](./README.md) for the pitch, [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md) for the
-locked specification, and [`docs/NEXT.md`](./docs/NEXT.md) for the
-phase-by-phase build plan — read all three before making structural changes.
+locked specification, [`docs/STATUS.md`](./docs/STATUS.md) for test-backed current truth,
+[`docs/NEXT.md`](./docs/NEXT.md) for the ordered backlog, and
+[`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) for multi-session handoffs — read them before
+making structural changes.
 
 ## The four planes
 
@@ -16,25 +18,30 @@ phase-by-phase build plan — read all three before making structural changes.
   the signing certificate's identity bound to the claimed repository), schema/description hashing
   with rug-pull drift detection, and description-poisoning heuristics.
 - **Observe** (`src/observe/`) — `agora run -- <cmd>` supervises an MCP server during real use and
-  records what it did. Replaced the brief's Docker sandbox; same evidence model.
+  records MCP tool names/counts and sampled network peers. It does not claim complete behavior
+  coverage. Replaced the brief's Docker sandbox; a stronger backend remains possible.
 - **Gate** (`src/policy/` + `src/revocation/` + `src/osv/`) — a real Cedar engine evaluated over
   that evidence, plus a revocation feed generated from OSV.dev daily with no human curation. The
   feed ships bundled in the package and a fetched copy is merged *monotonically* — it may add
   revocations, never remove one — which is why it needs no signing key. This is what Agora *is*; it gets the
   most scrutiny.
-- **Manage** (`src/stack/`) — the stack manager: `agora.toml` profile, `agora.lock` machine
-  truth, per-host adapters, `plan`/`apply`.
+- **Manage** (`src/stack/`) — the stack manager: `agora.toml` profile, per-host adapters, and
+  `plan`/`apply`. The `agora.lock` schema and verifier exist; automatic lock creation from acquire
+  is still partial and must not be described as live.
 
-Partly built: `src/serve/` — the install-intent record and `agora approve` exist; the MCP server
-hosting `search_tools` / `get_evidence` / `check_policy` / `request_install` does not. The rule it
-enforces: **an agent may ask, only a human may install.** Not built: a pre-install sandbox
-backend. See
-[`ROADMAP.md`](./ROADMAP.md), which is the authority on what is live.
+Partly built: `src/serve/` — the install-intent record and `agora approve` exist; the policy-filtered
+MCP tools do not. The intended rule is **an agent may ask, only a human may install**. The current
+`agora mcp` acquire tool can still reach a write after model-supplied confirmation, so this boundary
+is transitional, not enforced. See [`docs/STATUS.md`](./docs/STATUS.md).
 
 ## Non-negotiables
 
 - **Local-first.** Every core feature works offline against an on-disk cache. Agora has no hosted
   backend — don't add one, and don't make a feature depend on one being reachable.
+- **Preserve the product surface.** Improve and consolidate the shell, TUI, `today`, inference,
+  federation sources, host adapters, plugins, MCP integration, and trust planes; do not delete them
+  merely to shrink the codebase. Only already-obsolete legacy surfaces may be retired, using the
+  explicit retired-command contract below.
 - **Honest output.** No fabricated data, no invented counts. If a source is unreachable, say so.
   "Passed the gate" means *no known red flags*, not "safe" — never blur that line. This is
   enforced, not aspirational: the bundled `workflow` catalog items were deleted precisely because
@@ -51,7 +58,8 @@ backend. See
   `test/cli/no-dangling-commands.test.ts` and `test/cli/retired-commands.test.ts` enforce this.
 - **Surgical writes.** Config-writing code (stack adapters, `agora.toml`) must preserve every
   unrelated key and write atomically (see `src/atomic-write.ts`). Never credential-stuff
-  `agora.toml` — secrets belong in settings/state, not the portable manifest.
+  `agora.toml` — generated manifests use `env_from` references; secrets belong in process-local
+  settings/state or a secret manager, not the portable manifest.
 - **Thin plugins.** The OpenCode/Claude Code plugin surfaces tools and hooks; it never owns a
   write that bypasses the gate.
 - **Graceful terminal degradation.** Colour, gradients, and the banner degrade cleanly under
@@ -68,7 +76,7 @@ bun run build       # tsc + copy catalog + chmod +x dist/cli.js
 bun src/cli.ts <cmd> # run from source, no build needed
 ```
 
-Run `bun run test && bun run typecheck && bun run build` clean before any PR.
+Run `bun run typecheck && bun run lint && bun run build && bun run test` clean before any PR.
 
 ## Plugin tool design (`src/plugin/`)
 

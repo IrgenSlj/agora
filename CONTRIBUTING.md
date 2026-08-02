@@ -5,7 +5,8 @@ collects evidence, gates installs through policy, and manages MCP servers and Ag
 OpenCode, Claude Code, Cursor, and Windsurf. There is no hosted backend dependency in the core.
 
 Before structural changes, read [`README.md`](./README.md), [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md),
-and [`docs/NEXT.md`](./docs/NEXT.md).
+[`docs/STATUS.md`](./docs/STATUS.md), [`docs/NEXT.md`](./docs/NEXT.md), and the latest handoff in
+[`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md).
 
 ## Quick Start
 
@@ -20,14 +21,13 @@ bun run build       # tsc + catalog copy + executable dist/cli.js
 bun src/cli.ts <cmd>
 ```
 
-Run `bun run test && bun run typecheck && bun run build` before opening a PR. The release gate also
-requires `bun run lint`.
+Run `bun run typecheck && bun run lint && bun run build && bun run test` before opening a PR.
 
 ## Workflow
 
-External contributions should use focused branches and PRs. The owner execution plan currently lands
-coherent chunks directly on `main`; the ordering in `docs/NEXT.md` still decides when the
-project is ready to move forward.
+External contributions should use focused branches and PRs. Continue the first unblocked item in
+`docs/NEXT.md` unless the issue or maintainer explicitly reprioritizes it, and update the handoff when
+a change spans sessions.
 
 For every behavior change:
 
@@ -36,10 +36,12 @@ For every behavior change:
 3. Preserve `--json` and stable exit codes on new commands.
 4. Use plan/apply or dry-run separation for writes.
 5. Keep terminal output honest: unreachable sources and unknown evidence must be reported as such.
+6. Preserve working non-legacy product surfaces; consolidation should move them onto shared
+   services, not silently delete functionality.
 
 ## Code Style
 
-- TypeScript strict mode, ESM, Node >= 20.
+- TypeScript strict mode, ESM, Node >= 22.22.2.
 - Tests use Vitest, lint/format use Biome.
 - Prefer repo-local helper APIs and existing module patterns.
 - Do not add hosted-backend dependencies to core flows.
@@ -55,12 +57,12 @@ schemas/             generated JSON Schema artifacts
 src/store/           SQLite store + CAS blob cache
 src/federation/      federated catalog sources; target is adapters + sync by purl
 src/stack/           stack manager: agora.toml, plan/apply, host adapters, doctor
-src/scan.ts          live heuristic gate, being replaced by evidence + Cedar
-src/acquire.ts       resolve -> gate -> write acquisition path
+src/scan.ts          heuristic evidence producer used alongside Cedar
+src/acquire.ts       resolve -> gate -> write path; lock/store transaction still in progress
 src/cli/             CLI, shell, TUI, command metadata
 src/plugin/          thin OpenCode / Claude Code plugin tools and hooks
 src/news/            read-only news feed, frozen except maintenance
-src/marketplace.ts   legacy catalog/install-planner barrel, superseded by S1/S2
+src/marketplace.ts   compatibility catalog/install-planner barrel; converge without dropping features
 test/                Vitest suite
 ```
 
@@ -78,6 +80,7 @@ If the command writes anything, preserve unrelated keys and write atomically.
 
 ## Help Wanted
 
-The current scheduled work is in [`docs/NEXT.md`](./docs/NEXT.md):
-finish the lockfile/store contract, complete schema snapshots, migrate federation to purl-first
-adapters, and continue retiring legacy account/catalog-era surfaces.
+The current scheduled work is in [`docs/NEXT.md`](./docs/NEXT.md). Security invariants and a single
+mutation gate come first, followed by the lock/evidence transaction, agent authorization, data-model
+convergence, and release hardening. See [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) for the latest
+session handoff.

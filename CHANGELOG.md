@@ -7,6 +7,24 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 *Accumulating since 0.7.0. No version number yet: the release comes when several fronts are ready,
 not when one is.*
 
+### Security — portable secrets and honest observation
+
+- `agora freeze` no longer copies environment values from host MCP configuration into the
+  commit-friendly `agora.toml`. It emits `env_from` references; plan/apply resolve them from the
+  local environment and fail before writing if a required value is absent. Existing literal
+  environment entries remain readable for compatibility.
+- Runtime connection sampling now intersects `lsof`'s PID and network selectors with `-a`; the old
+  invocation could include sockets from unrelated processes. Missing or failed sampling is now
+  recorded as `unavailable`, never as a successful empty sample.
+
+### Changed — durable development direction
+
+- Added `docs/STATUS.md` as the authority on current capabilities and `docs/DEVELOPMENT.md` for
+  multi-session handoffs. Reworked the roadmap/backlog around security, one mandatory mutation
+  gate, atomic evidence/lock production, and human/agent authorization.
+- Working non-legacy features are preserved and improved in place. Consolidation is no longer
+  described as deleting the shell, TUI, news/today, inference, plugins, sources, or host adapters.
+
 0.7.0 shipped a revocation plane that was complete, tested, and **inert**: no key was pinned, so
 every feed read `unverifiable` and nothing was ever blocked. This release makes it work, and does
 it by removing the requirement rather than satisfying it.

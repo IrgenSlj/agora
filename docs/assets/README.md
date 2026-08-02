@@ -6,6 +6,10 @@ Generated, not hand-drawn. Regenerate with:
 bun scripts/generate-brand-assets.ts
 ```
 
+Brand and demo assets remain part of the preserved product surface. Changes to trust semantics must
+update demo scripts/captions rather than deleting the assets; generated output should continue to
+come from repository sources so it can be reproduced in later sessions.
+
 The wordmark is built from `AGORA_WORDMARK_RELIEF` and `BANNER_GRADIENT` in
 [`src/ui.ts`](../../src/ui.ts) — the same constants the CLI renders at runtime — so the README and
 the terminal can never drift apart. Editing the letterforms means editing `src/ui.ts` and re-running
@@ -60,5 +64,6 @@ Requires [vhs](https://github.com/charmbracelet/vhs). The tape records four beat
 configs. Beats 2 and 3 hit the network on purpose (live registry search, and the scan's GitHub/npm
 checks), so the exact rows differ between takes.
 
-Still to come: the five architecture diagrams specified in
-a diagram brief (deleted 2026-08-01 as a commission never placed); they would land here as `diagram-*.svg`.
+Architecture diagrams may be added here when they can distinguish live, partial, and planned paths
+without overstating capability. Their source or generation instructions must be committed alongside
+the rendered assets.

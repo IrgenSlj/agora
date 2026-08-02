@@ -30,17 +30,46 @@ export type SyncDriftBlock = CapabilityDriftBlock;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function manifestEntryToDesired(name: string, entry: ManifestEntry): DesiredServer {
+export class MissingManifestEnvironmentError extends Error {
+  readonly missing: string[];
+
+  constructor(missing: string[]) {
+    const unique = [...new Set(missing)].sort();
+    super(
+      `Required environment ${unique.length === 1 ? 'variable is' : 'variables are'} not set: ${unique.join(', ')}. ` +
+        'Set them in the local environment or secret manager before running plan/apply.'
+    );
+    this.name = 'MissingManifestEnvironmentError';
+    this.missing = unique;
+  }
+}
+
+function manifestEntryToDesired(
+  name: string,
+  entry: ManifestEntry,
+  processEnv: Record<string, string | undefined>
+): DesiredServer {
   const ds: DesiredServer = { name };
   if (entry.command) ds.command = entry.command;
   if (entry.url) ds.url = entry.url;
-  if (entry.env && Object.keys(entry.env).length > 0) ds.env = entry.env;
+  const resolvedEnv: Record<string, string> = { ...(entry.env ?? {}) };
+  const missing: string[] = [];
+  for (const [targetKey, sourceKey] of Object.entries(entry.envFrom ?? {})) {
+    const value = processEnv[sourceKey];
+    if (value === undefined) missing.push(sourceKey);
+    else resolvedEnv[targetKey] = value;
+  }
+  if (missing.length > 0) throw new MissingManifestEnvironmentError(missing);
+  if (Object.keys(resolvedEnv).length > 0) ds.env = resolvedEnv;
   if (entry.enabled === false) ds.enabled = false;
   return ds;
 }
 
-function manifestToDesired(manifest: StackManifest): DesiredServer[] {
-  return Object.entries(manifest.mcp).map(([name, entry]) => manifestEntryToDesired(name, entry));
+function manifestToDesired(manifest: StackManifest, opts: StackEnv): DesiredServer[] {
+  const processEnv = opts.env ?? process.env;
+  return Object.entries(manifest.mcp).map(([name, entry]) =>
+    manifestEntryToDesired(name, entry, processEnv)
+  );
 }
 
 export function findSyncDriftBlocks(manifest: StackManifest, dataDir: string): SyncDriftBlock[] {
@@ -215,7 +244,7 @@ export function planSync(
   scope: 'project' | 'user',
   prune: boolean
 ): ToolSyncPlan[] {
-  const desired = manifestToDesired(manifest);
+  const desired = manifestToDesired(manifest, opts);
   const plans: ToolSyncPlan[] = [];
 
   for (const toolId of targets) {
@@ -250,7 +279,7 @@ export function applySync(
   scope: 'project' | 'user',
   prune: boolean
 ): ToolSyncPlan[] {
-  const desired = manifestToDesired(manifest);
+  const desired = manifestToDesired(manifest, opts);
   const results: ToolSyncPlan[] = [];
 
   for (const toolId of targets) {

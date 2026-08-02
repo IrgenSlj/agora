@@ -22,22 +22,27 @@ Agora is local-first and has no hosted auth backend in the v2 direction. Core st
 
 - `~/.agora/agora.db` — SQLite evidence/catalog/store state (S1).
 - `~/.agora/cas/<sha256>` — content-addressed artifact blobs (S1).
-- `agora.toml` — portable human intent; never store credentials here.
-- `agora.lock` — committed machine truth: exact artifacts, hashes, policy verdicts.
+- `agora.toml` — portable human intent; generated manifests use `env_from` references and never copy
+  host environment values.
+- `agora.lock` — intended committed machine truth. Verification exists; automatic creation/update
+  from acquisition is still partial and tracked in `docs/NEXT.md`.
 - Legacy `~/.config/agora/*` state files may still exist while S1/S2 retire pre-v2 surfaces.
 
 Config and state writes must be surgical and atomic via `src/atomic-write.ts`. Secrets belong in
-local settings/state or host-native secret stores, never in `agora.toml`.
+the local process environment, settings/state, or host-native secret stores. `env_from` resolves
+names locally during plan/apply and fails before writing when a value is missing. Manually authored
+literal environment values remain backward-readable but must not contain credentials.
 
 ## Gate Semantics
 
-Today's live gate is heuristic (`src/scan.ts`, `src/acquire.ts`): description-injection checks,
-permission/declaration checks, registry status, npm reachability, and tool-schema drift when a probe
-baseline exists. It is not a sandbox and does not formally verify code.
+Today's gate combines heuristics, Sigstore evidence, revocation checks, and Cedar on the primary
+acquire path. Not every mutation command uses the full combination yet; central gate unification is
+a current security task, so local `apply`/`sync`/`update` must not be described as fully governed.
+It is not a sandbox and does not formally verify code.
 
 **"Passed the gate" means "no known red flags," not "safe."**
 
-The v2 build is replacing this with evidence and policy:
+The v2 build is integrating these into one mandatory authorization service:
 
 - S1: zod schemas, JSON Schema export, purl handling, SQLite/CAS, `agora lock verify`.
 - S3/S6: provenance, schema/description hashing, runtime observation (which replaced the
@@ -47,12 +52,20 @@ The v2 build is replacing this with evidence and policy:
 ## Execution Safety
 
 - Every config-writing command must support preview/plan separation or an explicit dry run.
-- Agents never get an ungated write path through plugins or MCP tools.
+- The intended boundary is request-only agent access and human-authorized writes. Current MCP/plugin
+  confirmation paths are transitional and must be treated as security-sensitive until AGENT-001/002
+  in `docs/NEXT.md` are complete.
 - Network failures must degrade honestly; do not fabricate source counts or trust results.
+- Runtime observation records MCP tool names/counts and sampled network peers only. Sampling is
+  direct-process, polling-based, and fallible; unavailable or unsampled is never “contacted nothing.”
 - Exit codes follow the v2 contract: `0` ok, `1` policy forbid / drift / revocation hit, `2`
   usage, `3` network, `4` sandbox unavailable.
 
-## Known Transitional Risk
+## Known Transitional Risks
 
 The v1 catalog surface (19 commands including auth, community, and account features) was removed in
 v0.7.0. Legacy `~/.config/agora/*` state files may still exist and can be safely deleted.
+
+The remaining high-priority risks are maintained in [`docs/STATUS.md`](./docs/STATUS.md): incomplete
+gate coverage, agent-callable confirmation, a partial acquire/lock transaction, predicate/schema
+mismatch, and non-round-trip `agora.toml` rewriting.

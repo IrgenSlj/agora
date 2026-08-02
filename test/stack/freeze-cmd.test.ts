@@ -84,6 +84,35 @@ describe('agora freeze', () => {
     }
   });
 
+  test('never copies host environment values into TOML or JSON output', async () => {
+    const cwd = makeTmp('agora-freeze-secret-');
+    const home = makeTmp('agora-freeze-secret-home-');
+    try {
+      writeOpencodeConfig(cwd, {
+        github: {
+          command: ['npx', 'github-mcp'],
+          type: 'local',
+          environment: { GITHUB_TOKEN: 'secret-value-must-not-leak' }
+        }
+      });
+
+      const preview = createIo(cwd, home);
+      expect(await runCli(['freeze'], preview.io)).toBe(0);
+      expect(preview.out()).not.toContain('secret-value-must-not-leak');
+      expect(preview.out()).toContain('[mcp.github.env_from]');
+      expect(preview.out()).toContain('GITHUB_TOKEN = "GITHUB_TOKEN"');
+      expect(preview.err()).toContain('Environment values were not copied');
+
+      const json = createIo(cwd, home);
+      expect(await runCli(['freeze', '--json'], json.io)).toBe(0);
+      expect(json.out()).not.toContain('secret-value-must-not-leak');
+      expect(JSON.parse(json.out()).mcp.github.envFrom).toEqual({ GITHUB_TOKEN: 'GITHUB_TOKEN' });
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+      rmSync(home, { recursive: true, force: true });
+    }
+  });
+
   test('--tool filters to a single tool', async () => {
     const cwd = makeTmp('agora-freeze-');
     const home = makeTmp('agora-freeze-home-');

@@ -20,6 +20,7 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import type { ConnectionSample } from './connections.js';
 import { calledToolName, type Frame, toolNamesFromResult } from './protocol.js';
 
 export interface ObservedSession {
@@ -39,6 +40,10 @@ export interface ObservedSession {
   hostsContacted: string[];
   /** True when sampling ran; false means "not observed", not "none". */
   networkSampled: boolean;
+  /** Why networkSampled is false, without collapsing unavailable into clean. */
+  networkSampling: 'not-requested' | 'sampled' | 'unavailable';
+  /** Stable, non-sensitive reason when the sampler was unavailable. */
+  networkSamplingError?: string;
 }
 
 export function sessionsPath(dataDir: string): string {
@@ -56,7 +61,7 @@ export interface RecorderOptions {
   dataDir: string;
   key: string;
   /** Samples network connections for a pid; omitted → no network observation. */
-  sampleConnections?: (pid: number) => Promise<string[]>;
+  sampleConnections?: (pid: number) => Promise<ConnectionSample>;
   now?: () => Date;
 }
 
@@ -76,7 +81,8 @@ export function createSessionRecorder(options: RecorderOptions): SessionRecorder
     toolCalls: {},
     toolsAdvertised: [],
     hostsContacted: [],
-    networkSampled: false
+    networkSampled: false,
+    networkSampling: 'not-requested'
   };
 
   let pid: number | undefined;
@@ -94,12 +100,24 @@ export function createSessionRecorder(options: RecorderOptions): SessionRecorder
           if (pid === undefined) return;
           options
             .sampleConnections?.(pid)
-            .then((found) => {
+            .then((result) => {
+              if (result.status === 'unavailable') {
+                if (!session.networkSampled) {
+                  session.networkSampling = 'unavailable';
+                  session.networkSamplingError = result.reason;
+                }
+                return;
+              }
               session.networkSampled = true;
-              for (const host of found) hosts.add(host);
+              session.networkSampling = 'sampled';
+              delete session.networkSamplingError;
+              for (const host of result.hosts) hosts.add(host);
             })
             .catch(() => {
-              /* sampling is best-effort */
+              if (!session.networkSampled) {
+                session.networkSampling = 'unavailable';
+                session.networkSamplingError = 'connection sampler failed';
+              }
             });
         };
         sample();

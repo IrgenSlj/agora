@@ -1,6 +1,6 @@
 // Best-effort network observation for a supervised process.
 //
-// Uses `lsof -p <pid> -i -n -P`, which needs no elevated privileges for a
+// Uses `lsof -a -p <pid> -i -n -P`, which needs no elevated privileges for a
 // process you own. That buys real evidence for free, but the honesty caveat is
 // large enough to be part of the API rather than a footnote:
 //
@@ -19,6 +19,16 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
 const execFileAsync = promisify(execFile);
+
+export type ConnectionSample =
+  | { status: 'sampled'; hosts: string[] }
+  | { status: 'unavailable'; reason: string };
+
+type LsofRunner = (
+  file: string,
+  args: string[],
+  options: { timeout: number; maxBuffer: number }
+) => Promise<{ stdout: string | Buffer }>;
 
 /** Hosts that are never interesting — loopback chatter, not egress. */
 const IGNORED_HOSTS = new Set(['localhost', '127.0.0.1', '::1', '*']);
@@ -57,18 +67,44 @@ export function parseLsofHosts(output: string): string[] {
 /**
  * Samples the peers a pid currently holds connections to.
  *
- * Resolves to `[]` when lsof is missing or errors — the caller distinguishes
- * "sampling never ran" from "sampled and saw nothing" via the session's
- * `networkSampled` flag, because those are very different claims.
+ * Returns an explicit unavailable state when lsof is missing or errors. An
+ * empty `hosts` array is only returned after lsof ran successfully.
  */
-export async function sampleConnections(pid: number): Promise<string[]> {
+export async function sampleConnections(
+  pid: number,
+  runLsof: LsofRunner = execFileAsync as LsofRunner
+): Promise<ConnectionSample> {
   try {
-    const { stdout } = await execFileAsync('lsof', ['-p', String(pid), '-i', '-n', '-P'], {
+    // lsof combines selection options with OR unless `-a` is present. Without
+    // it, `-p <pid> -i` can include sockets owned by unrelated processes.
+    const { stdout } = await runLsof('lsof', ['-a', '-p', String(pid), '-i', '-n', '-P'], {
       timeout: 4000,
       maxBuffer: 2_000_000
     });
-    return parseLsofHosts(stdout);
-  } catch {
-    return [];
+    return { status: 'sampled', hosts: parseLsofHosts(String(stdout)) };
+  } catch (error) {
+    const code =
+      typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code?: unknown }).code)
+        : undefined;
+    const stdout =
+      typeof error === 'object' && error !== null && 'stdout' in error
+        ? String((error as { stdout?: unknown }).stdout ?? '')
+        : '';
+    const stderr =
+      typeof error === 'object' && error !== null && 'stderr' in error
+        ? String((error as { stderr?: unknown }).stderr ?? '')
+        : '';
+
+    // lsof exits 1 when its selectors matched no open files. The command still
+    // ran successfully as an observation mechanism; an empty, error-free result
+    // means no peers were visible at this sample instant.
+    if (code === '1' && stderr.trim() === '') {
+      return { status: 'sampled', hosts: parseLsofHosts(stdout) };
+    }
+    return {
+      status: 'unavailable',
+      reason: code === 'ENOENT' ? 'lsof is not installed' : 'lsof sampling failed'
+    };
   }
 }

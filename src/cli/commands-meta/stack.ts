@@ -4,10 +4,10 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'observe',
     group: 'Stack',
-    summary: 'See what your servers actually did, and switch observation on across hosts',
+    summary: 'See recorded MCP activity and sampled peers, and switch observation on across hosts',
     usage: 'agora observe [status|enable|disable] [--dry-run] [--json]',
     details:
-      'Observation records real behaviour in the real environment, rather than a one-shot ' +
+      'Observation records bounded evidence in the real environment, rather than a one-shot ' +
       'sandbox run a server could detect. status (default) reports recorded sessions: tool ' +
       'names and counts, advertised tools, and sampled network peers. enable rewrites every ' +
       'host config so servers launch through `agora run --`, which is what makes observation ' +
@@ -15,8 +15,9 @@ export const COMMANDS: CommandMeta[] = [
       'exactly as it was. Both plan first — run with --dry-run to see the diff. Remote servers ' +
       'and Agora itself are skipped with a reason. NEVER recorded: tool arguments, results, ' +
       'prompt text, or anything derived from them — nothing leaves the machine. Network ' +
-      'sampling polls, so a connection opened and closed between polls is not seen; an empty ' +
-      'result means "nothing observed", never "nothing happened".',
+      'sampling polls the direct process, so short-lived or descendant-only connections may not ' +
+      'be seen; unavailable sampling stays unknown, and an empty successful sample means only ' +
+      '"no peers seen while sampling".',
     flags: [
       { flag: '--dry-run', description: 'Show the command diff without writing' },
       { flag: '--json', description: 'Output as JSON' }
@@ -31,7 +32,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'run',
     group: 'Stack',
-    summary: 'Run an MCP server through Agora so its behaviour can be observed',
+    summary: 'Run an MCP server through Agora so bounded runtime evidence can be recorded',
     usage: 'agora run -- <command…>',
     details:
       'The supervising shim. Spawns the real server, forwards stdio byte-for-byte in both ' +
@@ -62,12 +63,13 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'approve',
     group: 'Stack',
-    summary: 'Review and act on install requests an agent has made',
+    summary: 'Review install intents and re-run the gate before acting',
     usage: 'agora approve [id] [--deny] [--tool <host>] [--dry-run] [--json]',
     details:
-      'An agent can request an install through Agora; it cannot perform one. This ' +
-      'is where a request becomes an action, and it runs in your terminal on purpose — a channel ' +
-      'no injected text in a web page or tool result can reach. With no id, lists what is ' +
+      'An agent-facing request records intent without changing host configuration. This command ' +
+      'is the human-oriented review path, but a terminal alone is not a strong authorization ' +
+      'boundary when an agent also has shell access; use it only after personally reviewing the ' +
+      'request. With no id, lists what is ' +
       'pending. With an id, shows the request and then runs the full acquire gate: scan, policy, ' +
       'revocation. The evidence the agent saw is displayed for context and never used as the ' +
       'decision, because a request may be hours old and an allow computed against stale evidence ' +
@@ -300,6 +302,8 @@ export const COMMANDS: CommandMeta[] = [
       'stack manifest. Without --write the serialized TOML is printed to stdout (safe preview). ' +
       'With --write the manifest is written to agora.toml in the current directory (or --out). ' +
       'Refuses to overwrite an existing file unless --force is passed. ' +
+      'Environment values are never copied; named references are emitted and resolved from the ' +
+      'local environment during plan/apply. ' +
       'When a server name appears in multiple tools the first occurrence wins and a warning is emitted.',
     flags: [
       {

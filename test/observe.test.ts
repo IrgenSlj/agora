@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import { parseLsofHosts } from '../src/observe/connections';
+import { parseLsofHosts, sampleConnections } from '../src/observe/connections';
 import { calledToolName, createFrameTee, toolNamesFromResult } from '../src/observe/protocol';
 import { runSupervised } from '../src/observe/run';
 import { createSessionRecorder, readSessions } from '../src/observe/session';
@@ -243,6 +243,30 @@ describe('session recording', () => {
     expect(session.hostsContacted).toEqual([]);
     // ...and the flag is what distinguishes that from "sampled, saw nothing".
     expect(session.networkSampled).toBe(false);
+    expect(session.networkSampling).toBe('not-requested');
+
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test('an unavailable sampler is recorded as unavailable, never sampled-empty', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-observe-unavailable-'));
+    const recorder = createSessionRecorder({
+      dataDir: dir,
+      key: 'k',
+      sampleConnections: async () => ({
+        status: 'unavailable',
+        reason: 'lsof is not installed'
+      })
+    });
+    recorder.started(['x'], 1);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await recorder.finished(0);
+
+    const session = readSessions(dir)[0]!;
+    expect(session.hostsContacted).toEqual([]);
+    expect(session.networkSampled).toBe(false);
+    expect(session.networkSampling).toBe('unavailable');
+    expect(session.networkSamplingError).toBe('lsof is not installed');
 
     rmSync(dir, { recursive: true, force: true });
   });
@@ -266,6 +290,34 @@ describe('session recording', () => {
 });
 
 describe('connection sampling', () => {
+  test('intersects pid and network filters so unrelated process sockets are excluded', async () => {
+    let invocation: { file: string; args: string[] } | undefined;
+    const result = await sampleConnections(4242, async (file, args) => {
+      invocation = { file, args };
+      return { stdout: '' };
+    });
+
+    expect(invocation).toEqual({
+      file: 'lsof',
+      args: ['-a', '-p', '4242', '-i', '-n', '-P']
+    });
+    expect(result).toEqual({ status: 'sampled', hosts: [] });
+  });
+
+  test('reports lsof failures as unavailable', async () => {
+    const result = await sampleConnections(4242, async () => {
+      throw Object.assign(new Error('not found'), { code: 'ENOENT' });
+    });
+    expect(result).toEqual({ status: 'unavailable', reason: 'lsof is not installed' });
+  });
+
+  test('treats lsof exit 1 with no stderr as a successful empty sample', async () => {
+    const result = await sampleConnections(4242, async () => {
+      throw Object.assign(new Error('no matches'), { code: 1, stdout: '', stderr: '' });
+    });
+    expect(result).toEqual({ status: 'sampled', hosts: [] });
+  });
+
   test('parses lsof peers, ignoring loopback', () => {
     const output = [
       'COMMAND  PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME',

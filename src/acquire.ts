@@ -231,7 +231,9 @@ function manifestEntryFor(
   const entry: StackManifest['mcp'][string] = {};
   if (desired.url) entry.url = desired.url;
   if (desired.command) entry.command = desired.command;
-  if (desired.env && Object.keys(desired.env).length > 0) entry.env = desired.env;
+  if (desired.env && Object.keys(desired.env).length > 0) {
+    entry.envFrom = Object.fromEntries(Object.keys(desired.env).map((key) => [key, key]));
+  }
   if (desired.enabled === false) entry.enabled = false;
   if (descriptionDigest) entry.descriptionDigest = descriptionDigest;
   return entry;

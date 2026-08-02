@@ -244,6 +244,70 @@ describe('writeServers: add / update / remove', () => {
   });
 });
 
+describe('portable environment references', () => {
+  test('apply resolves a referenced value from the local environment', () => {
+    const cwd = makeTmp('agora-sync-env-ref-');
+    try {
+      const filePath = join(cwd, 'opencode.json');
+      writeFileSync(filePath, JSON.stringify({ mcp: {} }));
+      const manifest: StackManifest = {
+        mcp: {
+          github: {
+            command: ['npx', 'github-mcp'],
+            envFrom: { GITHUB_TOKEN: 'AGORA_GITHUB_TOKEN' }
+          }
+        }
+      };
+
+      applySync(
+        manifest,
+        {
+          cwd,
+          env: { OPENCODE_CONFIG: filePath, AGORA_GITHUB_TOKEN: 'resolved-locally' }
+        },
+        ['opencode'],
+        'project',
+        false
+      );
+
+      const result = JSON.parse(readFileSync(filePath, 'utf8'));
+      expect(result.mcp.github.environment).toEqual({ GITHUB_TOKEN: 'resolved-locally' });
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+
+  test('missing referenced values fail before any config write', () => {
+    const cwd = makeTmp('agora-sync-env-missing-');
+    try {
+      const filePath = join(cwd, 'opencode.json');
+      const original = JSON.stringify({ mcp: {} });
+      writeFileSync(filePath, original);
+      const manifest: StackManifest = {
+        mcp: {
+          github: {
+            command: ['npx', 'github-mcp'],
+            envFrom: { GITHUB_TOKEN: 'AGORA_GITHUB_TOKEN' }
+          }
+        }
+      };
+
+      expect(() =>
+        applySync(
+          manifest,
+          { cwd, env: { OPENCODE_CONFIG: filePath } },
+          ['opencode'],
+          'project',
+          false
+        )
+      ).toThrow(/AGORA_GITHUB_TOKEN/);
+      expect(readFileSync(filePath, 'utf8')).toBe(original);
+    } finally {
+      rmSync(cwd, { recursive: true, force: true });
+    }
+  });
+});
+
 // ── Invalid JSON → throws, file left intact ───────────────────────────────────
 
 describe('invalid existing JSON → throws, file left intact', () => {

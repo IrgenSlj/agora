@@ -41,6 +41,10 @@ response to any behavior they deem inappropriate, threatening, offensive, or har
 This Code of Conduct applies within all community spaces, and also applies when
 an individual is officially representing the community in public spaces.
 
+Technical collaboration also follows [`CONTRIBUTING.md`](./CONTRIBUTING.md) and the durable
+multi-session workflow in [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md). Security disclosures use
+the private process in [`SECURITY.md`](./SECURITY.md), not a public discussion thread.
+
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be

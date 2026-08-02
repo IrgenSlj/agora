@@ -9,6 +9,10 @@ bun run test -- --watch              # watch mode
 Tests are written with Vitest and run through Bun. Keep the default suite hermetic: no live network,
 no real host config writes, and no real `~/.agora` state.
 
+Current cross-session priorities are in [`../docs/NEXT.md`](../docs/NEXT.md). Security work should
+prefer invariant/contract tests that enumerate every mutation or evidence state, so adding a new
+command cannot silently create a bypass.
+
 ## Layout
 
 ```
@@ -18,7 +22,7 @@ test/
 ├── marketplace.test.ts       # search / sort / install plan / permissions / memo
 ├── data.test.ts              # bundled catalog invariants (every npmPackage resolves)
 ├── init.test.ts              # project scanner + init plan generation
-├── state.test.ts             # saved-item + auth state, atomic writes
+├── state.test.ts             # local state and atomic writes
 ├── shell.test.ts             # interactive shell input classification + dispatch
 ├── prompter.test.ts          # raw-mode line editor + completion + history
 ├── completions.test.ts       # slash / path / marketplace id completion providers
@@ -46,6 +50,8 @@ test/
 │   ├── cli-search.test.ts    # `agora search` federation behavior
 │   └── sync.test.ts          # purl-keyed SQLite/CAS source sync
 ├── stack/                    # host adapters, sync/plan/apply, doctor, MCP probing
+├── gate/                     # acquisition and policy security invariants
+├── cli/                      # trust view, retired-command, and CLI contract tests
 └── hubs/
     ├── enrichment.test.ts    # GitHub + HF README enrichment (mocked opencode)
     ├── github.test.ts        # GitHub Search REST connector
@@ -59,6 +65,11 @@ test/
 - **Fake IO streams** (collected `stdout` / `stderr` buffers). See `createIo` in `cli.test.ts` for the harness.
 - **Inject `fetcher: FetchLike`** for anything HTTP-touching: federation adapters, `today`, scan/acquire checks, and hosted API shims. Tests should never hit a real endpoint.
 - **Network-gated tests** (`AGORA_NETWORK_TESTS=1`) verify the curated catalog against the live npm registry — kept out of the default suite.
+- **Unknown-state assertions.** For evidence, observation, revocation, and network failures, assert
+  both the value and its availability/status marker. An empty collection alone is not proof that a
+  check ran.
+- **No-write-on-deny assertions.** Snapshot target bytes before a blocked operation and assert they
+  are unchanged afterward.
 
 ## Adding tests
 

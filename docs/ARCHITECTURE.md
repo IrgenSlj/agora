@@ -1,19 +1,19 @@
 # Architecture
 
 This document captures *what Agora is* and the reasoning behind the shape of the code. For the
-locked specification, see [`../AGORA_BRIEF_v2.md`](../AGORA_BRIEF_v2.md); for the phase-by-phase
-what to build next and current status, see [`NEXT.md`](./NEXT.md) and
-[`../ROADMAP.md`](../ROADMAP.md); for open external-API questions, see
+locked specification, see [`../AGORA_BRIEF_v2.md`](../AGORA_BRIEF_v2.md); for current capability
+truth see [`STATUS.md`](./STATUS.md), for ordered work see [`NEXT.md`](./NEXT.md), and for
+multi-session handoffs see [`DEVELOPMENT.md`](./DEVELOPMENT.md). For open external-API questions, see
 [`OPEN_QUESTIONS.md`](./OPEN_QUESTIONS.md).
 
-`ROADMAP.md` is the authority on *what is live*. This document describes shape and reasoning; if
-the two ever disagree, the roadmap is right and this file is stale.
+`STATUS.md` is the authority on *what is live*. This document describes shape and reasoning; if the
+two ever disagree, the status document is right and this file is stale.
 
 ## What Agora is
 
-`agora` is **the trust plane for agentic tooling** — it verifies where MCP servers and Agent
-Skills come from, observes what they actually do, enforces user-defined policy over both, and
-manages them across every host (OpenCode, Claude Code, Cursor, Windsurf).
+`agora` is **the trust plane for agentic tooling** — it verifies where MCP servers and Agent Skills
+come from, records declared capabilities plus sampled runtime evidence, enforces user-defined policy,
+and manages them across every host (OpenCode, Claude Code, Cursor, Windsurf).
 
 It is a **customs office over multi-source registries**, never a competing catalog: it does not
 grow its own catalog, it searches upstream registries (the official MCP Registry as canonical,
@@ -65,11 +65,11 @@ Most of npm has none, and warning on all of them would drain the meaning from ev
 
 ### Observe (`src/observe/`) — live
 
-`agora run -- <command…>` makes Agora the MCP server's parent process and tees its stdio, so
-behaviour is recorded during real work in the real environment. `agora observe` reports it.
-This replaced the brief's Docker sandbox after a pre-implementation review (see
-brief S6); the evidence model in `src/model/observed.ts` is unchanged, so a
-pre-install sandbox backend can still be added later and feed the same policy attributes.
+`agora run -- <command…>` makes Agora the MCP server's parent process and tees its stdio, so MCP
+protocol activity is recorded during real work in the real environment. `agora observe` reports it.
+This replaced the brief's Docker sandbox for the current implementation; a future sandbox or OS
+backend can add stronger evidence, but it must use its own versioned predicate rather than pretending
+sampled runtime sessions satisfy the older sandbox profile.
 
 **Two invariants that must never regress:**
 
@@ -83,9 +83,10 @@ pre-install sandbox backend can still be added later and feed the same policy at
    prompts and secrets. A test pushes a real `.ssh/id_rsa` path through the recorder and asserts
    it appears nowhere on disk.
 
-Connection sampling polls `lsof`, so a connection opened and closed between polls is invisible.
-Sessions therefore carry `networkSampled`, and an empty host list renders as `network: not
-observed` — never as "contacted nothing."
+Connection sampling polls the direct process with `lsof -a -p PID -i -n -P`, so a connection opened
+and closed between polls or made only by a descendant can be invisible. Sessions carry both
+`networkSampled` and an explicit sampling state; missing/failed `lsof` is `unavailable`, never an
+empty successful observation. Trust output describes sampled peers, not complete network behavior.
 
 ### Gate — policy (`src/policy/`) and revocation (`src/revocation/`) — live
 
@@ -105,11 +106,12 @@ checks referenced attribute names against the schema itself.
 of 67 catalog packages declare permissions, so `exec: false` would have asserted something untrue
 about the other 60.
 
-`src/revocation/` is an ed25519-signed feed over JCS canonicalization with monotonic anti-rollback
-checked *after* the signature holds. `acquire` refuses critical/high matches before any write;
-`doctor` shows `REVOKED`. **No key is pinned yet, so no revocations currently apply** — deliberate
-fail-closed, and owner-gated. Absent feed reads as `unknown`, never "clean"; servers that are not
-purl-addressable are "not checkable", never counted clean.
+`src/revocation/` consumes a bundled OSV-derived feed and merges a fetched copy monotonically. The
+network copy is unsigned and may add entries but cannot remove, weaken, or outrank bundled entries.
+`acquire` refuses confirmed critical/high matches before its write; `doctor` shows `REVOKED`.
+Absent coverage reads as `unknown`, never "clean"; servers that are not purl-addressable are "not
+checkable". Origin, bundled-feed age, and independent confirmation of network-added hard blocks are
+still being hardened.
 
 `src/scan.ts` is the heuristic gate that predates the evidence plane and still runs alongside it:
 injection-pattern checks, permission-manifest diffs, live-probe tool-schema drift. **It is not a
@@ -122,8 +124,9 @@ One `ToolAdapter` per agent tool (opencode, Claude Code, Cursor, Windsurf) norma
 config into a single `ConfiguredServer` shape. `agora installed` / `doctor [--probe]` read across
 all of them; `agora.toml` is the portable, declarative profile; `plan`/`apply` (`sync` =
 `plan && apply`) reconcile it into real config files surgically — every unrelated key preserved,
-writes atomic (`src/atomic-write.ts`). `agora.lock` is machine truth (brief §5.5), with
-`agora lock verify` for CI.
+writes atomic (`src/atomic-write.ts`). Generated manifests use `env_from` references so host
+environment values are not copied. `agora.lock verify` exists, but acquisition does not yet create
+or update complete lock entries; the lock is still a partial implementation of brief §5.5.
 
 ## Supporting surfaces
 
@@ -137,9 +140,10 @@ writes atomic (`src/atomic-write.ts`). `agora.lock` is machine truth (brief §5.
   translates its own stream into the renderer's event vocabulary, which is why
   `src/cli/chat-renderer.ts` needs to know nothing about who produced a line.
 - **`agora mcp`** (`src/cli/mcp-server.ts`) — exposes the stack manager and catalog as MCP tools,
-  so any MCP-capable harness can call Agora directly. Planned: `src/serve/`, the brief §8
-  agent-facing server with policy-filtered discovery (`search_tools`, `get_evidence`,
-  `check_policy`, `request_install`).
+  so any MCP-capable harness can call Agora directly. Its confirming acquire tool is transitional:
+  model-supplied booleans are not human authorization. `src/serve/` has intent records and approval
+  scaffolding; the target surface is policy-filtered `search_tools`, `get_evidence`, `check_policy`,
+  and request-only `request_install`.
 - **Thin plugins** (`src/plugin/`) — the OpenCode/Claude Code plugin registers explicit named
   tools (`agora_search`, `agora_acquire`, `agora_config`, …) plus lifecycle hooks. The plugin
   never owns a write that bypasses the gate.
@@ -159,6 +163,8 @@ writes atomic (`src/atomic-write.ts`). `agora.lock` is machine truth (brief §5.
 - **Agent-operable.** `--json` on every command and stable exit codes (brief §9): `0` ok · `1`
   policy forbid / drift / revocation hit · `2` usage · `3` network · `4` sandbox unavailable.
 - **The plugin stays thin.** No gate-bypassing write inside an LLM tool call.
+- **Working surfaces are preserved.** Shell, TUI, `today`, inference, federation sources, adapters,
+  plugins, and MCP integrations converge on shared services rather than being deleted for size.
 - **Graceful terminal degradation** under `NO_COLOR`, `TERM=dumb`, non-TTY pipes, narrow widths.
 
 ## The algorithms (fast, offline, original)
@@ -181,7 +187,7 @@ src/store/            SQLite store + content-addressed blob cache
 src/federation/       multi-source adapters + dedupe-by-purl sync
 src/evidence/         provenance, schema hashing, drift, poisoning heuristics
 src/policy/           Cedar engine, entity model, shipped baseline
-src/revocation/       signed feed client, matching, installed-purl resolution
+src/revocation/       bundled/additive feed client, matching, installed-purl resolution
 src/observe/          the `agora run` supervising shim + session recording
 src/stack/            stack manager — adapters, manifest, plan/apply, doctor, probe
 src/catalog/          the bundled offline catalog (bundled.ts, types, permissions)
@@ -197,6 +203,6 @@ src/fetch.ts          the injectable `FetchLike` every network call takes
 feed/                 revocation feed: entries.json (OSV-generated) + revocations.json (bundled)
 ```
 
-Still absent from the brief §4 target tree: **`src/serve/`** (agent-facing discovery, S7) and a
-pre-install sandbox backend (S6's Docker half, deferred rather than dropped). See
-[`NEXT.md`](./NEXT.md) and [`../ROADMAP.md`](../ROADMAP.md).
+Still incomplete from the brief §4 target: the **agent-facing serve tools and consent boundary** and
+a pre-install sandbox/stronger observation backend. See [`STATUS.md`](./STATUS.md) and
+[`NEXT.md`](./NEXT.md).

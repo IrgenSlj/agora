@@ -1,90 +1,63 @@
 # The revocation feed
 
-The ecosystem Agora sits in front of has no revocation mechanism. Once a malicious MCP server is
-published and installed, nothing tells you later that it turned out to be malicious. This directory
-is that missing piece, and it is deliberately the least impressive infrastructure in the project: a
-signed JSON file in a git repository.
+Agora covers a surface ordinary dependency scanners miss: MCP servers are spawned from host
+configuration and may appear in no `package.json`. The revocation feed turns published OSV
+advisories for those packages into offline, local-first gate evidence.
 
-- **`entries.json`** — the source of truth. Hand-edited. This is the file you change.
-- **`revocations.json`** — generated. Signed by `scripts/sign-feed.ts` in CI and committed by it.
-  Never edit it directly; it carries a signature over exact bytes, and any manual change
-  invalidates it for every client.
+Current behavior and limitations are tracked in [`../docs/STATUS.md`](../docs/STATUS.md); ordered
+hardening work is `REV-001` in [`../docs/NEXT.md`](../docs/NEXT.md).
 
-Clients read `revocations.json` straight from `raw.githubusercontent.com`. There is no API, no
-domain, and no account that can lapse. The signature is what makes that safe: the bytes are
-verified against a public key pinned in the binary, so the host is untrusted by construction.
-GitHub can withhold the feed — which the staleness check surfaces — but cannot forge one.
+## Files
 
-## Publishing a revocation
+- `entries.json` — generated source entries derived from OSV results.
+- `revocations.json` — packaged feed consumed by clients. It ships with `agora-hub` and is the
+  bundled baseline.
 
-1. Add an entry to `entries.json`:
+Do not hand-curate advisory counts or findings. `scripts/sync-feed.ts` queries OSV for catalog MCP
+package purls and rewrites the source data; `.github/workflows/sync-feed.yml` runs it on schedule.
+If an upstream package cannot be checked, previous entries are carried forward rather than erased.
 
-   ```json
-   {
-     "id": "AGR-2026-0001",
-     "purl_pattern": "pkg:npm/example-malicious",
-     "versions": "<=1.0.16",
-     "reason": "credential-exfiltration",
-     "severity": "critical",
-     "refs": ["https://github.com/advisories/GHSA-..."],
-     "added_at": "2026-07-30T12:00:00Z"
-   }
-   ```
+## Trust model
 
-   `critical` and `high` block an `agora acquire`. `advisory` is reported and does not block.
-   Omitting `versions` covers every version of the package.
+The active feed is not signed.
 
-2. Commit and push to `main`. `.github/workflows/publish-feed.yml` signs the feed, bumps
-   `feed_version`, and commits the result. That is the entire publishing act.
+1. The bundled copy ships inside the npm artifact and is the offline baseline.
+2. A fetched copy is merged monotonically by `src/revocation/merge.ts`: it may add entries, but may
+   not remove, weaken, or outrank a bundled entry.
 
-`feed_version` is strictly monotonic and clients refuse any feed that is not newer than the one
-they hold, so an attacker who can serve traffic cannot roll a user back past the entry naming
-their package.
+This prevents a fetched copy from suppressing a known bundled advisory. It does **not** make every
+network-added entry authentic: an attacker able to alter the fetched feed could add noise or a false
+hard block. Until network additions are independently confirmed, origin must remain visible in the
+verdict. That work is tracked as `REV-001`.
 
-## Do I need a signing key?
+The older ed25519 verification implementation remains in the repository for a future design that
+needs authenticated withdrawals between releases. No key should be generated or configured for the
+current additive-only design.
 
-**No.** Revocations apply today, unsigned. The integrity comes from two places instead:
+## Severity and matching
 
-1. **The bundled copy.** `revocations.json` ships inside the npm package, so it is covered by that
-   package's own provenance attestation. Nothing extra to sign.
-2. **Monotonic merge.** A copy fetched over the network may *add* entries and may never *remove*
-   one (`src/revocation/merge.ts`). So the attack that actually matters — an entry quietly going
-   missing so a user installs something known-malicious — is impossible regardless of who controls
-   the host.
+- `critical` and `high` block acquisition only when the installed/resolved version is confirmed to
+  fall in the affected range, or when the entry covers all versions.
+- `advisory` is reported and does not block.
+- Malware entries without a version range cover every version.
+- A package match with an unknown version is a warning/unknown applicability, not a confirmed block.
+- No matching published advisory means “no known matching advisory,” never “safe.”
+- An unavailable refresh or unaddressable server is unknown/not-checkable, never clean.
 
-A signature was the original design and it bought less than it cost: the key would have lived as a
-secret in this same repository, so anyone able to rewrite the feed could usually sign it too.
+## Refresh workflow
 
-The one thing a signature *would* buy is the ability to **withdraw** an entry between releases —
-useful if an advisory is retracted. Today a withdrawal waits for the next release, which is
-fail-closed and fine. The ed25519 path stays implemented and tested for when that changes:
-
-```
-bun scripts/generate-feed-key.ts
+```bash
+bun scripts/sync-feed.ts
+bun run test test/revocation-merge.test.ts test/revocation-client.test.ts
 ```
 
-1. **Public half** → `PINNED_FEED_KEYS` in `src/revocation/feed.ts`. Ships in the next release.
-   Clients trust exactly what is pinned in the binary they installed, so rotating the key requires
-   cutting a release. That is the design, not a wart.
-2. **Private half** → the `AGORA_FEED_SIGNING_KEY` repository secret. It must never exist anywhere
-   a person can copy it from, including your shell history.
-3. Optionally set the `AGORA_FEED_KEY_ID` repository *variable* to match the key id you chose;
-   it defaults to `agora-feed-<year>-a`.
+The workflow must fail loudly on malformed OSV responses, schema errors, or implausible destructive
+changes. It must never replace a usable bundled baseline with an empty feed merely because a network
+source failed.
 
-Rotation: add the new key alongside the old one, release, wait for clients to update, then drop
-the old entry in the release after.
+## Future authenticated withdrawals
 
-A signed feed becomes *authoritative* rather than additive — it may remove entries as well as add
-them. That is the whole difference.
-
-## Where the entries come from
-
-Nobody writes them. `scripts/sync-feed.ts` queries [OSV.dev](https://osv.dev) for every MCP server
-in the catalog and rewrites `entries.json`; `.github/workflows/sync-feed.yml` runs it daily. OSV
-is free, needs no API key, and is keyed by purl — the identifier Agora already uses.
-
-This covers a surface nothing else does: MCP servers are spawned commands in host configs, never
-declared dependencies, so `npm audit`, Dependabot and Snyk cannot see them at all.
-
-An empty result is still reported as "nothing published", never as "safe" — and an unreachable OSV
-never empties the feed, because entries for packages that could not be checked are carried over.
+A signed authoritative feed would be allowed to remove entries as well as add them, which is useful
+when an advisory is retracted between package releases. If that becomes necessary, define the key
+custody and compromise model first, pin public keys in a release, keep rollback protection, and
+document how clients distinguish authoritative withdrawals from additive unsigned updates.

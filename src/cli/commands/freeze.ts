@@ -50,10 +50,14 @@ export const commandFreeze: CommandHandler = async (parsed, io, style) => {
   const mcp: Record<string, ReturnType<typeof serverToEntry>> = {};
   const dataDir = detectDataDir(parsed, io);
   const cached = dataDir ? readCapabilityCache(dataDir) : [];
+  const referencedEnvironment = new Set<string>();
 
   for (const [name, instances] of grouped) {
     const winner = instances[0]!;
     mcp[name] = serverToEntry(winner);
+    for (const sourceKey of Object.values(mcp[name].envFrom ?? {})) {
+      referencedEnvironment.add(sourceKey);
+    }
     if (winner.command) {
       const digest = cached.find(
         (entry) => entry.key === capabilityKey(name, winner.command!)
@@ -76,6 +80,16 @@ export const commandFreeze: CommandHandler = async (parsed, io, style) => {
   }
 
   const manifest: StackManifest = { mcp };
+
+  if (referencedEnvironment.size > 0) {
+    writeLine(
+      io.stderr,
+      theme.dim(
+        `Environment values were not copied into the portable manifest. ` +
+          `References created for: ${[...referencedEnvironment].sort().join(', ')}`
+      )
+    );
+  }
 
   // --json: print manifest as JSON
   if (parsed.flags.json) {

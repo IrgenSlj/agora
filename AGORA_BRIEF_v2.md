@@ -622,5 +622,14 @@ delegate where possible.**
   standalone pre-pivot plugin with its own dependency tree — two names that had become two products
   with separate users. Everything is `agora-hub`. The OpenCode *plugin* specifier is unresolved
   (OpenCode does not resolve subpath exports); OpenCode *inference* is unaffected.
+- **DA-11 (2026-08-02) — preserve the product surface; harden from invariants outward.** Working
+  non-legacy features remain part of Agora: the CLI, shell, TUI, `today`, inference, federation
+  sources, host adapters, plugins, MCP integration, and all trust planes. Consolidation may move
+  them onto shared artifact, evidence, gate, and persistence services, but does not delete them to
+  reduce line count. Development order is now security/secret invariants → one mutation gate →
+  atomic artifact/evidence/lock transaction → human/agent authorization → data/config convergence
+  → platform and release hardening. `docs/STATUS.md` is the authority on what the code proves;
+  `docs/NEXT.md` is the ordered backlog; `docs/DEVELOPMENT.md` carries multi-session handoffs. This
+  amendment changes execution order and status discipline, not the trust-plane product intent.
 
 — END OF BRIEF —

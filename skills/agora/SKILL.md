@@ -17,9 +17,9 @@ If `agora` isn't on `PATH`, run it as `npx -y agora-hub <command>` — no local 
 
 1. **Always pass `--json` when you intend to parse the output.** Every command in this skill has
    a stable, documented JSON shape. Never scrape the human-readable text output.
-2. **Plan before you apply.** Commands that write configuration (`sync`, `apply`, `acquire`) have a
-   read-only counterpart or dry-run mode that shows exactly what would change. Run that first,
-   especially the first time you touch a machine you don't have full context on.
+2. **Plan before a human applies.** Commands that write configuration (`sync`, `apply`, `acquire`)
+   have a read-only counterpart or dry-run mode. Agents may inspect those plans but must not execute
+   the confirming write; ask the user to run it in their terminal.
 3. **Read the exit code, not just stdout.** Agora's exit codes are part of its contract — a non-zero
    code means "stop and look," not "something silently succeeded."
 4. **A clean scan means "no known red flags," not "safe."** The trust gate is static heuristics
@@ -37,7 +37,7 @@ Most Agora commands that read or write state share one exit-code contract:
 | `1` | Policy forbid / drift / revocation hit | gated writes, `scan`, `lock verify` |
 | `2` | Usage error | all commands |
 | `3` | Network error | search / refresh commands |
-| `4` | Sandbox unavailable | `vet` once S6 lands |
+| `4` | Required observation/sandbox backend unavailable | backend-dependent checks |
 
 A few commands intentionally don't use the full range: `agora doctor` is informational (exit `0`
 unless `--strict` is passed, then `1` on any server error) and `agora integrate` is `0`/`1` today
@@ -88,28 +88,24 @@ especially before touching a shared or production machine.
 profile runs through the same trust gate `acquire` uses before anything is written — a hard `fail`
 exits `1` with nothing written, no exceptions.
 
-## When to reach for `acquire`: the gap → acquire → gate → confirm loop
+## When to reach for `acquire`: the gap → preview → human decision loop
 
-Use `agora acquire` when the current agent is missing a capability (an MCP server it needs isn't
-configured yet). It is the single command that goes from "I need X" to "X is configured and
-gated," and it is intentionally a two-step confirmation flow — never a one-shot write:
+Use an acquire preview when the current agent is missing a capability. The agent may resolve the
+candidate and show the gate verdict, but installation is a human action:
 
 ```bash
 # Step 1 — resolve + gate, write nothing (this is the default; --dry-run makes it explicit)
 agora acquire <id|query> [--tool opencode|claude-code|cursor|windsurf] --dry-run --json
 
-# Step 2 — after inspecting the verdict, actually write
-agora acquire <id|query> [--accept-warnings] --json
+# Step 2 — show the result; the user runs the approved write in their own terminal
 ```
 
 Read the JSON result's `status` field to decide what to do next:
 
 - `"dry_run"` — preview only; `scan` shows the verdict, nothing was written. Inspect it, then
   decide whether to proceed.
-- `"needs_confirmation"` — the gate found warnings but no failures. Re-run with
-  `--accept-warnings` only if the warnings are acceptable for this context (read them — they're in
-  `scan.checks`, e.g. undeclared `exec` permission, a missing license, a deprecated registry
-  status). Never blindly retry with `--accept-warnings` without reading `scan.checks` first.
+- `"needs_confirmation"` — the gate found warnings but no failures. Explain the warnings and let
+  the user decide whether to run the human CLI with `--accept-warnings`.
 - `"blocked"` with `scan.summary.fail > 0` — hard failure (e.g. official registry marked the
   server `deleted`, or a description-injection pattern was detected). Do not retry. Do not look
   for a bypass flag — there isn't one, by design.
@@ -117,11 +113,10 @@ Read the JSON result's `status` field to decide what to do next:
   needs to do (usually: restart the harness so the new MCP server loads).
 - `"not_found"` — nothing matched; try `agora search <query>` first to find the right id.
 
-The MCP tool surface (`agora mcp`, exposed as `agora_acquire`) encodes the identical two-step
-shape: the first call omits `confirm` (always a dry run — plan + verdict, nothing written); only a
-second call with `confirm: true` can write, and even then the gate still decides — a `fail`
-verdict is never bypassable, and a `warn` verdict additionally requires `acceptWarnings: true` on
-that same confirming call.
+The current MCP tool surface still accepts a confirming acquire call. That is transitional and is
+not a human-consent boundary. Never send `confirm: true` or `acceptWarnings: true`; stop after the
+dry-run result. Where `request_install` is available, use it to create an intent that mutates no host
+configuration.
 
 ## Making Agora available in a harness
 
@@ -148,7 +143,7 @@ new to write.
 - An advisory against a package whose version is not pinned is reported but does not block: the
   advisory is real, and whether it applies to *this* copy was never established. Both halves of
   that are true and neither should be dropped when summarising.
-- **You cannot install anything.** If a capability is missing, `agora acquire` is a human's
+- **You cannot install anything.** If a capability is missing, a confirming `agora acquire` is a human's
   command. Where an install-intent flow is available, requesting one writes a record and nothing
   else — a person runs `agora approve <id>` in their own terminal. Never present a requested
   install as a completed one.
