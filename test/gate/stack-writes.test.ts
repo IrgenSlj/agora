@@ -137,3 +137,46 @@ describe('apply and sync run the gate on a local manifest', () => {
     expect(existsSync(join(cwd, '.agora'))).toBe(false);
   });
 });
+
+describe('integrate holds Agora to its own standard', () => {
+  test('a policy that forbids everything stops Agora installing itself', async () => {
+    // The one artifact this product has no standing to exempt is its own: if
+    // `agora-hub` is ever the package with the advisory, the command that
+    // spreads it to every harness on the machine is the one that must stop.
+    writeFileSync(join(cwd, 'team.cedar'), 'forbid (principal, action, resource);\n');
+    writeFileSync(join(cwd, 'agora.toml'), '[policy]\nfiles = ["team.cedar"]\n');
+    const { io: cliIo, out } = io();
+
+    const code = await runCli(['integrate', 'opencode', '--scope', 'project'], cliIo as never);
+
+    expect(code).toBe(1);
+    expect(out()).toContain('Refusing to integrate');
+    expect(JSON.parse(readFileSync(configPath, 'utf8')).mcp).toEqual({});
+  });
+
+  test('a dry run still previews what integration would do', async () => {
+    // Refusing to describe the change would make the refusal harder to
+    // understand, and a preview writes nothing either way.
+    writeFileSync(join(cwd, 'team.cedar'), 'forbid (principal, action, resource);\n');
+    writeFileSync(join(cwd, 'agora.toml'), '[policy]\nfiles = ["team.cedar"]\n');
+    const { io: cliIo, out } = io();
+
+    const code = await runCli(
+      ['integrate', 'opencode', '--scope', 'project', '--dry-run'],
+      cliIo as never
+    );
+
+    expect(code).toBe(0);
+    expect(out()).toContain('would add');
+    expect(JSON.parse(readFileSync(configPath, 'utf8')).mcp).toEqual({});
+  });
+
+  test('integration proceeds normally when nothing objects', async () => {
+    const { io: cliIo } = io();
+
+    const code = await runCli(['integrate', 'opencode', '--scope', 'project'], cliIo as never);
+
+    expect(code).toBe(0);
+    expect(JSON.parse(readFileSync(configPath, 'utf8')).mcp.agora).toBeDefined();
+  });
+});

@@ -30,7 +30,11 @@ describe('mutation inventory completeness', () => {
       .filter(([, entry]) => entry.requiresGate && entry.coverage !== 'present')
       .map(([name]) => name)
       .sort();
-    expect(cliGaps).toEqual(['approve', 'doctor', 'integrate', 'unquarantine']);
+    expect(cliGaps).toEqual(['approve', 'unquarantine']);
+
+    // Quarantining a drifted server is the fail-safe direction, so it is
+    // deliberately not behind an authorization decision that could refuse it.
+    expect(CLI_MUTATION_INVENTORY.doctor).toMatchObject({ requiresGate: false });
 
     expect(CLI_MUTATION_INVENTORY.acquire).toMatchObject({
       requiresGate: true,

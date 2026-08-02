@@ -1,6 +1,13 @@
+import { authorizeLegacyMutation } from '../../gate/adapters.js';
+import { evaluatePolicy } from '../../policy/engine.js';
+import { checkRevocations } from '../../revocation/client.js';
+import { npmPurl } from '../../revocation/installed.js';
+import { manifestPath, readManifest } from '../../stack/manifest.js';
 import { ALL_ADAPTERS, detectTools, getAdapter } from '../../stack/registry.js';
 import type { AgentToolId, DesiredServer, StackEnv, SyncChange } from '../../stack/types.js';
-import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
+import { AGORA_VERSION } from '../app.js';
+import { ExitCode } from '../exit-codes.js';
+import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
@@ -20,6 +27,7 @@ import type { CommandHandler } from './types.js';
 const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
 
 const AGORA_SERVER_NAME = 'agora';
+const AGORA_PACKAGE = 'agora-hub';
 const AGORA_LAUNCHER: DesiredServer = {
   name: AGORA_SERVER_NAME,
   command: ['npx', '-y', 'agora-hub', 'mcp'],
@@ -174,6 +182,46 @@ export const commandIntegrate: CommandHandler = async (parsed, io, style) => {
   }
 
   const dryRun = Boolean(parsed.flags.dryRun);
+
+  // Agora installing Agora is still a host-config write of an npm package, and
+  // the one artifact this product has no standing to exempt is its own. If
+  // `agora-hub` is ever the package with the advisory, the command that spreads
+  // it to every harness on the machine is exactly the one that must stop. The
+  // check is offline and costs nothing on a fresh machine.
+  const dataDir = detectDataDir(parsed, io);
+  const revocation = checkRevocations(dataDir, [
+    npmPurl(AGORA_PACKAGE),
+    npmPurl(AGORA_PACKAGE, AGORA_VERSION)
+  ]);
+  const authorization = authorizeLegacyMutation({
+    action: 'Integrate',
+    actor: 'human-cli',
+    effects: ['host-config'],
+    scanRequired: false,
+    policy: await evaluatePolicy({
+      purl: npmPurl(AGORA_PACKAGE, AGORA_VERSION),
+      action: 'Install',
+      policyFiles: readManifest(manifestPath(env))?.policy?.files ?? [],
+      cwd: io.cwd,
+      revoked: revocation.unknown ? undefined : revocation.blocked,
+      kind: 'mcp-server'
+    }),
+    revocation
+  });
+  const refused =
+    !dryRun && (authorization.verdict === 'deny' || authorization.verdict === 'inconclusive');
+  if (refused) {
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { mode: 'gate-blocked', authorization });
+      return ExitCode.POLICY_FORBID;
+    }
+    writeLine(
+      io.stderr,
+      `${theme.error('Refusing to integrate')} — ${authorization.reasons.join('; ')}.`
+    );
+    return ExitCode.POLICY_FORBID;
+  }
+
   const entries = targets.map((toolId) =>
     dryRun ? planEntry(toolId, env, scope) : writeEntry(toolId, env, scope)
   );

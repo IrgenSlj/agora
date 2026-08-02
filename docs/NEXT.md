@@ -37,9 +37,11 @@ integration. Only explicitly legacy surfaces may be retired.
   and recorded. Scan, revocation, Cedar, and artifact-identity adapters drive acquire, approve,
   install, and try; provenance/drift still need first-class signals beyond their aggregate scan
   state.
-- [ ] **GATE-003 — route writes.** Acquire, approve, `install`, `try`, `apply`, `sync`, `update`,
-  and MCP/plugin acquisition are routed; the plugin config write is removed. Remaining: `integrate`
-  and `doctor --probe`. Preserve every command and preview mode.
+- [x] **GATE-003 — route writes.** Every command that installs or runs an artifact is routed:
+  acquire, approve, `install`, `try`, `apply`, `sync`, `update`, `integrate`, and MCP/plugin
+  acquisition. The plugin config write is removed. `doctor --probe` is deliberately excluded and
+  documented as such — quarantine only disables, and gating the fail-safe direction would let a
+  denial keep a drifted server running. Every command and preview mode is preserved.
 - [x] **GATE-004 — eliminate bypass semantics.** `--skip-scan` no longer skips the gate: it leaves an
   explicit unknown that only `--accept-risk` clears, revocation and Cedar always decide, a deny is
   never acknowledgeable, an agent can never acknowledge, and each acceptance is recorded in

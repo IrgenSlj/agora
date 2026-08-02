@@ -103,12 +103,15 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
     'show/doctor are read-only unless edit or doctor --fix is selected.'
   ),
   diff: readOnly('Compatibility alias for config diff.'),
-  doctor: controlled(
+  // Deliberately not gated. `--probe`'s only host-config effect is quarantine,
+  // which disables a drifted server — the fail-safe direction. Requiring an
+  // authorization decision before that would mean a policy denial could keep a
+  // drifted server running, which inverts the point of having the policy.
+  doctor: local(
     'conditional',
     ['cache', 'local-state', 'host-config'],
-    'partial',
     'explicit-cli',
-    '--probe updates capability state and may quarantine drifted host entries.'
+    '--probe refreshes capability state and quarantines drifted entries by disabling them; it never enables or adds a server.'
   ),
   edit: local(
     'always',
@@ -148,9 +151,9 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
   integrate: controlled(
     'conditional',
     ['host-config'],
-    'missing',
+    'present',
     'explicit-cli',
-    'Installs Agora into a host; dry-run exists but no shared authorization decision runs.'
+    'Installs Agora into a host behind the shared gate; a revoked or policy-denied agora-hub stops it. Dry-run still previews.'
   ),
   lock: readOnly('Current lock command verifies only.'),
   mcp: local(

@@ -114,18 +114,23 @@ Completed:
   it a pinned known-bad release only ever produced an unversioned advisory warning and was applied.
 - A warning does not block `apply`/`sync` (CI has nobody to accept it, and one advisory must not
   stop every other server); `deny` and `inconclusive` still block everything.
+- `GATE-003` closed: `integrate` gates Agora's own package before installing itself into a harness.
+  `doctor --probe` is deliberately excluded and the inventory now says why — quarantine only
+  disables, so gating it would let a denial keep a drifted server running.
 
 Focused verification:
 
 - `bunx vitest run test/gate/ test/approve.test.ts test/cli.test.ts test/plugin-config-tool.test.ts`
 - `bun run typecheck`, `bun run lint`, `bun run build`, and full `bun run test` passed:
-  1,772 tests passed, one skipped.
+  1,775 tests passed, one skipped.
 
 Next:
 
-1. `GATE-003` remainder: `integrate` and `doctor --probe` are the last two unrouted writers.
-2. `AGENT-002`: a consent boundary an agent with shell access cannot self-assert.
-3. `SEC-002` secret inspection and `OBS-003` observation scope.
+1. `AGENT-002`: a consent boundary an agent with shell access cannot self-assert. This is now the
+   largest honest gap in the trust story.
+2. `SEC-002` secret inspection and `OBS-003` observation scope.
+3. `GATE-002` remainder: give provenance and drift first-class signals instead of letting them
+   reach the kernel only through the aggregate scan verdict.
 
 ### 2026-08-02 — hardening session 2
 

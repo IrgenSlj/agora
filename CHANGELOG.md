@@ -19,6 +19,14 @@ not when one is.*
 
 ### Security — the stack commands join the gate
 
+- `agora integrate` now passes the shared gate before installing Agora into a harness. The one
+  artifact this product has no standing to exempt is its own: if `agora-hub` is ever the package
+  with the advisory, the command that spreads it to every harness on the machine is the one that
+  must stop. `--dry-run` still previews.
+- `agora doctor --probe` is deliberately *not* gated, and now says so. Its only host-config effect
+  is quarantine, which disables a drifted server; requiring an authorization decision first would
+  let a policy denial keep a drifted server running.
+
 - `agora apply` and `agora sync` now run the trust gate on a **local** manifest, not only one
   fetched with `--from`. A manifest is written once and applied for months; an advisory published in
   between is exactly what should stop it. Revocation and your Cedar policy are offline, so they run
