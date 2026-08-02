@@ -81,15 +81,25 @@ export const COMMANDS: CommandMeta[] = [
       { flag: '--config', description: 'Path to opencode.json (auto-detected by default)' },
       {
         flag: '--skip-scan',
-        description: 'Bypass the pre-install scan gate (use only when you understand the risk)'
+        description:
+          'Do not run the heuristic scan. This does not skip the gate: the scan becomes an ' +
+          'explicit unknown, which only --accept-risk can clear'
+      },
+      {
+        flag: '--accept-risk',
+        description: 'Install although the scan was never run. Recorded in the local gate audit log'
+      },
+      {
+        flag: '--accept-warnings',
+        description: 'Proceed when the gate has warnings but no failures'
       },
       { flag: '--json', description: 'Output plan as JSON' }
     ],
     examples: [
       'agora install mcp-github',
-      'agora install mcp-github --write',
-      'agora install mcp-github --write --save',
-      'agora install mcp-github --write --config ./opencode.json'
+      'agora install mcp-github --write --accept-warnings',
+      'agora install mcp-github --write --save --accept-warnings',
+      'agora install mcp-github --write --skip-scan --accept-risk'
     ]
   },
   {

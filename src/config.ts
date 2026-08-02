@@ -36,6 +36,11 @@ export function extractPackageFromConfig(config: OpenCodeConfig): string[] {
 
   if (config.mcp) {
     for (const [_name, server] of Object.entries(config.mcp)) {
+      // A host config is a file people edit by hand, so an entry with no
+      // `command` is ordinary — and it is exactly what `config doctor --fix`
+      // exists to clean up. Reading it must not throw, or the doctor crashes on
+      // the one config that needs it.
+      if (!Array.isArray(server?.command)) continue;
       for (const part of server.command) {
         if (SKIP_EXECUTABLES.has(part)) continue;
         if (part.startsWith('@') || /^[a-z0-9][\w.-]*$/i.test(part)) {

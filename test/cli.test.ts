@@ -183,7 +183,10 @@ describe('CLI commands', () => {
     const { io, stdout } = createIo(temp, { fetcher: scanFetcher() });
 
     try {
-      const code = await runCli(['install', 'mcp-github', '--write', '--config', configPath], io);
+      const code = await runCli(
+        ['install', 'mcp-github', '--write', '--accept-warnings', '--config', configPath],
+        io
+      );
       const config = JSON.parse(readFileSync(configPath, 'utf8'));
 
       expect(code).toBe(0);
@@ -205,7 +208,7 @@ describe('CLI commands', () => {
 
     try {
       const code = await runCli(
-        ['install', 'mcp-filesystem', '--write', '--config', configPath],
+        ['install', 'mcp-filesystem', '--write', '--accept-warnings', '--config', configPath],
         io
       );
 
@@ -228,7 +231,15 @@ describe('CLI commands', () => {
 
     try {
       const code = await runCli(
-        ['install', 'mcp-filesystem', '--write', '--yes', '--config', configPath],
+        [
+          'install',
+          'mcp-filesystem',
+          '--write',
+          '--yes',
+          '--accept-warnings',
+          '--config',
+          configPath
+        ],
         io
       );
 
@@ -247,7 +258,10 @@ describe('CLI commands', () => {
     const { io, stdout } = createIo(temp, { fetcher: scanFetcher() });
 
     try {
-      const code = await runCli(['install', 'mcp-github', '--write', '--config', configPath], io);
+      const code = await runCli(
+        ['install', 'mcp-github', '--write', '--accept-warnings', '--config', configPath],
+        io
+      );
 
       expect(code).toBe(0);
       const out = stdout.join('');
@@ -266,7 +280,15 @@ describe('CLI commands', () => {
 
     try {
       const code = await runCli(
-        ['install', 'mcp-github', '--write', '--skip-scan', '--config', configPath],
+        [
+          'install',
+          'mcp-github',
+          '--write',
+          '--skip-scan',
+          '--accept-risk',
+          '--config',
+          configPath
+        ],
         io
       );
 
@@ -303,7 +325,16 @@ describe('CLI commands', () => {
 
     try {
       const code = await runCli(
-        ['install', 'mcp-github', '--write', '--skip-scan', '--save', '--config', configPath],
+        [
+          'install',
+          'mcp-github',
+          '--write',
+          '--skip-scan',
+          '--accept-risk',
+          '--save',
+          '--config',
+          configPath
+        ],
         io
       );
 
@@ -336,7 +367,16 @@ describe('CLI commands', () => {
 
     try {
       const code = await runCli(
-        ['install', 'mcp-github', '--write', '--skip-scan', '--save', '--config', configPath],
+        [
+          'install',
+          'mcp-github',
+          '--write',
+          '--skip-scan',
+          '--accept-risk',
+          '--save',
+          '--config',
+          configPath
+        ],
         io
       );
 
@@ -400,7 +440,15 @@ describe('CLI commands', () => {
 
     try {
       await runCli(
-        ['install', 'mcp-filesystem', '--write', '--yes', '--config', configPath],
+        [
+          'install',
+          'mcp-filesystem',
+          '--write',
+          '--yes',
+          '--accept-warnings',
+          '--config',
+          configPath
+        ],
         setup.io
       );
 

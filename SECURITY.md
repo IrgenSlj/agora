@@ -69,7 +69,12 @@ The v2 build is integrating these into one mandatory authorization service:
 The v1 catalog surface (19 commands including auth, community, and account features) was removed in
 v0.7.0. Legacy `~/.config/agora/*` state files may still exist and can be safely deleted.
 
-The remaining high-priority risks are maintained in [`docs/STATUS.md`](./docs/STATUS.md): incomplete
-gate coverage outside primary acquire, the agent-callable plugin config path, the weak terminal
-approval boundary for shell-capable agents, a partial acquire/lock transaction, predicate/schema
-mismatch, and non-round-trip `agora.toml` rewriting.
+The remaining high-priority risks are maintained in [`docs/STATUS.md`](./docs/STATUS.md): gate
+coverage still missing on `apply`, `sync`, `update`, `integrate`, and `doctor --probe`; the weak
+terminal approval boundary for shell-capable agents; a partial acquire/lock transaction;
+predicate/schema mismatch; and non-round-trip `agora.toml` rewriting.
+
+No flag disables the trust gate. `--skip-scan` means the heuristic scan did not run, which the gate
+records as an explicit unknown; `--accept-risk` accepts that unknown and is written to
+`gate-audit.jsonl`. Neither can clear a revocation or a policy denial, and an agent caller can do
+neither.

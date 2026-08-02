@@ -17,6 +17,30 @@ not when one is.*
   invocation could include sockets from unrelated processes. Missing or failed sampling is now
   recorded as `unavailable`, never as a successful empty sample.
 
+### Security — no flag skips the gate
+
+- `--skip-scan` no longer bypasses anything. It means "do not run the heuristic scan", and the gate
+  then holds an explicit *unknown* instead of an implied pass. Only `--accept-risk` clears it, the
+  acceptance is scoped to the scan alone, and it is recorded. Revocation and your Cedar policy are
+  always evaluated, and a `deny` from either is never acknowledgeable from the command line.
+- `agora install --write` now runs the same decision as `agora acquire` — scan, revocation, and
+  Cedar policy — where it previously had a scan and nothing else. Preview mode (no `--write`) stays
+  read-only and offline-friendly.
+- `agora try` is gated like a write, because it executes the artifact's code. A scan that could not
+  run is now an unknown that stops the run rather than a silent "proceed without scan".
+- Every mutation that proceeded on an accepted unknown appends a line to `gate-audit.jsonl` in the
+  data directory, naming the action, artifact, verdict, and exactly what was accepted. This is a
+  local accountability log, not signed evidence.
+- The OpenCode plugin's `agora_config` no longer edits host configuration. It was the last
+  agent-callable write of the file that decides which MCP servers run. `fix: true` now reports the
+  exact repairs for a human to apply with `agora config doctor --fix`.
+- An agent cannot accept risk on a human's behalf; the kernel refuses the acknowledgement outright.
+
+### Fixed
+
+- `agora config doctor` crashed with "server.command is not iterable" on an MCP entry with no
+  command — precisely the malformed entry its `--fix` exists to remove.
+
 ### Security — an approval names one artifact
 
 - `agora approve` now installs only the artifact that was reviewed. It resolves the request by exact

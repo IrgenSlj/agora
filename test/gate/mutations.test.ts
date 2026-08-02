@@ -34,10 +34,8 @@ describe('mutation inventory completeness', () => {
       'apply',
       'approve',
       'doctor',
-      'install',
       'integrate',
       'sync',
-      'try',
       'unquarantine',
       'update'
     ]);
@@ -51,10 +49,18 @@ describe('mutation inventory completeness', () => {
       coverage: 'request-only',
       consent: 'agent-callable'
     });
+    // The plugin's config repair used to be the one agent-callable host-config
+    // write left in the product. It no longer mutates anything.
     expect(PLUGIN_MUTATION_INVENTORY.agora_config).toMatchObject({
-      requiresGate: true,
-      coverage: 'missing',
-      consent: 'agent-callable'
+      mode: 'none',
+      effects: [],
+      requiresGate: false
     });
+    for (const [name, declaration] of Object.entries(PLUGIN_MUTATION_INVENTORY)) {
+      expect(
+        { name, writesHostConfig: declaration.effects.includes('host-config') },
+        `plugin tool ${name} must not be able to write host config`
+      ).toEqual({ name, writesHostConfig: false });
+    }
   });
 });

@@ -1,12 +1,12 @@
 import { execFileSync, execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { resolvedPurlFor, revocationPurlsFor } from '../../acquire.js';
 import {
   createInstallPlan,
   findMarketplaceItem,
   hasPermissions,
   renderPermissionLines
 } from '../../catalog/bundled.js';
-import { resolvedPurlFor, revocationPurlsFor } from '../../acquire.js';
 import { formatConfigJson } from '../../config.js';
 import {
   detectOpenCodeConfigPath,
@@ -17,10 +17,10 @@ import {
 import { authorizeLegacyMutation } from '../../gate/adapters.js';
 import { appendGateAudit, auditRecordFor } from '../../gate/audit.js';
 import { clearHistory, loadHistory } from '../../history.js';
-import { evaluatePolicy } from '../../policy/engine.js';
-import { checkRevocations } from '../../revocation/client.js';
 import { isOpencodeAvailable } from '../../opencode-exec.js';
+import { evaluatePolicy } from '../../policy/engine.js';
 import { loadPreferences, prefsPath, writePreferences } from '../../preferences.js';
+import { checkRevocations } from '../../revocation/client.js';
 import { type ScanResult, scanItem } from '../../scan.js';
 import {
   manifestPath,
@@ -96,7 +96,8 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
         policy: await evaluatePolicy({
           purl: revocationPurlsFor(item)[0] ?? `pkg:generic/${item.id}`,
           action: 'Install',
-          policyFiles: readManifest(manifestPath({ cwd: io.cwd, env: io.env }))?.policy?.files ?? [],
+          policyFiles:
+            readManifest(manifestPath({ cwd: io.cwd, env: io.env }))?.policy?.files ?? [],
           cwd: io.cwd,
           ...(scanResult ? { scan: scanResult } : {}),
           revoked: revocation && !revocation.unknown ? revocation.blocked : undefined,
@@ -156,11 +157,16 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
     writeLine(io.stdout, '');
   }
 
-  if (authorization && authorization.verdict !== 'allow') {
-    // `--skip-scan` no longer overrides anything. A scan failure is a deny, and
-    // a deny is not a thing the person running the command gets to wave past;
-    // the only non-conclusive result they can accept is one that was never
-    // established, and that is what --accept-risk says.
+  // `--skip-scan` no longer overrides anything. A scan failure is a deny, and a
+  // deny is not a thing the person running the command gets to wave past; the
+  // only non-conclusive result they can accept is one that was never
+  // established, and that is what --accept-risk says.
+  const authorized =
+    !authorization ||
+    authorization.verdict === 'allow' ||
+    (authorization.verdict === 'review' && parsed.flags.acceptWarnings === true);
+
+  if (authorization && !authorized) {
     const headline =
       authorization.verdict === 'deny'
         ? 'Refusing install'
@@ -176,9 +182,7 @@ export const commandInstall: CommandHandler = async (parsed, io, style) => {
           ? 'Re-run with --skip-scan --accept-risk to install without a scan, and the acceptance will be recorded.'
           : `Run \`agora trust ${item.id}\` to see the evidence behind this.`
     );
-    if (!(authorization.verdict === 'review' && parsed.flags.acceptWarnings === true)) {
-      return ExitCode.POLICY_FORBID;
-    }
+    return ExitCode.POLICY_FORBID;
   }
 
   if (parsed.flags.write) {

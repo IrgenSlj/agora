@@ -32,16 +32,21 @@ integration. Only explicitly legacy surfaces may be retired.
   aliases), MCP tool, and plugin tool has a machine-readable effect/gate/consent declaration.
   Completeness tests fail when a new surface is added without classification.
 - [ ] **GATE-002 — central authorization service.** The pure decision kernel is implemented: deny
-  dominates, missing/unknown required evidence is inconclusive, warnings require review, and agents
-  cannot authorize host/project/manifest writes. Scan, revocation, and Cedar adapters now drive the
-  primary acquire path; provenance/drift need first-class signals beyond their aggregate scan state.
-- [ ] **GATE-003 — route writes.** Primary human acquire is routed, and MCP acquisition is
-  request-only. Next route install compatibility, apply, sync, update, approve, integrate where
-  applicable, and plugin writes. Preserve every command and preview mode.
-- [ ] **GATE-004 — eliminate bypass semantics.** Replace `--skip-scan` write behavior with a
-  policy-governed, auditable risk acknowledgement or make it preview-only.
-- [ ] **GATE-005 — all-or-nothing tests.** Prove every mutation writes nothing on deny,
-  inconclusive policy, confirmed high/critical revocation, or drift.
+  dominates, missing/unknown required evidence is inconclusive, warnings require review, agents
+  cannot authorize host/project/manifest writes or accept risk, and an accepted unknown is scoped
+  and recorded. Scan, revocation, Cedar, and artifact-identity adapters drive acquire, approve,
+  install, and try; provenance/drift still need first-class signals beyond their aggregate scan
+  state.
+- [ ] **GATE-003 — route writes.** Acquire, approve, the `install` compatibility path, `try`, and
+  MCP/plugin acquisition are routed; the plugin config write is removed. Remaining: apply, sync,
+  update, integrate, and `doctor --probe`. Preserve every command and preview mode.
+- [x] **GATE-004 — eliminate bypass semantics.** `--skip-scan` no longer skips the gate: it leaves an
+  explicit unknown that only `--accept-risk` clears, revocation and Cedar always decide, a deny is
+  never acknowledgeable, an agent can never acknowledge, and each acceptance is recorded in
+  `gate-audit.jsonl`.
+- [x] **GATE-005 — all-or-nothing tests.** Refused installs and try-runs are proven to leave the
+  filesystem byte-identical, including the two-file `--save` case. Extend to each newly routed
+  command as GATE-003 completes.
 
 ## Then — acquisition, lockfile, and evidence
 

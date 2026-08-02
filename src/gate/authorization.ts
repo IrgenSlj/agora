@@ -80,7 +80,13 @@ export function authorizeMutation(request: AuthorizationRequest): AuthorizationD
   reasons.push(...denied.map((signal) => `${signal.source}: ${signal.detail}`));
 
   if (reasons.length > 0) {
-    return { verdict: 'deny', action: request.action, reasons, signals: request.signals, acknowledged: [] };
+    return {
+      verdict: 'deny',
+      action: request.action,
+      reasons,
+      signals: request.signals,
+      acknowledged: []
+    };
   }
 
   const bySource = new Map(request.signals.map((signal) => [signal.source, signal]));
@@ -94,7 +100,9 @@ export function authorizeMutation(request: AuthorizationRequest): AuthorizationD
       );
       continue;
     }
-    reasons.push(signal ? `${source}: ${signal.detail}` : `${source}: required decision was not produced`);
+    reasons.push(
+      signal ? `${source}: ${signal.detail}` : `${source}: required decision was not produced`
+    );
   }
   if (reasons.length > 0) {
     return {

@@ -77,6 +77,48 @@ existing by itself is not completion.
 
 ## Latest handoff
 
+### 2026-08-02 — hardening session 3
+
+Intent: verify session 2's work, then close every remaining path to a write that skips the gate.
+
+Corrected in session 2's own output (each test confirmed failing before its fix):
+
+- `agora approve` re-resolved the request with a capability *query*, so approval could install a
+  different item than the one reviewed. It now resolves by exact id, and the intent's recorded purl
+  is a required `identity` signal — a changed package or version is refused, not installed.
+- `agora approve` never passed `[policy] files`, so an agent-requested install was governed by
+  fewer Cedar rules than a direct `agora acquire`. It now reads the project manifest.
+- `--deny` was not a declared boolean flag, so `agora approve --deny <id>` consumed the id as the
+  flag's value and listed pending requests instead of denying one.
+
+Completed:
+
+- `GATE-004`: `--skip-scan` is no longer a bypass. It leaves an explicit `unknown` scan signal that
+  only `--accept-risk` clears; revocation and Cedar always decide, and a `deny` is never
+  acknowledgeable. The kernel gained scoped acknowledgement, and agents cannot acknowledge at all.
+- `src/gate/audit.ts`: every mutation that proceeded on an accepted unknown appends one line to
+  `gate-audit.jsonl` (local accountability record, not signed evidence).
+- `install --write` and `try` now run the same decision as `acquire` — scan, revocation, Cedar —
+  where `install` previously had only a scan and `try` ran the artifact's code after any scan error.
+- Closed the plugin `agora_config` write gap: `fix: true` computes and reports the repairs, and the
+  kernel refuses the write because no agent can authorize a host-config mutation.
+- Fixed a pre-existing crash in `extractPackageFromConfig`: an MCP entry without a `command` array
+  threw, so `agora config doctor` crashed on exactly the config its `--fix` exists to repair.
+- `GATE-005`: `test/gate/all-or-nothing.test.ts` pins that a refused install/try leaves the
+  filesystem byte-identical, including the `--save` two-file case.
+
+Focused verification:
+
+- `bunx vitest run test/gate/ test/approve.test.ts test/cli.test.ts test/plugin-config-tool.test.ts`
+- `bun run typecheck`, `bun run lint`, `bun run build`, and full `bun run test` passed:
+  1,765 tests passed, one skipped.
+
+Next:
+
+1. `GATE-003` remainder: route `apply`, `sync`, `update`, `integrate`, and `doctor --probe`.
+2. `AGENT-002`: a consent boundary an agent with shell access cannot self-assert.
+3. `SEC-002` secret inspection and `OBS-003` observation scope.
+
 ### 2026-08-02 — hardening session 2
 
 Intent: make every write surface visible before routing behavior through one gate.

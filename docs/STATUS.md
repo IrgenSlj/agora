@@ -21,7 +21,7 @@ State labels are deliberately strict:
 | Provenance | Live | Sigstore verification checks Fulcio, CT, Rekor, subject digest, and repository identity | Persist the result as part of one acquisition transaction |
 | Schema and description drift | Live | Capability hashing, comparison, quarantine, and poisoning heuristics exist | Route every mutation through the same drift decision |
 | Runtime observation | Live with limits | Byte-transparent MCP supervision records tool names/counts and sampled direct-process network peers; arguments/results are excluded | Descendant-process coverage and stronger platform backends; sampled data must never be described as complete behavior |
-| Cedar policy and mutation gate | Partial | Engine, linting, CLI, baseline, complete mutation inventory, typed scan/revocation/Cedar adapters, and central authorization on primary acquire exist | Give provenance/drift independent signals and require the decision before install/apply/sync/update/approve/plugin writes |
+| Cedar policy and mutation gate | Partial | Engine, linting, CLI, baseline, complete mutation inventory, typed scan/revocation/Cedar/identity adapters, and central authorization on acquire, approve, `install --write`, and `try`; no bypass flag remains | Give provenance/drift independent signals and route apply, sync, update, integrate, and `doctor --probe` |
 | Revocation and OSV audit | Partial | Bundled OSV-derived feed and additive monotonic merge work; `audit` covers configured MCP packages | Preserve feed origin/freshness in verdicts and independently validate network-added hard blocks |
 | Stack management | Live with limits | Host adapters, plan/apply, atomic host-config writes, freeze, sync, drift and quarantine work | Round-trip-preserving edits of existing `agora.toml`; central gate for every write |
 | Portable environment configuration | Live | `freeze` emits `env_from` references, never copied host environment values; plan/apply resolve locally and fail before writing when missing | Secret scanning for manually authored literal values and sensitive command/URL material |
@@ -51,12 +51,19 @@ State labels are deliberately strict:
 - Approving a request installs only the reviewed artifact: resolution is by exact id, and a changed
   package or version fails a required identity signal instead of installing.
 - The approval path evaluates the project's Cedar policy files, exactly as a direct acquire does.
+- No flag skips the gate. `--skip-scan` records an explicit unknown; only `--accept-risk` clears it,
+  and never a deny — a revocation or a policy rule cannot be waived from the command line.
+- An agent cannot accept risk on a human's behalf, and no plugin tool can write host configuration.
+- A refused install or try-run leaves the filesystem byte-identical, including the `--save` case
+  where two files would have been written.
+- Every mutation that proceeded on an accepted unknown is recorded in `gate-audit.jsonl` (a local
+  accountability log, not signed evidence).
 
 ## Known high-priority gaps
 
-1. Mutation commands other than primary acquire do not yet share one mandatory gate.
-2. Plugin `agora_config` remains agent-callable, and terminal `agora approve` is not a strong consent
-   boundary when an agent also has shell access.
+1. `apply`, `sync`, `update`, `integrate`, and `doctor --probe` do not yet share the mandatory gate
+   that acquire, approve, `install --write`, and `try` now use.
+2. Terminal `agora approve` is not a strong consent boundary when an agent also has shell access.
 3. Acquire does not atomically produce the artifact digest, evidence records, and lockfile entry.
 4. Export predicates are not yet checked against their predicate-specific schemas.
 5. Existing `agora.toml` files are parsed and reconstructed rather than edited with full
@@ -66,6 +73,6 @@ State labels are deliberately strict:
 
 ## Verification snapshot
 
-After the 2026-08-02 hardening session, typecheck, lint, build, and the full suite pass: 1,744 tests
-passed with one skipped. Each development session must refresh this snapshot in
+After the third 2026-08-02 hardening session, typecheck, lint, build, and the full suite pass: 1,765
+tests passed with one skipped. Each development session must refresh this snapshot in
 [`DEVELOPMENT.md`](./DEVELOPMENT.md) after running the applicable gates.

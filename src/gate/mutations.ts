@@ -140,9 +140,9 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
   install: controlled(
     'conditional',
     ['project-files', 'host-config', 'portable-manifest', 'external-process'],
-    'partial',
-    'explicit-cli',
-    'Legacy-compatible installer has a scan but can bypass it with --skip-scan.'
+    'present',
+    'risk-acceptance',
+    'Every write runs scan, revocation, and Cedar through the shared gate; --skip-scan leaves an unknown that only --accept-risk clears, and the acceptance is recorded.'
   ),
   installed: readOnly('Reads host configuration.'),
   integrate: controlled(
@@ -236,9 +236,9 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
   try: controlled(
     'always',
     ['external-process', 'cache'],
-    'partial',
-    'explicit-cli',
-    'Runs an ephemeral server and caches capabilities; --skip-scan remains a bypass.'
+    'present',
+    'risk-acceptance',
+    'Running the code is gated like a write: an unavailable or skipped scan is an unknown that only --accept-risk clears, and the acceptance is recorded.'
   ),
   tui: local(
     'delegated',
@@ -299,12 +299,8 @@ export const PLUGIN_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
     'agent-callable',
     'Invokes the configured local inference provider or host client.'
   ),
-  agora_config: controlled(
-    'conditional',
-    ['host-config'],
-    'missing',
-    'agent-callable',
-    'fix:true can rewrite host config without a human authorization boundary.'
+  agora_config: readOnly(
+    'Reports config health and the repairs needed; the kernel refuses every agent-authorized host-config write, so fix:true only describes them.'
   ),
   agora_info: readOnly('Returns plugin help.'),
   agora_install: readOnly('Generates instructions/config text but does not write files.'),

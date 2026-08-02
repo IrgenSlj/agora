@@ -1,6 +1,12 @@
+import { resolvedPurlFor, revocationPurlsFor } from '../../acquire.js';
 import { buildOpenCodeConfig, findMarketplaceItem } from '../../catalog/bundled.js';
+import { authorizeLegacyMutation } from '../../gate/adapters.js';
+import { appendGateAudit, auditRecordFor } from '../../gate/audit.js';
+import { evaluatePolicy } from '../../policy/engine.js';
+import { checkRevocations } from '../../revocation/client.js';
 import { type ScanResult, scanItem } from '../../scan.js';
 import { capabilityKey, upsertCapabilities } from '../../stack/capability-cache.js';
+import { manifestPath, readManifest } from '../../stack/manifest.js';
 import { type McpProbeResult, probeMcpServer } from '../../stack/mcp-probe.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, numberFlag, usageError, writeJson, writeLine } from '../helpers.js';
@@ -36,7 +42,14 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
 
   const command: string[] = mcpEntry.command as string[];
 
-  // ── Scan gate ────────────────────────────────────────────────────────────────
+  // ── The gate ─────────────────────────────────────────────────────────────
+  //
+  // `try` writes no host config, but it *runs the server's code* on this
+  // machine, which is the effect the scan existed to inform. `--skip-scan` used
+  // to run it with nothing known at all, and a scan that merely failed did the
+  // same thing silently. Both now produce an explicit unknown that only
+  // `--accept-risk` can clear, while revocation and policy always decide.
+  const dataDir = detectDataDir(parsed, io);
   const skipScan = Boolean(parsed.flags.skipScan);
   let scanResult: ScanResult | null = null;
 
@@ -47,22 +60,48 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
         githubToken: io.env?.AGORA_GITHUB_TOKEN
       });
     } catch {
-      // Offline / unreachable — proceed without scan
+      // Unreachable scan: left null, which the gate reads as unknown rather
+      // than as permission to run the thing anyway.
     }
   }
 
+  const revocation = checkRevocations(dataDir, revocationPurlsFor(item));
+  const authorization = authorizeLegacyMutation({
+    action: 'TryRun',
+    actor: 'human-cli',
+    effects: ['external-process', 'cache'],
+    ...(scanResult ? { scan: scanResult } : {}),
+    policy: await evaluatePolicy({
+      purl: revocationPurlsFor(item)[0] ?? `pkg:generic/${item.id}`,
+      action: 'Install',
+      policyFiles: readManifest(manifestPath({ cwd: io.cwd, env: io.env }))?.policy?.files ?? [],
+      cwd: io.cwd,
+      ...(scanResult ? { scan: scanResult } : {}),
+      revoked: revocation.unknown ? undefined : revocation.blocked,
+      kind: item.kind === 'package' ? 'mcp-server' : item.kind,
+      permissions: item.kind === 'package' ? item.permissions : undefined
+    }),
+    revocation,
+    ...(parsed.flags.acceptRisk === true ? { acknowledged: ['scan'] } : {})
+  });
+  const allowed =
+    authorization.verdict === 'allow' ||
+    (authorization.verdict === 'review' && parsed.flags.acceptWarnings === true);
+
   if (parsed.flags.json) {
     const timeoutMs = numberFlag(parsed, 'timeout') ?? 15000;
-    let probe: McpProbeResult = { ok: false, error: 'scan failed' };
+    // Only replaced when the gate allows the run, so the reported error is the
+    // refusal itself rather than a probe that never happened.
+    let probe: McpProbeResult = { ok: false, error: 'refused before running' };
 
-    if (!scanResult || scanResult.summary.fail === 0) {
+    if (allowed) {
       probe = await probeMcpServer(command, {
         env: io.env,
         cwd: io.cwd,
         timeoutMs
       });
       try {
-        upsertCapabilities(detectDataDir(parsed, io), {
+        upsertCapabilities(dataDir, {
           key: capabilityKey(item.id, command),
           name: item.id,
           command,
@@ -80,10 +119,11 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
       item: { id: item.id, name: item.name },
       command,
       scan: scanResult,
+      authorization,
       probe
     });
 
-    if (scanResult && scanResult.summary.fail > 0) return ExitCode.POLICY_FORBID;
+    if (!allowed) return ExitCode.POLICY_FORBID;
     return probe.ok ? ExitCode.OK : ExitCode.POLICY_FORBID;
   }
 
@@ -104,13 +144,40 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
     const { pass, warn, fail } = scanResult.summary;
     writeLine(io.stdout, `  ${pass} pass · ${warn} warning(s) · ${fail} failure(s)`);
     writeLine(io.stdout, '');
+  }
 
-    if (fail > 0) {
-      writeLine(
-        io.stderr,
-        `${theme.error('Refusing try-run')} — ${fail} scan check(s) failed. Re-run with --skip-scan to override.`
-      );
-      return ExitCode.POLICY_FORBID;
+  if (!allowed) {
+    writeLine(
+      io.stderr,
+      `${theme.error('Refusing try-run')} — ${authorization.reasons.join('; ')}.`
+    );
+    writeLine(
+      io.stderr,
+      authorization.verdict === 'review'
+        ? 'Re-run with --accept-warnings to run it anyway.'
+        : authorization.verdict === 'inconclusive'
+          ? 'Re-run with --accept-risk to run it without a scan; the acceptance will be recorded.'
+          : `Run \`agora trust ${item.id}\` to see the evidence behind this.`
+    );
+    return ExitCode.POLICY_FORBID;
+  }
+
+  if (authorization.acknowledged.length) {
+    // `try` runs the code. An acceptance to run something unscanned is exactly
+    // the kind of decision that should still be findable a week later.
+    const recorded = appendGateAudit(
+      dataDir,
+      auditRecordFor(authorization, {
+        actor: 'human-cli',
+        subject: item.id,
+        ...(resolvedPurlFor(item) ? { purl: resolvedPurlFor(item) as string } : {})
+      })
+    );
+    for (const accepted of authorization.acknowledged) {
+      writeLine(io.stdout, theme.dim(`Accepted risk — ${accepted}`));
+    }
+    if (!recorded) {
+      writeLine(io.stderr, `Warning: the risk acceptance could not be recorded in ${dataDir}.`);
     }
   }
 
@@ -128,7 +195,7 @@ export const commandTry: CommandHandler = async (parsed, io, style) => {
     timeoutMs
   });
   try {
-    upsertCapabilities(detectDataDir(parsed, io), {
+    upsertCapabilities(dataDir, {
       key: capabilityKey(item.id, command),
       name: item.id,
       command,

@@ -156,21 +156,30 @@ export const COMMANDS: CommandMeta[] = [
     name: 'try',
     group: 'Stack',
     summary: 'Ephemeral test-drive an MCP server without saving any config',
-    usage: 'agora try <id> [--timeout <ms>] [--skip-scan] [--json]',
+    usage: 'agora try <id> [--timeout <ms>] [--skip-scan] [--accept-risk] [--json]',
     details:
       'Spawns the MCP server for the given catalog item, performs a real MCP ' +
       'initialize + tools/list handshake over stdio, reports the server name and tools, ' +
       'then kills the process — without writing any configuration file. ' +
-      'Runs the pre-install scan by default (same as agora install); pass --skip-scan ' +
-      'to bypass. Use --timeout to override the default 15-second probe window. ' +
-      'Returns exit code 1 if the probe fails or scan blocks.',
+      "A try-run executes the server's code, so it passes the same gate as an install: " +
+      'revocation and Cedar policy always decide, and a scan that was skipped or could not ' +
+      'run leaves an explicit unknown that only --accept-risk clears. Use --timeout to ' +
+      'override the default 15-second probe window. Returns exit code 1 if the probe fails ' +
+      'or the gate refuses.',
     flags: [
       { flag: '--timeout', description: 'Probe timeout in milliseconds (default 15000)' },
       {
         flag: '--skip-scan',
-        description: 'Bypass the pre-install scan gate'
+        description: 'Do not run the heuristic scan; the gate then has an explicit unknown'
       },
-      { flag: '--json', description: 'Output { item, command, scan, probe } as JSON' }
+      {
+        flag: '--accept-risk',
+        description: 'Run it although the scan never ran. Recorded in the local gate audit log'
+      },
+      {
+        flag: '--json',
+        description: 'Output { item, command, scan, authorization, probe } as JSON'
+      }
     ],
     examples: ['agora try mcp-github', 'agora try mcp-filesystem --timeout 20000']
   },

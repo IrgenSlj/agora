@@ -91,3 +91,91 @@ describe('central authorization decision contract', () => {
     expect(decision.verdict).toBe('allow');
   });
 });
+
+describe('accepting a risk, which is what replaces a bypass flag', () => {
+  const unknownScan = request({
+    signals: [
+      { source: 'scan', verdict: 'unknown', detail: 'the pre-install scan was skipped' },
+      { source: 'revocation', verdict: 'allow', detail: 'no confirmed match' },
+      { source: 'policy', verdict: 'allow', detail: 'permit' }
+    ]
+  });
+
+  test('an unknown a human accepted stops being inconclusive and is reported back', () => {
+    const decision = authorizeMutation({ ...unknownScan, acknowledged: ['scan'] });
+
+    expect(decision.verdict).toBe('allow');
+    // Reported back, because an acceptance nobody can find afterwards is just a
+    // bypass with better manners.
+    expect(decision.acknowledged).toHaveLength(1);
+    expect(decision.acknowledged[0]).toContain('scan');
+  });
+
+  test('an acceptance is scoped to the source it names', () => {
+    // Accepting an unrunnable scan says nothing about the policy engine having
+    // failed to run, and must not quietly answer for it too.
+    const decision = authorizeMutation({
+      ...request({
+        signals: [
+          { source: 'scan', verdict: 'unknown', detail: 'skipped' },
+          { source: 'revocation', verdict: 'allow', detail: 'no confirmed match' },
+          { source: 'policy', verdict: 'unknown', detail: 'the engine could not run' }
+        ]
+      }),
+      acknowledged: ['scan']
+    });
+
+    expect(decision.verdict).toBe('inconclusive');
+    expect(decision.reasons.join(' ')).toContain('the engine could not run');
+  });
+
+  test('a deny is not acknowledgeable, however it is named', () => {
+    // Otherwise the flag is a veto over the user's own policy and over a
+    // published advisory, which is precisely the bypass being removed.
+    const decision = authorizeMutation({
+      ...request({
+        signals: [
+          { source: 'scan', verdict: 'unknown', detail: 'skipped' },
+          { source: 'revocation', verdict: 'deny', detail: 'confirmed critical revocation' },
+          { source: 'policy', verdict: 'deny', detail: 'denied by team.cedar' }
+        ]
+      }),
+      acknowledged: ['scan', 'revocation', 'policy']
+    });
+
+    expect(decision.verdict).toBe('deny');
+    expect(decision.acknowledged).toEqual([]);
+  });
+
+  test('an agent cannot accept risk on a human’s behalf', () => {
+    // If a model could supply the acknowledgement, the acknowledgement would be
+    // the bypass flag again, wearing the vocabulary of consent.
+    const decision = authorizeMutation({
+      ...unknownScan,
+      action: 'RequestInstall',
+      actor: 'agent',
+      effects: ['install-intent'],
+      acknowledged: ['scan']
+    });
+
+    expect(decision.verdict).toBe('deny');
+    expect(decision.reasons.join(' ')).toContain('cannot accept risk');
+  });
+
+  test('warnings are never cleared by a risk acceptance', () => {
+    // "I read the warnings" and "install knowing nothing" are different
+    // statements; the caller answers the first where the human can read them.
+    const decision = authorizeMutation({
+      ...request({
+        signals: [
+          { source: 'scan', verdict: 'warn', detail: '3 check(s) require review' },
+          { source: 'revocation', verdict: 'allow', detail: 'no confirmed match' },
+          { source: 'policy', verdict: 'allow', detail: 'permit' }
+        ]
+      }),
+      acknowledged: ['scan']
+    });
+
+    expect(decision.verdict).toBe('review');
+  });
+});

@@ -120,13 +120,17 @@ export function createAgoraRuntimeTools(input?: PluginInput): Record<string, Too
     }),
 
     agora_config: tool({
-      description: 'Check your OpenCode config health, optionally auto-fix issues',
+      description:
+        'Check your OpenCode config health and list the repairs it needs. This tool never edits ' +
+        'the config: an agent cannot authorize a host-configuration write, so `fix` reports the ' +
+        'exact changes for a human to apply with `agora config doctor --fix`.',
       args: {
         fix: tool.schema
           .boolean()
           .optional()
           .describe(
-            'Auto-heal common issues (missing $schema, duplicate plugins, empty MCP entries)'
+            'List the repairs that `agora config doctor --fix` would apply (missing $schema, ' +
+              'duplicate plugins, empty MCP entries). Nothing is written.'
           ),
         configPath: tool.schema
           .string()
@@ -134,50 +138,52 @@ export function createAgoraRuntimeTools(input?: PluginInput): Record<string, Too
           .describe('Explicit path to opencode.json (auto-detected if not set)')
       },
       async execute(args) {
-        const {
-          detectOpenCodeConfigPath,
-          doctorOpenCodeConfig,
-          loadOpenCodeConfig,
-          writeOpenCodeConfig
-        } = await import('../config-files.js');
+        // Deliberately does not import the config writer: this tool has no
+        // path to one.
+        const { detectOpenCodeConfigPath, doctorOpenCodeConfig, loadOpenCodeConfig } = await import(
+          '../config-files.js'
+        );
         const configPath = detectOpenCodeConfigPath({
           explicitPath: args.configPath || process.env.OPENCODE_CONFIG,
           cwd: process.cwd(),
           env: process.env
         });
-        let report = doctorOpenCodeConfig(configPath);
+        const report = doctorOpenCodeConfig(configPath);
 
         if (args.fix) {
+          // The write this used to perform was the last agent-callable edit of
+          // host configuration in the product: a model could rewrite the file
+          // that decides which servers run, with no human anywhere. The repairs
+          // are still computed and shown — that is the useful half — but the
+          // authorization kernel answers the write, and it refuses every
+          // host-config mutation an agent asks for, by construction.
+          const { authorizeMutation } = await import('../gate/authorization.js');
+          const decision = authorizeMutation({
+            action: 'ConfigRepair',
+            actor: 'agent',
+            effects: ['host-config'],
+            requiredSignals: [],
+            signals: []
+          });
           const loaded = loadOpenCodeConfig(configPath);
           const fixes: string[] = [];
-          let changed = false;
-          if (!loaded.config.$schema) {
-            loaded.config.$schema = 'https://opencode.ai/config.json';
-            fixes.push('Added missing $schema');
-            changed = true;
-          }
+          if (!loaded.config.$schema) fixes.push('Add missing $schema');
           if (loaded.config.plugin) {
             const deduped = [...new Set(loaded.config.plugin)];
             if (deduped.length !== loaded.config.plugin.length) {
-              loaded.config.plugin = deduped;
-              fixes.push('Removed duplicate plugins');
-              changed = true;
+              fixes.push('Remove duplicate plugins');
             }
           }
           if (loaded.config.mcp) {
             for (const [key, entry] of Object.entries(loaded.config.mcp)) {
-              if (!entry.command?.length) {
-                delete loaded.config.mcp[key];
-                fixes.push(`Removed empty MCP entry "${key}"`);
-                changed = true;
-              }
+              if (!entry.command?.length) fixes.push(`Remove empty MCP entry "${key}"`);
             }
           }
-          if (changed) {
-            writeOpenCodeConfig(configPath, loaded.config);
-            report = doctorOpenCodeConfig(configPath);
-          }
-          return `## Config Health Report\n\n**Path**: ${report.path}\n**Status**: ${report.valid ? '✅ Valid' : '⚠️ Issues'}${report.error ? `\n**Error**: ${report.error}` : ''}\n**MCP Servers**: ${report.mcpServers}\n**Plugins**: ${report.plugins}\n**Packages**: ${report.packages.length ? report.packages.join(', ') : '(none)'}${fixes.length ? `\n\n**Auto-fixes applied**:\n${fixes.map((f) => `- ${f}`).join('\n')}` : ''}\n\nRun \`agora config doctor --fix\` in your terminal for a more detailed output.`;
+          const refusal =
+            decision.verdict === 'allow'
+              ? ''
+              : `\n\n**Not applied** — ${decision.reasons.join('; ')}.`;
+          return `## Config Health Report\n\n**Path**: ${report.path}\n**Status**: ${report.valid ? '✅ Valid' : '⚠️ Issues'}${report.error ? `\n**Error**: ${report.error}` : ''}\n**MCP Servers**: ${report.mcpServers}\n**Plugins**: ${report.plugins}\n**Packages**: ${report.packages.length ? report.packages.join(', ') : '(none)'}${fixes.length ? `\n\n**Repairs needed**:\n${fixes.map((f) => `- ${f}`).join('\n')}` : '\n\nNo repairs needed.'}${refusal}\n\nRun \`agora config doctor --fix\` in your terminal to apply them.`;
         }
 
         return `## Config Health Report\n\n**Path**: ${report.path}\n**Status**: ${report.valid ? '✅ Valid' : '⚠️ Issues'}${report.error ? `\n**Error**: ${report.error}` : ''}\n**MCP Servers**: ${report.mcpServers}\n**Plugins**: ${report.plugins}\n**Packages**: ${report.packages.length ? report.packages.join(', ') : '(none)'}\n\nRun \`agora config doctor --fix\` in your terminal to auto-heal common issues.`;
