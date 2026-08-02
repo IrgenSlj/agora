@@ -158,26 +158,37 @@ export const commandSync: CommandHandler = async (parsed, io, style) => {
     return ExitCode.POLICY_FORBID;
   }
 
-  // --from: run the trust gate (the SAME exported scanItem gate from src/scan.ts —
+  // Run the trust gate (the SAME exported scanItem gate from src/scan.ts —
   // never reimplemented here) over every mcp/instruction entry before anything
   // is written. A hard fail blocks the whole sync — the flagship demo.
-  if (fromFlag !== undefined) {
+  //
+  // It runs for a local manifest as well, where only the network scan is
+  // skipped: a manifest is written once and applied for months, so revocation
+  // and the project's Cedar rules have to be consulted every time, not only
+  // when the file came from somewhere else.
+  {
     const gate = await gateManifestForSync(manifest, {
       fetcher: io.fetcher,
       cwd: io.cwd,
-      baseSource: isRemoteSource ? fromFlag : undefined
+      baseSource: isRemoteSource ? fromFlag : undefined,
+      dataDir,
+      policyFiles: readManifest(manifestPath(env))?.policy?.files ?? [],
+      scanEntries: fromFlag !== undefined
     });
     if (!gate.ok) {
       if (parsed.flags.json) {
         writeJson(io.stdout, { mode: 'gate-blocked', blocked: gate.blocked });
         return ExitCode.POLICY_FORBID;
       }
-      writeLine(io.stdout, theme.accent('agora sync — scan gate blocked'));
+      writeLine(io.stdout, theme.accent('agora sync — trust gate blocked'));
       writeLine(io.stdout);
       for (const entry of gate.blocked) {
         writeLine(io.stdout, `  ${entry.kind} "${entry.name}":`);
-        for (const check of entry.scan.checks.filter((c) => c.status === 'fail')) {
+        for (const check of entry.scan?.checks.filter((c) => c.status === 'fail') ?? []) {
           writeLine(io.stdout, `    ✗ ${check.label} — ${check.message}`);
+        }
+        for (const reason of entry.reasons ?? []) {
+          writeLine(io.stdout, `    ✗ ${reason}`);
         }
       }
       writeLine(io.stdout);

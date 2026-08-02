@@ -81,9 +81,9 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
   apply: controlled(
     'conditional',
     ['host-config', 'project-files'],
-    'partial',
+    'present',
     'explicit-cli',
-    'Drift is checked; local manifests do not yet receive the complete acquire gate.'
+    'Every manifest entry passes the shared gate before a write; only the network scan is reserved for remote sources.'
   ),
   approve: controlled(
     'conditional',
@@ -222,9 +222,9 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
   sync: controlled(
     'conditional',
     ['host-config', 'project-files'],
-    'partial',
+    'present',
     'explicit-cli',
-    'Remote profiles and drift are gated; local manifests do not receive the complete gate.'
+    'Drift plus the shared gate over every manifest entry, local or remote, before anything is written.'
   ),
   today: local(
     'conditional',
@@ -256,9 +256,9 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
   update: controlled(
     'conditional',
     ['host-config'],
-    'partial',
+    'present',
     'explicit-cli',
-    'Drift is checked before --write --yes; complete provenance/revocation/Cedar checks are absent.'
+    'Drift, then revocation and Cedar evaluated against the version being moved TO; a refused entry is skipped, not written.'
   ),
   verify: readOnly('Compatibility alias for scan.'),
   watch: local(

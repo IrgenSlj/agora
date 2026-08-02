@@ -21,9 +21,9 @@ State labels are deliberately strict:
 | Provenance | Live | Sigstore verification checks Fulcio, CT, Rekor, subject digest, and repository identity | Persist the result as part of one acquisition transaction |
 | Schema and description drift | Live | Capability hashing, comparison, quarantine, and poisoning heuristics exist | Route every mutation through the same drift decision |
 | Runtime observation | Live with limits | Byte-transparent MCP supervision records tool names/counts and sampled direct-process network peers; arguments/results are excluded | Descendant-process coverage and stronger platform backends; sampled data must never be described as complete behavior |
-| Cedar policy and mutation gate | Partial | Engine, linting, CLI, baseline, complete mutation inventory, typed scan/revocation/Cedar/identity adapters, and central authorization on acquire, approve, `install --write`, and `try`; no bypass flag remains | Give provenance/drift independent signals and route apply, sync, update, integrate, and `doctor --probe` |
+| Cedar policy and mutation gate | Live with limits | Engine, linting, CLI, baseline, complete mutation inventory, typed scan/revocation/Cedar/identity adapters, and central authorization on acquire, approve, `install --write`, `try`, `apply`, `sync`, and `update`; no bypass flag remains | Give provenance/drift independent signals; route `integrate` and `doctor --probe` |
 | Revocation and OSV audit | Partial | Bundled OSV-derived feed and additive monotonic merge work; `audit` covers configured MCP packages | Preserve feed origin/freshness in verdicts and independently validate network-added hard blocks |
-| Stack management | Live with limits | Host adapters, plan/apply, atomic host-config writes, freeze, sync, drift and quarantine work | Round-trip-preserving edits of existing `agora.toml`; central gate for every write |
+| Stack management | Live with limits | Host adapters, plan/apply, atomic host-config writes, freeze, sync, drift and quarantine work, and every apply/sync/update write passes the shared gate | Round-trip-preserving edits of existing `agora.toml` |
 | Portable environment configuration | Live | `freeze` emits `env_from` references, never copied host environment values; plan/apply resolve locally and fail before writing when missing | Secret scanning for manually authored literal values and sensitive command/URL material |
 | Lockfile and evidence store | Partial | Models, SQLite/CAS primitives, lock verification, and schema generation exist | Acquisition does not yet create/update `agora.lock` or persist the complete evidence chain |
 | Evidence export | Partial | Bundle/envelope generation and explicit `not_established` reporting exist | Resolve subjects from the lock/store and validate each predicate payload against its named schema |
@@ -58,11 +58,14 @@ State labels are deliberately strict:
   where two files would have been written.
 - Every mutation that proceeded on an accepted unknown is recorded in `gate-audit.jsonl` (a local
   accountability log, not signed evidence).
+- `apply`/`sync` evaluate revocation and Cedar for every manifest entry, local or remote, and match
+  a revocation against the exact version pinned in the launch command.
+- `update` evaluates the version it is moving to, not the one already installed.
 
 ## Known high-priority gaps
 
-1. `apply`, `sync`, `update`, `integrate`, and `doctor --probe` do not yet share the mandatory gate
-   that acquire, approve, `install --write`, and `try` now use.
+1. `integrate` and `doctor --probe` do not yet share the mandatory gate that acquire, approve,
+   `install`, `try`, `apply`, `sync`, and `update` now use.
 2. Terminal `agora approve` is not a strong consent boundary when an agent also has shell access.
 3. Acquire does not atomically produce the artifact digest, evidence records, and lockfile entry.
 4. Export predicates are not yet checked against their predicate-specific schemas.
@@ -73,6 +76,6 @@ State labels are deliberately strict:
 
 ## Verification snapshot
 
-After the third 2026-08-02 hardening session, typecheck, lint, build, and the full suite pass: 1,765
+After the third 2026-08-02 hardening session, typecheck, lint, build, and the full suite pass: 1,772
 tests passed with one skipped. Each development session must refresh this snapshot in
 [`DEVELOPMENT.md`](./DEVELOPMENT.md) after running the applicable gates.

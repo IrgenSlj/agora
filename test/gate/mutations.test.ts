@@ -30,15 +30,7 @@ describe('mutation inventory completeness', () => {
       .filter(([, entry]) => entry.requiresGate && entry.coverage !== 'present')
       .map(([name]) => name)
       .sort();
-    expect(cliGaps).toEqual([
-      'apply',
-      'approve',
-      'doctor',
-      'integrate',
-      'sync',
-      'unquarantine',
-      'update'
-    ]);
+    expect(cliGaps).toEqual(['approve', 'doctor', 'integrate', 'unquarantine']);
 
     expect(CLI_MUTATION_INVENTORY.acquire).toMatchObject({
       requiresGate: true,

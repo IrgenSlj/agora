@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import type { MarketplaceItem } from '../catalog/types.js';
 import type { FetchLike } from '../fetch.js';
+import { authorizeLegacyMutation } from '../gate/adapters.js';
+import type { AuthorizationDecision } from '../gate/authorization.js';
+import { evaluatePolicy } from '../policy/engine.js';
+import { checkRevocations } from '../revocation/client.js';
+import { npmPackageFromCommand, npmPurl, versionFromCommand } from '../revocation/installed.js';
 import { type ScanOptions, type ScanResult, scanInstructionText, scanItem } from '../scan.js';
 import { type CapabilityDriftBlock, findCapabilityDriftBlocks } from './drift-blocks.js';
 import type { ManifestEntry, StackManifest } from './manifest.js';
@@ -518,7 +523,14 @@ export async function applyInstructionsSync(
 export interface GateEntry {
   name: string;
   kind: 'mcp' | 'instruction';
-  scan: ScanResult;
+  /** Absent for a local manifest, where no network scan is performed. */
+  scan?: ScanResult;
+  /** The artifact's identity, when the entry resolves to one. */
+  purl?: string;
+  /** The shared gate's verdict for this entry. Absent only for instructions. */
+  authorization?: AuthorizationDecision;
+  /** Why this entry blocks or warns, in one line, for the caller to render. */
+  reasons?: string[];
 }
 
 export interface GateReport {
@@ -532,6 +544,24 @@ export interface GateOptions {
   cwd?: string;
   baseSource?: string;
   scanOptions?: ScanOptions;
+  /**
+   * Where the revocation feed lives. Without it revocation cannot be consulted,
+   * which the gate reports as unknown rather than treating as clean.
+   */
+  dataDir?: string;
+  /** Project `.cedar` files from `agora.toml → [policy] files`. */
+  policyFiles?: readonly string[];
+  /**
+   * Whether to scan every entry over the network.
+   *
+   * True for a manifest fetched from somewhere else, where the servers are new
+   * to this machine and triage is the whole point. False for the user's own
+   * local manifest: those servers are already configured, `apply` is
+   * reconciling a file they wrote, and making every local apply depend on the
+   * network would trade a real capability for a check already made. Revocation
+   * and policy still run in both cases, offline.
+   */
+  scanEntries?: boolean;
   /** Test seam — override scanItem itself, mirroring AcquireDeps.scan. */
   deps?: { scan?: typeof scanItem };
 }
@@ -587,13 +617,64 @@ export async function gateManifestForSync(
   opts: GateOptions = {}
 ): Promise<GateReport> {
   const scan = opts.deps?.scan ?? scanItem;
+  const scanEntries = opts.scanEntries !== false;
   const entries: GateEntry[] = [];
 
   for (const [name, entry] of Object.entries(manifest.mcp)) {
     if (entry.enabled === false) continue;
     const item = mcpEntryToScanItem(name, entry);
-    const result = await scan(item, { ...opts.scanOptions, fetcher: opts.fetcher });
-    entries.push({ name, kind: 'mcp', scan: result });
+    const result = scanEntries
+      ? await scan(item, { ...opts.scanOptions, fetcher: opts.fetcher })
+      : undefined;
+
+    // Revocation and Cedar are offline lookups, so they run for every manifest
+    // — including the user's own. Applying a manifest that pins a package with
+    // a published advisory is exactly the case a trust plane exists for, and it
+    // used to write straight through.
+    //
+    // The version has to be split out of the command rather than left attached:
+    // a revocation names one release, so `pkg:npm/name@1.2.3` is what matches a
+    // confirmed block. Concatenating the raw `name@1.2.3` token into the name
+    // field would only ever produce unversioned advisory warnings, and the
+    // pinned bad version would sail through.
+    const npmPackage = npmPackageFromCommand(entry.command);
+    const pinnedVersion = versionFromCommand(entry.command);
+    const purl = npmPackage ? npmPurl(npmPackage, pinnedVersion) : undefined;
+    const revocationPurls = npmPackage
+      ? pinnedVersion
+        ? // Both forms: an advisory may name the package or one release of it.
+          [npmPurl(npmPackage), npmPurl(npmPackage, pinnedVersion)]
+        : [npmPurl(npmPackage)]
+      : [];
+    const revocation = opts.dataDir ? checkRevocations(opts.dataDir, revocationPurls) : undefined;
+    const policy = await evaluatePolicy({
+      purl: purl ?? `pkg:generic/${name}`,
+      action: 'Install',
+      policyFiles: opts.policyFiles ?? [],
+      cwd: opts.cwd,
+      ...(result ? { scan: result } : {}),
+      revoked: revocation && !revocation.unknown ? revocation.blocked : undefined,
+      kind: 'mcp-server'
+    });
+
+    const authorization = authorizeLegacyMutation({
+      action: 'Apply',
+      actor: 'human-cli',
+      effects: ['host-config'],
+      ...(result ? { scan: result } : {}),
+      scanRequired: scanEntries,
+      policy,
+      ...(revocation ? { revocation } : {})
+    });
+
+    entries.push({
+      name,
+      kind: 'mcp',
+      ...(result ? { scan: result } : {}),
+      ...(purl ? { purl } : {}),
+      authorization,
+      ...(authorization.reasons.length ? { reasons: authorization.reasons } : {})
+    });
   }
 
   for (const [name, entry] of Object.entries(manifest.instructions ?? {})) {
@@ -616,6 +697,16 @@ export async function gateManifestForSync(
     entries.push({ name, kind: 'instruction', scan: scanInstructionText(name, content) });
   }
 
-  const blocked = entries.filter((e) => e.scan.summary.fail > 0);
+  // An entry blocks on a refusal or on evidence that could not conclude — not
+  // on a warning. `apply`/`sync` reconcile a whole declared manifest, often in
+  // CI where there is nobody to accept anything; making one advisory warning
+  // stop every other server would push people to stop running them at all.
+  // Warnings stay visible in each entry's decision. A `deny` is different: it
+  // is a scan failure, a confirmed revocation, or the project's own rule.
+  const blocked = entries.filter((e) =>
+    e.authorization
+      ? e.authorization.verdict === 'deny' || e.authorization.verdict === 'inconclusive'
+      : (e.scan?.summary.fail ?? 0) > 0
+  );
   return { ok: blocked.length === 0, entries, blocked };
 }

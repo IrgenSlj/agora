@@ -20,8 +20,9 @@ import {
   type ToolSyncPlan
 } from '../../stack/sync.js';
 import type { AgentToolId, StackEnv } from '../../stack/types.js';
+import { detectAgoraDataDir } from '../../state.js';
 import type { CliIo, ParsedArgs } from '../flags.js';
-import { stringFlag, usageError } from '../helpers.js';
+import { detectDataDir, stringFlag, usageError } from '../helpers.js';
 import type { Theme } from '../theme.js';
 
 export const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
@@ -136,11 +137,28 @@ export function combinedHasChanges(plan: CombinedPlan): boolean {
   return hasAny(plan.servers) || hasAny(plan.instructions);
 }
 
-export async function runGate(args: ResolvedStackArgs, io: CliIo): Promise<GateReport> {
+/**
+ * The gate for `plan`/`apply`/`sync`.
+ *
+ * It runs for every manifest, not only a remote one. A local `agora apply` used
+ * to write host configuration with no trust decision at all, on the reasoning
+ * that the user wrote the file — but a manifest is written once and applied for
+ * months, and an advisory published in between is exactly what should stop it.
+ * Only the *network scan* is reserved for remote sources; revocation and Cedar
+ * are offline and always run.
+ */
+export async function runGate(
+  args: ResolvedStackArgs,
+  io: CliIo,
+  parsed?: ParsedArgs
+): Promise<GateReport> {
   return gateManifestForSync(args.manifest, {
     fetcher: io.fetcher,
     cwd: io.cwd,
-    baseSource: args.isRemoteSource ? args.fromFlag : undefined
+    baseSource: args.isRemoteSource ? args.fromFlag : undefined,
+    dataDir: parsed ? detectDataDir(parsed, io) : detectAgoraDataDir({ cwd: io.cwd, env: io.env }),
+    policyFiles: readManifest(manifestPath(args.env))?.policy?.files ?? [],
+    scanEntries: args.fromFlag !== undefined
   });
 }
 
@@ -198,11 +216,16 @@ export function formatToolPlans(title: string, plans: ToolSyncPlan[], theme: The
 }
 
 export function formatGateBlocked(gate: GateReport, theme: Theme): string {
-  const lines: string[] = [theme.accent('agora — scan gate blocked'), ''];
+  const lines: string[] = [theme.accent('agora — trust gate blocked'), ''];
   for (const entry of gate.blocked) {
     lines.push(`  ${entry.kind} "${entry.name}":`);
-    for (const check of entry.scan.checks.filter((c) => c.status === 'fail')) {
+    for (const check of entry.scan?.checks.filter((c) => c.status === 'fail') ?? []) {
       lines.push(`    ✗ ${check.label} — ${check.message}`);
+    }
+    // Revocation and policy have no scan check to point at, so the gate's own
+    // reasons are what explains the refusal.
+    for (const reason of entry.reasons ?? []) {
+      lines.push(`    ✗ ${reason}`);
     }
   }
   lines.push('');

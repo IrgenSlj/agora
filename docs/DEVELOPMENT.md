@@ -106,16 +106,24 @@ Completed:
   threw, so `agora config doctor` crashed on exactly the config its `--fix` exists to repair.
 - `GATE-005`: `test/gate/all-or-nothing.test.ts` pins that a refused install/try leaves the
   filesystem byte-identical, including the `--save` two-file case.
+- `GATE-003` (most of it): `apply`/`sync` now gate a **local** manifest, not only `--from`. Only the
+  network scan is reserved for remote sources; revocation and Cedar are offline and always run, so
+  everyday local applies stay offline-capable. `update --write --yes` evaluates the version it is
+  moving *to* and skips a refused entry with a reason rather than blocking the others.
+- The manifest gate splits `name@1.2.3` out of the launch command before building the purl. Without
+  it a pinned known-bad release only ever produced an unversioned advisory warning and was applied.
+- A warning does not block `apply`/`sync` (CI has nobody to accept it, and one advisory must not
+  stop every other server); `deny` and `inconclusive` still block everything.
 
 Focused verification:
 
 - `bunx vitest run test/gate/ test/approve.test.ts test/cli.test.ts test/plugin-config-tool.test.ts`
 - `bun run typecheck`, `bun run lint`, `bun run build`, and full `bun run test` passed:
-  1,765 tests passed, one skipped.
+  1,772 tests passed, one skipped.
 
 Next:
 
-1. `GATE-003` remainder: route `apply`, `sync`, `update`, `integrate`, and `doctor --probe`.
+1. `GATE-003` remainder: `integrate` and `doctor --probe` are the last two unrouted writers.
 2. `AGENT-002`: a consent boundary an agent with shell access cannot self-assert.
 3. `SEC-002` secret inspection and `OBS-003` observation scope.
 

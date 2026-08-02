@@ -22,16 +22,18 @@ export const commandApply: CommandHandler = async (parsed, io, style) => {
   if (!resolved.ok) return resolved.code;
   const args = resolved.value;
 
-  if (args.fromFlag !== undefined) {
-    const gate = await runGate(args, io);
-    if (!gate.ok) {
-      if (parsed.flags.json) {
-        writeJson(io.stdout, { mode: 'gate-blocked', blocked: gate.blocked });
-      } else {
-        writeLine(io.stdout, formatGateBlocked(gate, theme));
-      }
-      return ExitCode.POLICY_FORBID;
+  // Runs for a local manifest too. `apply` writes host configuration, and a
+  // file the user wrote in March says nothing about an advisory published in
+  // July — which is precisely what the offline revocation and policy checks
+  // catch here.
+  const gate = await runGate(args, io, parsed);
+  if (!gate.ok) {
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { mode: 'gate-blocked', blocked: gate.blocked });
+    } else {
+      writeLine(io.stdout, formatGateBlocked(gate, theme));
     }
+    return ExitCode.POLICY_FORBID;
   }
 
   let applied;

@@ -230,6 +230,16 @@ export interface LegacyMutationAuthorizationInput {
   effects: MutationEffect[];
   /** Absent when the caller skipped it; the gate then has an unknown, not a pass. */
   scan?: ScanResult;
+  /**
+   * Whether a scan belongs in this decision at all. Acquiring or running an
+   * artifact must be informed by one, so the default is true and a missing scan
+   * is an unknown. Reconciling a manifest of servers the user already
+   * configured is a different question: there is no new artifact to triage, and
+   * pretending an absent scan is an accepted risk would put a false
+   * acknowledgement in the audit log. Then the signal is simply not part of the
+   * decision — recorded as absent, never as a pass.
+   */
+  scanRequired?: boolean;
   policy: PolicyDecision;
   revocation?: RevocationStatus;
   /** Sources a human explicitly accepted, typically `['scan']` via --accept-risk. */
@@ -237,8 +247,8 @@ export interface LegacyMutationAuthorizationInput {
 }
 
 /**
- * The decision for the older command paths that used to reach a write with a
- * bypass flag instead of a gate.
+ * The decision for the command paths that used to reach a write with a bypass
+ * flag, a partial check, or nothing at all.
  *
  * Revocation is *required* here, unlike primary acquire, because these paths
  * always have a data directory to look one up in — there is no honest reason
@@ -247,13 +257,19 @@ export interface LegacyMutationAuthorizationInput {
 export function authorizeLegacyMutation(
   input: LegacyMutationAuthorizationInput
 ): AuthorizationDecision {
+  const scanRequired = input.scanRequired !== false;
+  const scanSignals = scanRequired
+    ? [input.scan ? scanAuthorizationSignal(input.scan) : skippedScanSignal()]
+    : input.scan
+      ? [scanAuthorizationSignal(input.scan)]
+      : [];
   return authorizeMutation({
     action: input.action,
     actor: input.actor,
     effects: input.effects,
-    requiredSignals: ['scan', 'revocation', 'policy'],
+    requiredSignals: scanRequired ? ['scan', 'revocation', 'policy'] : ['revocation', 'policy'],
     signals: [
-      input.scan ? scanAuthorizationSignal(input.scan) : skippedScanSignal(),
+      ...scanSignals,
       revocationAuthorizationSignal(input.revocation),
       policyAuthorizationSignal(input.policy)
     ],

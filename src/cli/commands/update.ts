@@ -1,5 +1,10 @@
+import { authorizeLegacyMutation } from '../../gate/adapters.js';
 import { checkOutdated } from '../../outdated.js';
+import { evaluatePolicy } from '../../policy/engine.js';
+import { checkRevocations } from '../../revocation/client.js';
+import { npmPurl } from '../../revocation/installed.js';
 import { findConfiguredServerDriftBlocks } from '../../stack/drift-blocks.js';
+import { manifestPath, readManifest } from '../../stack/manifest.js';
 import { ALL_ADAPTERS, getAdapter, readAllServers } from '../../stack/registry.js';
 import type { AgentToolId, DesiredServer, StackEnv } from '../../stack/types.js';
 import { buildUpdatePlan, bumpCommand, collectPackages } from '../../update.js';
@@ -130,6 +135,7 @@ export const commandUpdate: CommandHandler = async (parsed, io, style) => {
   if (doWrite && doYes) {
     // ── WRITE MODE ──────────────────────────────────────────────────────────
     const updatableEntries = entries.filter((e) => e.status === 'updatable');
+    const policyFiles = readManifest(manifestPath(env))?.policy?.files ?? [];
 
     // Group updatable entries by tool
     const byTool = new Map<AgentToolId, typeof updatableEntries>();
@@ -202,6 +208,38 @@ export const commandUpdate: CommandHandler = async (parsed, io, style) => {
           result.skipped.push({
             server: entry.server,
             reason: 'version data missing for updatable entry'
+          });
+          continue;
+        }
+
+        // The gate, on the version being moved TO.
+        //
+        // This is the rug-pull shape in its purest form: the artifact was fine
+        // when it was installed, and `update` is the command that reaches out
+        // for whatever npm now calls latest. Checking the version already on
+        // disk would answer the wrong question, so revocation and policy are
+        // evaluated against the *target* purl before it is written.
+        const targetPurl = entry.pkg ? npmPurl(entry.pkg, entry.latest) : undefined;
+        const revocation = checkRevocations(dataDir, targetPurl ? [targetPurl] : []);
+        const authorization = authorizeLegacyMutation({
+          action: 'Update',
+          actor: 'human-cli',
+          effects: ['host-config'],
+          scanRequired: false,
+          policy: await evaluatePolicy({
+            purl: targetPurl ?? `pkg:generic/${entry.server}`,
+            action: 'Install',
+            policyFiles,
+            cwd: io.cwd,
+            revoked: revocation.unknown ? undefined : revocation.blocked,
+            kind: 'mcp-server'
+          }),
+          revocation
+        });
+        if (authorization.verdict === 'deny' || authorization.verdict === 'inconclusive') {
+          result.skipped.push({
+            server: entry.server,
+            reason: `refused by the trust gate — ${authorization.reasons.join('; ')}`
           });
           continue;
         }

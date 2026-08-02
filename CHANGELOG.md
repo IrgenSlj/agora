@@ -17,6 +17,24 @@ not when one is.*
   invocation could include sockets from unrelated processes. Missing or failed sampling is now
   recorded as `unavailable`, never as a successful empty sample.
 
+### Security — the stack commands join the gate
+
+- `agora apply` and `agora sync` now run the trust gate on a **local** manifest, not only one
+  fetched with `--from`. A manifest is written once and applied for months; an advisory published in
+  between is exactly what should stop it. Revocation and your Cedar policy are offline, so they run
+  every time — only the network scan stays reserved for manifests that came from elsewhere, keeping
+  everyday local applies offline-capable.
+- The manifest gate now matches a revocation against the **exact pinned version**. A command like
+  `npx pkg@1.2.3` carries the version in one token; treating it as part of the package name produced
+  only unversioned advisory warnings, so a pinned known-bad release would have been applied.
+- `agora update --write --yes` evaluates revocation and policy against **the version it is moving
+  to**, which is the whole point of the command — the artifact was fine when installed, and update
+  reaches for whatever npm now calls latest. A refused entry is skipped with a reason; the other
+  servers still update.
+- A warning does not block `apply`/`sync`. These commands reconcile a whole manifest, often in CI
+  where nobody can accept anything, and one advisory should not stop every other server. Denials and
+  inconclusive evidence still block everything.
+
 ### Security — no flag skips the gate
 
 - `--skip-scan` no longer bypasses anything. It means "do not run the heuristic scan", and the gate
