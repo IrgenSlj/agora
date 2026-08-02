@@ -98,6 +98,37 @@ export function revocationAuthorizationSignal(
   return { source: 'revocation', verdict: 'allow', detail: 'no matching revocation entry' };
 }
 
+/**
+ * Bind a decision to the artifact it was made about.
+ *
+ * An approval is granted for one thing. If resolution later produces a
+ * different package or a different version, the recorded review no longer
+ * describes what would be installed — so this is a mismatch, not a warning.
+ * An artifact that cannot be addressed by purl at all is `unknown`: the
+ * expectation cannot be checked, and an unverifiable identity claim is not a
+ * satisfied one.
+ */
+export function identityAuthorizationSignal(
+  expected: string,
+  actual: string | undefined
+): AuthorizationSignal {
+  if (!actual) {
+    return {
+      source: 'identity',
+      verdict: 'unknown',
+      detail: `expected ${expected}, but the resolved artifact has no comparable package identity`
+    };
+  }
+  if (actual !== expected) {
+    return {
+      source: 'identity',
+      verdict: 'deny',
+      detail: `expected ${expected}, but resolution produced ${actual}`
+    };
+  }
+  return { source: 'identity', verdict: 'allow', detail: `resolved artifact is ${expected}` };
+}
+
 function acquireEffects(save: boolean | undefined): MutationEffect[] {
   return save ? ['host-config', 'portable-manifest', 'local-state'] : ['host-config'];
 }
@@ -107,6 +138,9 @@ export interface AcquireAuthorizationInput {
   scan: ScanResult;
   policy: PolicyDecision;
   revocation?: RevocationStatus;
+  /** Set when the caller acquires a specific artifact it has already reviewed. */
+  expectedPurl?: string;
+  resolvedPurl?: string;
   save?: boolean;
 }
 
@@ -119,12 +153,16 @@ export interface InstallRequestAuthorizationInput {
 
 /** One auditable authorization decision for the complete acquire evidence set. */
 export function authorizeAcquireEvidence(input: AcquireAuthorizationInput): AuthorizationDecision {
+  const identity = input.expectedPurl
+    ? [identityAuthorizationSignal(input.expectedPurl, input.resolvedPurl)]
+    : [];
   return authorizeMutation({
     action: 'Acquire',
     actor: input.actor,
     effects: acquireEffects(input.save),
-    requiredSignals: ['scan', 'policy'],
+    requiredSignals: input.expectedPurl ? ['identity', 'scan', 'policy'] : ['scan', 'policy'],
     signals: [
+      ...identity,
       scanAuthorizationSignal(input.scan),
       revocationAuthorizationSignal(input.revocation),
       policyAuthorizationSignal(input.policy)
@@ -151,6 +189,29 @@ export function authorizeInstallRequestEvidence(
     effects: ['install-intent'],
     requiredSignals: ['scan', 'policy'],
     signals
+  });
+}
+
+/**
+ * Decide whether resolution produced the artifact the caller was promised.
+ *
+ * Separate from the evidence gate on purpose: this is not a question about the
+ * caller's authority or the artifact's trustworthiness, so it is answered
+ * before any scan runs and it applies to previews too. A dry run that reports
+ * on a different package than the one requested is misinformation.
+ */
+export function authorizeAcquireIdentity(
+  actor: AuthorizationActor,
+  expectedPurl: string,
+  resolvedPurl: string | undefined,
+  save?: boolean
+): AuthorizationDecision {
+  return authorizeMutation({
+    action: 'Acquire',
+    actor,
+    effects: acquireEffects(save),
+    requiredSignals: ['identity'],
+    signals: [identityAuthorizationSignal(expectedPurl, resolvedPurl)]
   });
 }
 

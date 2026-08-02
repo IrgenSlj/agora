@@ -10,7 +10,12 @@ import { detectOpenCodeConfigPath, loadOpenCodeConfig } from './config-files.js'
 import { federatedFetchItem } from './federation/index.js';
 import type { FederatedItem, FederationEnv, SourceId } from './federation/types.js';
 import type { FetchLike } from './fetch.js';
-import { authorizeAcquireEvidence, authorizeAcquireRevocationPreflight } from './gate/adapters.js';
+import {
+  authorizeAcquireEvidence,
+  authorizeAcquireIdentity,
+  authorizeAcquireRevocationPreflight,
+  identityAuthorizationSignal
+} from './gate/adapters.js';
 import type { AuthorizationActor, AuthorizationDecision } from './gate/authorization.js';
 import type { Divergence } from './model/observed.js';
 import { aggregate, divergences as computeDivergences } from './observe/profile.js';
@@ -44,6 +49,12 @@ export interface AcquireInput {
   dryRun?: boolean;
   /** Security principal making the request. Agent callers may preview but never install. */
   actor?: AuthorizationActor;
+  /**
+   * purl the caller has already reviewed and is acquiring. Resolution must
+   * produce exactly this artifact or nothing is installed — an approval is
+   * granted for one thing, not for whatever the id resolves to later.
+   */
+  expectedPurl?: string;
   cwd?: string;
   /** Project `.cedar` files from `agora.toml → [policy] files`. */
   policyFiles?: readonly string[];
@@ -99,6 +110,12 @@ const DEFAULT_TOOL: AgentToolId = 'opencode';
  * the addressable identity today; both the pinned-version and version-less
  * forms are queried so an entry written against either shape still matches.
  */
+/** The artifact's exact, version-pinned identity, when it has one. */
+function resolvedPurlFor(item: MarketplaceItem): string | undefined {
+  if (item.kind !== 'package' || !item.npmPackage) return undefined;
+  return npmPurl(item.npmPackage, item.version);
+}
+
 function revocationPurlsFor(item: MarketplaceItem): string[] {
   const npmPackage = item.kind === 'package' ? item.npmPackage : undefined;
   if (!npmPackage) return [];
@@ -311,6 +328,30 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       : undefined;
   const previousDigest = existingTrust?.descriptionDigestBaseline ?? cachedDigest;
 
+  // Identity runs before the scan, before the revocation lookup, and before any
+  // preview is rendered. When the caller named the exact artifact it reviewed,
+  // everything downstream is a statement about that artifact; resolving to a
+  // different package or version makes the whole report describe the wrong
+  // thing, so there is nothing useful to compute past this point.
+  const resolvedPurl = resolvedPurlFor(item);
+  if (input.expectedPurl) {
+    const identity = identityAuthorizationSignal(input.expectedPurl, resolvedPurl);
+    if (identity.verdict !== 'allow') {
+      return {
+        status: 'blocked',
+        item,
+        plan,
+        authorization: authorizeAcquireIdentity(
+          actor,
+          input.expectedPurl,
+          resolvedPurl,
+          input.save
+        ),
+        reason: `Refusing: ${item.name} no longer resolves to the reviewed artifact — ${identity.detail}. Re-run the request so the new version is reviewed on its own evidence.`
+      };
+    }
+  }
+
   // Revocation runs BEFORE the scan and before any write. A revoked artifact
   // is not a judgement call the heuristics get to weigh in on — it is a known
   // -bad thing someone has published an advisory about, and the answer is no.
@@ -375,6 +416,7 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     scan,
     policy: policyDecision,
     revocation,
+    ...(input.expectedPurl ? { expectedPurl: input.expectedPurl, resolvedPurl } : {}),
     save: input.save
   });
 

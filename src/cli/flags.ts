@@ -35,6 +35,9 @@ const booleanFlags = new Set([
   'attestations',
   'clear',
   'continue',
+  // Without this, `agora approve --deny k7m2xq` swallows the id as the flag's
+  // value and silently lists pending requests instead of denying one.
+  'deny',
   'down',
   'dryRun',
   'dry-run',

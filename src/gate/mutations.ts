@@ -90,7 +90,7 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
     ['host-config', 'portable-manifest', 'local-state'],
     'partial',
     'explicit-cli',
-    'Re-runs acquire, but terminal invocation is not itself a strong human-consent boundary.'
+    'Re-runs the complete acquire gate bound to the reviewed purl and project policy; terminal invocation is not itself a strong human-consent boundary.'
   ),
   audit: readOnly('Reads configured servers and queries OSV.'),
   browse: readOnly('Reads merged catalog detail.'),

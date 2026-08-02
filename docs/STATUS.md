@@ -48,6 +48,9 @@ State labels are deliberately strict:
 - Human acquire consumes typed scan, revocation, and Cedar signals before its write.
 - Agent-facing acquire confirmation writes only a pending intent. Failed or inconclusive required
   evidence writes no intent; no agent parameter can write host config or `agora.toml`.
+- Approving a request installs only the reviewed artifact: resolution is by exact id, and a changed
+  package or version fails a required identity signal instead of installing.
+- The approval path evaluates the project's Cedar policy files, exactly as a direct acquire does.
 
 ## Known high-priority gaps
 

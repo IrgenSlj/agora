@@ -130,6 +130,53 @@ describe('agora approve', () => {
     expect(existsSync(join(dir, 'opencode.json'))).toBe(false);
   });
 
+  test('--deny works before the id as well as after it', async () => {
+    // The id is a positional, so an undeclared boolean flag consumes it as its
+    // own value and the command silently lists instead of denying.
+    intent('k7m2xq');
+    const { io: cliIo, out } = io();
+
+    await runCli(['approve', '--deny', 'k7m2xq'], cliIo as never);
+
+    expect(out()).toContain('Denied');
+    expect(listIntents(data)).toHaveLength(0);
+  });
+
+  test('a request is refused once it resolves to a different artifact', async () => {
+    // The reviewed evidence describes one set of bytes. If the id now resolves
+    // to another version, nobody has reviewed that version — approving it would
+    // launder an unreviewed artifact through a human decision about a different
+    // one, which is the rug-pull shape Agora exists to catch.
+    intent('k7m2xq', {
+      purl: 'pkg:npm/%40modelcontextprotocol/server-filesystem@0.0.1-not-the-reviewed-one'
+    });
+    const { io: cliIo, out } = io();
+
+    const code = await runCli(['approve', 'k7m2xq'], cliIo as never);
+
+    expect(code).toBe(1);
+    expect(out()).toContain('no longer resolves to the reviewed artifact');
+    expect(existsSync(join(dir, 'opencode.json'))).toBe(false);
+    expect(listIntents(data)).toHaveLength(1);
+  });
+
+  test("the project's own policy files govern the approval path", async () => {
+    // Approval is the install path that begins with an agent asking. It must
+    // enforce at least what a direct `agora acquire` enforces, or requesting
+    // through an agent becomes a way around the project's rules.
+    writeFileSync(join(dir, 'team.cedar'), 'forbid (principal, action, resource);\n', 'utf8');
+    writeFileSync(join(dir, 'agora.toml'), '[policy]\nfiles = ["team.cedar"]\n', 'utf8');
+    intent('k7m2xq');
+    const { io: cliIo, out } = io();
+
+    const code = await runCli(['approve', 'k7m2xq'], cliIo as never);
+
+    expect(code).toBe(1);
+    expect(out()).toContain('policy denied');
+    expect(existsSync(join(dir, 'opencode.json'))).toBe(false);
+    expect(listIntents(data)).toHaveLength(1);
+  });
+
   test('a request naming an unknown item installs nothing', async () => {
     intent('k7m2xq', { item: 'no-such-item-anywhere' });
     const { io: cliIo, out } = io();

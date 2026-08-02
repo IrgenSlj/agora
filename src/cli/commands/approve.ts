@@ -16,6 +16,7 @@ import { acquire, renderAcquireResult } from '../../acquire.js';
 import { findMarketplaceItem } from '../../catalog/bundled.js';
 import { createProvenanceResolver } from '../../evidence/resolve-provenance.js';
 import { deleteIntent, displayIntentText, listIntents, readIntent } from '../../serve/intent.js';
+import { manifestPath, readManifest } from '../../stack/manifest.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
@@ -100,7 +101,13 @@ export const commandApprove: CommandHandler = async (parsed, io, style) => {
   }
 
   const result = await acquire({
-    query: intent.item,
+    // `id`, never `query`: a capability search could resolve to a different
+    // item than the one the person just read about, and an approval names one
+    // artifact. `expectedPurl` closes the same hole one level down — the id
+    // may still resolve to a newer version than the request was reviewed
+    // against, and that version has not been reviewed by anyone.
+    id: intent.item,
+    ...(intent.purl ? { expectedPurl: intent.purl } : {}),
     tool: (stringFlag(parsed, 'tool') ?? intent.tool ?? 'opencode') as never,
     dryRun: parsed.flags.dryRun === true,
     acceptWarnings: parsed.flags.acceptWarnings === true,
@@ -110,6 +117,10 @@ export const commandApprove: CommandHandler = async (parsed, io, style) => {
     dataDir,
     fetcher: io.fetcher,
     githubToken: io.env?.AGORA_GITHUB_TOKEN,
+    // The approval path must enforce at least what a direct `agora acquire`
+    // enforces. Without this the project's own Cedar rules are absent from the
+    // one install path that started with an agent asking for it.
+    policyFiles: readManifest(manifestPath({ cwd: io.cwd, env: io.env }))?.policy?.files ?? [],
     scanOptions: {
       provenance: createProvenanceResolver({
         fetcher: io.fetcher,

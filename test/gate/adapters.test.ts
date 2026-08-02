@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
   authorizeAcquireEvidence,
   authorizeInstallRequestEvidence,
+  identityAuthorizationSignal,
   policyAuthorizationSignal,
   revocationAuthorizationSignal,
   scanAuthorizationSignal
@@ -110,5 +111,60 @@ describe('authorization evidence adapters', () => {
     expect(
       authorizeInstallRequestEvidence({ actor: 'agent', revocation: revocation() }).verdict
     ).toBe('inconclusive');
+  });
+
+  test('binds a decision to the artifact it was made about', () => {
+    const reviewed = 'pkg:npm/example@1.0.0';
+    expect(identityAuthorizationSignal(reviewed, reviewed).verdict).toBe('allow');
+    // A newer version is a different artifact, not a better one: no evidence
+    // has been gathered about it and no human has looked at it.
+    expect(identityAuthorizationSignal(reviewed, 'pkg:npm/example@1.0.1').verdict).toBe('deny');
+    expect(identityAuthorizationSignal(reviewed, 'pkg:npm/other@1.0.0').verdict).toBe('deny');
+    // An unverifiable identity claim is not a satisfied one.
+    expect(identityAuthorizationSignal(reviewed, undefined).verdict).toBe('unknown');
+  });
+
+  test('an expected identity is required evidence, so an unmatchable one is inconclusive', () => {
+    const clean = { actor: 'human-cli', scan: scan(), policy: policy(), revocation: revocation() };
+
+    expect(
+      authorizeAcquireEvidence({
+        ...clean,
+        actor: 'human-cli',
+        expectedPurl: 'pkg:npm/example@1.0.0',
+        resolvedPurl: 'pkg:npm/example@1.0.0'
+      }).verdict
+    ).toBe('allow');
+
+    expect(
+      authorizeAcquireEvidence({
+        ...clean,
+        actor: 'human-cli',
+        expectedPurl: 'pkg:npm/example@1.0.0',
+        resolvedPurl: 'pkg:npm/example@2.0.0'
+      }).verdict
+    ).toBe('deny');
+
+    expect(
+      authorizeAcquireEvidence({
+        ...clean,
+        actor: 'human-cli',
+        expectedPurl: 'pkg:npm/example@1.0.0'
+      }).verdict
+    ).toBe('inconclusive');
+  });
+
+  test('an acquire without an expectation records no identity signal at all', () => {
+    // Most acquires legitimately have nothing to compare against. Inventing an
+    // `unknown` identity for them would make every ordinary install
+    // inconclusive.
+    const decision = authorizeAcquireEvidence({
+      actor: 'human-cli',
+      scan: scan(),
+      policy: policy(),
+      revocation: revocation()
+    });
+    expect(decision.verdict).toBe('allow');
+    expect(decision.signals.map((signal) => signal.source)).not.toContain('identity');
   });
 });

@@ -17,6 +17,20 @@ not when one is.*
   invocation could include sockets from unrelated processes. Missing or failed sampling is now
   recorded as `unavailable`, never as a successful empty sample.
 
+### Security — an approval names one artifact
+
+- `agora approve` now installs only the artifact that was reviewed. It resolves the request by exact
+  id rather than by capability search, and the intent's recorded purl becomes a required
+  authorization signal: if the id now resolves to a different package or a newer version, the
+  approval is refused and the request stays pending rather than installing something nobody read
+  about.
+- `agora approve` applies the project's `[policy] files` from `agora.toml`, which it previously
+  skipped. An install requested through an agent is now governed by at least the same Cedar rules as
+  a direct `agora acquire`.
+- `agora approve --deny <id>` works with the flag in either position. `--deny` was undeclared, so
+  placing it before the id consumed the id as the flag's value and silently listed pending requests
+  instead of denying one.
+
 ### Changed — durable development direction
 
 - Added `docs/STATUS.md` as the authority on current capabilities and `docs/DEVELOPMENT.md` for
