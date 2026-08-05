@@ -25,7 +25,7 @@ jobs:
 
       # bun runs the checks; npm does the publishing. Trusted publishing (OIDC)
       # needs npm >= 11.5.1, which is newer than some runner images ship.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
       - run: npm install -g npm@latest
