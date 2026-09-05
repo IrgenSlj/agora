@@ -55,10 +55,22 @@ export function planObserve(
     // Disabling only ever needs to touch what is currently wrapped, so the
     // "is this observable" question does not apply — a remote server is
     // already not wrapped and simply falls through to `unchanged`.
+    // A manifest-sourced entry has no host config to rewrite: `agora.toml` is
+    // declared intent, and the shim belongs in the launch command a host
+    // actually spawns. Run `agora apply` first, then observe the real entries.
+    if (server.tool === 'agora') {
+      skipped.push({
+        name: server.name,
+        tool: 'opencode',
+        reason: 'declared in agora.toml, not in a host config — run `agora apply` first'
+      });
+      continue;
+    }
+
     if (mode === 'enable') {
       const reason = unobservableReason(server);
       if (reason) {
-        skipped.push({ name: server.name, tool: server.tool, reason });
+        skipped.push({ name: server.name, tool: server.tool as AgentToolId, reason });
         continue;
       }
     }
@@ -72,7 +84,7 @@ export function planObserve(
     const after = mode === 'enable' ? wrapCommand(before) : unwrapCommand(before);
     changes.push({
       name: server.name,
-      tool: server.tool,
+      tool: server.tool as AgentToolId,
       configPath: server.configPath,
       scope: server.scope,
       before,

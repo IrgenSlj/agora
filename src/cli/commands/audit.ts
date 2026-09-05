@@ -20,6 +20,7 @@ import { queryPurl } from '../../osv/client.js';
 import type { OsvVulnerability } from '../../osv/types.js';
 import { installedPurls } from '../../revocation/installed.js';
 import { readAllServers } from '../../stack/registry.js';
+import type { ConfiguredServer } from '../../stack/types.js';
 import { ExitCode } from '../exit-codes.js';
 import type { CliIo } from '../flags.js';
 import { writeJson, writeLine } from '../helpers.js';
@@ -60,10 +61,15 @@ const BLOCKING = new Set(['MALWARE', 'CRITICAL', 'HIGH']);
  * implementation that would eventually disagree with this one about what
  * "clean" means.
  */
-export async function sweepAdvisories(io: CliIo): Promise<AdvisorySweep> {
+export async function sweepAdvisories(
+  io: CliIo,
+  /** Server set to check. Defaults to what the host adapters report; `agora ci`
+   *  passes a set that also includes the committed `agora.toml` manifest. */
+  servers?: ConfiguredServer[]
+): Promise<AdvisorySweep> {
   const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
-  const servers = readAllServers(env).filter((s) => s.enabled);
-  const { addressable, unaddressable } = installedPurls(servers);
+  const subjects = servers ?? readAllServers(env).filter((s) => s.enabled);
+  const { addressable, unaddressable } = installedPurls(subjects);
 
   const findings: Finding[] = [];
   const unreachable: { purl: string; reason: string }[] = [];

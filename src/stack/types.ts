@@ -1,5 +1,17 @@
 export type AgentToolId = 'opencode' | 'claude-code' | 'cursor' | 'windsurf';
 
+/**
+ * Where a *read* server came from — a superset of the hosts Agora can write to.
+ *
+ * `agora` means the entry was read from the portable `agora.toml` manifest
+ * rather than from a host config. That is a different axis from `AgentToolId`,
+ * which answers "which host would a write go to": you can read a server out of
+ * the manifest, but you cannot install one *into* it as though it were a host,
+ * so widening `AgentToolId` itself would make an impossible write target
+ * type-check.
+ */
+export type ServerSourceId = AgentToolId | 'agora';
+
 export interface StackEnv {
   cwd?: string;
   home?: string;
@@ -13,7 +25,7 @@ export interface ToolConfigLocation {
 
 export interface ConfiguredServer {
   name: string;
-  tool: AgentToolId;
+  tool: ServerSourceId;
   scope: 'project' | 'user';
   configPath: string;
   transport: 'local' | 'remote';

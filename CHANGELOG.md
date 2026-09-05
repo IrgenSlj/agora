@@ -20,6 +20,16 @@ to be ready at once. Unshipped work is a defect. Releases are weekly from here, 
   server and writes the verdict to the job summary. `--json-file` carries the machine report out of
   band so one run serves both readers: annotations are workflow commands on stdout, so capturing
   stdout would swallow them, and running twice would double every OSV lookup.
+- Reads the committed `agora.toml` alongside host configs, merged by name with the manifest
+  winning. A CI runner has your repository, not your laptop, and `agora.toml` is the artifact this
+  product spends a whole plane telling people to commit — reading only host adapters meant the
+  users who had adopted Agora correctly were the ones who got an empty report.
+- `ConfiguredServer.tool` widens to `ServerSourceId` so a manifest-sourced entry can say it came
+  from `agora.toml` rather than impersonating one of the four hosts. `AgentToolId` deliberately does
+  not widen: it answers "where would a write go", and you cannot install a server *into* the
+  manifest as though it were a host. The compiler then found the two places that read a server and
+  write it back to a host — `observe enable` and `quarantine` — which now skip manifest entries with
+  a reason instead of silently targeting a file no host spawns from.
 - Two deliberate non-behaviours, both because a gate people delete protects nothing. It never starts
   a configured server — a runner should not be talked into executing a stranger's processes on a
   pull request. And an unresolvable server does **not** fail the build: on a fresh runner almost no

@@ -65,6 +65,11 @@ export function quarantineConfiguredServers(
   for (const server of servers) {
     if (!targets.has(server.name)) continue;
     const location: ToolConfigLocation = { path: server.configPath, scope: server.scope };
+    // Quarantine disables a server in the config a host actually spawns from.
+    // A manifest-sourced entry has no such config: `agora.toml` is declared
+    // intent, and rewriting it would change what the user asked for rather than
+    // what is currently running. `agora remove` is the manifest-level verb.
+    if (server.tool === 'agora') continue;
     if (!canRewriteServer(server, env)) {
       skipped.push({
         tool: server.tool,

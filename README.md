@@ -52,8 +52,10 @@ The question above only helps if somebody keeps asking it. People don't; CI does
 
 That runs `agora ci`, which answers the whole post-install question once, with one exit code:
 **advisories** against the servers you actually run, **drift** against the artifacts you approved,
-and whether the **stack** still resolves. Findings are annotated on the pull request against the
-host config that declares the offending server, and the verdict lands on the run summary.
+and whether the **stack** still resolves. It reads your committed `agora.toml` as well as any host
+configs in the repository — a runner has your repository, not your laptop, and `agora.toml` is the
+part you commit. Findings are annotated on the pull request against the file that declares the
+offending server, and the verdict lands on the run summary.
 
 ```console
 $ agora ci

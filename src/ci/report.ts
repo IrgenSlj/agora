@@ -24,7 +24,9 @@
 import { type AdvisorySweep, sweepAdvisories } from '../cli/commands/audit.js';
 import type { CliIo } from '../cli/flags.js';
 import { checkStack } from '../stack/doctor.js';
+import { type ManifestEntry, manifestPath, readManifest } from '../stack/manifest.js';
 import { readAllServers } from '../stack/registry.js';
+import type { ConfiguredServer } from '../stack/types.js';
 
 /**
  * Deliberately four states, not two.
@@ -70,6 +72,58 @@ export interface CiOptions {
   failOnUnknown?: boolean;
   /** Verify lockfile drift. Requires an `agora.lock` in the working directory. */
   lockVerify?: (io: CliIo) => Promise<{ ok: boolean; drifts: CiFinding[] } | null>;
+}
+
+/**
+ * The servers this run is about.
+ *
+ * Host configs are the obvious source and the wrong one to rely on alone. A CI
+ * runner is not somebody's laptop: it has the repository, and what a repository
+ * commits is `agora.toml` — the portable manifest this product spends a whole
+ * plane telling people to commit. Reading only host adapters meant the users who
+ * had adopted Agora *correctly* were the ones who got an empty report, which is
+ * close to the worst possible failure for an adoption surface.
+ *
+ * So both are read and merged by name. A manifest entry wins over a host entry
+ * of the same name, because the manifest is the declared intent and the host
+ * config is a local materialisation of it.
+ */
+function serversForRun(io: CliIo): { servers: ConfiguredServer[]; fromManifest: number } {
+  const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
+  const hostServers = readAllServers(env).filter((s) => s.enabled);
+
+  const path = manifestPath(env);
+  const manifest = readManifest(path);
+  if (!manifest) return { servers: hostServers, fromManifest: 0 };
+
+  const byName = new Map(hostServers.map((s) => [s.name, s]));
+  let fromManifest = 0;
+
+  for (const [name, entry] of Object.entries(manifest.mcp ?? {})) {
+    const e = entry as ManifestEntry;
+    if (e.enabled === false) {
+      byName.delete(name);
+      continue;
+    }
+    fromManifest++;
+    byName.set(name, {
+      name,
+      // Not a host: this entry came from the portable manifest, and naming one
+      // of the four adapters would be a small lie in every annotation that says
+      // where a finding lives.
+      tool: 'agora',
+      scope: 'project',
+      configPath: path,
+      transport: e.url ? 'remote' : 'local',
+      ...(e.command ? { command: e.command } : {}),
+      ...(e.url ? { url: e.url } : {}),
+      ...(e.env ? { env: e.env } : {}),
+      enabled: true,
+      raw: e
+    });
+  }
+
+  return { servers: [...byName.values()], fromManifest };
 }
 
 function advisoriesCheck(sweep: AdvisorySweep): CiCheck {
@@ -195,9 +249,8 @@ async function driftCheck(io: CliIo, opts: CiOptions): Promise<CiCheck> {
  * this strict already has `--fail-on-unknown`, and `agora doctor --strict`
  * remains the command that exists to fail on a broken stack.
  */
-async function healthCheck(io: CliIo): Promise<CiCheck> {
+async function healthCheck(io: CliIo, servers: ConfiguredServer[]): Promise<CiCheck> {
   const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
-  const servers = readAllServers(env).filter((s) => s.enabled);
 
   if (!servers.length) {
     return {
@@ -239,12 +292,13 @@ async function healthCheck(io: CliIo): Promise<CiCheck> {
 }
 
 export async function runCiChecks(io: CliIo, opts: CiOptions = {}): Promise<CiReport> {
-  const sweep = await sweepAdvisories(io);
+  const { servers } = serversForRun(io);
+  const sweep = await sweepAdvisories(io, servers);
 
   const checks: CiCheck[] = [
     advisoriesCheck(sweep),
     await driftCheck(io, opts),
-    await healthCheck(io)
+    await healthCheck(io, servers)
   ];
 
   const failed = checks.filter((c) => c.state === 'fail').map((c) => c.name);

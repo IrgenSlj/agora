@@ -96,6 +96,31 @@ describe('agora ci', () => {
     expect(out()).toContain('could not be resolved in this environment');
   });
 
+  test('a repository that commits only agora.toml is still checked', async () => {
+    // The adoption case that matters most and was broken first: `agora.toml` is
+    // the artifact this product spends a whole plane telling people to commit,
+    // and a CI runner has the repository, not somebody's host configs. Reading
+    // only host adapters meant the users who had adopted Agora correctly were
+    // the ones who got an empty report.
+    writeFileSync(join(dir, 'agora.toml'), '[mcp.fs]\ncommand = ["npx", "@scope/server@1.0.0"]\n');
+    const { io: cliIo, out } = io((() => respond([advisory('GHSA-x', 'HIGH')])) as never);
+
+    expect(await runCli(['ci'], cliIo as never)).toBe(1);
+    expect(out()).toContain('GHSA-x');
+  });
+
+  test('a manifest entry disabled in agora.toml is not checked', async () => {
+    config({ fs: server });
+    writeFileSync(
+      join(dir, 'agora.toml'),
+      '[mcp.fs]\ncommand = ["npx", "@scope/server@1.0.0"]\nenabled = false\n'
+    );
+    const { io: cliIo, out } = io((() => respond([advisory('GHSA-x', 'HIGH')])) as never);
+
+    expect(await runCli(['ci'], cliIo as never)).toBe(0);
+    expect(out()).not.toContain('GHSA-x');
+  });
+
   test('--fail-on-unknown turns an unanswerable check into a failure', async () => {
     config({ fs: server });
     const { io: cliIo } = io((() => respond([])) as never);
