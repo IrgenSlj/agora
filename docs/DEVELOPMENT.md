@@ -150,6 +150,9 @@ Focused verification:
 
 - `bun run lint`, `bun run typecheck`, `bun run build`, and full `bun run test` passed:
   1,775 tests passed, one skipped.
+- **Before any release, run `bun run verify:package`.** The suite tests the source tree; nobody
+  installs the source tree. This packs, clean-installs, and asserts the exit contract on the
+  installed binary. CI runs it on Linux and macOS on every push.
 - `agora --help`, `agora doctor`, and `agora trust @modelcontextprotocol/server-filesystem` run
   correctly from the built `dist/`.
 

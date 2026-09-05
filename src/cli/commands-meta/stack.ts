@@ -164,7 +164,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'policy',
     group: 'Stack',
-    summary: 'Scaffold, lint, and evaluate your Cedar policy over installed servers',
+    summary: 'Scaffold, check, and test your Cedar policy over installed servers',
     usage: 'agora policy <init|check|test> [--ci] [--json]',
     details:
       'Policy is evaluated on top of the shipped baseline, which already forbids revoked ' +

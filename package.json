@@ -47,6 +47,7 @@
     "typecheck": "bun run typecheck:cli",
     "typecheck:cli": "tsc -p tsconfig.check.json",
     "test": "vitest run",
+    "verify:package": "bash scripts/verify-package.sh",
     "test:watch": "vitest",
     "prepublishOnly": "bun run build",
     "refresh:data": "bun scripts/refresh-data.ts",

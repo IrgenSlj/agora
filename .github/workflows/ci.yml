@@ -7,6 +7,37 @@ on:
     branches: [main]
 
 jobs:
+  # The suite above tests the source tree. Nobody installs the source tree, and
+  # the gap is not hypothetical here: v0.7.0's release fired, the publish step
+  # crashed, and npm stayed on 0.6.1 for weeks while the whole trust plane sat
+  # finished in `main`. A green suite said nothing about it, because it was never
+  # looking at the tarball.
+  #
+  # Runs on both platforms because the failures this catches — a missing
+  # `chmod +x`, a file left out of `files`, a path that only resolves inside the
+  # repo layout — are exactly the ones that differ by OS.
+  packaged:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: bun install --frozen-lockfile
+
+      - name: The packed artifact installs and runs
+        run: bash scripts/verify-package.sh
+
   check:
     strategy:
       matrix:

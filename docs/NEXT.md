@@ -45,6 +45,8 @@ outstanding. Revisit when a user asks, or when the CI surface has an audience to
   quarantine on change using the existing drift/quarantine machinery.
 - [ ] **SKILL-003 — skill install and evidence.** Host adapters install/remove/quarantine skills;
   evidence records skills by purl like any other artifact.
+- [ ] **REL-006 — publish 0.8.0.** Blocked on npm credentials. `bun run verify:package` is green,
+  so the tarball is known to install and run; what remains is authentication and the release itself.
 - [ ] **CI-005 — tag `v0` after publishing.** `action.yml` runs the published package, and `ci`
   landed in 0.8.0, so the tag the Action is consumed by must not exist before that release does —
   a `v0` pointing at an unpublished command is a broken Action with a good README. Order: publish
@@ -161,8 +163,10 @@ outstanding. Revisit when a user asks, or when the CI surface has an audience to
 
 - [ ] **REL-001 — deterministic CI.** Pin action SHAs, Bun, Node, and npm; minimize workflow
   permissions.
-- [ ] **REL-002 — shipped-artifact tests.** Build, `npm pack`, clean-install, run CLI smoke tests,
-  and validate schemas/evidence in CI.
+- [x] **REL-002 — shipped-artifact tests.** `bun run verify:package` packs, clean-installs into an
+  empty directory with an isolated `HOME`, and asserts the exit-code contract on the installed
+  binary — including the three `agora ci` paths the GitHub Action depends on — plus that the schemas
+  and revocation feed actually ship. Runs in CI on Linux and macOS. Run it before publishing.
 - [ ] **REL-003 — platform matrix.** Minimum/current Node plus Linux, macOS, and Windows coverage for
   supported host paths.
 - [ ] **REL-004 — supply-chain outputs.** npm provenance, SBOM, dependency review, and Agora's own

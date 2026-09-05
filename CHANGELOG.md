@@ -8,6 +8,19 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 2026-08-02 and reached nobody for five weeks, because the release was waiting for "several fronts"
 to be ready at once. Unshipped work is a defect. Releases are weekly from here, small or not.*
 
+### Added — proof that what ships actually works
+
+- `bun run verify:package` packs the package, installs it into an empty directory with an isolated
+  `HOME`, and asserts the exit-code contract on the installed binary — including the three
+  `agora ci` paths the GitHub Action depends on, the `USAGE` code any script relies on, and that the
+  schemas and bundled revocation feed are really in the tarball. It runs in CI on Linux and macOS.
+- Everything else in this repository tests the source tree, and nobody installs the source tree. The
+  gap is not hypothetical: v0.7.0's release fired, the publish step crashed, and npm stayed on 0.6.1
+  for weeks while the whole trust plane sat finished in `main`. A green suite said nothing about it
+  because it was never looking at the tarball.
+- Writing it immediately found that `agora policy`'s summary advertised a `lint` subcommand that
+  does not exist — the command is `check`. Fixed.
+
 ### Added — the lockfile now pins the bytes, not just what a server says about itself
 
 - `agora lock write` downloads and hashes each pinned tarball, so `tarball_sha256` records what npm

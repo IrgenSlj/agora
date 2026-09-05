@@ -14,3 +14,7 @@ dist/
 
 # never commit a stray literal-tilde dir (unexpanded ~ path bug)
 /~/
+
+# `npm pack` output. verify-package.sh removes its own, but an interrupted
+# run should never be able to commit a 600KB build artifact.
+*.tgz
