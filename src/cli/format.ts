@@ -14,12 +14,20 @@ export function formatItemList(items: MarketplaceItem[], theme: Theme): string {
   const idWidth = Math.max(...items.map((item) => item.id.length));
   return items
     .map((item) => {
-      const metrics =
-        item.kind === 'package'
-          ? `${formatNumber(item.installs)} installs · ${formatNumber(item.stars)} ★`
-          : `${formatNumber(item.stars)} ★`;
+      // Only metrics the source actually published. Most upstream registries
+      // measure no installs, and printing `0 installs · 0 ★` on every row put a
+      // fabricated measurement beside every result and made a working search
+      // look broken. Nothing is the honest rendering of nothing.
+      const parts: string[] = [];
+      if (item.installs !== undefined && item.installs > 0) {
+        parts.push(`${formatNumber(item.installs)} installs`);
+      }
+      if (item.stars > 0) parts.push(`${formatNumber(item.stars)} ★`);
+      const metrics = parts.join(' · ');
       return [
-        `${theme.accent(item.id.padEnd(idWidth))}  ${theme.dim(metrics)}`,
+        metrics
+          ? `${theme.accent(item.id.padEnd(idWidth))}  ${theme.dim(metrics)}`
+          : theme.accent(item.id),
         theme.dim(item.name),
         truncate(item.description, 88),
         theme.dim(`${item.category} · by ${item.author}`)
@@ -61,7 +69,9 @@ export function formatItemTable(items: MarketplaceItem[], theme: Theme): string 
       ' │ ' +
       theme.dim(formatNumber(item.stars).padStart(starW)) +
       ' │ ' +
-      theme.dim(formatNumber(item.installs).padStart(installW)) +
+      theme.dim(
+        (item.installs === undefined ? '—' : formatNumber(item.installs)).padStart(installW)
+      ) +
       ' │'
   );
 
@@ -87,7 +97,9 @@ export function formatItemDetail(item: MarketplaceItem, theme: Theme): string {
 
   if (item.kind === 'package') {
     lines.splice(5, 0, kvRow('version', item.version, KV_KEY_WIDTH, theme));
-    lines.push(kvRow('installs', formatNumber(item.installs), KV_KEY_WIDTH, theme));
+    if (item.installs !== undefined) {
+      lines.push(kvRow('installs', formatNumber(item.installs), KV_KEY_WIDTH, theme));
+    }
     if (item.repository) lines.push(kvRow('repo', item.repository, KV_KEY_WIDTH, theme));
     if (item.npmPackage) lines.push(kvRow('npm', item.npmPackage, KV_KEY_WIDTH, theme));
     if (item.permissions) {

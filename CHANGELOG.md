@@ -8,6 +8,19 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 2026-08-02 and reached nobody for five weeks, because the release was waiting for "several fronts"
 to be ready at once. Unshipped work is a defect. Releases are weekly from here, small or not.*
 
+### Fixed — search was printing numbers nobody measured
+
+- `installs` is now optional across the catalog model, and absent means *not measured*. Two separate
+  fabrications produced it. The official registry and Glama publish no install count, so every one
+  of their results was rendered `0 installs · 0 ★` — a zero indistinguishable from a real
+  measurement of nobody using it, on a search that looked broken as a result. And GitHub-sourced
+  items copied `stargazers_count` into `installs` as a "proxy", which is why rows showed the same
+  figure twice under two different labels (`3.3K installs · 3.3K ★`).
+- Rows now render only the metrics their source actually published, and nothing when there are
+  none. Tables show `—` where a cell is required. Sorting still orders an unmeasured item as zero,
+  which is ordering rather than a claim. Cached search results written before this change keep
+  their old numbers until the cache refreshes.
+
 ### Added — `agora lock write`, which makes the drift plane reachable at all
 
 - The lockfile is the brief's rug-pull tripwire and nothing had ever written one. `lock verify` was

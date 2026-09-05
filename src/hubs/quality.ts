@@ -72,7 +72,6 @@ export function toHubItem(repo: RawGithubRepo, fetchedAt: string): HubItem {
     category: categorize(repo),
     tags: Array.from(new Set([...repo.topics, repo.license?.spdx_id ?? ''].filter(Boolean))),
     stars: repo.stargazers_count,
-    installs: repo.stargazers_count, // proxy for v1
     repository: repo.html_url,
     createdAt: repo.created_at,
     fetchedAt,

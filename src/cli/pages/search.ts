@@ -154,7 +154,7 @@ function sortedFiltered(): FederatedItem[] {
       if (aOff !== bOff) return aOff - bOff;
       if (state.sort === 'name') return a.name.localeCompare(b.name);
       if (state.sort === 'stars') return b.stars - a.stars;
-      return b.installs - a.installs;
+      return (b.installs ?? 0) - (a.installs ?? 0);
     });
 }
 
@@ -280,7 +280,7 @@ export const searchPage: Page = {
         theme
       );
       const stats =
-        theme.accent(fmtCount(it.installs).padStart(7)) +
+        theme.accent((it.installs === undefined ? '—' : fmtCount(it.installs)).padStart(7)) +
         theme.muted(' installs') +
         '  ' +
         theme.accent(fmtCount(it.stars).padStart(5)) +

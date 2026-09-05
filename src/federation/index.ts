@@ -263,7 +263,10 @@ function mergeGroup(group: FederatedItem[], sourceOrder: Map<SourceId, number>):
 
   const tags = Array.from(new Set(group.flatMap((i) => i.tags)));
   const stars = Math.max(...group.map((i) => i.stars));
-  const installs = Math.max(...group.map((i) => i.installs));
+  // Absent unless at least one source in the group actually measured it;
+  // Math.max over undefined would otherwise invent a 0 for the merged row.
+  const measured = group.map((i) => i.installs).filter((n): n is number => n !== undefined);
+  const installs = measured.length ? Math.max(...measured) : undefined;
 
   return {
     ...base,

@@ -40,7 +40,9 @@ describe('officialSource.search() — official → FederatedItem mapping', () =>
     expect(waystation!.category).toBe('mcp');
     expect(waystation!.tags).toEqual([]);
     expect(waystation!.stars).toBe(0);
-    expect(waystation!.installs).toBe(0);
+    // The official registry measures no installs. Absent, not zero — a zero
+    // here is indistinguishable from a real measurement of nobody using it.
+    expect(waystation!.installs).toBeUndefined();
     expect(waystation!.createdAt).toBe('2025-09-09T14:46:09.489652Z');
     expect(waystation!.repository).toBe('https://github.com/waystation-ai/mcp');
     expect(waystation!.npmPackage).toBeUndefined();

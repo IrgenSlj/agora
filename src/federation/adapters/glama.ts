@@ -77,7 +77,6 @@ export function mapGlamaServer(raw: RawGlamaServer, fetchedAt: string): Federate
     category: 'mcp',
     tags: hostingTags,
     stars: 0,
-    installs: 0,
     createdAt: fetchedAt,
     repository: raw.repository?.url
   };

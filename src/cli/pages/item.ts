@@ -222,7 +222,7 @@ export const itemPage: Page = {
 
     body.push(
       ' ' +
-        theme.accent(fmtCount(item.installs)) +
+        theme.accent(item.installs === undefined ? '—' : fmtCount(item.installs)) +
         theme.muted(' installs') +
         '   ' +
         theme.accent(fmtCount(item.stars)) +

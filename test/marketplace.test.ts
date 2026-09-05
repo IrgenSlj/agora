@@ -78,7 +78,7 @@ describe('searchMarketplaceItems', () => {
   test('results sorted by popularity (installs) descending for empty query', () => {
     const results = searchMarketplaceItems();
     for (let i = 0; i < results.length - 1; i++) {
-      expect(results[i].installs).toBeGreaterThanOrEqual(results[i + 1].installs);
+      expect(results[i].installs ?? 0).toBeGreaterThanOrEqual(results[i + 1].installs ?? 0);
     }
   });
 
@@ -172,7 +172,7 @@ describe('getTrendingItems', () => {
   test('returned items are sorted by popularity (installs) descending', () => {
     const items = getTrendingItems({ limit: 10 });
     for (let i = 0; i < items.length - 1; i++) {
-      expect(items[i].installs).toBeGreaterThanOrEqual(items[i + 1].installs);
+      expect(items[i].installs ?? 0).toBeGreaterThanOrEqual(items[i + 1].installs ?? 0);
     }
   });
 
@@ -926,7 +926,7 @@ describe('getHotItems', () => {
   test('getTrendingItems order is unchanged (installs desc, then stars)', () => {
     const items = getTrendingItems({ limit: 10 });
     for (let i = 0; i < items.length - 1; i++) {
-      expect(items[i].installs).toBeGreaterThanOrEqual(items[i + 1].installs);
+      expect(items[i].installs ?? 0).toBeGreaterThanOrEqual(items[i + 1].installs ?? 0);
     }
   });
 });

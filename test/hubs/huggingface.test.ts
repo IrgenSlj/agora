@@ -192,7 +192,7 @@ describe('searchHuggingFace()', () => {
     const fetcher = makeFetcher([low, high]);
     const items = await searchHuggingFace({ fetcher, now: NOW });
     if (items.length >= 2) {
-      expect(items[0].installs).toBeGreaterThanOrEqual(items[items.length - 1].installs);
+      expect(items[0].installs ?? 0).toBeGreaterThanOrEqual(items[items.length - 1].installs ?? 0);
     }
   });
 });

@@ -244,7 +244,7 @@ export function sortMarketplaceItems(
     let cmp: number;
 
     if (sortBy === 'stars') cmp = compareByStars(a, b);
-    else if (sortBy === 'installs') cmp = a.installs - b.installs;
+    else if (sortBy === 'installs') cmp = (a.installs ?? 0) - (b.installs ?? 0);
     else if (sortBy === 'name') cmp = a.name.localeCompare(b.name);
     else if (sortBy === 'updated') cmp = (a.createdAt || '').localeCompare(b.createdAt || '');
     else if (scores) {
@@ -269,10 +269,10 @@ function relevanceScore(a: MarketplaceItem, b: MarketplaceItem, query: string): 
 
 function compareByStars(a: MarketplaceItem, b: MarketplaceItem): number {
   if (sharesRepository(a, b) && a.installs !== b.installs) {
-    return a.installs - b.installs;
+    return (a.installs ?? 0) - (b.installs ?? 0);
   }
   if (a.stars !== b.stars) return a.stars - b.stars;
-  if (a.installs !== b.installs) return a.installs - b.installs;
+  if (a.installs !== b.installs) return (a.installs ?? 0) - (b.installs ?? 0);
   return a.name.localeCompare(b.name);
 }
 
@@ -361,7 +361,10 @@ export function getTrendingItems(options: SearchOptions = {}): MarketplaceItem[]
 
   return getMarketplaceItems()
     .filter((item) => matchesCategory(item, category))
-    .sort((a, b) => b.installs - a.installs || b.stars - a.stars || a.name.localeCompare(b.name))
+    .sort(
+      (a, b) =>
+        (b.installs ?? 0) - (a.installs ?? 0) || b.stars - a.stars || a.name.localeCompare(b.name)
+    )
     .slice(0, limit);
 }
 
@@ -607,8 +610,10 @@ function matchesQuery(item: MarketplaceItem, query: string): boolean {
  * otherwise tie the entire official set.
  */
 function compareByPopularity(a: MarketplaceItem, b: MarketplaceItem): number {
-  if (sharesRepository(a, b) && a.installs !== b.installs) return a.installs - b.installs;
-  if (a.installs !== b.installs) return a.installs - b.installs;
+  if (sharesRepository(a, b) && a.installs !== b.installs) {
+    return (a.installs ?? 0) - (b.installs ?? 0);
+  }
+  if (a.installs !== b.installs) return (a.installs ?? 0) - (b.installs ?? 0);
   if (a.stars !== b.stars) return a.stars - b.stars;
   return a.name.localeCompare(b.name);
 }

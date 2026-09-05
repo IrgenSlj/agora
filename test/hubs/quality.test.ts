@@ -125,7 +125,10 @@ describe('toHubItem()', () => {
     expect(item.id).toBe('gh:owner/repo');
     expect(item.source).toBe('github');
     expect(item.stars).toBe(50);
-    expect(item.installs).toBe(50); // proxy
+    // GitHub publishes no install count, so there is none. This used to copy
+    // `stars` in as a "proxy", which rendered the same figure twice under two
+    // different labels and put an invented measurement on every search row.
+    expect(item.installs).toBeUndefined();
     expect(item.license).toBe('MIT');
     expect(item.tags).toContain('MIT');
     expect(item.tags).toContain('mcp');

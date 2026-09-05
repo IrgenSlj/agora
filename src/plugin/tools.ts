@@ -10,6 +10,12 @@ import {
 } from '../catalog/bundled.js';
 import { formatConfigJson } from '../config.js';
 import { formatInstalls, formatStars } from '../format.js';
+
+/** `📥 N installs · ` when measured, and nothing at all when not. */
+function installsPrefix(installs: number | undefined): string {
+  return installs === undefined ? '' : `📥 ${formatInstalls(installs)} installs · `;
+}
+
 import { readCache } from '../news/cache.js';
 import { rankItems } from '../news/score.js';
 import { DEFAULT_NEWS_CONFIG, hostFromUrl } from '../news/types.js';
@@ -74,7 +80,7 @@ function renderToday(directory?: string, section = 'all'): string {
     if (lines.length > 2) lines.push('');
     lines.push('**Trending**');
     for (const item of trending) {
-      lines.push(`- **${item.id}** — ${formatInstalls(item.installs)} installs · ${item.name}`);
+      lines.push(`- **${item.id}** — ${installsPrefix(item.installs)}${item.name}`);
     }
   }
 
@@ -128,7 +134,7 @@ ${filtered
     const icon = item.kind === 'package' ? '📦' : '🔄';
     return `${i + 1}. ${icon} **${item.id}** — ${item.name}
    ${shortDesc}
-   📥 ${formatInstalls(item.installs)} installs · ⭐ ${formatStars(item.stars)} · by ${item.author}`;
+   ${installsPrefix(item.installs)}⭐ ${formatStars(item.stars)} · by ${item.author}`;
   })
   .join('\n\n')}
 
@@ -221,7 +227,7 @@ ${items
     const shortDesc = item.description.slice(0, 72) + (item.description.length > 72 ? '...' : '');
     return `${i + 1}. **${item.id}** — ${item.name}
    ${shortDesc}
-   📥 ${formatInstalls(item.installs)} installs · ⭐ ${formatStars(item.stars)}`;
+   ${installsPrefix(item.installs)}⭐ ${formatStars(item.stars)}`;
   })
   .join('\n\n')}
 
@@ -250,7 +256,7 @@ Run \`/agora browse <id>\` for details.`;
 
         const p = item;
         return `📦 **${p.name}** (\`${p.id}\`)
-v${p.version} by ${p.author} | 📥 ${formatInstalls(p.installs)} installs | ⭐ ${formatStars(p.stars)}
+v${p.version} by ${p.author} | ${installsPrefix(p.installs).replace(' · ', ' | ')}⭐ ${formatStars(p.stars)}
 
 ${p.description}
 

@@ -73,7 +73,7 @@ export async function searchHuggingFace(opts: HfSearchOptions = {}): Promise<Hub
   }
 
   // Sort by downloads (installs) descending
-  items.sort((a, b) => b.installs - a.installs);
+  items.sort((a, b) => (b.installs ?? 0) - (a.installs ?? 0));
 
   return items;
 }

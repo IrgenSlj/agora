@@ -13,7 +13,16 @@ export interface Package {
   category: 'mcp' | 'prompt' | 'skill' | 'other';
   tags: string[];
   stars: number;
-  installs: number;
+  /**
+   * Install/download count, when the source actually measures one.
+   *
+   * Undefined means *not measured*, which is not zero. Most upstream registries
+   * publish no such number; rendering their absence as `0 installs` put a
+   * fabricated measurement next to every result, and the value it replaced was
+   * worse — GitHub stars, copied into this field as a "proxy", which is why
+   * search rows showed the same figure twice under two different labels.
+   */
+  installs?: number;
   repository?: string;
   npmPackage?: string;
   createdAt: string;

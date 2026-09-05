@@ -131,7 +131,6 @@ export function mapServerEntry(entry: RawServerEntry, fetchedAt: string): Federa
     category: 'mcp',
     tags: [],
     stars: 0,
-    installs: 0,
     createdAt: meta?.publishedAt ?? fetchedAt,
     repository,
     npmPackage: npmPkg?.identifier

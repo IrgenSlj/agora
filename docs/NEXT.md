@@ -59,8 +59,11 @@ outstanding. Revisit when a user asks, or when the CI surface has an audience to
   constrain nobody today — `enforce_admins` is false and there is one committer) or give the job a
   token that triggers workflows. Until one of those lands, the feed is only as fresh as the last
   release.
-- [ ] **FED-003 — search honesty and ranking.** Stop printing `0 installs · 0 ★` for sources that
-  supply neither. Rank by evidence Agora actually holds — signed, pinnable, no advisories.
+- [x] **FED-003a — search honesty.** `installs` is optional; absent means not measured. The
+  stars-as-installs proxy is removed, and rows render only metrics their source published.
+- [ ] **FED-003b — evidence-first ranking.** Rank by what Agora uniquely holds — signed, pinnable,
+  no advisories — rather than by upstream popularity. Needs per-item evidence cheap enough for a
+  list, so it waits on the evidence store being populated by acquisition.
 
 ## Then — security foundations
 

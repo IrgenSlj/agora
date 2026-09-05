@@ -12,7 +12,8 @@ export interface HubItem {
   category: 'mcp' | 'prompt' | 'skill' | 'other';
   tags: string[];
   stars: number;
-  installs: number; // approximate; use stars as a proxy until we have download data
+  /** Real download count where the source publishes one; absent when it does not. */
+  installs?: number;
   repository: string;
   npmPackage?: string; // derived if topics include 'npm' or package.json was readable; leave undefined otherwise for v1
   createdAt: string; // ISO
