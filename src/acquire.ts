@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import pkg from '../package.json' with { type: 'json' };
 import {
   createInstallPlan,
   findMarketplaceItem,
@@ -17,7 +19,15 @@ import {
   identityAuthorizationSignal
 } from './gate/adapters.js';
 import type { AuthorizationActor, AuthorizationDecision } from './gate/authorization.js';
+import { hashJson, hashText } from './model/hash.js';
+import {
+  type ArtifactLockEntry,
+  type Lockfile,
+  normalizeLockfile,
+  parseLockfile
+} from './model/lockfile.js';
 import type { Divergence } from './model/observed.js';
+import { parsePurl } from './model/purl.js';
 import { aggregate, divergences as computeDivergences } from './observe/profile.js';
 import { readSessions } from './observe/session.js';
 import { evaluatePolicy, isConclusive, type PolicyDecision } from './policy/engine.js';
@@ -26,8 +36,10 @@ import { npmPackageFromCommand, npmPurl } from './revocation/installed.js';
 import { isBlockingMatch } from './revocation/match.js';
 import { type ScanOptions, type ScanResult, scanItem } from './scan.js';
 import { capabilityKey, descriptionDigest, readCapabilityCache } from './stack/capability-cache.js';
+import { declaredManifestFrom } from './stack/lockwrite.js';
 import { manifestPath, readManifest, type StackManifest, writeManifest } from './stack/manifest.js';
 import { getAdapter } from './stack/registry.js';
+import { FileTransaction } from './stack/transaction.js';
 import type { AgentToolId, DesiredServer, StackEnv, ToolConfigLocation } from './stack/types.js';
 import {
   buildTrustMeta,
@@ -99,6 +111,8 @@ export interface AcquireResult {
   /** Shared gate decision over the evidence above and the caller's authority. */
   authorization?: AuthorizationDecision;
   written?: { tool: AgentToolId; configPath: string; serverKey: string };
+  /** Whether this acquire recorded an `agora.lock` entry for the artifact. */
+  lockUpdated?: boolean;
   nextSteps?: string[];
   reason?: string;
 }
@@ -266,11 +280,118 @@ function manifestEntryFor(
   return entry;
 }
 
-function buildNextSteps(plan: InstallPlan): string[] {
+/**
+ * A hash of the policy that produced a verdict, so the verdict stays checkable.
+ *
+ * Recording `allow` without recording *what allowed it* makes the lockfile's
+ * policy verdict unfalsifiable: nobody can later tell whether the rules have
+ * changed since. An empty policy set hashes to a real, stable value — "this was
+ * installed under no project policy" is itself a fact worth pinning.
+ */
+function policySha256(policyFiles: readonly string[], cwd?: string): string {
+  const entries = [...policyFiles].sort().map((file) => {
+    const abs = resolveConfigPath(file, cwd);
+    try {
+      return { path: file, sha256: hashText(readFileSync(abs, 'utf8')) };
+    } catch {
+      // A policy file Agora could not read did not contribute to the decision,
+      // and saying otherwise would attribute the verdict to rules that never ran.
+      return { path: file, sha256: null };
+    }
+  });
+  return hashJson(entries);
+}
+
+/**
+ * The lock entry for an artifact acquire actually established.
+ *
+ * Unlike `agora lock write`, this runs at install time with the gate's own
+ * results in hand, so it can honestly record the two fields that command has to
+ * leave absent: a real provenance verdict and a real policy evaluation.
+ *
+ * `tarball_sha256` is still absent. Acquire resolves a *launch command*, not
+ * bytes — nothing here downloads and hashes the tarball, so nothing here may
+ * claim to have. That remains the last piece of EVD-002.
+ */
+function lockEntryFor(args: {
+  purl: string;
+  tools: ReadonlyArray<{ name: string; description?: string; inputSchema?: unknown }>;
+  provenance: ScanResult['provenance'];
+  policy: PolicyDecision;
+  policySha: string;
+  hosts: string[];
+  now: string;
+}): ArtifactLockEntry | null {
+  let version: string | undefined;
+  try {
+    version = parsePurl(args.purl).version;
+  } catch {
+    return null;
+  }
+  // Without a version there is nothing stable to pin, and an entry keyed to a
+  // floating package would report drift on every unrelated upstream release.
+  if (!version) return null;
+
+  const manifest = declaredManifestFrom(args.purl, version, args.tools);
+
+  const provenance: ArtifactLockEntry['provenance'] = {
+    verified: args.provenance?.verified === true
+  };
+  if (args.provenance?.source_repo) provenance.source_repo = args.provenance.source_repo;
+
+  const entry: ArtifactLockEntry = {
+    purl: args.purl,
+    kind: 'mcp-server',
+    integrity: { manifest_sha256: manifest.manifest_sha256 },
+    provenance,
+    tools: manifest.tools.map((t) => ({
+      name: t.name,
+      description_sha256: t.description_sha256,
+      input_schema_sha256: t.input_schema_sha256
+    })),
+    policy_verdict: {
+      // Cedar's `deny` never reaches a write, so an entry only ever records the
+      // permissive outcome — but which rules produced it is the part that has
+      // to survive.
+      decision: args.policy.decision === 'deny' ? 'forbid' : 'allow',
+      policy_sha256: args.policySha,
+      evaluated_at: args.now,
+      ...(args.policy.determining[0] ? { determining_rule: args.policy.determining[0] } : {})
+    },
+    hosts: args.hosts,
+    state: 'installed'
+  };
+  return entry;
+}
+
+/** Merge one entry into an existing lockfile, replacing any entry for the same purl. */
+function withEntry(
+  existing: Lockfile | null,
+  entry: ArtifactLockEntry,
+  generatedBy: string
+): Lockfile {
+  const artifacts = (existing?.artifacts ?? []).filter((a) => a.purl !== entry.purl);
+  artifacts.push(entry);
+  return normalizeLockfile({ lockfile_version: 1, generated_by: generatedBy, artifacts });
+}
+
+function buildNextSteps(plan: InstallPlan, opts: { pinned: boolean; saved: boolean }): string[] {
   const steps = [...plan.commands];
   if (plan.postInstallHint) steps.push(plan.postInstallHint);
   // FUTURE: an in-session MCP proxy could activate a newly acquired server without restart.
   steps.push('Restart your agent or start a new session so the new MCP server is loaded.');
+
+  // Acquire can only pin a drift baseline when the upstream source published
+  // the artifact's tool list, and today only Smithery does — a non-canonical,
+  // opt-in source that is off by default. So for almost every real acquire the
+  // honest thing is to say the baseline does not exist yet and name the two
+  // commands that create it, rather than let a successful install imply that
+  // `agora ci` is now watching this server. It is not, until this is run.
+  if (opts.saved && !opts.pinned) {
+    steps.push(
+      'agora doctor --probe && agora lock write   # pin what it advertises, so `agora ci` can detect drift'
+    );
+  }
   return steps;
 }
 
@@ -479,7 +600,9 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       policy: policyDecision,
       revocation,
       authorization,
-      nextSteps: buildNextSteps(plan),
+      // A dry run pins nothing, so it shows the same follow-up a real save
+      // would leave behind rather than a shorter, rosier list.
+      nextSteps: buildNextSteps(plan, { pinned: false, saved: input.save === true }),
       reason: 'Dry run only; no files were written.'
     };
   }
@@ -583,9 +706,80 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     };
   }
 
+  // Everything below writes to disk. Up to four files describe one install —
+  // host config, portable manifest, trust sidecar, lockfile — and a failure
+  // partway through used to leave a machine describing an installation that
+  // never happened: a server running in a host config `agora.toml` has never
+  // heard of, or a lockfile pinning something nothing lists. The next `agora ci`
+  // would then report drift that is really a half-finished write, which is the
+  // most expensive kind of false alarm a tripwire can raise.
+  const tx = new FileTransaction();
+  let lockWritten = false;
   try {
+    tx.snapshot(location.path);
     adapter.writeServers(location, [desired], { prune: false });
+
+    if (input.save) {
+      const mPath = manifestPath(stackEnv(input));
+      const manifest: StackManifest = readManifest(mPath) ?? { mcp: {} };
+      // Prefer a digest computed fresh from the federation-resolved tool
+      // schemas (the freshest baseline for exactly what's being installed)
+      // over whatever was previously cached/recorded.
+      const federatedDigest =
+        federated?.tools && federated.tools.length > 0
+          ? descriptionDigest(federated.tools)
+          : undefined;
+      const digestBaseline = federatedDigest ?? previousDigest;
+      manifest.mcp[desired.name] = manifestEntryFor(desired, digestBaseline);
+      tx.snapshot(mPath);
+      writeManifest(mPath, manifest);
+
+      // Trust gate data (scan verdict + drift baseline) travels alongside the
+      // profile under a namespaced `_meta` key (brief P2) — see src/trust-store.ts
+      // for why this is a JSON sidecar rather than a new ManifestEntry field.
+      const meta = buildTrustMeta(scan, {
+        officialStatus: federated?.officialStatus,
+        descriptionDigestBaseline: digestBaseline
+      });
+      tx.snapshot(trustPath);
+      recordTrust(trustPath, desired.name, meta);
+
+      // The lockfile is a project artifact like `agora.toml`, so it is written
+      // on the same flag and in the same transaction. Only when the federated
+      // tool list is known: an entry with no tools would pin an empty baseline
+      // and then read every real tool the server has as an addition, turning
+      // the first honest `agora ci` into a false drift report.
+      const lockTools = federated?.tools ?? [];
+      const lockPurl = resolvedPurlFor(item);
+      if (lockTools.length > 0 && lockPurl) {
+        const entry = lockEntryFor({
+          purl: lockPurl,
+          tools: lockTools,
+          provenance: scan.provenance,
+          policy: policyDecision,
+          policySha: policySha256(input.policyFiles ?? [], input.cwd),
+          hosts: [tool],
+          now: new Date().toISOString()
+        });
+        if (entry) {
+          const lockPath = resolve(input.cwd ?? process.cwd(), 'agora.lock');
+          let existing: Lockfile | null = null;
+          try {
+            existing = parseLockfile(readFileSync(lockPath, 'utf8'));
+          } catch {
+            existing = null;
+          }
+          tx.write(
+            lockPath,
+            `${JSON.stringify(withEntry(existing, entry, `agora ${pkg.version}`), null, 2)}\n`
+          );
+          lockWritten = true;
+        }
+      }
+    }
+    tx.commit();
   } catch (err) {
+    const { failed } = tx.rollback();
     return {
       status: 'blocked',
       item,
@@ -594,32 +788,10 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
       policy: policyDecision,
       revocation,
       authorization,
-      reason: err instanceof Error ? err.message : String(err)
+      reason: failed.length
+        ? `${err instanceof Error ? err.message : String(err)} — and rollback could not restore ${failed.join(', ')}; those files may be in a partial state`
+        : `${err instanceof Error ? err.message : String(err)}. Nothing was changed.`
     };
-  }
-
-  if (input.save) {
-    const mPath = manifestPath(stackEnv(input));
-    const manifest: StackManifest = readManifest(mPath) ?? { mcp: {} };
-    // Prefer a digest computed fresh from the federation-resolved tool
-    // schemas (the freshest baseline for exactly what's being installed)
-    // over whatever was previously cached/recorded.
-    const federatedDigest =
-      federated?.tools && federated.tools.length > 0
-        ? descriptionDigest(federated.tools)
-        : undefined;
-    const digestBaseline = federatedDigest ?? previousDigest;
-    manifest.mcp[desired.name] = manifestEntryFor(desired, digestBaseline);
-    writeManifest(mPath, manifest);
-
-    // Trust gate data (scan verdict + drift baseline) travels alongside the
-    // profile under a namespaced `_meta` key (brief P2) — see src/trust-store.ts
-    // for why this is a JSON sidecar rather than a new ManifestEntry field.
-    const meta = buildTrustMeta(scan, {
-      officialStatus: federated?.officialStatus,
-      descriptionDigestBaseline: digestBaseline
-    });
-    recordTrust(trustPath, desired.name, meta);
   }
 
   return {
@@ -631,7 +803,8 @@ export async function acquire(input: AcquireInput): Promise<AcquireResult> {
     revocation,
     authorization,
     written: { tool, configPath: location.path, serverKey: desired.name },
-    nextSteps: buildNextSteps(plan)
+    lockUpdated: lockWritten,
+    nextSteps: buildNextSteps(plan, { pinned: lockWritten, saved: input.save === true })
   };
 }
 

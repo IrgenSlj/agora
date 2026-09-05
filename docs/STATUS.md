@@ -18,7 +18,7 @@ State labels are deliberately strict:
 | Plane or surface | State | What is true now | What remains |
 |---|---|---|---|
 | Federated search | Live | Multi-source adapters, purl-aware dedupe, offline cache, honest source status | Unify the older catalog/hub types around one artifact model; repair automated catalog refresh |
-| Provenance | Live | Sigstore verification checks Fulcio, CT, Rekor, subject digest, and repository identity | Persist the result as part of one acquisition transaction |
+| Provenance | Live | Sigstore verification checks Fulcio, CT, Rekor, subject digest, and repository identity, and the structured verdict is carried on `ScanResult` rather than only rendered as a check | Persist it against resolved bytes; the tarball digest is still never computed |
 | Schema and description drift | Live | Capability hashing, comparison, quarantine, and poisoning heuristics exist | Route every mutation through the same drift decision |
 | Runtime observation | Live with limits | Byte-transparent MCP supervision records tool names/counts and sampled direct-process network peers; arguments/results are excluded | Descendant-process coverage and stronger platform backends; sampled data must never be described as complete behavior |
 | Cedar policy and mutation gate | Live with limits | Engine, linting, CLI, baseline, complete mutation inventory, typed scan/revocation/Cedar/identity adapters, and central authorization on every artifact-installing command; no bypass flag remains | Give provenance/drift independent signals beyond their aggregate scan state |

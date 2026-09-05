@@ -32,6 +32,16 @@ export interface ScanResult {
   itemKind: 'package' | 'instruction';
   checks: ScanCheck[];
   summary: { pass: number; warn: number; fail: number };
+  /**
+   * The structured provenance verdict, not just its rendered check.
+   *
+   * A `ScanCheck` is a label and a sentence; the lockfile has to record whether
+   * an attestation actually verified and which repository signed it, and
+   * `absent` has to stay distinguishable from `checked and unsigned`. Reading
+   * that back out of a display string is how a trust product starts believing
+   * its own formatting.
+   */
+  provenance?: ProvenanceEvidenceSummary;
 }
 
 export interface ScanOptions {
@@ -435,50 +445,59 @@ async function checkNpmExists(item: PackageMarketplaceItem, opts: ScanOptions): 
  * The absence of evidence is reported as absence — visible in `--json` via the
  * missing check — not dressed up as either reassurance or alarm.
  */
-async function checkProvenance(
+async function resolveProvenance(
   item: PackageMarketplaceItem,
   opts: ScanOptions
-): Promise<ScanCheck | null> {
+): Promise<ProvenanceEvidenceSummary | null> {
   if (!item.npmPackage || !opts.provenance || opts.offline) return null;
+  try {
+    return await opts.provenance(item.npmPackage);
+  } catch {
+    return null;
+  }
+}
+
+function provenanceCheck(evidence: ProvenanceEvidenceSummary | null): ScanCheck | null {
+  if (!evidence) return null;
 
   const base: Omit<ScanCheck, 'status' | 'message'> = {
     name: 'registry_provenance',
     label: 'Signed provenance'
   };
 
-  try {
-    const evidence = await opts.provenance(item.npmPackage);
-    if (!evidence) return null;
-
-    if (evidence.verified) {
-      return {
-        ...base,
-        status: 'pass',
-        message: evidence.source_repo
-          ? `signed by ${evidence.source_repo.replace('https://github.com/', '')}`
-          : 'signature verified'
-      };
-    }
-
-    if (evidence.reason === 'verification-failed' || evidence.reason === 'publisher-mismatch') {
-      return {
-        ...base,
-        status: 'fail',
-        message:
-          evidence.reason === 'publisher-mismatch'
-            ? 'attestation was signed by a different repository than it claims'
-            : 'attestation failed verification'
-      };
-    }
-
-    // no-provenance · network-error · verification-skipped — say nothing.
-    return null;
-  } catch {
-    return null;
+  if (evidence.verified) {
+    return {
+      ...base,
+      status: 'pass',
+      message: evidence.source_repo
+        ? `signed by ${evidence.source_repo.replace('https://github.com/', '')}`
+        : 'signature verified'
+    };
   }
+
+  if (evidence.reason === 'verification-failed' || evidence.reason === 'publisher-mismatch') {
+    return {
+      ...base,
+      status: 'fail',
+      message:
+        evidence.reason === 'publisher-mismatch'
+          ? 'attestation was signed by a different repository than it claims'
+          : 'attestation failed verification'
+    };
+  }
+
+  // no-provenance · network-error · verification-skipped — say nothing. The
+  // overwhelming majority of npm packages publish no provenance, and a warning
+  // on all of them is noise that teaches people to ignore the row.
+  return null;
 }
 
-async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Promise<ScanCheck[]> {
+interface PackageScan {
+  checks: ScanCheck[];
+  provenance: ProvenanceEvidenceSummary | null;
+}
+
+async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Promise<PackageScan> {
   const checks: ScanCheck[] = [];
 
   // 1. permissions_declared
@@ -539,8 +558,11 @@ async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Pro
   }
 
   // 4b. registry_provenance — skipped entirely when no resolver is wired.
-  const provenance = await checkProvenance(item, opts);
-  if (provenance) checks.push(provenance);
+  // Resolved once and used twice: as a rendered check, and as the structured
+  // verdict the lockfile and the gate need.
+  const provenance = await resolveProvenance(item, opts);
+  const provenanceRow = provenanceCheck(provenance);
+  if (provenanceRow) checks.push(provenanceRow);
 
   // 5. recently_active
   if (item.pushedAt) {
@@ -612,19 +634,23 @@ async function scanPackage(item: PackageMarketplaceItem, opts: ScanOptions): Pro
   const driftCheck = checkDescriptionDrift(opts.previousDigest, opts.observedTools ?? opts.tools);
   if (driftCheck) checks.push(driftCheck);
 
-  return checks;
+  return { checks, provenance };
 }
 
 export async function scanItem(item: MarketplaceItem, opts: ScanOptions = {}): Promise<ScanResult> {
-  const checks = await scanPackage(item, opts);
+  const { checks, provenance } = await scanPackage(item, opts);
   checks.push(checkDescriptionInjection(item.description));
 
-  return {
+  const result: ScanResult = {
     id: item.id,
     itemKind: 'package',
     checks,
     summary: tally(checks)
   };
+  // Absent stays absent: no resolver wired, offline, or the package publishes
+  // nothing. That is different from a resolver that ran and found no signature.
+  if (provenance) result.provenance = provenance;
+  return result;
 }
 
 /**

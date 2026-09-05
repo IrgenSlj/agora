@@ -109,9 +109,15 @@ outstanding. Revisit when a user asks, or when the CI surface has an audience to
 
 - [ ] **EVD-001 — canonical artifact identity.** Establish one purl-first artifact type at the
   federation boundary and adapt older catalog types without losing source-specific fields.
-- [ ] **EVD-002 — acquisition transaction.** Resolve immutable bytes, compute digest, validate the
-  declared manifest, verify provenance, run the gate, persist evidence, update `agora.lock`, then
-  write host config atomically or roll back.
+- [~] **EVD-002 — acquisition transaction.** Partially done. All of acquire's writes now run in one
+  `FileTransaction` that restores every touched file if any step fails, and a failed rollback is
+  reported rather than swallowed. Provenance is a first-class structured signal on `ScanResult`
+  instead of a rendered check, and acquire records a real policy verdict with the hash of the policy
+  files that produced it. **Still missing: the immutable bytes.** Nothing downloads and hashes the
+  tarball, so `tarball_sha256` is still absent everywhere, and acquire can only build a lock entry
+  when the upstream source published a tool list — today only Smithery does, which is off by
+  default. Until then acquire tells the user to run `doctor --probe && lock write` instead of
+  letting a successful install imply a baseline exists.
 - [x] **EVD-003 — lock lifecycle.** `agora lock write` creates/updates the lockfile and the declared
   manifests it verifies against, deterministically serialized, refusing to lock drifted or
   quarantined servers. `lock verify` is unchanged and still reads older files.

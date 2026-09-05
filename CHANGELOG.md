@@ -8,6 +8,28 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 2026-08-02 and reached nobody for five weeks, because the release was waiting for "several fronts"
 to be ready at once. Unshipped work is a defect. Releases are weekly from here, small or not.*
 
+### Fixed — a failed acquire could leave the machine describing an install that never happened
+
+- One acquire writes up to four files: host config, portable manifest, trust sidecar, lockfile. They
+  were written one after another with no relationship, so a failure partway through left a server
+  running in a host config `agora.toml` had never heard of. The next `agora ci` would report that
+  half-write as drift — the most expensive kind of false alarm a tripwire can raise. All four now
+  run in one `FileTransaction` that restores every touched file if any step throws, and a rollback
+  that could not restore something says which paths rather than claiming a clean undo.
+- Provenance is a first-class signal. `ScanResult.provenance` carries the structured verdict —
+  whether an attestation verified, and which repository signed it — instead of that fact existing
+  only inside a rendered check string. Reading a verdict back out of its own display text is how a
+  trust product starts believing its own formatting. (`GATE-002` remainder.)
+- Acquire records a real policy verdict in the lockfile, with a hash of the policy files that
+  produced it. A verdict without that hash is unfalsifiable: nobody can later tell whether the rules
+  have changed since.
+- Acquire still cannot pin a drift baseline for most artifacts, and now says so. A lock entry needs
+  the artifact's tool list, and of the wired sources only Smithery publishes one — a non-canonical
+  source that is off by default. Rather than let a successful install imply `agora ci` is watching
+  the server, acquire adds `agora doctor --probe && agora lock write` to its next steps. The
+  remaining piece of `EVD-002` is resolving the immutable bytes; nothing yet downloads and hashes a
+  tarball, so `tarball_sha256` stays absent.
+
 ### Fixed — search was printing numbers nobody measured
 
 - `installs` is now optional across the catalog model, and absent means *not measured*. Two separate

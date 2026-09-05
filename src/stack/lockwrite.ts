@@ -20,7 +20,7 @@
 import { hashToolSchema } from '../evidence/schemahash.js';
 import { hashDeclaredManifest, hashText } from '../model/hash.js';
 import type { ArtifactLockEntry, Lockfile } from '../model/lockfile.js';
-import type { DeclaredManifest, DeclaredTool } from '../model/manifest.js';
+import type { DeclaredManifest } from '../model/manifest.js';
 import { parsePurl } from '../model/purl.js';
 import { installedPurls } from '../revocation/installed.js';
 import type { AgoraStore } from '../store/index.js';
@@ -51,34 +51,30 @@ export interface LockWriteOptions {
 }
 
 /**
- * Only the *approved* baseline is ever locked, never the live reading.
+ * Build a declared manifest from a set of advertised tools.
  *
- * A server whose descriptions have drifted has a `liveDescriptionDigest` that
- * differs from its approved one. Locking the live value would silently bless
- * the change — the lockfile would agree with the drifted server and the
- * tripwire would report clean forever after. Quarantine and `unquarantine` are
- * the path for accepting a change; this is not.
+ * Shared with `acquire`, which has the same tools in hand from federation at
+ * install time. Two implementations of "what does this artifact declare" would
+ * eventually disagree, and the disagreement would surface as drift against a
+ * server that never changed — the false positive that costs a tripwire its
+ * credibility.
  */
-function toolsFrom(entry: ServerCapabilities): DeclaredTool[] {
-  return entry.tools.map((tool) => ({
-    name: tool.name,
-    description_sha256: hashText(tool.description ?? ''),
-    input_schema_sha256: hashToolSchema(tool),
-    source: 'handshake' as const
-  }));
-}
-
-function manifestFor(purl: string, version: string, entry: ServerCapabilities): DeclaredManifest {
+export function declaredManifestFrom(
+  purl: string,
+  version: string,
+  tools: ReadonlyArray<{ name: string; description?: string; inputSchema?: unknown }>
+): DeclaredManifest {
   const base = {
     purl,
     version,
-    // A stdio launch command is what the capability cache probes; a remote
-    // server is filtered out before this is reached.
     transports: ['stdio' as const],
-    // Not inspected here. `unknown` is the model's word for exactly this, and
-    // it is why the enum has one.
     auth_model: 'unknown' as const,
-    tools: toolsFrom(entry),
+    tools: tools.map((tool) => ({
+      name: tool.name,
+      description_sha256: hashText(tool.description ?? ''),
+      input_schema_sha256: hashToolSchema(tool as Parameters<typeof hashToolSchema>[0]),
+      source: 'handshake' as const
+    })),
     declared_capabilities: {
       // Deliberately empty rather than inferred. Coarse capability buckets come
       // from static analysis of the artifact, which this has not done; guessing
@@ -94,6 +90,19 @@ function manifestFor(purl: string, version: string, entry: ServerCapabilities): 
   return { ...base, manifest_sha256: hashDeclaredManifest(base as DeclaredManifest) };
 }
 
+function manifestFor(purl: string, version: string, entry: ServerCapabilities): DeclaredManifest {
+  return declaredManifestFrom(purl, version, entry.tools);
+}
+
+/**
+ * Only the *approved* baseline is ever locked, never the live reading.
+ *
+ * A server whose descriptions have drifted has a `liveDescriptionDigest` that
+ * differs from its approved one. Locking the live value would silently bless
+ * the change — the lockfile would agree with the drifted server and the
+ * tripwire would report clean forever after. Quarantine and `unquarantine` are
+ * the path for accepting a change; this is not.
+ */
 export function buildLockfile(
   servers: readonly ConfiguredServer[],
   opts: LockWriteOptions
