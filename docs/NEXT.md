@@ -28,7 +28,7 @@ distribution channel that has discovery, which npm does not.
   established*, never as clean.
 - [x] **CI-003 — the Action.** `action.yml` at the repo root so `uses: IrgenSlj/agora@v0` works with
   no npm knowledge. Inputs for what to fail on; a job-summary table; annotations on findings.
-- [ ] **CI-004 — proof on a real repo.** Run it against this repository's own stack in CI, publicly.
+- [x] **CI-004 — proof on a real repo.** Run it against this repository's own stack in CI, publicly.
   Agora holding Agora to its own standard is the demo.
 
 ## Later — the skills gap

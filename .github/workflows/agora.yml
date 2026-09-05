@@ -1,0 +1,50 @@
+name: Agora checks its own stack
+
+# The demo, and the honesty test. A tool that tells you to gate your agent
+# tooling in CI and does not gate its own is asking for trust it has not spent
+# anything to earn — the same reasoning that made `agora integrate` hold Agora's
+# own package to the gate before installing it into a harness.
+#
+# Runs from source rather than through `action.yml`, on purpose: the Action runs
+# the published package, and this has to work on a commit that has not been
+# published yet. When a release is out, the composite path is exercised by the
+# consumers of `uses: IrgenSlj/agora@v0`.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # 07:15 UTC, an hour after the revocation feed syncs, so a new advisory is
+    # in the feed before this asks about it. Scheduled because that is the whole
+    # argument for this command: the answer changes on days you did not push.
+    - cron: '15 7 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: agora-self-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  self-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+
+      # Not `--fail-on-unknown`. This repository has no `agora.lock` yet —
+      # acquisition does not create one (EVD-002) — and a self-check that goes
+      # red for a gap the product already documents would be theatre. The run
+      # reports drift as not established, which is the true answer, and this
+      # becomes strict the day the lockfile is real.
+      - name: agora ci
+        run: node dist/cli.js ci
