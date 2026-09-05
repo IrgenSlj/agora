@@ -534,23 +534,39 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'lock',
     group: 'Stack',
-    summary: 'Manage the lockfile (agora.lock) — verify integrity and detect drift',
-    usage: 'agora lock verify [--store <path>] [--json]',
+    summary: 'Manage the lockfile (agora.lock) — pin what is installed, then detect drift',
+    usage: 'agora lock write [--dry-run] [--json]\nagora lock verify [--store <path>] [--json]',
     details:
-      'Recomputes all hashes in the lockfile (manifest_sha256, per-tool description and schema hashes) ' +
-      'and compares them against the current manifest in the local SQLite store. ANY mismatch indicates ' +
-      'drift — the artifact may have been modified after installation (rug-pull detection, §5.5). ' +
-      'Exits 1 on drift, 0 on clean verification.',
+      "`write` pins what is currently installed: it records each server's advertised tools, " +
+      'descriptions and input schemas as the approved baseline, in agora.lock and in the local ' +
+      'store together — either alone is inert. It needs a capability baseline, so run ' +
+      '`agora doctor --probe` first, and it refuses to lock a server whose descriptions have ' +
+      'already drifted rather than blessing the change. Commit the result; `agora ci` compares ' +
+      'against it on every run. Fields Agora cannot establish from an installed server — the ' +
+      'tarball hash, provenance, a policy verdict — are left absent rather than filled with ' +
+      'plausible values; the acquisition transaction writes those. ' +
+      '`verify` recomputes every hash and compares. ANY mismatch is drift — the artifact may ' +
+      'have been modified after installation (rug-pull detection, §5.5). Exits 1 on drift, 0 on ' +
+      'clean verification.',
     flags: [
+      {
+        flag: '--dry-run',
+        description: 'write: print the lockfile that would be written, and write nothing'
+      },
       {
         flag: '--store',
         description: 'Path to the Agora SQLite store (default: ~/.agora/agora.db)'
       },
       {
         flag: '--json',
-        description: 'Output { ok, lockfile_version, generated_by, artifacts } as JSON'
+        description: 'Output the result as JSON'
       }
     ],
-    examples: ['agora lock verify', 'agora lock verify --json']
+    examples: [
+      'agora doctor --probe && agora lock write',
+      'agora lock write --dry-run',
+      'agora lock verify',
+      'agora lock verify --json'
+    ]
   }
 ];

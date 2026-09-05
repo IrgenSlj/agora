@@ -73,6 +73,14 @@ $ agora ci
   Something you trusted has changed.
 ```
 
+Drift needs a baseline, so pin one first — once, and again whenever you deliberately accept a
+change:
+
+```bash
+agora doctor --probe   # learn what each server currently advertises
+agora lock write       # pin it, and commit agora.lock
+```
+
 Exit `0` nothing failed · `1` a blocking advisory or drift · `3` OSV unreachable. A check Agora
 could not perform is reported as **not established**, never as a pass — a repository with no
 `agora.lock` has not proved the absence of drift, and this says so instead of showing a green tick.
@@ -155,7 +163,8 @@ Agora is mid-build against the v2.0 brief. The plane descriptions above are the 
 | **Gate** — heuristic customs gate **plus** Cedar, provenance, drift, and revocation | 🔄 primary acquire path live; all-write unification pending |
 | **Gate** — revocation feed, generated from OSV daily, bundled with the package | ✅ live |
 | **Gate** — `agora audit`: advisories against the servers you actually run | ✅ live |
-| **Lock/export** — digest-bound machine truth and schema-valid portable evidence | 🔄 models/verifier/export exist; acquisition transaction incomplete |
+| **Lock** — `lock write` pins the approved tool baseline; `lock verify` and `agora ci` detect drift | ✅ live *(tarball digest and policy verdict come with the acquisition transaction)* |
+| **Export** — schema-valid portable evidence | 🔄 bundle/envelope exist; predicate schema validation pending |
 | **Serve** — agent-facing MCP acquisition | 🔄 preview + request-only intent live; policy/evidence tools and strong consent boundary pending |
 | **Agent Skills** — trust plane coverage (scan, gate, evidence, host install) | ⬜ **not built** — skills are searchable only |
 | **Sandboxed pre-install `vet`** | ⬜ deferred — replaced by runtime observation above |
@@ -169,6 +178,7 @@ Agora is mid-build against the v2.0 brief. The plane descriptions above are the 
 
 ```bash
 agora ci                         # the whole post-install question, one exit code (for CI)
+agora lock write                 # pin what is installed now, so drift has a baseline
 agora doctor                     # one table of every MCP server across all your hosts + drift
 agora search postgres            # multi-source catalog search across upstream registries
 agora acquire mcp-postgres       # resolve → gate → write config (the customs office)

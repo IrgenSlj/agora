@@ -1,13 +1,24 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { atomicWriteFile } from '../../atomic-write.js';
 import { hashDeclaredManifest } from '../../model/hash.js';
-import { type ArtifactLockEntry, type Lockfile, parseLockfile } from '../../model/lockfile.js';
+import {
+  type ArtifactLockEntry,
+  type Lockfile,
+  normalizeLockfile,
+  parseLockfile
+} from '../../model/lockfile.js';
 import { DeclaredManifest } from '../../model/manifest.js';
 import { parsePurl } from '../../model/purl.js';
+import { buildLockfile, type LockWriteResult } from '../../stack/lockwrite.js';
+import { readAllServers } from '../../stack/registry.js';
 import { AgoraStore } from '../../store/index.js';
+import type { Styler } from '../../ui.js';
+import { AGORA_VERSION } from '../app.js';
 import { ExitCode } from '../exit-codes.js';
 import type { CliIo, ParsedArgs } from '../flags.js';
-import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
+import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
+import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 /**
@@ -200,15 +211,98 @@ async function verifyLockfile(parsed: ParsedArgs, io: CliIo): Promise<number> {
 }
 
 /**
- * `agora lock` — manage the lockfile.
- * Subcommands: verify
+ * `agora lock write` — pin what is installed now, so drift has a baseline.
+ *
+ * Writes the lockfile and the declared manifests it verifies against in one
+ * pass; either alone is inert. Refuses to lock a server whose descriptions have
+ * already drifted, because doing so would bless the change and permanently
+ * silence the tripwire for that artifact.
  */
-export const commandLock: CommandHandler = async (parsed, io) => {
+async function writeLockfile(parsed: ParsedArgs, io: CliIo, style: Styler): Promise<number> {
+  const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
+  const servers = readAllServers(env).filter((s) => s.enabled);
+  const dataDir = detectDataDir(parsed, io);
+  const storePath = stringFlag(parsed, 'store') || io.env?.AGORA_DB_PATH;
+  const store = new AgoraStore(storePath);
+  const dryRun = parsed.flags.dryRun === true || parsed.flags['dry-run'] === true;
+
+  let result: LockWriteResult;
+  try {
+    result = buildLockfile(servers, {
+      dataDir,
+      generatedBy: `agora ${AGORA_VERSION}`,
+      store,
+      persist: !dryRun
+    });
+  } finally {
+    store.close();
+  }
+
+  const lockPath = join(io.cwd ?? process.cwd(), 'agora.lock');
+  const body = `${JSON.stringify(normalizeLockfile(result.lockfile), null, 2)}\n`;
+
+  if (dryRun) {
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { ...result, wrote: false, path: lockPath });
+    } else {
+      writeLine(io.stdout, body);
+    }
+    return ExitCode.OK;
+  }
+
+  atomicWriteFile(lockPath, body);
+
+  if (parsed.flags.json) {
+    writeJson(io.stdout, { ...result, wrote: true, path: lockPath });
+    return ExitCode.OK;
+  }
+
+  const theme = cliTheme(style, io);
+  writeLine(
+    io.stdout,
+    `Locked ${theme.bold(String(result.locked.length))} artifact${result.locked.length === 1 ? '' : 's'} to ${lockPath}`
+  );
+  for (const name of result.locked) writeLine(io.stdout, `  ${theme.accent('✓')} ${name}`);
+
+  if (result.skipped.length) {
+    writeLine(io.stdout, '');
+    // Never a silent omission. A server missing from the lockfile is a server
+    // the tripwire will not watch, and the user has to know which ones.
+    writeLine(
+      io.stdout,
+      theme.muted(
+        `  ${result.skipped.length} not locked — these are not covered by drift detection:`
+      )
+    );
+    for (const s of result.skipped) {
+      writeLine(io.stdout, theme.muted(`    ? ${s.name} — ${s.reason}`));
+    }
+  }
+
+  writeLine(io.stdout, '');
+  writeLine(
+    io.stdout,
+    theme.muted('  Commit agora.lock. `agora ci` compares against it on every run.')
+  );
+  return ExitCode.OK;
+}
+
+/**
+ * `agora lock` — manage the lockfile.
+ * Subcommands: verify, write
+ */
+export const commandLock: CommandHandler = async (parsed, io, style) => {
   const subcommand = parsed.args[0];
 
   if (subcommand === 'verify') {
     return verifyLockfile(parsed, io);
   }
+  if (subcommand === 'write') {
+    return writeLockfile(parsed, io, style);
+  }
 
-  return usageError(io, `Unknown lock subcommand: ${subcommand}. Usage: agora lock verify`);
+  return usageError(
+    io,
+    `Unknown lock subcommand: ${subcommand}. Usage: agora lock verify | agora lock write`
+  );
 };

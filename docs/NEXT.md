@@ -109,8 +109,9 @@ outstanding. Revisit when a user asks, or when the CI surface has an audience to
 - [ ] **EVD-002 — acquisition transaction.** Resolve immutable bytes, compute digest, validate the
   declared manifest, verify provenance, run the gate, persist evidence, update `agora.lock`, then
   write host config atomically or roll back.
-- [ ] **EVD-003 — lock lifecycle.** Add create/update commands and deterministic serialization;
-  preserve `lock verify` and backward-readable versions.
+- [x] **EVD-003 — lock lifecycle.** `agora lock write` creates/updates the lockfile and the declared
+  manifests it verifies against, deterministically serialized, refusing to lock drifted or
+  quarantined servers. `lock verify` is unchanged and still reads older files.
 - [ ] **EVD-004 — predicate schema registry.** Map every predicate type URI to a schema and reject
   invalid payloads before creating a DSSE envelope.
 - [ ] **EVD-005 — runtime observation predicate v2.** Represent actual MCP session evidence rather

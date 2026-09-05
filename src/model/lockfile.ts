@@ -27,7 +27,16 @@ export const ArtifactLockEntry = z
     kind: z.enum(['mcp-server', 'agent-skill']),
     integrity: z
       .object({
-        tarball_sha256: z.string().describe('SHA-256 hash of the downloaded tarball'),
+        // Optional because it is the one hash Agora cannot compute from an
+        // already-installed server: it requires resolving the immutable bytes,
+        // which only the acquisition transaction does (EVD-002). Absent means
+        // *not established* — writing a plausible-looking hash here to satisfy
+        // a required field would be the exact failure this product exists to
+        // detect in other people's supply chains.
+        tarball_sha256: z
+          .string()
+          .optional()
+          .describe('SHA-256 of the resolved tarball. Absent = never resolved, not "no bytes".'),
         manifest_sha256: z.string().describe('JCS hash of the declared manifest')
       })
       .describe('Content integrity hashes'),
@@ -48,7 +57,12 @@ export const ArtifactLockEntry = z
         })
       )
       .describe('Declared tools with their hashes'),
-    policy_verdict: PolicyVerdict,
+    // Optional for the same reason. A lockfile written from what is already
+    // installed records what is there; it has not run an install-time policy
+    // evaluation, and recording `allow` without having evaluated anything would
+    // put a fabricated verdict into the file whose entire purpose is being the
+    // trustworthy one. The acquisition transaction fills this in.
+    policy_verdict: PolicyVerdict.optional(),
     hosts: z
       .array(z.string())
       .describe('Hosts where this artifact is synced (e.g. claudecode, cursor)'),
@@ -85,20 +99,25 @@ function normalizeArtifact(entry: ArtifactLockEntry): ArtifactLockEntry {
     provenance.rekor_log_index = entry.provenance.rekor_log_index;
   }
 
-  const policy_verdict: ArtifactLockEntry['policy_verdict'] = {
-    decision: entry.policy_verdict.decision,
-    policy_sha256: entry.policy_verdict.policy_sha256,
-    evaluated_at: entry.policy_verdict.evaluated_at
-  };
-  if (entry.policy_verdict.determining_rule !== undefined) {
-    policy_verdict.determining_rule = entry.policy_verdict.determining_rule;
+  let policy_verdict: ArtifactLockEntry['policy_verdict'];
+  if (entry.policy_verdict) {
+    policy_verdict = {
+      decision: entry.policy_verdict.decision,
+      policy_sha256: entry.policy_verdict.policy_sha256,
+      evaluated_at: entry.policy_verdict.evaluated_at
+    };
+    if (entry.policy_verdict.determining_rule !== undefined) {
+      policy_verdict.determining_rule = entry.policy_verdict.determining_rule;
+    }
   }
 
   const normalized: ArtifactLockEntry = {
     purl: entry.purl,
     kind: entry.kind,
     integrity: {
-      tarball_sha256: entry.integrity.tarball_sha256,
+      ...(entry.integrity.tarball_sha256 !== undefined
+        ? { tarball_sha256: entry.integrity.tarball_sha256 }
+        : {}),
       manifest_sha256: entry.integrity.manifest_sha256
     },
     provenance,
@@ -109,9 +128,12 @@ function normalizeArtifact(entry: ArtifactLockEntry): ArtifactLockEntry {
         input_schema_sha256: tool.input_schema_sha256
       }))
       .sort((a, b) => a.name.localeCompare(b.name)),
-    policy_verdict,
     hosts: [...entry.hosts].sort()
   };
+  // Only present when it was actually established. A `"policy_verdict": null`
+  // in serialized output would read as a verdict of some kind; an absent key
+  // reads as the question not having been asked, which is what happened.
+  if (policy_verdict !== undefined) normalized.policy_verdict = policy_verdict;
   if (entry.state !== undefined) normalized.state = entry.state;
   return normalized;
 }

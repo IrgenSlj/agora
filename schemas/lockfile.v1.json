@@ -31,8 +31,8 @@
             "type": "object",
             "properties": {
               "tarball_sha256": {
-                "type": "string",
-                "description": "SHA-256 hash of the downloaded tarball"
+                "description": "SHA-256 of the resolved tarball. Absent = never resolved, not \"no bytes\".",
+                "type": "string"
               },
               "manifest_sha256": {
                 "type": "string",
@@ -40,7 +40,6 @@
               }
             },
             "required": [
-              "tarball_sha256",
               "manifest_sha256"
             ],
             "additionalProperties": false,
@@ -154,7 +153,6 @@
           "integrity",
           "provenance",
           "tools",
-          "policy_verdict",
           "hosts"
         ],
         "additionalProperties": false,

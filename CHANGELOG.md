@@ -8,6 +8,26 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 2026-08-02 and reached nobody for five weeks, because the release was waiting for "several fronts"
 to be ready at once. Unshipped work is a defect. Releases are weekly from here, small or not.*
 
+### Added — `agora lock write`, which makes the drift plane reachable at all
+
+- The lockfile is the brief's rug-pull tripwire and nothing had ever written one. `lock verify` was
+  correct and unreachable: it compares a lockfile against declared manifests in the SQLite store,
+  and nothing called `upsertManifest` either. Both halves are written together now, from the
+  capability baseline `doctor --probe` already collects — so `agora ci` can answer the drift
+  question instead of reporting it unanswerable for every user forever.
+- Only the *approved* baseline is ever locked. A server whose descriptions have already drifted, or
+  one that is quarantined, is refused with a reason: locking the live reading would bless the change
+  and silence the tripwire for that artifact permanently. Every skipped server is named, because a
+  server missing from the lockfile is a server nothing is watching.
+- `ArtifactLockEntry.integrity.tarball_sha256` and `policy_verdict` become optional. Agora cannot
+  establish either from an already-installed server — the first needs the resolved bytes, the second
+  needs an install-time evaluation — and writing a plausible-looking hash or an unevaluated `allow`
+  would put a fabricated record in the one file whose entire job is being the trustworthy one.
+  Absent means *not established*; the acquisition transaction fills them in. Existing lockfiles
+  still parse.
+- `--dry-run` writes neither the lockfile nor the store. Skipping only the file would still change
+  what `lock verify` compares against, which is a preview with a side effect.
+
 ### Added — `agora ci`, and the Action that runs it
 
 - One command answers the whole post-install question with one exit code: advisories against the

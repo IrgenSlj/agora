@@ -218,7 +218,7 @@ async function driftCheck(io: CliIo, opts: CiOptions): Promise<CiCheck> {
     return {
       name: 'drift',
       state: 'fail',
-      summary: `${result.drifts.length} artifact${result.drifts.length === 1 ? '' : 's'} no longer match the lockfile`,
+      summary: `${result.drifts.length} artifact${result.drifts.length === 1 ? ' no longer matches' : 's no longer match'} the lockfile`,
       findings: result.drifts
     };
   }
