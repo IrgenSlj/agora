@@ -62,6 +62,14 @@ runs:
         status=$?
         set -e
 
+        # `ci` landed in 0.8.0. Resolving to an older release exits 2 with
+        # "Unknown command", which reads like a broken Action rather than a
+        # version mismatch. Say which it is.
+        if [ "$status" -eq 2 ] && [ ! -s "$report" ]; then
+          echo "::error title=agora-hub too old::\`agora ci\` requires agora-hub >= 0.8.0; resolved '${AGORA_VERSION}'. Pin the action's \`version\` input to a release that has it."
+          exit 2
+        fi
+
         if [ -s "$report" ]; then
           {
             echo "result<<AGORA_REPORT_EOF"

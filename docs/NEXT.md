@@ -45,6 +45,12 @@ outstanding. Revisit when a user asks, or when the CI surface has an audience to
   quarantine on change using the existing drift/quarantine machinery.
 - [ ] **SKILL-003 — skill install and evidence.** Host adapters install/remove/quarantine skills;
   evidence records skills by purl like any other artifact.
+- [ ] **CI-005 — tag `v0` after publishing.** `action.yml` runs the published package, and `ci`
+  landed in 0.8.0, so the tag the Action is consumed by must not exist before that release does —
+  a `v0` pointing at an unpublished command is a broken Action with a good README. Order: publish
+  0.8.0, verify `npx -y agora-hub@0.8.0 ci` on a clean machine, then `git tag -f v0 && git push -f
+  origin v0`. The Action already fails with a legible version-mismatch error if this is done out of
+  order.
 - [ ] **REL-005 — let the feed bot publish.** Two repository settings block it. (a) `main` requires
   a status check named `backend` that no workflow produces — a leftover from the deleted Cloudflare
   backend — so with `strict: true` every non-admin push waits forever on a check that never
