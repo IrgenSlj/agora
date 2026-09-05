@@ -41,6 +41,8 @@ const booleanFlags = new Set([
   'down',
   'dryRun',
   'dry-run',
+  'failOnUnknown',
+  'fail-on-unknown',
   'fix',
   'force',
   'help',

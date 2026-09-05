@@ -8,6 +8,28 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 2026-08-02 and reached nobody for five weeks, because the release was waiting for "several fronts"
 to be ready at once. Unshipped work is a defect. Releases are weekly from here, small or not.*
 
+### Added — `agora ci`, and the Action that runs it
+
+- One command answers the whole post-install question with one exit code: advisories against the
+  servers you actually run, lockfile drift against what you approved, and whether the stack still
+  resolves. Each already existed as its own command; what did not exist was a single verdict, and
+  chaining three exit codes in a workflow is three chances to reconcile them wrong.
+- `action.yml` makes it `uses: IrgenSlj/agora@v0` — composite, so what CI executes is the published
+  npm package rather than a bundled `dist/` that has to be kept in sync with the source forever.
+- Under GitHub Actions it annotates each finding against the host config that declares the offending
+  server and writes the verdict to the job summary. `--json-file` carries the machine report out of
+  band so one run serves both readers: annotations are workflow commands on stdout, so capturing
+  stdout would swallow them, and running twice would double every OSV lookup.
+- Two deliberate non-behaviours, both because a gate people delete protects nothing. It never starts
+  a configured server — a runner should not be talked into executing a stranger's processes on a
+  pull request. And an unresolvable server does **not** fail the build: on a fresh runner almost no
+  `npx`-resolved server exists, and a server that was never installed there has not *changed*, which
+  is the only thing this command claims to detect. `doctor --strict` remains the command that fails
+  on a broken stack.
+- A check Agora could not perform is `not_established`, never a pass. A repository with no
+  `agora.lock` has not proved the absence of drift; `--fail-on-unknown` turns that absence into a
+  failure for anyone who wants it.
+
 ### Changed — what Agora says it is
 
 - The front door leads with the promise nothing else makes: **Agora catches the tool that changed

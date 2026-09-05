@@ -10,10 +10,34 @@ The overall feature set is preserved. Consolidation means shared models and serv
 of the shell, TUI, news/today, inference, federation sources, host adapters, plugins, or MCP
 integration. Only explicitly legacy surfaces may be retired.
 
-## Now — release, then the skills gap
+## Now — the CI wedge
+
+Agora's job, stated where it can be acted on: **fail the build when a tool you trusted changes.**
+CI is the only place that question gets asked automatically, forever, by someone who has already
+decided they care. Every primitive this needs already exists — `audit --json` exits 1 on a blocking
+advisory, `lock verify` exits 1 on drift, `doctor --strict` exits 1 on a broken server and is
+already documented "for CI/scripting". What is missing is one surface that composes them and a
+distribution channel that has discovery, which npm does not.
 
 - [x] **REL-000 — ship 0.8.0.** Publish the revocation feed, `audit`, and the gate. Correct the
-  Agent Skills claim. Lead all copy with the post-install promise (DA-13). Weekly cadence after.
+  Agent Skills claim. Lead all copy with the post-install promise (DA-13).
+- [x] **CI-002 — `agora ci`.** One command that runs the whole post-install question and answers it
+  once: advisories against configured servers, lockfile drift, and stack health. Single summary,
+  one exit code on the existing contract, `--json`, and GitHub Actions annotations when
+  `GITHUB_ACTIONS` is set. Unknowns stay unknown — a missing lockfile is reported as *not
+  established*, never as clean.
+- [x] **CI-003 — the Action.** `action.yml` at the repo root so `uses: IrgenSlj/agora@v0` works with
+  no npm knowledge. Inputs for what to fail on; a job-summary table; annotations on findings.
+- [ ] **CI-004 — proof on a real repo.** Run it against this repository's own stack in CI, publicly.
+  Agora holding Agora to its own standard is the demo.
+
+## Later — the skills gap
+
+Demoted from Now on 2026-09-05. The demand signal that made skills look urgent — roughly a fifth of
+one marketplace's skills carrying malware — is an argument that *marketplaces* should scan, not that
+a developer wants a second CLI for it. The copy no longer claims coverage, so nothing dishonest is
+outstanding. Revisit when a user asks, or when the CI surface has an audience to ask.
+
 - [ ] **SKILL-001 — skills through scan and the gate.** Give `agent-skill` a scan path (instruction
   hashing, injected-imperative heuristics) and route it through the same authorization kernel as
   `mcp-server`. No new gate semantics; one more artifact kind through the existing one.

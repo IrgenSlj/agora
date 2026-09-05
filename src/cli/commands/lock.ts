@@ -89,6 +89,46 @@ function verifyArtifact(
 }
 
 /**
+ * The drift question, answered without a CLI around it.
+ *
+ * Returns `null` when there is no lockfile at all — which `agora ci` renders as
+ * *not established* rather than as a pass. Nothing is pinned, so nothing can be
+ * proved unchanged, and that is a different sentence from "nothing changed".
+ */
+export async function verifyLockfileForCi(
+  io: CliIo,
+  storePath?: string
+): Promise<{ ok: boolean; drifts: { title: string; detail: string; where?: string }[] } | null> {
+  const lockPath = join(io.cwd ?? process.cwd(), 'agora.lock');
+
+  let lockfile: Lockfile;
+  try {
+    lockfile = parseLockfile(readFileSync(lockPath, 'utf-8'));
+  } catch {
+    return null;
+  }
+
+  const store = new AgoraStore(storePath ?? io.env?.AGORA_DB_PATH);
+  const drifts: { title: string; detail: string; where?: string }[] = [];
+  try {
+    for (const entry of lockfile.artifacts) {
+      const drift = verifyArtifact(entry, store);
+      if (drift) {
+        drifts.push({
+          title: `drift — ${drift.purl}`,
+          detail: drift.drifts.join('; '),
+          where: 'agora.lock'
+        });
+      }
+    }
+  } finally {
+    store.close();
+  }
+
+  return { ok: drifts.length === 0, drifts };
+}
+
+/**
  * `agora lock verify` — recompute all hashes, exit 1 on drift.
  * Source: AGORA_BRIEF_v2.md §5.5 (drift rule)
  */

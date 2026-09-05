@@ -1,0 +1,80 @@
+name: 'Agora'
+description: 'Fail the build when an MCP server you trusted changes — advisories, lockfile drift, and stack health in one check.'
+author: 'IrgenSlj'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+# A composite action rather than a JavaScript one on purpose. A JS action has to
+# commit a bundled `dist/` to the repository and keep it in sync with the source
+# forever; this runs the published npm package, so what CI executes is exactly
+# what a user gets from `npm i -g agora-hub` — the same artifact, with the same
+# provenance, and nothing extra to keep honest.
+
+inputs:
+  version:
+    description: 'Version of agora-hub to run. Pin this for reproducible runs.'
+    required: false
+    default: 'latest'
+  fail-on-unknown:
+    description: >-
+      Fail when a check could not be established rather than only when one fails.
+      Most repositories have no agora.lock yet, so this is off by default — a gate
+      that goes red on day one for not having adopted a feature gets deleted.
+    required: false
+    default: 'false'
+  working-directory:
+    description: 'Directory to run in. Host configs and agora.lock are read relative to it.'
+    required: false
+    default: '.'
+
+outputs:
+  result:
+    description: 'The full CiReport as JSON.'
+    value: ${{ steps.agora.outputs.result }}
+  ok:
+    description: 'true when nothing failed.'
+    value: ${{ steps.agora.outputs.ok }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: agora
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        AGORA_VERSION: ${{ inputs.version }}
+        AGORA_FAIL_ON_UNKNOWN: ${{ inputs.fail-on-unknown }}
+      run: |
+        args=()
+        if [ "$AGORA_FAIL_ON_UNKNOWN" = "true" ]; then
+          args+=(--fail-on-unknown)
+        fi
+
+        # One invocation. Annotations are workflow commands on stdout, so the
+        # human render has to own stdout; `--json-file` carries the machine
+        # report out of band. Running twice would double every OSV lookup and
+        # let the two runs disagree about what the answer was.
+        report="$(mktemp -t agora-ci-XXXXXX)"
+        set +e
+        npx -y "agora-hub@${AGORA_VERSION}" ci --json-file "$report" "${args[@]}"
+        status=$?
+        set -e
+
+        if [ -s "$report" ]; then
+          {
+            echo "result<<AGORA_REPORT_EOF"
+            cat "$report"
+            echo "AGORA_REPORT_EOF"
+          } >> "$GITHUB_OUTPUT"
+        fi
+        rm -f "$report"
+
+        if [ "$status" -eq 0 ]; then
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "ok=false" >> "$GITHUB_OUTPUT"
+        fi
+
+        exit "$status"

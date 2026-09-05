@@ -21,15 +21,27 @@ import type { OsvVulnerability } from '../../osv/types.js';
 import { installedPurls } from '../../revocation/installed.js';
 import { readAllServers } from '../../stack/registry.js';
 import { ExitCode } from '../exit-codes.js';
+import type { CliIo } from '../flags.js';
 import { writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
-interface Finding {
+export interface Finding {
   server: string;
   purl: string;
   configPath: string;
   advisories: { id: string; severity: string; summary: string; url: string }[];
+}
+
+export interface AdvisorySweep {
+  /** Servers Agora could resolve to an npm purl and actually looked up. */
+  scanned: number;
+  /** Resolved but unreachable — never folded into `scanned`. */
+  unreachable: { purl: string; reason: string }[];
+  /** Remote or custom-launcher servers that no lookup can address. */
+  unidentifiable: number;
+  findings: Finding[];
+  blocking: Finding[];
 }
 
 /** GitHub's label, or the malware marker. Kept separate from the feed's severity mapping. */
@@ -40,7 +52,15 @@ function labelFor(v: OsvVulnerability): string {
 
 const BLOCKING = new Set(['MALWARE', 'CRITICAL', 'HIGH']);
 
-export const commandAudit: CommandHandler = async (parsed, io, style) => {
+/**
+ * Look up every addressable configured MCP server in OSV.
+ *
+ * Extracted so `agora ci` reports the same advisories, with the same
+ * unreachable/unidentifiable distinctions, rather than growing a parallel
+ * implementation that would eventually disagree with this one about what
+ * "clean" means.
+ */
+export async function sweepAdvisories(io: CliIo): Promise<AdvisorySweep> {
   const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
   const servers = readAllServers(env).filter((s) => s.enabled);
   const { addressable, unaddressable } = installedPurls(servers);
@@ -68,15 +88,28 @@ export const commandAudit: CommandHandler = async (parsed, io, style) => {
     });
   }
 
-  const blocking = findings.filter((f) => f.advisories.some((a) => BLOCKING.has(a.severity)));
+  return {
+    scanned: addressable.length,
+    unreachable,
+    unidentifiable: unaddressable.length,
+    findings,
+    blocking: findings.filter((f) => f.advisories.some((a) => BLOCKING.has(a.severity)))
+  };
+}
+
+export const commandAudit: CommandHandler = async (parsed, io, style) => {
+  const sweep = await sweepAdvisories(io);
+  const { findings, unreachable, blocking } = sweep;
+  const addressable = { length: sweep.scanned };
+  const unaddressable = { length: sweep.unidentifiable };
 
   if (parsed.flags.json) {
     writeJson(io.stdout, {
-      scanned: addressable.length,
+      scanned: sweep.scanned,
       // Never folded into `scanned`: a server Agora could not identify has not
       // been checked, and reporting it as clean would be the same lie the rest
       // of the product is arranged against.
-      unidentifiable: unaddressable.length,
+      unidentifiable: sweep.unidentifiable,
       unreachable,
       findings,
       blocking: blocking.length

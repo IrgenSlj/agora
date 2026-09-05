@@ -93,6 +93,11 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
     'Re-runs the complete acquire gate bound to the reviewed purl and project policy; terminal invocation is not itself a strong human-consent boundary.'
   ),
   audit: readOnly('Reads configured servers and queries OSV.'),
+  ci: readOnly(
+    'Reads configured servers, queries OSV, and recomputes lockfile hashes. Starts no server: ' +
+      'probing is deliberately excluded so a pull request cannot make a runner execute ' +
+      'configured processes.'
+  ),
   browse: readOnly('Reads merged catalog detail.'),
   capabilities: readOnly('Reads the local capability cache.'),
   completions: readOnly('Prints shell completion source.'),

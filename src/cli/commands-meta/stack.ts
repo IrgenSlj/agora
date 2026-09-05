@@ -61,6 +61,39 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora audit', 'agora audit --json']
   },
   {
+    name: 'ci',
+    group: 'Stack',
+    summary: 'Answer the whole post-install question once, with an exit code',
+    usage: 'agora ci [--fail-on-unknown] [--json]',
+    details:
+      'Runs the three checks that together mean "nothing I trusted has changed": published ' +
+      'advisories against the servers you actually run, lockfile drift against what you ' +
+      'approved, and whether the stack still resolves. Read-only — it never starts a ' +
+      "configured server, because a CI runner executing a stranger's processes on a pull " +
+      'request is worse than anything this command could report. Under GitHub Actions it also ' +
+      'emits annotations on the offending host config and writes a job summary. Exit codes: 0 ' +
+      'nothing failed, 1 a blocking advisory or drift, 3 OSV unreachable. A check Agora could ' +
+      'not perform is reported as not established, never as a pass; `--fail-on-unknown` turns ' +
+      'that absence into a failure.',
+    flags: [
+      {
+        flag: '--fail-on-unknown',
+        description: 'Exit 1 when a check could not be established (e.g. no agora.lock)'
+      },
+      { flag: '--json', description: 'Output the full CiReport as JSON' },
+      {
+        flag: '--json-file',
+        description: 'Also write the CiReport to a path, leaving stdout for humans and annotations'
+      }
+    ],
+    examples: [
+      'agora ci',
+      'agora ci --fail-on-unknown',
+      'agora ci --json',
+      'agora ci --json-file agora-ci.json'
+    ]
+  },
+  {
     name: 'approve',
     group: 'Stack',
     summary: 'Review install intents and re-run the gate before acting',

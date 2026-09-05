@@ -6,6 +6,7 @@ import * as approveModule from './commands/approve.js';
 import * as auditModule from './commands/audit.js';
 import * as browseModule from './commands/browse.js';
 import * as capabilitiesModule from './commands/capabilities.js';
+import * as ciModule from './commands/ci.js';
 import * as doctorModule from './commands/doctor.js';
 import * as exportModule from './commands/export.js';
 import * as freezeModule from './commands/freeze.js';
@@ -190,6 +191,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       update: updateModule.commandUpdate,
       approve: approveModule.commandApprove,
       audit: auditModule.commandAudit,
+      ci: ciModule.commandCi,
       trust: trustModule.commandTrust,
       try: tryModule.commandTry,
       capabilities: capabilitiesModule.commandCapabilities,

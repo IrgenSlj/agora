@@ -42,6 +42,45 @@ Every plane's verdict for one artifact, including the unknowns. **"Passed the ga
 red flags*, never "safe."** That distinction is deliberate and appears everywhere a verdict is
 shown. Agora never fabricates data or counts; if a source is unreachable, it says so.
 
+## Put it in CI
+
+The question above only helps if somebody keeps asking it. People don't; CI does.
+
+```yaml
+- uses: IrgenSlj/agora@v0
+```
+
+That runs `agora ci`, which answers the whole post-install question once, with one exit code:
+**advisories** against the servers you actually run, **drift** against the artifacts you approved,
+and whether the **stack** still resolves. Findings are annotated on the pull request against the
+host config that declares the offending server, and the verdict lands on the run summary.
+
+```console
+$ agora ci
+
+  ✗ advisories  known-vulnerable
+      1 server with a MALWARE/CRITICAL/HIGH advisory
+      · HIGH GHSA-hc55-p739-j48w — filesystem
+
+  ✓ drift       changed since approval
+      every locked artifact still hashes to what was approved
+
+  ✓ health      stack coherent
+      3 configured servers resolve cleanly
+
+  Something you trusted has changed.
+```
+
+Exit `0` nothing failed · `1` a blocking advisory or drift · `3` OSV unreachable. A check Agora
+could not perform is reported as **not established**, never as a pass — a repository with no
+`agora.lock` has not proved the absence of drift, and this says so instead of showing a green tick.
+`--fail-on-unknown` turns that absence into a failure.
+
+Two deliberate non-behaviours, because a gate people delete protects nothing: it never starts a
+configured server (a CI runner should not be talked into executing a stranger's processes on a pull
+request), and an unresolvable server does not fail the build (on a fresh runner almost nothing is
+installed — and a server that was never installed here has not *changed*).
+
 <p align="center">
   <img src="./docs/assets/demo.gif" alt="agora doctor, search, scan, and freeze in the terminal" width="100%">
 </p>
@@ -127,6 +166,7 @@ Agora is mid-build against the v2.0 brief. The plane descriptions above are the 
 ## What works today
 
 ```bash
+agora ci                         # the whole post-install question, one exit code (for CI)
 agora doctor                     # one table of every MCP server across all your hosts + drift
 agora search postgres            # multi-source catalog search across upstream registries
 agora acquire mcp-postgres       # resolve → gate → write config (the customs office)
