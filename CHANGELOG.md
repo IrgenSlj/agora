@@ -27,6 +27,19 @@ to be ready at once. Unshipped work is a defect. Releases are weekly from here, 
   product whose entire value is refusing to upgrade unknown to clean cannot overstate its own
   coverage.
 
+### Fixed — the revocation feed had stopped publishing
+
+- The daily OSV sync has failed every night since early August. `main` requires status checks; a
+  push made with `GITHUB_TOKEN` never triggers the workflow that reports them, so the bot's push
+  was rejected indefinitely. Clients poll `feed/revocations.json` on `main` directly, so every
+  install has been reading a feed frozen at 2026-07-31 — as was the copy bundled into this package.
+  The feed is regenerated here. **No advisory was missed**: OSV returns the same ten entries it did
+  five weeks ago, so the staleness cost accuracy of the timestamp, not of the verdicts.
+- The sync job now opens an issue when it cannot publish, updating one rather than duplicating.
+  A revocation feed that can die quietly is worse than no revocation feed, because its silence is
+  indistinguishable from good news. Two repository settings still need attention and are noted in
+  `docs/NEXT.md` under `REL-005`.
+
 ### Changed — scope
 
 - Brief amendment DA-14 narrows DA-11's preservation rule to the trust spine (federate, verify,

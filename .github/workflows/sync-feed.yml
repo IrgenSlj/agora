@@ -24,6 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
     steps:
       - uses: actions/checkout@v7
 
@@ -63,3 +64,40 @@ jobs:
           git add feed/
           git commit -m "Sync revocation feed from OSV ($(node -p "require('./feed/entries.json').entries.length") entries)"
           git push
+
+      # This job died silently for five weeks in 2026: `main` requires status
+      # checks, a push made with GITHUB_TOKEN does not trigger the workflow that
+      # reports them, so the bot's push was rejected every single night while
+      # clients kept polling a frozen feed. Nothing surfaced it, because a red
+      # cron job on a repo nobody watches is indistinguishable from silence.
+      #
+      # So the feed now reports its own death. One issue, reopened and updated
+      # rather than duplicated, because a hundred identical issues is the same
+      # silence in a louder form.
+      - name: Say so when the feed cannot be published
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          title="Revocation feed sync is failing"
+          body=$(printf '%s\n' \
+            "The daily OSV sync could not publish \`feed/revocations.json\`." \
+            "" \
+            "Clients poll this file directly, so while this is red **every user is" \
+            "reading a frozen feed** — including the copy bundled into the next release." \
+            "" \
+            "Failed run: $RUN_URL" \
+            "" \
+            "Common cause: branch protection on \`main\` requires status checks, and a" \
+            "push made with \`GITHUB_TOKEN\` never triggers the workflow that reports" \
+            "them, so the push is rejected indefinitely." \
+            "" \
+            "_Opened automatically. It will be updated, not duplicated._")
+          existing=$(gh issue list --state open --search "$title in:title" --json number --jq '.[0].number')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "$title" --body "$body" --label "" || \
+              gh issue create --title "$title" --body "$body"
+          fi

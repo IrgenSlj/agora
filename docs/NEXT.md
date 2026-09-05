@@ -21,6 +21,14 @@ integration. Only explicitly legacy surfaces may be retired.
   quarantine on change using the existing drift/quarantine machinery.
 - [ ] **SKILL-003 — skill install and evidence.** Host adapters install/remove/quarantine skills;
   evidence records skills by purl like any other artifact.
+- [ ] **REL-005 — let the feed bot publish.** Two repository settings block it. (a) `main` requires
+  a status check named `backend` that no workflow produces — a leftover from the deleted Cloudflare
+  backend — so with `strict: true` every non-admin push waits forever on a check that never
+  reports. Remove the context. (b) Even then, a `GITHUB_TOKEN` push does not trigger the workflow
+  that reports `check`, so the bot stays blocked: either drop required checks on `main` (they
+  constrain nobody today — `enforce_admins` is false and there is one committer) or give the job a
+  token that triggers workflows. Until one of those lands, the feed is only as fresh as the last
+  release.
 - [ ] **FED-003 — search honesty and ranking.** Stop printing `0 installs · 0 ★` for sources that
   supply neither. Rank by evidence Agora actually holds — signed, pinnable, no advisories.
 
