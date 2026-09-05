@@ -1,5 +1,5 @@
 /**
- * agora-hub — the trust plane for agentic tooling.
+ * agora-hub — catch the tool that changed after you trusted it.
  *
  * This is the library surface: types and functions for programmatic use
  * (the `agora mcp` server and integrations build on these). The OpenCode

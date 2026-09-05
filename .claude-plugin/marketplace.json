@@ -8,7 +8,7 @@
     {
       "name": "agora",
       "source": "./",
-      "description": "The trust plane for agentic tooling — multi-source catalog search, evidence-backed inspection, a policy gate on install, and cross-host stack management, via the agora MCP server."
+      "description": "Catch the MCP server that changed after you trusted it — multi-source catalog search, evidence-backed inspection, a policy gate on install, and cross-host stack management, via the agora MCP server."
     }
   ]
 }

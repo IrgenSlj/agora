@@ -1,7 +1,8 @@
 # Agora roadmap
 
-Agora remains **the trust plane for agentic tooling**. The product concept and working feature
-surface are preserved while its security guarantees are made true end to end.
+Agora catches **the tool that changed after you trusted it**. That is the promise the product leads
+with (brief amendment DA-13); "trust plane" remains the accurate description of the architecture
+underneath it. The security guarantees are made true end to end, and every step ships to npm.
 
 Use [`docs/STATUS.md`](./docs/STATUS.md) for current capability truth,
 [`docs/NEXT.md`](./docs/NEXT.md) for actionable work, and
@@ -16,17 +17,25 @@ Agora will continue to provide:
 - provenance, schema, description, and runtime evidence;
 - Cedar policy, revocation, audit, quarantine, and trust views;
 - portable stack management across OpenCode, Claude Code, Cursor, and Windsurf;
-- CLI, shell, TUI, daily feed, local inference, plugins, and MCP integrations;
+- a CLI, plugins, and MCP integrations;
 - local-first operation with no required hosted backend.
 
-Features may be consolidated behind shared services and models. They are not removed merely to
-reduce code size. Only already-obsolete legacy surfaces may be retired, using the explicit retired
-command mechanism.
+The shell, TUI, local inference, and the `today` command are scheduled for retirement (DA-14). The
+news pipeline behind `today` survives as a published weekly digest.
+
+Features may be consolidated behind shared services and models. Preservation applies to the trust
+spine — federate, verify, gate, manage — plus the host adapters, plugins, and MCP integration.
+Surfaces outside that spine may be retired through the explicit retired-command mechanism with a
+named reason (brief amendment DA-14). The daily-digest *pipeline* is retained; it is published
+rather than shipped as a command.
 
 ## Ordering principle
 
-Work proceeds from the broadest invariant to the narrowest integration:
+Release comes first. Finished, unshipped work is a defect: it cannot be used, cannot be corrected by
+anyone else, and cannot teach us anything. After that, work proceeds from the broadest invariant to
+the narrowest integration:
 
+0. Ship what is already finished, and keep shipping weekly.
 1. Protect secrets and correct false evidence.
 2. Make one gate authorize every mutation.
 3. Make acquire produce immutable identity, evidence, and lock state atomically.
@@ -35,6 +44,18 @@ Work proceeds from the broadest invariant to the narrowest integration:
 6. Unify federation and persistence models without losing sources or interfaces.
 7. Harden individual hosts, UI surfaces, packaging, and release automation.
 8. Add new capabilities only on top of those foundations.
+
+## Phase 0 — release
+
+Status: **in progress (0.8.0)**.
+
+- Publish the revocation feed, `agora audit`, and the authorization gate, finished on `main` since
+  2026-08-02 and absent from npm since.
+- Correct the Agent Skills claim: skills are federated into search and pass through no trust plane.
+- Lead all copy with the post-install promise (DA-13).
+- Hold a weekly release cadence thereafter, including for small changes.
+
+Gate: what the README describes is what `npm i -g agora-hub` installs.
 
 ## Phase A — security invariants
 

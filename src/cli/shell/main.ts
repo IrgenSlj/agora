@@ -48,7 +48,8 @@ export async function runShell(io: CliIo, style: Styler): Promise<number> {
 
   function printHome(): void {
     const banner = renderBanner({ color: true, trueColor });
-    const motto = 'The trust plane for agentic tooling - type a command, bash or chat:';
+    const motto =
+      'Catch the tool that changed after you trusted it - type a command, bash or chat:';
     const mottoLine = gradientText(motto, { trueColor });
     const model = inference.provider?.defaultModel ?? 'no inference provider';
     const infoLine = style.dim(`v${AGORA_VERSION} · ${model} · /abc · /help · /search · /quit`);

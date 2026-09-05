@@ -107,7 +107,7 @@ export function welcome(color: boolean, trueColor: boolean, theme: Theme, versio
   if (!color) {
     return [
       '',
-      `agora · the trust plane for agentic tooling · v${version}`,
+      `agora · catch the tool that changed after you trusted it · v${version}`,
       '',
       '  Audit     agora doctor · agora installed',
       '  Search    agora search <query> · agora browse <id>',
@@ -121,7 +121,7 @@ export function welcome(color: boolean, trueColor: boolean, theme: Theme, versio
   const box = renderBox(
     'Welcome to Agora',
     [
-      'the trust plane for agentic tooling - type a command, bash or chat:',
+      'catch the tool that changed after you trusted it - type a command, bash or chat:',
       `v${version} · run \`agora help\` to get started`
     ],
     { color, trueColor }
@@ -145,7 +145,7 @@ export function usage(theme: Theme, version: string): string {
   const groups = ['Catalog', 'Setup', 'Stack'] as const;
 
   const lines: string[] = [
-    `${theme.accent('agora')}${theme.dim(` · the trust plane for agentic tooling · v${version}`)}`,
+    `${theme.accent('agora')}${theme.dim(` · catch the tool that changed after you trusted it · v${version}`)}`,
     ''
   ];
 

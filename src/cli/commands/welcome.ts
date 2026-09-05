@@ -57,8 +57,8 @@ export const commandWelcome: CommandHandler = async (parsed, io, style) => {
 
   writeLine(io.stdout, style.bold('Welcome to agora'));
   writeLine(io.stdout, style.dim('────────────────'));
-  writeLine(io.stdout, 'agora is the trust plane for agentic tooling — verify provenance,');
-  writeLine(io.stdout, 'enforce policy, manage MCP servers and skills across every host.');
+  writeLine(io.stdout, 'agora catches the tool that changed after you trusted it — verify');
+  writeLine(io.stdout, 'provenance, pin what you approved, and enforce policy on every host.');
   writeLine(io.stdout, '');
 
   steps.forEach((step, i) => {

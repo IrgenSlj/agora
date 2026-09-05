@@ -639,4 +639,27 @@ delegate where possible.**
   preserved. Strong approval still requires a host-native or out-of-band boundary when agents have
   ordinary shell access.
 
+- **DA-13 (2026-09-05) — the front door leads with the tripwire, not the plane.** §1's "trust plane
+  for agentic tooling" remains the accurate description of the architecture and stays in the brief.
+  It is withdrawn as *positioning*. Two things changed in the year since: pre-install scanning
+  became a funded, crowded category (Cisco, Snyk, Backslash, Qualys, Akto), and host config sync
+  acquired a simpler zero-dependency competitor. Neither is a wedge. What remains empty is the
+  thing §5.6 named first: there is still no revocation or post-install change mechanism anywhere in
+  the ecosystem, and the field's own recommended defense — pin the version, hash the approved tool
+  definitions, re-review on change — is `agora.lock` + drift + quarantine described by people who
+  have not heard of Agora. All user-facing copy therefore leads with *catching the artifact that
+  changed after it was trusted*. D2 (evidence over scores), D11 (no backend), host-neutrality, and
+  the explicit-unknown discipline are unchanged and are the reason to believe the claim.
+- **DA-14 (2026-09-05) — DA-11's preservation rule is narrowed to the trust surface.** DA-11 said
+  working non-legacy features are not deleted to reduce line count. That rule was written to stop
+  panic-deletion during hardening and it did its job. It is now protecting roughly 6,000 lines —
+  the interactive shell, the TUI pages, local inference, the legacy `hubs/` layer, `home/` — that
+  no user has asked for, in a project with no users, maintained by one person. Amended: preservation
+  applies to the trust planes (federate, verify, gate, manage), the host adapters, the plugins, and
+  the MCP integration. Surfaces outside that spine may be retired through `src/cli/retired.ts` with
+  a named reason, on the same terms as any other removal. The news *pipeline* is retained; its value
+  is a published digest, not a CLI command. Execution order from DA-11 otherwise stands, with one
+  change: releasing to npm precedes further hardening, because five weeks of finished, unshipped
+  work is a worse defect than any item left in `docs/NEXT.md`.
+
 — END OF BRIEF —

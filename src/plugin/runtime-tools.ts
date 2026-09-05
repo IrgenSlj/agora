@@ -196,7 +196,7 @@ export function createAgoraRuntimeTools(input?: PluginInput): Record<string, Too
       async execute() {
         return `🏛️ **Agora** v${AGORA_VERSION}
 
-The trust plane for agentic tooling.
+Catch the tool that changed after you trusted it.
 
 Type \`/agora <request>\` in OpenCode and it routes to the right tool:
 - \`/agora search <query> [category]\` - Search the catalog

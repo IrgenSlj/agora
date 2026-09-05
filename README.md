@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="./docs/assets/banner.svg" alt="Agora — the trust plane for agentic tooling" width="100%">
+  <img src="./docs/assets/banner.svg" alt="Agora — catch the tool that changed after you trusted it" width="100%">
 </p>
 
-> **The trust plane for agentic tooling.** Agora verifies where your MCP servers and Agent Skills
-> come from, records MCP activity and sampled network peers during use, enforces *your* policy over
-> both, and manages them across every host — OpenCode, Claude Code, Cursor, Windsurf.
+> **Agora catches the tool that changed after you trusted it.** It verifies where your MCP servers
+> come from, pins exactly what you approved, watches for the update that quietly rewrites a tool's
+> behaviour, and enforces *your* policy across every host — OpenCode, Claude Code, Cursor, Windsurf.
 
 <p>
   <a href="https://www.npmjs.com/package/agora-hub"><img src="https://img.shields.io/npm/v/agora-hub" alt="npm"></a>
@@ -12,13 +12,35 @@
   <a href="https://github.com/IrgenSlj/agora/actions"><img src="https://img.shields.io/github/actions/workflow/status/IrgenSlj/agora/ci.yml?branch=main" alt="CI"></a>
 </p>
 
-Registries answer *what exists*. Nobody answers, at the moment you install and run an agent tool, the
-only question that matters: **should THIS artifact be trusted, by THIS project, under THIS policy —
-and what happens when that answer changes tomorrow?** That is Agora.
+You vetted that MCP server on install day. Then it shipped a new version. The tool descriptions
+changed, an advisory landed, the maintainer handed the repo to someone else — and nothing on your
+machine said a word.
 
-Agora is a **customs office over multi-source registries**, not a competing catalog. It deals in
-**evidence** — verifiable, inspectable attestations — never opaque numeric "trust scores." It is
-host-neutral and local-first: no accounts, no hosted backend you depend on, `--json` on every command.
+That is the gap. Scanning a server *before* you install it is a crowded field and getting better.
+**Almost nothing watches what happens after.** The agent-tooling ecosystem still has no revocation
+mechanism at all: no feed, no kill switch, no way to be told that the thing you already installed
+went bad.
+
+Agora is that layer. It deals in **evidence** — verifiable, inspectable attestations — never opaque
+numeric "trust scores," and it says plainly what it does *not* know. It is host-neutral and
+local-first: no accounts, no hosted backend you depend on, `--json` on every command.
+
+```console
+$ agora trust @modelcontextprotocol/server-filesystem
+
+  ✓ provenance signed by modelcontextprotocol/servers
+  ⚠ scan       6 pass · 2 warn · 0 fail
+  ? policy     not evaluated
+  ⚠ revocation 2 advisories for this package — no version pinned, so it is unknown
+               whether yours is affected (feed 1m old)
+  ? observed   never run through `agora run` — no behaviour recorded
+
+  incomplete — policy, observed not established
+```
+
+Every plane's verdict for one artifact, including the unknowns. **"Passed the gate" means *no known
+red flags*, never "safe."** That distinction is deliberate and appears everywhere a verdict is
+shown. Agora never fabricates data or counts; if a source is unreachable, it says so.
 
 <p align="center">
   <img src="./docs/assets/demo.gif" alt="agora doctor, search, scan, and freeze in the terminal" width="100%">
@@ -30,12 +52,16 @@ host-neutral and local-first: no accounts, no hosted backend you depend on, `--j
 
 ## Why this exists
 
-The agent-tooling ecosystem has 20k+ published MCP servers and a fast-growing skills ecosystem,
-near-zero signing/provenance discipline, a documented 2025–2026 record of supply-chain attacks
-(typosquatted servers, rug-pulls, description poisoning, credential exfiltration) — and **no
-revocation mechanism at all**. Agora is the layer that verifies provenance, samples observable MCP
-and network behavior while you use a server, enforces policy over that evidence, and can revoke —
-at the point of install and run. Sampling is evidence, not complete behavior coverage.
+The agent-tooling ecosystem has 20k+ published MCP servers, near-zero signing and provenance
+discipline, a documented 2025–2026 record of supply-chain attacks (typosquatted servers, rug-pulls,
+description poisoning, credential exfiltration) — and **no revocation mechanism at all**.
+
+The defense the field now converges on is: pin the exact version, hash the tool definitions you
+approved, and force a human re-review when either changes. That is precisely what Agora is built to
+do — plus the part nobody else does, which is telling you when the answer changes *after* the
+install. Provenance is verified, behaviour is sampled while you actually use a server, policy is
+evaluated over that evidence, and a revocation can reach you offline. Sampling is evidence, not
+complete behavior coverage.
 
 ## Install
 
@@ -54,10 +80,11 @@ Agora is organized as four planes over your agent stack (see [`AGORA_BRIEF_v2.md
 for the full specification):
 
 - **Federate** — one search across multi-source upstream registries (the official MCP Registry as
-  canonical, then Glama, GitHub, + skills). Agora never competes on catalog size; its effective
-  catalog is everyone's, deduped by [purl](https://github.com/package-url/purl-spec). PulseMCP is
-  wired but disabled — it has no self-serve API. Smithery and Hugging Face are non-canonical,
-  opt-in research sources.
+  canonical, then Glama, GitHub, and GitHub-hosted Agent Skills). Agora never competes on catalog
+  size; its effective catalog is everyone's, deduped by
+  [purl](https://github.com/package-url/purl-spec). PulseMCP is wired but disabled — it has no
+  self-serve API. Smithery and Hugging Face are non-canonical, opt-in research sources.
+  **Agent Skills are discoverable here and nothing more** — see the status table below.
 - **Verify (evidence)** — provenance verification (Sigstore / npm & GitHub attestations),
   schema-and-description hashing with rug-pull **drift** detection, and runtime **observation**:
   `agora run -- <server>` supervises an MCP server while you actually use it and records what it
@@ -85,18 +112,17 @@ Agora is mid-build against the v2.0 brief. The plane descriptions above are the 
 | **Verify** — live Sigstore provenance (Fulcio + CT + Rekor, identity-bound) · schema drift · poisoning heuristics | ✅ live |
 | **Observe** — `agora observe enable` records MCP activity and sampled direct-process network peers | ✅ live, limited sampling |
 | **Gate** — heuristic customs gate **plus** Cedar, provenance, drift, and revocation | 🔄 primary acquire path live; all-write unification pending |
-| **Gate** — revocation feed, generated from OSV daily, bundled with the package | ✅ live *(not yet on npm — see below)* |
-| **Gate** — `agora audit`: advisories against the servers you actually run | ✅ live *(not yet on npm)* |
+| **Gate** — revocation feed, generated from OSV daily, bundled with the package | ✅ live |
+| **Gate** — `agora audit`: advisories against the servers you actually run | ✅ live |
 | **Lock/export** — digest-bound machine truth and schema-valid portable evidence | 🔄 models/verifier/export exist; acquisition transaction incomplete |
 | **Serve** — agent-facing MCP acquisition | 🔄 preview + request-only intent live; policy/evidence tools and strong consent boundary pending |
+| **Agent Skills** — trust plane coverage (scan, gate, evidence, host install) | ⬜ **not built** — skills are searchable only |
 | **Sandboxed pre-install `vet`** | ⬜ deferred — replaced by runtime observation above |
 
-> **The last three are on `main`, not on npm.** `agora-hub@0.7.0` is the published version and
-> predates them. The next release ships several fronts at once rather than one at a time.
-
-**"Passed the gate" means *no known red flags*, never "safe."** That distinction is deliberate and
-appears everywhere a verdict is shown. Agora never fabricates data or counts; if a source is
-unreachable, it says so.
+> **On Agent Skills.** Earlier copy said Agora verifies where your MCP servers *and Agent Skills*
+> come from. That was true of the roadmap, not the code: skills are federated into search, but no
+> skill passes through `scan`, the gate, or the evidence store today. The claim is corrected here
+> rather than quietly kept, and closing that gap is the next release's main work.
 
 ## What works today
 
@@ -171,6 +197,8 @@ and `browse` are unchanged.
 
 ## Positioning
 
+- **The tripwire, not the turnstile.** Checking an artifact once, on install day, is the crowded
+  half of this problem. Agora's job is the answer that changes afterwards.
 - **A customs office, not a registry.** Agora searches existing registries; it never competes on
   catalog size.
 - **Evidence, not scores.** Every verdict is policy evaluated over verifiable attestations — no opaque
@@ -179,6 +207,8 @@ and `browse` are unchanged.
   identity.
 - **Local-first, no accounts.** Every core feature works offline against an on-disk cache — degraded,
   never broken. No auth, no sessions, no hosted backend you depend on.
+- **Unknown stays unknown.** Absence of evidence is never rendered as a clean result, and the status
+  table above is kept accurate against the code rather than against the plan.
 
 ## Host integration
 

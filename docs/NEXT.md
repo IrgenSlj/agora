@@ -1,6 +1,6 @@
 # What to build next
 
-Last prioritized: 2026-08-02.
+Last prioritized: 2026-09-05.
 
 This is the ordered implementation backlog. Current behavior is documented in
 [`STATUS.md`](./STATUS.md); strategic phases are in [`../ROADMAP.md`](../ROADMAP.md); session
@@ -10,7 +10,21 @@ The overall feature set is preserved. Consolidation means shared models and serv
 of the shell, TUI, news/today, inference, federation sources, host adapters, plugins, or MCP
 integration. Only explicitly legacy surfaces may be retired.
 
-## Now — security foundations
+## Now — release, then the skills gap
+
+- [x] **REL-000 — ship 0.8.0.** Publish the revocation feed, `audit`, and the gate. Correct the
+  Agent Skills claim. Lead all copy with the post-install promise (DA-13). Weekly cadence after.
+- [ ] **SKILL-001 — skills through scan and the gate.** Give `agent-skill` a scan path (instruction
+  hashing, injected-imperative heuristics) and route it through the same authorization kernel as
+  `mcp-server`. No new gate semantics; one more artifact kind through the existing one.
+- [ ] **SKILL-002 — skill drift.** Hash a skill's instruction body, diff across versions, and
+  quarantine on change using the existing drift/quarantine machinery.
+- [ ] **SKILL-003 — skill install and evidence.** Host adapters install/remove/quarantine skills;
+  evidence records skills by purl like any other artifact.
+- [ ] **FED-003 — search honesty and ranking.** Stop printing `0 installs · 0 ★` for sources that
+  supply neither. Rank by evidence Agora actually holds — signed, pinnable, no advisories.
+
+## Then — security foundations
 
 - [x] **SEC-001 — portable environment references.** `freeze` emits `env_from` names instead of
   host values; plan/apply resolve them locally and fail before writing when absent.

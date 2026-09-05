@@ -124,9 +124,41 @@ Focused verification:
 - `bun run typecheck`, `bun run lint`, `bun run build`, and full `bun run test` passed:
   1,775 tests passed, one skipped.
 
+---
+
+## Session 2026-09-05 — release the work, correct the claim
+
+Product review found the defect that outranked every item in `NEXT.md`: revocation, `audit`, and the
+gate were finished on `main` on 2026-08-02 and reached no one for five weeks, while npm served
+`0.7.0`. Shipping is now Phase 0 of the roadmap and precedes further hardening.
+
+- **DA-13** — copy leads with *catch the tool that changed after you trusted it*. Pre-install
+  scanning is a funded, crowded category and host-config sync has a simpler competitor; the
+  post-install answer is still unclaimed. "Trust plane" stays as the architecture's name, not the
+  pitch. Taglines updated across CLI, shell, plugin runtime, and all three manifests.
+- **DA-14** — DA-11's preservation rule is narrowed to the trust spine plus adapters, plugins, and
+  MCP integration. Shell, TUI, inference, `hubs/`, `home/` are scheduled for retirement via
+  `retired.ts`. Nothing is removed in this release.
+- **Honesty fix** — README claimed Agora verifies where MCP servers *and Agent Skills* come from.
+  `scan.ts`, `acquire.ts`, `gate/*`, and `evidence/*` contain no skill handling. The status table
+  now carries an explicit *not built* row and the README states the correction rather than quietly
+  dropping the sentence. `SKILL-001..003` added to `NEXT.md` as the next release's main work.
+- The `release-integrity` test caught `.claude-plugin/plugin.json` and `gemini-extension.json`
+  drifting from the bumped `package.json`. Working as designed.
+
+Focused verification:
+
+- `bun run lint`, `bun run typecheck`, `bun run build`, and full `bun run test` passed:
+  1,775 tests passed, one skipped.
+- `agora --help`, `agora doctor`, and `agora trust @modelcontextprotocol/server-filesystem` run
+  correctly from the built `dist/`.
+
 Next:
 
-1. `AGENT-002`: a consent boundary an agent with shell access cannot self-assert. This is now the
+1. Publish `0.8.0` to npm, then hold a weekly cadence.
+2. `SKILL-001..003`: route `agent-skill` through scan, the gate, evidence, and the host adapters.
+3. `FED-003`: stop printing `0 installs · 0 ★`; rank search by evidence Agora actually holds.
+4. `AGENT-002`: a consent boundary an agent with shell access cannot self-assert. This is now the
    largest honest gap in the trust story.
 2. `SEC-002` secret inspection and `OBS-003` observation scope.
 3. `GATE-002` remainder: give provenance and drift first-class signals instead of letting them

@@ -2,10 +2,37 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
-## [Unreleased] — revocation actually applies
+## [0.8.0] — 2026-09-05 — revocation actually applies
 
-*Accumulating since 0.7.0. No version number yet: the release comes when several fronts are ready,
-not when one is.*
+*The policy that produced this delay is retired with it. Everything below was finished on `main` by
+2026-08-02 and reached nobody for five weeks, because the release was waiting for "several fronts"
+to be ready at once. Unshipped work is a defect. Releases are weekly from here, small or not.*
+
+### Changed — what Agora says it is
+
+- The front door leads with the promise nothing else makes: **Agora catches the tool that changed
+  after you trusted it.** Pre-install scanning is now a crowded, funded category and host-config
+  sync has a simpler competitor; the post-install answer — revocation, drift, re-review on change —
+  is still unclaimed, and is what this product is actually for. "Trust plane" remains the accurate
+  description of the architecture and is no longer the pitch. Recorded as brief amendment DA-13.
+- `agora trust` output is the README's hero, because a verdict that names its own unknowns is the
+  one thing in this category no competitor prints.
+
+### Fixed — a claim the code did not support
+
+- README copy said Agora verifies where your MCP servers **and Agent Skills** come from. Skills are
+  federated into `agora search`; no skill has ever passed through `scan`, the gate, or the evidence
+  store. The status table now carries an explicit *not built* row, and the correction is stated in
+  the README rather than quietly dropped. Closing the gap is the next release's main work — a
+  product whose entire value is refusing to upgrade unknown to clean cannot overstate its own
+  coverage.
+
+### Changed — scope
+
+- Brief amendment DA-14 narrows DA-11's preservation rule to the trust spine (federate, verify,
+  gate, manage), the host adapters, plugins, and MCP integration. The interactive shell, the TUI,
+  local inference, the legacy `hubs/` layer and `home/` are scheduled for retirement through
+  `src/cli/retired.ts`. No behaviour changes in this release; the commands still work.
 
 ### Security — portable secrets and honest observation
 

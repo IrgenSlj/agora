@@ -1,6 +1,6 @@
 # Capability status
 
-Last reviewed: 2026-08-02.
+Last reviewed: 2026-09-05.
 
 This is the authority on what the current source tree can prove. The locked product intent lives in
 [`AGORA_BRIEF_v2.md`](../AGORA_BRIEF_v2.md), the strategic sequence in
@@ -31,6 +31,7 @@ State labels are deliberately strict:
 | Serve | Partial | Install-intent records, the request service, and `agora approve` exist; agent requests cannot mutate the stack | Unified policy-filtered MCP surface and a strong out-of-band/host-native approval boundary |
 | Shell, TUI, today/news, inference | Live | Retained product surfaces; inference is spawned locally | Keep functional and align trust-plane views; do not remove solely to reduce code size |
 | OpenCode/Claude integrations | Partial | Adapters, plugin code, MCP registration, and integration command exist | Test the packed plugin path in real hosts and keep all agent-facing writes behind the gate |
+| Agent Skills through the trust plane | Planned | `agent-skill` is a federated search result and a manifest kind. `scan.ts`, `acquire.ts`, `gate/*`, and `evidence/*` contain no skill handling, and no host adapter installs one | Route skills through scan, gate, evidence, and the adapters; hash skill instructions and diff them across versions |
 | Pre-install sandbox backend | Planned | Runtime observation replaced it for current use; model leaves room for a future backend | Build only when a concrete policy need justifies it |
 
 ## Security invariants currently enforced
@@ -66,6 +67,8 @@ State labels are deliberately strict:
 
 ## Known high-priority gaps
 
+0. Agent Skills are discoverable but not verified, gated, or installable. Copy that claimed
+   otherwise was corrected in 0.8.0; the capability itself is unbuilt.
 1. Terminal `agora approve` is not a strong consent boundary when an agent also has shell access.
 2. Acquire does not atomically produce the artifact digest, evidence records, and lockfile entry.
 3. Export predicates are not yet checked against their predicate-specific schemas.

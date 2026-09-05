@@ -472,7 +472,7 @@ describe('CLI commands', () => {
     const out = stdout.join('');
 
     expect(code).toBe(0);
-    expect(out).toContain('agora · the trust plane for agentic tooling');
+    expect(out).toContain('agora · catch the tool that changed after you trusted it');
   });
 });
 
