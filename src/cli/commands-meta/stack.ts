@@ -535,16 +535,21 @@ export const COMMANDS: CommandMeta[] = [
     name: 'lock',
     group: 'Stack',
     summary: 'Manage the lockfile (agora.lock) — pin what is installed, then detect drift',
-    usage: 'agora lock write [--dry-run] [--json]\nagora lock verify [--store <path>] [--json]',
+    usage:
+      'agora lock write [--dry-run] [--no-fetch] [--json]\nagora lock verify [--store <path>] [--json]',
     details:
       "`write` pins what is currently installed: it records each server's advertised tools, " +
       'descriptions and input schemas as the approved baseline, in agora.lock and in the local ' +
       'store together — either alone is inert. It needs a capability baseline, so run ' +
       '`agora doctor --probe` first, and it refuses to lock a server whose descriptions have ' +
-      'already drifted rather than blessing the change. Commit the result; `agora ci` compares ' +
-      'against it on every run. Fields Agora cannot establish from an installed server — the ' +
-      'tarball hash, provenance, a policy verdict — are left absent rather than filled with ' +
-      'plausible values; the acquisition transaction writes those. ' +
+      'already drifted rather than blessing the change. It also downloads and hashes each pinned ' +
+      'tarball, so the lockfile records the bytes npm actually served rather than what npm says ' +
+      'about them; published versions are supposed to be immutable, so a later mismatch is an ' +
+      'event that should not be possible. --no-fetch skips that and leaves the hash absent, and a ' +
+      "tarball disagreeing with npm's own published integrity is reported loudly. " +
+      'Commit the result; `agora ci` compares against it on every run. Provenance and a policy ' +
+      'verdict are left absent here rather than filled with plausible values — those need an ' +
+      'install-time gate run, which `agora acquire` has and this does not. ' +
       '`verify` recomputes every hash and compares. ANY mismatch is drift — the artifact may ' +
       'have been modified after installation (rug-pull detection, §5.5). Exits 1 on drift, 0 on ' +
       'clean verification.',
@@ -552,6 +557,10 @@ export const COMMANDS: CommandMeta[] = [
       {
         flag: '--dry-run',
         description: 'write: print the lockfile that would be written, and write nothing'
+      },
+      {
+        flag: '--no-fetch',
+        description: 'write: skip downloading tarballs; leaves tarball_sha256 absent'
       },
       {
         flag: '--store',

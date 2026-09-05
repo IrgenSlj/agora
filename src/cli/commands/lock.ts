@@ -228,11 +228,16 @@ async function writeLockfile(parsed: ParsedArgs, io: CliIo, style: Styler): Prom
 
   let result: LockWriteResult;
   try {
-    result = buildLockfile(servers, {
+    result = await buildLockfile(servers, {
       dataDir,
       generatedBy: `agora ${AGORA_VERSION}`,
       store,
-      persist: !dryRun
+      persist: !dryRun,
+      // On by default: the tarball hash is the only signal that catches a
+      // pinned version's bytes changing underneath you, and a lock command that
+      // quietly skipped it would pin less than the user believes it did.
+      resolveBytes: parsed.flags.fetch !== false,
+      ...(io.fetcher ? { fetcher: io.fetcher } : {})
     });
   } finally {
     store.close();
@@ -263,6 +268,34 @@ async function writeLockfile(parsed: ParsedArgs, io: CliIo, style: Styler): Prom
     `Locked ${theme.bold(String(result.locked.length))} artifact${result.locked.length === 1 ? '' : 's'} to ${lockPath}`
   );
   for (const name of result.locked) writeLine(io.stdout, `  ${theme.accent('✓')} ${name}`);
+
+  if (result.integrityMismatches.length) {
+    writeLine(io.stdout, '');
+    // The registry served bytes that disagree with the metadata it publishes
+    // about them. Rare, and exactly the kind of thing a lockfile exists for.
+    writeLine(
+      io.stdout,
+      theme.error(
+        `  ✗ ${result.integrityMismatches.length} tarball(s) did not match npm's own published integrity:`
+      )
+    );
+    for (const purl of result.integrityMismatches) {
+      writeLine(io.stdout, theme.error(`    ${purl}`));
+    }
+  }
+
+  if (result.unresolvedBytes.length) {
+    writeLine(io.stdout, '');
+    writeLine(
+      io.stdout,
+      theme.muted(
+        `  ${result.unresolvedBytes.length} pinned without a tarball hash — still drift-checked on declared tools:`
+      )
+    );
+    for (const b of result.unresolvedBytes) {
+      writeLine(io.stdout, theme.muted(`    ? ${b.purl} — ${b.reason}`));
+    }
+  }
 
   if (result.skipped.length) {
     writeLine(io.stdout, '');

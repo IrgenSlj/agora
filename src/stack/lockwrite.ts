@@ -11,13 +11,20 @@
 // advertised when it was last approved. That is exactly the material a rug-pull
 // changes, so hashing it is the check that matters.
 //
-// What it does NOT do is as important. It resolves no tarball, verifies no
-// provenance, and evaluates no policy, so it writes none of those. Those belong
-// to the acquisition transaction (EVD-002), which sees the bytes. A lockfile
-// that claimed a policy verdict nobody evaluated would be a fabricated record
-// in the one file whose entire job is being the trustworthy one.
+// It also resolves the immutable bytes: the tarball for each pinned version is
+// downloaded and hashed, so the lockfile records what npm actually served, not
+// what npm says about it. Published versions are supposed to be immutable, so a
+// tarball that hashes differently later is an event that should not be possible.
+//
+// What it does NOT do is as important. It verifies no provenance and evaluates
+// no policy, so it writes neither — those need an install-time gate run, which
+// `acquire` has and this does not. A lockfile that claimed a policy verdict
+// nobody evaluated would be a fabricated record in the one file whose entire job
+// is being the trustworthy one.
 
 import { hashToolSchema } from '../evidence/schemahash.js';
+import { resolveTarball } from '../evidence/tarball.js';
+import type { FetchLike } from '../fetch.js';
 import { hashDeclaredManifest, hashText } from '../model/hash.js';
 import type { ArtifactLockEntry, Lockfile } from '../model/lockfile.js';
 import type { DeclaredManifest } from '../model/manifest.js';
@@ -33,12 +40,25 @@ export interface LockWriteResult {
   locked: string[];
   /** Why each remaining server produced none. Never silently dropped. */
   skipped: { name: string; reason: string }[];
+  /**
+   * Entries locked without a tarball hash, and why.
+   *
+   * Separate from `skipped`: these artifacts ARE pinned and drift-checked on
+   * their declared tools. Only the bytes could not be resolved, and saying so
+   * is the difference between "not watched" and "watched, minus one signal".
+   */
+  unresolvedBytes: { purl: string; reason: string }[];
+  /** Purls where npm's own published integrity disagreed with the bytes it served. */
+  integrityMismatches: string[];
 }
 
 export interface LockWriteOptions {
   dataDir: string;
   generatedBy: string;
   store: AgoraStore;
+  /** Download and hash each pinned tarball. Off leaves `tarball_sha256` absent. */
+  resolveBytes?: boolean;
+  fetcher?: FetchLike;
   /**
    * Whether to persist declared manifests to the store.
    *
@@ -103,10 +123,10 @@ function manifestFor(purl: string, version: string, entry: ServerCapabilities): 
  * tripwire would report clean forever after. Quarantine and `unquarantine` are
  * the path for accepting a change; this is not.
  */
-export function buildLockfile(
+export async function buildLockfile(
   servers: readonly ConfiguredServer[],
   opts: LockWriteOptions
-): LockWriteResult {
+): Promise<LockWriteResult> {
   const cache = readCapabilityCache(opts.dataDir);
   const byKey = new Map(cache.map((c) => [c.key, c]));
 
@@ -169,9 +189,27 @@ export function buildLockfile(
     byPurl.set(purl, { entry: caps, hosts: new Set([server.tool]), name: server.name });
   }
 
+  const unresolvedBytes: { purl: string; reason: string }[] = [];
+  const integrityMismatches: string[] = [];
+
   for (const [purl, { entry, hosts, name }] of byPurl) {
     const version = parsePurl(purl).version as string;
     const manifest = manifestFor(purl, version, entry);
+
+    let tarballSha: string | undefined;
+    if (opts.resolveBytes) {
+      const bytes = await resolveTarball(purl, { fetcher: opts.fetcher });
+      if (bytes.status === 'resolved') {
+        tarballSha = bytes.sha256;
+        // `false` only — `undefined` means npm published no integrity to
+        // compare against, which is common and not a finding.
+        if (bytes.integrityMatch === false) integrityMismatches.push(purl);
+      } else {
+        unresolvedBytes.push({ purl, reason: bytes.reason });
+      }
+    } else {
+      unresolvedBytes.push({ purl, reason: 'byte resolution not requested' });
+    }
 
     // The store is what `lock verify` recomputes against, so the lockfile is
     // useless without this write. They are produced together on purpose — and
@@ -183,7 +221,10 @@ export function buildLockfile(
     artifacts.push({
       purl,
       kind: 'mcp-server',
-      integrity: { manifest_sha256: manifest.manifest_sha256 },
+      integrity: {
+        ...(tarballSha ? { tarball_sha256: tarballSha } : {}),
+        manifest_sha256: manifest.manifest_sha256
+      },
       provenance: { verified: false },
       tools: manifest.tools.map((t) => ({
         name: t.name,
@@ -199,6 +240,8 @@ export function buildLockfile(
   return {
     lockfile: { lockfile_version: 1, generated_by: opts.generatedBy, artifacts },
     locked: locked.sort(),
-    skipped: skipped.sort((a, b) => a.name.localeCompare(b.name))
+    skipped: skipped.sort((a, b) => a.name.localeCompare(b.name)),
+    unresolvedBytes,
+    integrityMismatches
   };
 }

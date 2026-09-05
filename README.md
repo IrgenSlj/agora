@@ -78,7 +78,7 @@ change:
 
 ```bash
 agora doctor --probe   # learn what each server currently advertises
-agora lock write       # pin it, and commit agora.lock
+agora lock write       # pin it — tools, schemas, and tarball bytes — and commit agora.lock
 ```
 
 Exit `0` nothing failed · `1` a blocking advisory or drift · `3` OSV unreachable. A check Agora

@@ -8,6 +8,25 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 2026-08-02 and reached nobody for five weeks, because the release was waiting for "several fronts"
 to be ready at once. Unshipped work is a defect. Releases are weekly from here, small or not.*
 
+### Added — the lockfile now pins the bytes, not just what a server says about itself
+
+- `agora lock write` downloads and hashes each pinned tarball, so `tarball_sha256` records what npm
+  actually served. Every other hash in the lockfile describes what a server *claims* — tool names,
+  descriptions, schemas — which catches a rug-pull arriving as a published update. None of them
+  catch the rarer, worse case: the bytes behind a version you already pinned changing underneath
+  you. npm treats published versions as immutable, so a later mismatch is an event that is not
+  supposed to be possible.
+- The hash is cross-checked against npm's own published `dist.integrity`, and the two are kept
+  distinct: our hash is evidence, npm's integrity is corroboration from a second source.
+  Disagreement is reported loudly and separately from "npm published no integrity", because
+  flattening those together would hide the only alarming outcome.
+- Failure to resolve bytes never costs the drift baseline. An unreachable registry leaves
+  `tarball_sha256` absent with the reason attached, and the artifact stays pinned and drift-checked
+  on its declared tools — "watched, minus one signal" rather than "not watched". `--no-fetch` skips
+  resolution deliberately, and says that is why the hash is absent.
+- Oversized tarballs are refused rather than downloaded: a lock command must not become a way to
+  make someone fetch an unbounded response because a registry declared one.
+
 ### Fixed — a failed acquire could leave the machine describing an install that never happened
 
 - One acquire writes up to four files: host config, portable manifest, trust sidecar, lockfile. They

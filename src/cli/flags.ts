@@ -43,6 +43,10 @@ const booleanFlags = new Set([
   'dry-run',
   'failOnUnknown',
   'fail-on-unknown',
+  // Registered as the positive form: yargs turns `--no-fetch` into
+  // `fetch: false` natively, and fighting that produces a flag that silently
+  // does nothing.
+  'fetch',
   'fix',
   'force',
   'help',
