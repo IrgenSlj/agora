@@ -35,13 +35,12 @@ architecture. Effort moves.
   are different and are the whole reason to exist: rug pulls, tool-description poisoning, repository
   transfer to a new owner, typosquats, abandonment. Each needs an entry kind, a severity rule, and a
   provenance field saying who asserted it and on what evidence.
-- [ ] **FEED-003 — publish the format before the client.** A stable URL, a versioned JSON Schema,
-  and a document another project can implement against without trusting Agora. Consumers adopting
-  the schema *is* the distribution strategy; every integration reaches more people than a year of
-  CLI installs would.
-- [ ] **HOOK-001 — `PreToolUse` for Claude Code.** Detection without enforcement is advice. A
-  host-native hook blocks on a feed hit or unapproved drift at the moment of the call, running on
-  the user's machine with no service to operate — a gateway's placement without a gateway's cost.
+- [x] **FEED-003 — publish the format before the client.** `feed/SPEC.md` is the contract, written
+  for someone with no relationship to this project. Writing it caught `reason` carrying prose where
+  the model documents a slug.
+- [x] **HOOK-001 — `PreToolUse` for Claude Code.** `agora hook install`. Blocks on a feed hit,
+  drift, or quarantine; never emits `allow`; fails open on every error; bounded stdin so it cannot
+  hang a tool call. 95ms for a non-MCP call against an 80ms Node floor.
 - [x] **HOST-001 — close the VS Code blind spot.** `.vscode/mcp.json` and
   `~/.copilot/mcp-config.json` are read and written, with VS Code's own schema (`servers`, not
   `mcpServers`; explicit `type`; `inputs` and `sandbox` preserved). `.roo/mcp.json` is still
@@ -49,6 +48,18 @@ architecture. Effort moves.
 - [ ] **FED-RETIRE — Federate stops being discovery.** Keep it as identity resolution; the feed
   needs purl dedupe. Drop the ambition to be a search and browse surface against a registry with
   ~9,652 records and aggregators with 18,000+. Not a deletion — a narrowing of what it is for.
+
+Remaining, in order:
+
+- [ ] **FEED-002 — model what OSV cannot.** The reason this is next and not first: everything above
+  it was plumbing that made the feed worth consuming, and this is the part that makes it worth
+  *existing*. `rug-pull`, `ownership-transfer`, `abandoned` and `typosquat` are reserved in the spec
+  and emitted by nothing. Each needs a detection path and a provenance field saying who asserted it
+  on what evidence — an entry nobody can check is an accusation.
+- [ ] **HOOK-002 — the same hook for the other hosts.** Claude Code has `PreToolUse`; the OpenCode
+  plugin already has a tool-call boundary. Cursor and VS Code do not expose one yet, and saying so
+  is better than implying coverage the hosts do not allow.
+- [ ] **FED-RETIRE** (below) and `.roo/mcp.json`, both opportunistic.
 
 **This ordering is falsifiable.** Re-check it, do not defend it. It is wrong if OpenSSF or Anthropic
 ship an MCP advisory database, if the official registry adds revocation to its API, if advisory
