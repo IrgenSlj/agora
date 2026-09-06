@@ -20,12 +20,12 @@
 //     into an empty result, which would read as a clean bill of health.
 
 import type { FetchLike } from '../fetch.js';
-import type { OsvQueryResponse, OsvVulnerability } from './types.js';
+import type { OsvBatchResponse, OsvQueryResponse, OsvVulnerability } from './types.js';
 
 export const OSV_QUERY_URL = 'https://api.osv.dev/v1/query';
 export const OSV_BATCH_URL = 'https://api.osv.dev/v1/querybatch';
 
-/** Batch queries above this size are split; OSV accepts large batches but slow ones time out. */
+/** OSV's documented ceiling for a single `querybatch` request. */
 const BATCH_SIZE = 100;
 
 export interface OsvOptions {
@@ -78,9 +78,27 @@ export async function queryPurl(purl: string, options: OsvOptions = {}): Promise
 /**
  * Advisories for many purls.
  *
- * Sequential rather than parallel on purpose: OSV publishes no rate limit, and
- * a tool whose entire argument is good supply-chain citizenship should not be
- * the reason a free public service starts needing one.
+ * Two phases, because the shape of the data makes one request per package the
+ * wrong trade at scale. When the artifact universe was thirty hand-listed
+ * servers, asking OSV thirty separate questions was fine. Against the whole
+ * registry it is thousands of sequential round trips, and the overwhelming
+ * majority of them return nothing — there are a few thousand MCP packages and
+ * roughly ten live advisories between them.
+ *
+ * So: `querybatch` first, a hundred packages per request, which answers "does
+ * this have anything at all" for everything. Then the full record for only the
+ * few that said yes, because batch returns ids and nothing a revocation entry
+ * needs — no severity, no version ranges.
+ *
+ * This is both faster and better citizenship. OSV publishes no rate limit, and
+ * a tool whose whole argument is good supply-chain behaviour should not be the
+ * reason a free public service starts needing one. Two dozen batched requests
+ * ask less of them than two thousand individual ones, so the two goals point
+ * the same way here rather than trading off.
+ *
+ * A failed batch marks every purl in it unreachable. It must never collapse
+ * into "no advisories" — that is a clean bill of health for packages nobody
+ * actually asked about.
  */
 export async function queryPurls(
   purls: readonly string[],
@@ -90,7 +108,44 @@ export async function queryPurls(
   const out: OsvLookup[] = [];
 
   for (let i = 0; i < unique.length; i += BATCH_SIZE) {
-    for (const purl of unique.slice(i, i + BATCH_SIZE)) {
+    const chunk = unique.slice(i, i + BATCH_SIZE);
+    const result = await postJson(
+      OSV_BATCH_URL,
+      { queries: chunk.map((purl) => ({ package: { purl } })) },
+      options
+    );
+
+    if (!result.ok) {
+      for (const purl of chunk) {
+        out.push({ status: 'unreachable', purl, reason: result.reason });
+      }
+      continue;
+    }
+
+    // Results are positional, never keyed by package. A response that does not
+    // line up with the queries cannot be matched to a package safely, so the
+    // whole chunk is unreachable rather than silently mis-attributed.
+    const results = (result.json as OsvBatchResponse)?.results;
+    if (!Array.isArray(results) || results.length !== chunk.length) {
+      for (const purl of chunk) {
+        out.push({
+          status: 'unreachable',
+          purl,
+          reason: `OSV batch returned ${Array.isArray(results) ? results.length : 'no'} results for ${chunk.length} queries`
+        });
+      }
+      continue;
+    }
+
+    for (let j = 0; j < chunk.length; j++) {
+      const purl = chunk[j]!;
+      const hits = results[j]?.vulns ?? [];
+      if (hits.length === 0) {
+        out.push({ status: 'ok', purl, vulns: [] });
+        continue;
+      }
+      // Something is there; go get the record that can actually be turned into
+      // a revocation entry.
       out.push(await queryPurl(purl, options));
     }
   }

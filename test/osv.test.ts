@@ -159,13 +159,104 @@ describe('client', () => {
     expect(res2.status === 'unreachable' && res2.reason).toContain('500');
   });
 
-  test('duplicate purls are queried once', async () => {
-    let calls = 0;
-    const fetcher = () => {
-      calls++;
-      return ok({ vulns: [] });
-    };
-    await queryPurls([PURL, PURL, 'pkg:npm/other'], { fetcher });
-    expect(calls).toBe(2);
+  // ── queryPurls: batch first, full records only for the hits ───────────────
+  //
+  // The artifact universe went from thirty hand-listed servers to the whole
+  // registry. One request per package was fine at thirty and is thousands of
+  // sequential round trips at scale, nearly all of them returning nothing.
+
+  /** Routes batch and single-query URLs to separate handlers, counting both. */
+  function osv(opts: {
+    batch: (purls: string[]) => Promise<Response>;
+    single?: (purl: string) => Promise<Response>;
+  }) {
+    const calls = { batch: 0, single: 0 };
+    const fetcher = ((url: string, init?: { body?: string }) => {
+      const body = JSON.parse(init?.body ?? '{}');
+      if (String(url).includes('querybatch')) {
+        calls.batch++;
+        return opts.batch(
+          (body.queries as { package: { purl: string } }[]).map((q) => q.package.purl)
+        );
+      }
+      calls.single++;
+      return (opts.single ?? (() => ok({ vulns: [] })))(body.package.purl);
+    }) as never;
+    return { fetcher, calls };
+  }
+
+  const noHits = (purls: string[]) => ok({ results: purls.map(() => ({})) });
+
+  test('asks once per batch, not once per package, and deduplicates', async () => {
+    const { fetcher, calls } = osv({ batch: noHits });
+    const res = await queryPurls([PURL, PURL, 'pkg:npm/other'], { fetcher });
+
+    expect(calls.batch).toBe(1);
+    expect(calls.single).toBe(0);
+    expect(res).toHaveLength(2);
+    expect(res.every((r) => r.status === 'ok')).toBe(true);
+  });
+
+  test('fetches the full record only for packages the batch flagged', async () => {
+    // Batch returns ids and nothing a revocation entry needs — no severity, no
+    // version ranges — so a hit still costs a second request. A miss must not.
+    const { fetcher, calls } = osv({
+      batch: (purls) =>
+        ok({ results: purls.map((p) => (p === PURL ? { vulns: [{ id: GHSA.id }] } : {})) }),
+      single: () => ok({ vulns: [GHSA] })
+    });
+
+    const res = await queryPurls([PURL, 'pkg:npm/clean'], { fetcher });
+
+    expect(calls.batch).toBe(1);
+    expect(calls.single).toBe(1);
+    const hit = res.find((r) => r.purl === PURL)!;
+    expect(hit.status === 'ok' && hit.vulns).toHaveLength(1);
+    const clean = res.find((r) => r.purl === 'pkg:npm/clean')!;
+    expect(clean.status === 'ok' && clean.vulns).toEqual([]);
+  });
+
+  test('a failed batch marks every package in it unreachable, never clean', async () => {
+    // The dangerous failure. "OSV was down" and "OSV said nothing is wrong"
+    // are the same shape downstream, and only one is safe to publish.
+    const { fetcher } = osv({
+      batch: () => Promise.resolve(new Response('nope', { status: 503 }))
+    });
+
+    const res = await queryPurls([PURL, 'pkg:npm/other'], { fetcher });
+    expect(res).toHaveLength(2);
+    expect(res.every((r) => r.status === 'unreachable')).toBe(true);
+  });
+
+  test('a misaligned batch response is unreachable rather than mis-attributed', async () => {
+    // Results are positional, never keyed by package. Two results for three
+    // queries cannot be matched to packages safely at all — guessing would
+    // attach one package's advisories to another's name.
+    const { fetcher } = osv({ batch: () => ok({ results: [{}, {}] }) });
+
+    const res = await queryPurls([PURL, 'pkg:npm/b', 'pkg:npm/c'], { fetcher });
+    expect(res).toHaveLength(3);
+    expect(res.every((r) => r.status === 'unreachable')).toBe(true);
+    expect(res[0].status === 'unreachable' && res[0].reason).toContain('2 results for 3 queries');
+  });
+
+  test('one bad batch does not take down the batches around it', async () => {
+    let n = 0;
+    const { fetcher } = osv({
+      batch: (purls) => {
+        n++;
+        return n === 1
+          ? Promise.resolve(new Response('', { status: 500 }))
+          : ok({ results: purls.map(() => ({})) });
+      }
+    });
+
+    // BATCH_SIZE is 100, so 150 purls is two chunks.
+    const many = Array.from({ length: 150 }, (_, i) => `pkg:npm/p${i}`);
+    const res = await queryPurls(many, { fetcher });
+
+    expect(res).toHaveLength(150);
+    expect(res.filter((r) => r.status === 'unreachable')).toHaveLength(100);
+    expect(res.filter((r) => r.status === 'ok')).toHaveLength(50);
   });
 });
