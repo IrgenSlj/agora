@@ -4,6 +4,53 @@ All notable changes to `agora`. Format inspired by [Keep a Changelog](https://ke
 
 ## [0.8.0] — 2026-09-05 — revocation actually applies
 
+### Removed — the surfaces outside the trust spine (brief DA-14)
+
+- **`agora shell` and `agora tui` are gone**, with the prompter, the transcript store, the TUI
+  pages, `src/home/`, and `src/inference/`. 7,100 lines. The shell was a bash+chat REPL — a second
+  place to run commands you can already run, wrapped around a local inference provider Agora had no
+  business owning. The TUI was a second UI over the same commands, and the one thing it did that
+  they do not, browse a catalog, is not what Agora is for. Both explain themselves and exit 2.
+- Bare `agora` no longer behaves differently in a TTY. It opened the shell when stdout was a
+  terminal and printed the welcome otherwise, so the same invocation meant two things depending on
+  whether anyone was watching.
+- The news pipeline and `agora today` are untouched — DA-14 retains them.
+- Deleting the plugin's `agora_chat` tool made the compiler find the rest: it was the only reason
+  the tool factory ever took a `PluginInput`, and dropping that left another unused parameter a
+  level up. Both removed rather than underscore-silenced.
+- What was left behind went too: of `pages/components.ts`'s 27 exports, three had a caller. Among
+  the rest was a second set of trust widgets — `trustPanel`, `verdictBanner`, `statusTriad` — which
+  are *not* what `agora trust` renders; that output is built in `trust-view.ts` and always was. Two
+  renderings of a verdict eventually disagree about what a verdict looks like. `catalog/bundled.ts`
+  lost four exports the home feed was the only caller of, including a velocity-ranking `trendScore`
+  that `agora today` does not use.
+
+### Fixed — the Action reference the README hands out
+
+- `uses: IrgenSlj/agora@v0` resolved to nothing. **No `v0` tag had ever been created**, so every
+  reader who copied the one call-to-action in the project got "Unable to resolve action" from
+  GitHub. A floating major tag is a convention that only works if something moves it, and nothing
+  did. `publish.yml` now moves it, after the npm publish rather than before — the tag asserts the
+  ref is runnable, and it is not runnable until the package the composite action shells out to
+  exists.
+- `test/release/action-reachability.test.ts` holds the docs and the machinery to each other: that
+  something in the release path creates the tag, that the job has permission to push it, and that
+  no version quoted at a user is one this repository cannot produce. Same shape as the v0.7.0
+  failure — that one published a version that never arrived, this one documented a reference nobody
+  created, and both pass every test while the promise is broken.
+
+### Changed — startup no longer builds the whole product
+
+- `agora --version` resolved **322 CommonJS modules and took 215ms**, of which 107ms was sigstore
+  and 75ms the MCP SDK — neither of which it calls. The dispatch table imported all thirty command
+  modules eagerly. Now 58ms, two modules, zero external packages.
+- It matters most where the cost repeats: `uses: IrgenSlj/agora@v0` runs the CLI once per push per
+  repository that adopts it. `src/policy/engine.ts` already lazy-imported cedar-wasm for exactly
+  this reason; this is that rule applied to the dispatch table instead of one dependency.
+- `test/cli/lazy-dispatch.test.ts` pins it, because the regression is invisible — one eager import
+  back changes no behaviour and breaks no other test, it just restores the cost.
+
+
 *The policy that produced this delay is retired with it. Everything below was finished on `main` by
 2026-08-02 and reached nobody for five weeks, because the release was waiting for "several fronts"
 to be ready at once. Unshipped work is a defect. Releases are weekly from here, small or not.*

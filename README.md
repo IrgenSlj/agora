@@ -240,8 +240,11 @@ $ agora news
   Use `agora today` instead.
 ```
 
-`news`/`trending` → `today` · `use` → `acquire` · `curate` → `search` · `chat` → run `agora` with
-no arguments · `workflows` → `search --kind agent-skill`. The account and community commands
+`news`/`trending` → `today` · `use` → `acquire` · `curate` → `search` · `workflows` →
+`search --kind agent-skill`. The interactive surfaces — `shell`, `tui` and `chat` — have **no
+replacement**: the bash+chat REPL was a second place to run commands you can already run, the
+full-screen browser was a second UI over the same ones, and Agora hosts no inference. The account
+and community commands
 (`auth`, `login`, `logout`, `whoami`, `author`, `share`, `save`, `saved`, `bookmarks`, `similar`,
 `compare`, `tutorial`, `tutorials`) have **no replacement** — Agora has no accounts and stores no
 credentials. `install`, `acquire`, `scan`, `doctor`, `freeze`, `plan`, `apply`, `sync`, `search`
