@@ -27,10 +27,10 @@ competition into consumers.
 So: **the feed is the product; the CLI is its reference client.** The four planes stay as the
 architecture. Effort moves.
 
-- [ ] **FEED-001 — ingest the whole namespace.** `sync-feed` currently queries OSV for the ~30
-  servers in the bundled sample catalog and produces 10 entries, all straight GHSA re-exports. Widen
-  the purl set to every artifact federation can enumerate, so coverage stops being an accident of
-  what the sample catalog happens to list.
+- [x] **FEED-001 — ingest the whole namespace.** The universe is the official registry walked in
+  full: 13,400 servers, 3,257 npm artifacts, 31 entries across 20 packages including the first
+  criticals. OSV moved to batched lookups (~30 requests, not ~3,300) and the walk retries a failed
+  page rather than discarding everything behind it.
 - [ ] **FEED-002 — model what OSV cannot.** OSV describes vulnerable *code*. The MCP-native classes
   are different and are the whole reason to exist: rug pulls, tool-description poisoning, repository
   transfer to a new owner, typosquats, abandonment. Each needs an entry kind, a severity rule, and a
@@ -42,10 +42,10 @@ architecture. Effort moves.
 - [ ] **HOOK-001 — `PreToolUse` for Claude Code.** Detection without enforcement is advice. A
   host-native hook blocks on a feed hit or unapproved drift at the moment of the call, running on
   the user's machine with no service to operate — a gateway's placement without a gateway's cost.
-- [ ] **HOST-001 — close the VS Code blind spot.** Adapters read `.mcp.json`, `.claude.json`,
-  Cursor's `mcp.json`, `opencode.json` and Windsurf's `mcp_config.json`, but not
-  `.vscode/mcp.json` or `.roo/mcp.json`. The largest editor install base in the market is invisible
-  to `agora ci` today. Cheap, and it multiplies what every other surface can see.
+- [x] **HOST-001 — close the VS Code blind spot.** `.vscode/mcp.json` and
+  `~/.copilot/mcp-config.json` are read and written, with VS Code's own schema (`servers`, not
+  `mcpServers`; explicit `type`; `inputs` and `sandbox` preserved). `.roo/mcp.json` is still
+  unread — same shape as Cursor's, so it is cheap whenever Roo is worth the surface.
 - [ ] **FED-RETIRE — Federate stops being discovery.** Keep it as identity resolution; the feed
   needs purl dedupe. Drop the ambition to be a search and browse surface against a registry with
   ~9,652 records and aggregators with 18,000+. Not a deletion — a narrowing of what it is for.

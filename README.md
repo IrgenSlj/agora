@@ -4,7 +4,8 @@
 
 > **Agora catches the tool that changed after you trusted it.** It verifies where your MCP servers
 > come from, pins exactly what you approved, watches for the update that quietly rewrites a tool's
-> behaviour, and enforces *your* policy across every host — OpenCode, Claude Code, Cursor, Windsurf.
+> behaviour, and enforces *your* policy across every host — VS Code, Claude Code, Cursor, Windsurf,
+> OpenCode.
 
 <p>
   <a href="https://www.npmjs.com/package/agora-hub"><img src="https://img.shields.io/npm/v/agora-hub" alt="npm"></a>
@@ -258,7 +259,7 @@ and `browse` are unchanged.
   catalog size.
 - **Evidence, not scores.** Every verdict is policy evaluated over verifiable attestations — no opaque
   numeric trust score exists anywhere in the product.
-- **Host-neutral.** OpenCode, Claude Code, Cursor, and Windsurf are four equal integrations, not one
+- **Host-neutral.** VS Code, Claude Code, Cursor, Windsurf and OpenCode are five equal integrations, not one
   identity.
 - **Local-first, no accounts.** Every core feature works offline against an on-disk cache — degraded,
   never broken. No auth, no sessions, no hosted backend you depend on.

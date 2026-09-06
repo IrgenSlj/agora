@@ -2,7 +2,7 @@
 
 `agora` is **the trust plane for agentic tooling** — it verifies where MCP servers and Agent
 Skills come from, observes what they actually do, enforces user-defined policy over both, and
-manages them across every host (OpenCode, Claude Code, Cursor, Windsurf). See
+manages them across every host (VS Code, Claude Code, Cursor, Windsurf, OpenCode). See
 [`README.md`](./README.md) for the pitch, [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md) for the
 locked specification, [`docs/STATUS.md`](./docs/STATUS.md) for test-backed current truth,
 [`docs/NEXT.md`](./docs/NEXT.md) for the ordered backlog, and

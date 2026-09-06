@@ -13,7 +13,7 @@ two ever disagree, the status document is right and this file is stale.
 
 `agora` is **the trust plane for agentic tooling** — it verifies where MCP servers and Agent Skills
 come from, records declared capabilities plus sampled runtime evidence, enforces user-defined policy,
-and manages them across every host (OpenCode, Claude Code, Cursor, Windsurf).
+and manages them across every host (VS Code, Claude Code, Cursor, Windsurf, OpenCode).
 
 It is a **customs office over multi-source registries**, never a competing catalog: it does not
 grow its own catalog, it searches upstream registries (the official MCP Registry as canonical,
@@ -129,7 +129,7 @@ red flags*, not "safe," and that distinction is deliberate everywhere a verdict 
 
 ### Manage (`src/stack/`) — live
 
-One `ToolAdapter` per agent tool (opencode, Claude Code, Cursor, Windsurf) normalizes its MCP
+One `ToolAdapter` per agent tool (VS Code, Claude Code, Cursor, Windsurf, opencode) normalizes its MCP
 config into a single `ConfiguredServer` shape. `agora installed` / `doctor [--probe]` read across
 all of them; `agora.toml` is the portable, declarative profile; `plan`/`apply` (`sync` =
 `plan && apply`) reconcile it into real config files surgically — every unrelated key preserved,
