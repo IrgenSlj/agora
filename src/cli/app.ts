@@ -1,38 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { createStyler, type Styler, shouldUseColor, supportsTrueColor } from '../ui.js';
-import * as acquireModule from './commands/acquire.js';
-import * as applyModule from './commands/apply.js';
-import * as approveModule from './commands/approve.js';
-import * as auditModule from './commands/audit.js';
-import * as browseModule from './commands/browse.js';
-import * as capabilitiesModule from './commands/capabilities.js';
-import * as ciModule from './commands/ci.js';
-import * as doctorModule from './commands/doctor.js';
-import * as exportModule from './commands/export.js';
-import * as freezeModule from './commands/freeze.js';
-import * as initModule from './commands/init.js';
-import * as installedModule from './commands/installed.js';
-import * as integrateModule from './commands/integrate.js';
-import * as lockModule from './commands/lock.js';
-import * as marketplace from './commands/marketplace.js';
-import * as notifyModule from './commands/notify.js';
-import * as observeModule from './commands/observe.js';
-import * as operations from './commands/operations.js';
-import * as outdatedModule from './commands/outdated.js';
-import * as planModule from './commands/plan.js';
-import * as policyModule from './commands/policy.js';
-import * as quarantineModule from './commands/quarantine.js';
-import * as refreshModule from './commands/refresh.js';
-import * as removeModule from './commands/remove.js';
-import * as scanModule from './commands/scan.js';
-import * as syncModule from './commands/sync.js';
-import * as todayModule from './commands/today.js';
-import * as trustModule from './commands/trust.js';
-import * as tryModule from './commands/try.js';
-import type { CommandMap } from './commands/types.js';
-import * as updateModule from './commands/update.js';
-import * as watchModule from './commands/watch.js';
-import * as welcomeModule from './commands/welcome.js';
+import type { CommandHandler } from './commands/types.js';
 import { COMMANDS, renderManual } from './commands-meta.js';
 import { ExitCode } from './exit-codes.js';
 import { type CliIo, parseArgs } from './flags.js';
@@ -137,70 +105,64 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   }
 
   try {
-    const cmd: CommandMap = {
-      search: marketplace.commandSearch,
-      info: marketplace.commandInfo,
-      browse: marketplace.commandBrowse,
-      init: initModule.commandInit,
-      install: operations.commandInstall,
-      mcp: operations.commandMcp,
-      preferences: operations.commandPreferences,
-      history: operations.commandHistory,
-      config: operations.commandConfig,
-      show: (p, io2, style2) =>
-        operations.commandConfig(
-          { ...p, args: ['show', ...p.args], command: 'config' },
-          io2,
-          style2
-        ),
-      edit: (p, io2, style2) =>
-        operations.commandConfig(
-          { ...p, args: ['edit', ...p.args], command: 'config' },
-          io2,
-          style2
-        ),
-      diff: (p, io2, style2) =>
-        operations.commandConfig(
-          { ...p, args: ['diff', ...p.args], command: 'config' },
-          io2,
-          style2
-        ),
-      export: exportModule.commandExport,
-      watch: watchModule.commandWatch,
-      notify: notifyModule.commandNotify,
-      observe: observeModule.commandObserve,
-      run: observeModule.commandRun,
-      today: todayModule.commandToday,
-      open: browseModule.commandOpen,
-      scan: scanModule.commandScan,
-      verify: scanModule.commandScan,
-      acquire: acquireModule.commandAcquire,
-      outdated: outdatedModule.commandOutdated,
-      refresh: refreshModule.commandRefresh,
-      remove: removeModule.commandRemove,
-      installed: installedModule.commandInstalled,
-      doctor: doctorModule.commandDoctor,
-      freeze: freezeModule.commandFreeze,
-      sync: syncModule.commandSync,
-      plan: planModule.commandPlan,
-      policy: policyModule.commandPolicy,
-      quarantine: quarantineModule.commandQuarantine,
-      unquarantine: quarantineModule.commandUnquarantine,
-      apply: applyModule.commandApply,
-      update: updateModule.commandUpdate,
-      approve: approveModule.commandApprove,
-      audit: auditModule.commandAudit,
-      ci: ciModule.commandCi,
-      trust: trustModule.commandTrust,
-      try: tryModule.commandTry,
-      capabilities: capabilitiesModule.commandCapabilities,
-      integrate: integrateModule.commandIntegrate,
-      lock: lockModule.commandLock,
-      welcome: welcomeModule.commandWelcome
+    // Every handler is behind a dynamic import, and it matters more than it
+    // looks. Importing all thirty eagerly meant `agora --version` resolved 322
+    // modules and paid 107ms for sigstore plus 75ms for the MCP SDK before
+    // printing a string it already had. The GitHub Action pays that on every
+    // run of every repository that adopts it.
+    //
+    // `src/policy/engine.ts` already did this for cedar-wasm, for the same
+    // reason and with the same comment. This is that rule applied to the
+    // dispatch table instead of one dependency.
+    const cmd: Record<string, () => Promise<CommandHandler>> = {
+      search: async () => (await import('./commands/marketplace.js')).commandSearch,
+      info: async () => (await import('./commands/marketplace.js')).commandInfo,
+      browse: async () => (await import('./commands/marketplace.js')).commandBrowse,
+      init: async () => (await import('./commands/init.js')).commandInit,
+      install: async () => (await import('./commands/operations.js')).commandInstall,
+      mcp: async () => (await import('./commands/operations.js')).commandMcp,
+      preferences: async () => (await import('./commands/operations.js')).commandPreferences,
+      history: async () => (await import('./commands/operations.js')).commandHistory,
+      config: async () => (await import('./commands/operations.js')).commandConfig,
+      show: () => configAlias('show'),
+      edit: () => configAlias('edit'),
+      diff: () => configAlias('diff'),
+      export: async () => (await import('./commands/export.js')).commandExport,
+      watch: async () => (await import('./commands/watch.js')).commandWatch,
+      notify: async () => (await import('./commands/notify.js')).commandNotify,
+      observe: async () => (await import('./commands/observe.js')).commandObserve,
+      run: async () => (await import('./commands/observe.js')).commandRun,
+      today: async () => (await import('./commands/today.js')).commandToday,
+      open: async () => (await import('./commands/browse.js')).commandOpen,
+      scan: async () => (await import('./commands/scan.js')).commandScan,
+      verify: async () => (await import('./commands/scan.js')).commandScan,
+      acquire: async () => (await import('./commands/acquire.js')).commandAcquire,
+      outdated: async () => (await import('./commands/outdated.js')).commandOutdated,
+      refresh: async () => (await import('./commands/refresh.js')).commandRefresh,
+      remove: async () => (await import('./commands/remove.js')).commandRemove,
+      installed: async () => (await import('./commands/installed.js')).commandInstalled,
+      doctor: async () => (await import('./commands/doctor.js')).commandDoctor,
+      freeze: async () => (await import('./commands/freeze.js')).commandFreeze,
+      sync: async () => (await import('./commands/sync.js')).commandSync,
+      plan: async () => (await import('./commands/plan.js')).commandPlan,
+      policy: async () => (await import('./commands/policy.js')).commandPolicy,
+      quarantine: async () => (await import('./commands/quarantine.js')).commandQuarantine,
+      unquarantine: async () => (await import('./commands/quarantine.js')).commandUnquarantine,
+      apply: async () => (await import('./commands/apply.js')).commandApply,
+      update: async () => (await import('./commands/update.js')).commandUpdate,
+      approve: async () => (await import('./commands/approve.js')).commandApprove,
+      audit: async () => (await import('./commands/audit.js')).commandAudit,
+      ci: async () => (await import('./commands/ci.js')).commandCi,
+      trust: async () => (await import('./commands/trust.js')).commandTrust,
+      try: async () => (await import('./commands/try.js')).commandTry,
+      capabilities: async () => (await import('./commands/capabilities.js')).commandCapabilities,
+      integrate: async () => (await import('./commands/integrate.js')).commandIntegrate,
+      lock: async () => (await import('./commands/lock.js')).commandLock,
+      welcome: async () => (await import('./commands/welcome.js')).commandWelcome
     };
 
-    const handler = cmd[parsed.command];
-    if (handler) return await handler(parsed, io, style);
+    const load = cmd[parsed.command];
+    if (load) return await (await load())(parsed, io, style);
 
     if (parsed.command === 'help') {
       const helpTarget = parsed.args[0];
@@ -237,6 +199,17 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     writeLine(io.stderr, error instanceof Error ? error.message : String(error));
     return ExitCode.USAGE;
   }
+}
+
+/**
+ * `agora show|edit|diff` are compatibility aliases for `agora config <verb>`.
+ * They rewrite the parsed arguments rather than calling a second entry point,
+ * so the aliases cannot drift from the command they stand for.
+ */
+async function configAlias(verb: 'show' | 'edit' | 'diff'): Promise<CommandHandler> {
+  const { commandConfig } = await import('./commands/operations.js');
+  return (parsed, io, style) =>
+    commandConfig({ ...parsed, args: [verb, ...parsed.args], command: 'config' }, io, style);
 }
 
 export function commandManual(name: string): string {

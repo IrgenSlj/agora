@@ -88,7 +88,13 @@ describe('the version floor the Action quotes back to users', () => {
     // the guard would keep explaining a command nobody can run.
     const action = readText('action.yml');
     expect(action).toMatch(/agora ci/);
-    expect(readText('src/cli/app.ts')).toMatch(/\bci:\s*ciModule\.commandCi\b/);
+    // Matched loosely on purpose: this asserts that `ci` is still a registered
+    // entry point, not how the dispatch table happens to be written. The first
+    // version of this pinned the literal `ci: ciModule.commandCi` and broke on
+    // a refactor that changed nothing a user could see.
+    expect(readText('src/cli/app.ts')).toMatch(
+      /\bci:\s*(async\s*)?\(\s*\)\s*=>|\bci:\s*\w+\.commandCi\b/
+    );
   });
 });
 
