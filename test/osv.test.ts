@@ -103,6 +103,62 @@ describe('version range mapping', () => {
   });
 });
 
+describe('reason classification', () => {
+  // `reason` used to be the advisory's summary sentence, truncated. That made
+  // it a headline rather than a field: no consumer can branch on "MCP Server
+  // Kubernetes has an Argument Injection in port_forward tool via
+  // space-splitting", and the whole point of publishing a feed other tools
+  // consume is that they can act on it without parsing English.
+  const reason = (v: Partial<OsvVulnerability>) =>
+    toRevocationEntry({ id: 'GHSA-x', ...v } as OsvVulnerability, PURL).reason;
+
+  test('MAL-* is malicious-package on the id alone, never on keywords', () => {
+    // Not a heuristic. The OpenSSF malicious-packages feed is an assertion that
+    // the package is hostile, and it must not depend on the summary wording.
+    expect(reason({ id: 'MAL-2026-1', summary: 'anything at all' })).toBe('malicious-package');
+    expect(reason({ id: 'MAL-2026-2' })).toBe('malicious-package');
+  });
+
+  test('classifies the classes that actually show up in this ecosystem', () => {
+    expect(reason({ summary: 'kubectl-generic flag injection enables token exfiltration' })).toBe(
+      'credential-exfiltration'
+    );
+    expect(reason({ summary: 'Argument Injection in port_forward tool via space-splitting' })).toBe(
+      'command-injection'
+    );
+    expect(reason({ summary: 'allows for path validation bypass via colliding prefix' })).toBe(
+      'path-traversal'
+    );
+    expect(reason({ summary: 'vulnerable to DNS Rebinding Attack' })).toBe('ssrf');
+    expect(reason({ summary: 'Tool Access Control Bypass via presentation-layer filtering' })).toBe(
+      'access-control'
+    );
+  });
+
+  test('reads details as well as summary', () => {
+    expect(reason({ summary: 'A problem', details: 'This allows prompt injection.' })).toBe(
+      'prompt-injection'
+    );
+  });
+
+  test('an unmatched advisory lands on the honest general case', () => {
+    // The important half of a crude classifier: everything it cannot place goes
+    // to `vulnerability` rather than to a confident wrong label. A consumer
+    // that branches on the slug is misled by a bad guess, not by a vague one.
+    expect(reason({ summary: 'Something nobody has a keyword for' })).toBe('vulnerability');
+    expect(reason({})).toBe('vulnerability');
+  });
+
+  test('exfiltration outranks injection when an advisory describes both', () => {
+    // Both are true of "flag injection enables token exfiltration". The
+    // consequence is what a consumer needs to act on, so the more severe
+    // outcome wins rather than the mechanism.
+    expect(reason({ summary: 'command injection leading to credential exfiltration' })).toBe(
+      'credential-exfiltration'
+    );
+  });
+});
+
 describe('entry construction', () => {
   test('the entry is keyed by the catalog purl, not by what OSV echoed back', () => {
     // An entry keyed by anything but Agora's own purl would never match.
@@ -120,6 +176,27 @@ describe('entry construction', () => {
 
   test('malware gets a stable machine reason rather than prose', () => {
     expect(toRevocationEntry(MALWARE, 'pkg:npm/decode-sdks').reason).toBe('malicious-package');
+  });
+
+  test('the advisory sentence survives, in the field where prose belongs', () => {
+    const entry = toRevocationEntry(GHSA, PURL);
+    expect(entry.summary).toBe(GHSA.summary);
+    expect(entry.reason).not.toContain(' ');
+  });
+
+  test('an advisory with no summary carries no summary field', () => {
+    // Absent, not an empty string. A consumer rendering `summary` should show
+    // nothing rather than a blank line where a description would be.
+    expect(toRevocationEntry({ id: 'GHSA-y' } as OsvVulnerability, PURL).summary).toBeUndefined();
+  });
+
+  test('a long summary is truncated rather than dropped', () => {
+    const long = 'x'.repeat(400);
+    const entry = toRevocationEntry({ id: 'GHSA-z', summary: long } as OsvVulnerability, PURL);
+    // The invariant is the ceiling, not an exact width — asserting the precise
+    // length just pins the arithmetic of the slice.
+    expect(entry.summary!.length).toBeLessThanOrEqual(200);
+    expect(entry.summary!.endsWith('…')).toBe(true);
   });
 
   test('the produced entry validates as a RevocationEntry', async () => {

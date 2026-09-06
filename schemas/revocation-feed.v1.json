@@ -37,7 +37,11 @@
           },
           "reason": {
             "type": "string",
-            "description": "Reason for revocation (e.g. credential-exfiltration)"
+            "description": "Machine-readable reason slug (e.g. credential-exfiltration). Consumers branch on this, so it is a closed-ish vocabulary rather than prose; treat an unrecognised value as `vulnerability` rather than dropping the entry."
+          },
+          "summary": {
+            "description": "One-line human description, from the upstream advisory where it has one",
+            "type": "string"
           },
           "severity": {
             "type": "string",

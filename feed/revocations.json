@@ -1,12 +1,139 @@
 {
-  "feed_version": 2,
-  "generated_at": "2026-09-05T11:23:14.757Z",
+  "feed_version": 3,
+  "generated_at": "2026-09-06T13:23:37.996Z",
   "entries": [
+    {
+      "id": "GHSA-2r2p-4cgf-hv7h",
+      "purl_pattern": "pkg:npm/engramx",
+      "versions": "<2.0.2",
+      "reason": "credential-exfiltration",
+      "summary": "engram: HTTP server CORS wildcard + auth-off-by-default enables CSRF graph exfiltration and persistent indirect prompt injection",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-2r2p-4cgf-hv7h",
+        "https://github.com/NickCirv/engram/security/advisories/GHSA-2r2p-4cgf-hv7h",
+        "https://github.com/NickCirv/engram/issues/7",
+        "https://github.com/NickCirv/engram"
+      ],
+      "added_at": "2026-04-22T14:52:03Z"
+    },
+    {
+      "id": "GHSA-3p2m-h2v6-g9mx",
+      "purl_pattern": "pkg:npm/%40mobilenext/mobile-mcp",
+      "versions": "<0.0.49",
+      "reason": "path-traversal",
+      "summary": "@mobilenext/mobile-mcp alllows arbitrary file write via Path Traversal in mobile screen capture tools",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-3p2m-h2v6-g9mx",
+        "https://github.com/mobile-next/mobile-mcp/security/advisories/GHSA-3p2m-h2v6-g9mx",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-33989",
+        "https://github.com/mobile-next/mobile-mcp/commit/f5e32295903128c1e71cf915ae6c0b76c7b0153b",
+        "https://github.com/mobile-next/mobile-mcp"
+      ],
+      "added_at": "2026-03-27T19:13:17Z"
+    },
+    {
+      "id": "GHSA-3pvj-jv98-qhjq",
+      "purl_pattern": "pkg:npm/chrome-devtools-mcp",
+      "versions": ">=0.20.0 <1.1.0",
+      "reason": "access-control",
+      "summary": "Chrome DevTools for agents: daemon.pid write follows symlinks in /tmp fallback runtime directory",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-3pvj-jv98-qhjq",
+        "https://github.com/ChromeDevTools/chrome-devtools-mcp/security/advisories/GHSA-3pvj-jv98-qhjq",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-53765",
+        "https://github.com/ChromeDevTools/chrome-devtools-mcp"
+      ],
+      "added_at": "2026-06-17T14:01:04Z"
+    },
+    {
+      "id": "GHSA-3q26-f695-pp76",
+      "purl_pattern": "pkg:npm/%40cyanheads/git-mcp-server",
+      "versions": "<2.1.5",
+      "reason": "command-injection",
+      "summary": "@cyanheads/git-mcp-server vulnerable to command injection in several tools",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-3q26-f695-pp76",
+        "https://github.com/cyanheads/git-mcp-server/security/advisories/GHSA-3q26-f695-pp76",
+        "https://nvd.nist.gov/vuln/detail/CVE-2025-53107",
+        "https://github.com/cyanheads/git-mcp-server/commit/0dbd6995ccdf76ab770b58013034365b2d06c4d9",
+        "https://github.com/cyanheads/git-mcp-server"
+      ],
+      "added_at": "2025-06-30T18:50:22Z"
+    },
+    {
+      "id": "GHSA-3xm7-qw7j-qc8v",
+      "purl_pattern": "pkg:npm/%40aborruso/ckan-mcp-server",
+      "versions": "<0.4.85",
+      "reason": "prompt-injection",
+      "summary": "SSRF in @aborruso/ckan-mcp-server via base_url allows access to internal networks",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-3xm7-qw7j-qc8v",
+        "https://github.com/ondata/ckan-mcp-server/security/advisories/GHSA-3xm7-qw7j-qc8v",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-33060",
+        "https://github.com/kysely-org/kysely/commit/0a602bff2f442f6c26d5e047ca8f8715179f6d24",
+        "https://github.com/ondata/ckan-mcp-server"
+      ],
+      "added_at": "2026-03-18T12:59:42Z"
+    },
+    {
+      "id": "GHSA-49mq-fc6q-3h46",
+      "purl_pattern": "pkg:npm/%40ooples/token-optimizer-mcp",
+      "versions": "<5.1.0",
+      "reason": "command-injection",
+      "summary": "Token Optimizer MCP: OS command injection in smart_user via username in get-user-info",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-49mq-fc6q-3h46",
+        "https://github.com/ooples/token-optimizer-mcp/security/advisories/GHSA-49mq-fc6q-3h46",
+        "https://github.com/ooples/token-optimizer-mcp/commit/b4ee96dac799cbfba0a9f9c17844ce9d613cbcc7",
+        "https://github.com/ooples/token-optimizer-mcp",
+        "https://github.com/ooples/token-optimizer-mcp/releases/tag/v5.1.0"
+      ],
+      "added_at": "2026-08-14T21:42:06Z"
+    },
+    {
+      "id": "GHSA-4vrv-93c7-m92j",
+      "purl_pattern": "pkg:npm/snyk",
+      "versions": "<1.1064.0",
+      "reason": "access-control",
+      "summary": "snyk Code Injection vulnerability",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-4vrv-93c7-m92j",
+        "https://nvd.nist.gov/vuln/detail/CVE-2022-24441",
+        "https://github.com/snyk/snyk-eclipse-plugin/commit/b5a8bce25a359ced75f83a729fc6b2393fc9a495",
+        "https://github.com/snyk/snyk-intellij-plugin/commit/56682f4ba6081ce1d95cb980cbfacd3809a826f4",
+        "https://github.com/snyk/snyk-ls/commit/b3229f0142f782871aa72d1a7dcf417546d568ed"
+      ],
+      "added_at": "2023-07-06T19:24:04Z"
+    },
+    {
+      "id": "GHSA-4x6g-3cmx-w76r",
+      "purl_pattern": "pkg:npm/snyk",
+      "versions": "<1.1064.0",
+      "reason": "command-injection",
+      "summary": "Snyk plugins vulnerable to Command Injection",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-4x6g-3cmx-w76r",
+        "https://nvd.nist.gov/vuln/detail/CVE-2022-22984",
+        "https://github.com/snyk/cli/commit/80d97a93326406e09776156daf72e3caa03ae25a",
+        "https://github.com/snyk/snyk-cocoapods-plugin/commit/c73e049c5200772babde61c40aab57296bf91381",
+        "https://github.com/snyk/snyk-docker-plugin/commit/d730d7630691a61587b120bb11daaaf4b58a8357"
+      ],
+      "added_at": "2022-11-30T15:30:27Z"
+    },
     {
       "id": "GHSA-4xqg-gf5c-ghwq",
       "purl_pattern": "pkg:npm/mcp-server-kubernetes",
       "versions": "<3.5.0",
-      "reason": "MCP Server Kubernetes has an Argument Injection in port_forward tool via space-splitting",
+      "reason": "command-injection",
+      "summary": "MCP Server Kubernetes has an Argument Injection in port_forward tool via space-splitting",
       "severity": "high",
       "refs": [
         "https://osv.dev/vulnerability/GHSA-4xqg-gf5c-ghwq",
@@ -18,10 +145,91 @@
       "added_at": "2026-04-14T22:32:15Z"
     },
     {
+      "id": "GHSA-5qhv-x9j4-c3vm",
+      "purl_pattern": "pkg:npm/%40mobilenext/mobile-mcp",
+      "versions": "<0.0.50",
+      "reason": "prompt-injection",
+      "summary": "@mobilenext/mobile-mcp: Arbitrary Android Intent Execution via mobile_open_url",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-5qhv-x9j4-c3vm",
+        "https://github.com/mobile-next/mobile-mcp/security/advisories/GHSA-5qhv-x9j4-c3vm",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-35394",
+        "https://github.com/mobile-next/mobile-mcp/pull/299",
+        "https://github.com/mobile-next/mobile-mcp"
+      ],
+      "added_at": "2026-04-04T05:37:10Z"
+    },
+    {
+      "id": "GHSA-5xx3-j724-wmx5",
+      "purl_pattern": "pkg:npm/%40wonderwhy-er/desktop-commander",
+      "versions": "<=0.2.37",
+      "reason": "ssrf",
+      "summary": "DesktopCommanderMCP is vulnerable to SSRF",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-5xx3-j724-wmx5",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-10690",
+        "https://github.com/wonderwhy-er/DesktopCommanderMCP/issues/410",
+        "https://github.com/sorlen008/DesktopCommanderMCP/commit/53699bebba9950047bca16ac4dc8f0568f596aaa",
+        "https://github.com/wonderwhy-er/DesktopCommanderMCP"
+      ],
+      "added_at": "2026-06-03T00:30:27Z"
+    },
+    {
+      "id": "GHSA-63gr-g7jc-v8rg",
+      "purl_pattern": "pkg:npm/%40agenticmail/mcp",
+      "versions": "<0.9.27",
+      "reason": "access-control",
+      "summary": "@agenticmail/mcp Missing Authentication for Critical Function",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-63gr-g7jc-v8rg",
+        "https://github.com/agenticmail/agenticmail/security/advisories/GHSA-63gr-g7jc-v8rg",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-50287",
+        "https://github.com/agenticmail/agenticmail/commit/7b9b05d973676e9f3d097c08b8e649f59bfc15d0",
+        "https://github.com/agenticmail/agenticmail/commit/7d1791da7c8c8bd4e70d7081db48e18ab55f6736"
+      ],
+      "added_at": "2026-06-01T13:58:33Z"
+    },
+    {
+      "id": "GHSA-6f5r-5672-72j7",
+      "purl_pattern": "pkg:npm/%40andrea9293/mcp-documentation-server",
+      "versions": ">=1.13.0 <1.13.1",
+      "reason": "vulnerability",
+      "summary": "@andrea9293/mcp-documentation-server: Web UI API binds to all interfaces without authentication by default",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-6f5r-5672-72j7",
+        "https://github.com/andrea9293/mcp-documentation-server/security/advisories/GHSA-6f5r-5672-72j7",
+        "https://github.com/andrea9293/mcp-documentation-server/commit/37159d4e06b8ee50c3645b2496e3d3f6d32c47f9",
+        "https://github.com/andrea9293/mcp-documentation-server",
+        "https://github.com/andrea9293/mcp-documentation-server/releases/tag/v1.13.1"
+      ],
+      "added_at": "2026-07-15T23:26:57Z"
+    },
+    {
+      "id": "GHSA-6f9w-9hf2-5rg3",
+      "purl_pattern": "pkg:npm/%40aborruso/ckan-mcp-server",
+      "versions": "<0.4.112",
+      "reason": "ssrf",
+      "summary": "CKAN MCP Server: Information disclosure via verbose error reflection",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-6f9w-9hf2-5rg3",
+        "https://github.com/ondata/ckan-mcp-server/security/advisories/GHSA-6f9w-9hf2-5rg3",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-73844",
+        "https://github.com/ondata/ckan-mcp-server/commit/3b827af72b228d42aa7b0d7dac5347d16af3f4e5",
+        "https://github.com/ondata/ckan-mcp-server"
+      ],
+      "added_at": "2026-09-03T14:49:10Z"
+    },
+    {
       "id": "GHSA-6fg3-hvw7-2fwq",
       "purl_pattern": "pkg:npm/%40playwright/mcp",
       "versions": "<0.0.40",
-      "reason": "Microsoft Playwright MCP Server vulnerable to DNS Rebinding Attack; Allows Attackers Access to All Server Tools",
+      "reason": "ssrf",
+      "summary": "Microsoft Playwright MCP Server vulnerable to DNS Rebinding Attack; Allows Attackers Access to All Server Tools",
       "severity": "high",
       "refs": [
         "https://osv.dev/vulnerability/GHSA-6fg3-hvw7-2fwq",
@@ -33,10 +241,27 @@
       "added_at": "2026-01-07T12:31:25Z"
     },
     {
+      "id": "GHSA-6hwc-9h8r-3vmf",
+      "purl_pattern": "pkg:npm/snyk",
+      "versions": "<1.1297.3",
+      "reason": "vulnerability",
+      "summary": "Snyk CLI Insertion of Sensitive Information into Log File allowed in DEBUG or DEBUG/TRACE mode",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-6hwc-9h8r-3vmf",
+        "https://nvd.nist.gov/vuln/detail/CVE-2025-6624",
+        "https://github.com/snyk/cli/commit/38322f377da7e5f1391e1f641710be50989fa4df",
+        "https://github.com/snyk/go-application-framework/commit/ca7ba7d72e68455afb466a7a47bb2c9aece86c18",
+        "https://docs.snyk.io/snyk-cli/debugging-the-snyk-cli"
+      ],
+      "added_at": "2025-06-26T06:31:04Z"
+    },
+    {
       "id": "GHSA-6mx4-4h42-r8vh",
       "purl_pattern": "pkg:npm/mcp-server-kubernetes",
       "versions": "<3.7.0",
-      "reason": "MCP Server Kubernetes: kubectl-generic flag injection enables Kubernetes bearer token exfiltration",
+      "reason": "credential-exfiltration",
+      "summary": "MCP Server Kubernetes: kubectl-generic flag injection enables Kubernetes bearer token exfiltration",
       "severity": "advisory",
       "refs": [
         "https://osv.dev/vulnerability/GHSA-6mx4-4h42-r8vh",
@@ -51,7 +276,8 @@
       "id": "GHSA-6xpm-ggf7-wc3p",
       "purl_pattern": "pkg:npm/mcp-remote",
       "versions": ">=0.0.5 <0.1.16",
-      "reason": "mcp-remote exposed to OS command injection via untrusted MCP server connections",
+      "reason": "command-injection",
+      "summary": "mcp-remote exposed to OS command injection via untrusted MCP server connections",
       "severity": "high",
       "refs": [
         "https://osv.dev/vulnerability/GHSA-6xpm-ggf7-wc3p",
@@ -63,10 +289,120 @@
       "added_at": "2025-07-09T15:30:44Z"
     },
     {
+      "id": "GHSA-72f3-6w86-7rv3",
+      "purl_pattern": "pkg:npm/%40arikusi/deepseek-mcp-server",
+      "versions": ">=1.4.2 <1.8.0",
+      "reason": "vulnerability",
+      "summary": "@arikusi/deepseek-mcp-server: Missing Authentication on Self-Hosted HTTP MCP Endpoint",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-72f3-6w86-7rv3",
+        "https://github.com/arikusi/deepseek-mcp-server/security/advisories/GHSA-72f3-6w86-7rv3",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-55605",
+        "https://github.com/arikusi/deepseek-mcp-server/pull/4",
+        "https://github.com/arikusi/deepseek-mcp-server/commit/dab07ed93ddde0ab219d4cb7066785847db53a32"
+      ],
+      "added_at": "2026-08-25T18:38:30Z"
+    },
+    {
+      "id": "GHSA-76pc-mqxp-3rq5",
+      "purl_pattern": "pkg:npm/%40ooples/token-optimizer-mcp",
+      "versions": "<5.1.0",
+      "reason": "credential-exfiltration",
+      "summary": "Token Optimizer MCP: Unauthenticated Path Traversal in Dashboard Session Log API Endpoints",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-76pc-mqxp-3rq5",
+        "https://github.com/ooples/token-optimizer-mcp/security/advisories/GHSA-76pc-mqxp-3rq5",
+        "https://github.com/ooples/token-optimizer-mcp/commit/b4ee96dac799cbfba0a9f9c17844ce9d613cbcc7",
+        "https://github.com/ooples/token-optimizer-mcp",
+        "https://github.com/ooples/token-optimizer-mcp/releases/tag/v5.1.0"
+      ],
+      "added_at": "2026-08-14T21:43:54Z"
+    },
+    {
+      "id": "GHSA-78x9-fhhx-v2g6",
+      "purl_pattern": "pkg:npm/%40aborruso/ckan-mcp-server",
+      "versions": "<0.4.112",
+      "reason": "prompt-injection",
+      "summary": "CKAN MCP Server: Cache-key canonicalization collision enables cache confusion / poisoning",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-78x9-fhhx-v2g6",
+        "https://github.com/ondata/ckan-mcp-server/security/advisories/GHSA-78x9-fhhx-v2g6",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-73846",
+        "https://github.com/ondata/ckan-mcp-server/commit/8e1522f9bbfa1f3b21550f17887f60f133e24151",
+        "https://github.com/ondata/ckan-mcp-server"
+      ],
+      "added_at": "2026-09-03T14:49:22Z"
+    },
+    {
+      "id": "GHSA-83x6-42hr-jc76",
+      "purl_pattern": "pkg:npm/%40aborruso/ckan-mcp-server",
+      "versions": "<0.4.112",
+      "reason": "ssrf",
+      "summary": "CKAN MCP Server: MQA server allowlist bypass via unanchored regex (`isValidMqaServer`)",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-83x6-42hr-jc76",
+        "https://github.com/ondata/ckan-mcp-server/security/advisories/GHSA-83x6-42hr-jc76",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-73845",
+        "https://github.com/ondata/ckan-mcp-server/commit/8e1522f9bbfa1f3b21550f17887f60f133e24151",
+        "https://github.com/ondata/ckan-mcp-server"
+      ],
+      "added_at": "2026-09-02T14:52:21Z"
+    },
+    {
+      "id": "GHSA-8qf9-62x2-82pp",
+      "purl_pattern": "pkg:npm/chrome-devtools-mcp",
+      "versions": ">=0.24.0 <1.1.0",
+      "reason": "credential-exfiltration",
+      "summary": "chrome-devtools-mcp: validatePath() does not canonicalize symlinks before enforcing roots",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-8qf9-62x2-82pp",
+        "https://github.com/ChromeDevTools/chrome-devtools-mcp/security/advisories/GHSA-8qf9-62x2-82pp",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-53766",
+        "https://github.com/ChromeDevTools/chrome-devtools-mcp/pull/2127",
+        "https://github.com/ChromeDevTools/chrome-devtools-mcp/commit/176eb695137d9c46a61e2d4d5571880c5145cf46"
+      ],
+      "added_at": "2026-08-17T21:56:12Z"
+    },
+    {
+      "id": "GHSA-c5r6-m4mr-8q5j",
+      "purl_pattern": "pkg:npm/%40jshookmcp/jshook",
+      "versions": ">=0.3.1 <0.3.2",
+      "reason": "credential-exfiltration",
+      "summary": "@jshookmcp/jshook: ICMP probe and traceroute skip local-network SSRF authorization",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-c5r6-m4mr-8q5j",
+        "https://github.com/vmoranv/jshookmcp/security/advisories/GHSA-c5r6-m4mr-8q5j",
+        "https://github.com/vmoranv/jshookmcp"
+      ],
+      "added_at": "2026-07-01T18:14:57Z"
+    },
+    {
+      "id": "GHSA-cc2g-gq8c-r332",
+      "purl_pattern": "pkg:npm/grok-faf-mcp",
+      "versions": "<1.5.3",
+      "reason": "path-traversal",
+      "summary": "grok-faf-mcp has an arbitrary local file read via unconfined `path` argument in FAF tools",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-cc2g-gq8c-r332",
+        "https://github.com/Wolfe-Jam/grok-faf-mcp/security/advisories/GHSA-cc2g-gq8c-r332",
+        "https://github.com/Wolfe-Jam/grok-faf-mcp",
+        "https://github.com/Wolfe-Jam/grok-faf-mcp/releases/tag/v1.5.3"
+      ],
+      "added_at": "2026-08-19T19:15:01Z"
+    },
+    {
       "id": "GHSA-cr22-wjx7-2w6m",
       "purl_pattern": "pkg:npm/mcp-server-kubernetes",
       "versions": "<3.6.0",
-      "reason": "MCP Server Kubernetes: Tool Access Control Bypass via Presentation-Layer Filtering Without Execution-Layer Enforcement",
+      "reason": "access-control",
+      "summary": "MCP Server Kubernetes: Tool Access Control Bypass via Presentation-Layer Filtering Without Execution-Layer Enforcement",
       "severity": "high",
       "refs": [
         "https://osv.dev/vulnerability/GHSA-cr22-wjx7-2w6m",
@@ -78,10 +414,89 @@
       "added_at": "2026-05-21T20:33:46Z"
     },
     {
+      "id": "GHSA-fh3r-g96v-f578",
+      "purl_pattern": "pkg:npm/%40arikusi/deepseek-mcp-server",
+      "versions": ">=1.4.2 <1.7.0",
+      "reason": "access-control",
+      "summary": "@arikusi/deepseek-mcp-server has an Authorization Bypass Through User-Controlled Key",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-fh3r-g96v-f578",
+        "https://github.com/arikusi/deepseek-mcp-server/security/advisories/GHSA-fh3r-g96v-f578",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-55604",
+        "https://github.com/arikusi/deepseek-mcp-server",
+        "https://github.com/arikusi/deepseek-mcp-server/releases/tag/v1.7.0"
+      ],
+      "added_at": "2026-08-25T18:37:27Z"
+    },
+    {
+      "id": "GHSA-fvh2-gm75-j4j7",
+      "purl_pattern": "pkg:npm/dynoxide",
+      "versions": ">=0.9.3 <0.9.13",
+      "reason": "ssrf",
+      "summary": "dynoxide: DNS rebinding and cross-origin CSRF via MCP HTTP transport",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-fvh2-gm75-j4j7",
+        "https://github.com/nubo-db/dynoxide/security/advisories/GHSA-fvh2-gm75-j4j7",
+        "https://github.com/nubo-db/dynoxide",
+        "https://github.com/nubo-db/dynoxide/releases/tag/v0.9.13",
+        "https://rustsec.org/advisories/RUSTSEC-2026-0140.html"
+      ],
+      "added_at": "2026-05-18T17:00:25Z"
+    },
+    {
+      "id": "GHSA-g2gw-q38m-vjfc",
+      "purl_pattern": "pkg:npm/%40merill/lokka",
+      "versions": "<2.1.2",
+      "reason": "path-traversal",
+      "summary": "Lokka: Azure Resource Manager URL path validation issue",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-g2gw-q38m-vjfc",
+        "https://github.com/merill/lokka/security/advisories/GHSA-g2gw-q38m-vjfc",
+        "https://github.com/merill/lokka"
+      ],
+      "added_at": "2026-06-19T22:10:39Z"
+    },
+    {
+      "id": "GHSA-g5cg-6c7v-mmpw",
+      "purl_pattern": "pkg:npm/hackmd-mcp",
+      "versions": ">=1.4.0 <1.5.0",
+      "reason": "ssrf",
+      "summary": "HackMD MCP Server has Server-Side Request Forgery (SSRF) vulnerability",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-g5cg-6c7v-mmpw",
+        "https://github.com/yuna0x0/hackmd-mcp/security/advisories/GHSA-g5cg-6c7v-mmpw",
+        "https://nvd.nist.gov/vuln/detail/CVE-2025-59155",
+        "https://github.com/yuna0x0/hackmd-mcp/commit/43936c78a5bb3dedc74e8f080607a1125caa8c13",
+        "https://github.com/yuna0x0/hackmd-mcp"
+      ],
+      "added_at": "2025-09-15T20:37:46Z"
+    },
+    {
+      "id": "GHSA-g84h-j7jj-x32p",
+      "purl_pattern": "pkg:npm/%40aborruso/ckan-mcp-server",
+      "versions": "<0.4.106",
+      "reason": "ssrf",
+      "summary": "@aborruso/ckan-mcp-server: SSRF via base_url allows access to internal networks (Potential fix bypass of CVE-2026-33060)",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-g84h-j7jj-x32p",
+        "https://github.com/ondata/ckan-mcp-server/security/advisories/GHSA-g84h-j7jj-x32p",
+        "https://github.com/advisories/GHSA-3xm7-qw7j-qc8v",
+        "https://github.com/ondata/ckan-mcp-server",
+        "https://github.com/ondata/ckan-mcp-server/releases/tag/v0.4.106"
+      ],
+      "added_at": "2026-07-07T19:35:57Z"
+    },
+    {
       "id": "GHSA-gjv4-ghm7-q58q",
       "purl_pattern": "pkg:npm/mcp-server-kubernetes",
       "versions": "<2.5.0",
-      "reason": "MCP Server Kubernetes vulnerable to command injection in several tools",
+      "reason": "command-injection",
+      "summary": "MCP Server Kubernetes vulnerable to command injection in several tools",
       "severity": "high",
       "refs": [
         "https://osv.dev/vulnerability/GHSA-gjv4-ghm7-q58q",
@@ -96,7 +511,8 @@
       "id": "GHSA-gxw4-4fc5-9gr5",
       "purl_pattern": "pkg:npm/figma-developer-mcp",
       "versions": "<0.6.3",
-      "reason": "figma-developer-mcp vulnerable to command injection in get_figma_data tool",
+      "reason": "command-injection",
+      "summary": "figma-developer-mcp vulnerable to command injection in get_figma_data tool",
       "severity": "high",
       "refs": [
         "https://osv.dev/vulnerability/GHSA-gxw4-4fc5-9gr5",
@@ -110,7 +526,8 @@
       "id": "GHSA-hc55-p739-j48w",
       "purl_pattern": "pkg:npm/%40modelcontextprotocol/server-filesystem",
       "versions": "<=0.6.2",
-      "reason": "@modelcontextprotocol/server-filesystem vulnerability allows for path validation bypass via colliding path prefix",
+      "reason": "path-traversal",
+      "summary": "@modelcontextprotocol/server-filesystem vulnerability allows for path validation bypass via colliding path prefix",
       "severity": "high",
       "refs": [
         "https://osv.dev/vulnerability/GHSA-hc55-p739-j48w",
@@ -122,10 +539,149 @@
       "added_at": "2025-07-01T20:14:00Z"
     },
     {
+      "id": "GHSA-hhfx-wfvq-7g9c",
+      "purl_pattern": "pkg:npm/%40azure/mcp",
+      "versions": ">=2.0.0-beta.1 <2.0.0-beta.17",
+      "reason": "ssrf",
+      "summary": "Azure MCP Server has Server-Side Request Forgery issue that allows authorized attacker to elevate privileges over a network",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-hhfx-wfvq-7g9c",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-26118",
+        "https://github.com/microsoft/mcp/commit/804ff60293206c4d8e832f772097238561bf2c34",
+        "https://github.com/microsoft/mcp",
+        "https://github.com/microsoft/mcp/releases/tag/Azure.Mcp.Server-1.0.2"
+      ],
+      "added_at": "2026-03-10T18:31:21Z"
+    },
+    {
+      "id": "GHSA-hjwh-xvfw-qrwj",
+      "purl_pattern": "pkg:npm/mcp-searxng",
+      "versions": "<1.12.0",
+      "reason": "vulnerability",
+      "summary": "SearXNG Basic Authentication Credentials Exposed Through MCP Logs and JSON-RPC Error Responses",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-hjwh-xvfw-qrwj",
+        "https://github.com/ihor-sokoliuk/mcp-searxng/security/advisories/GHSA-hjwh-xvfw-qrwj",
+        "https://github.com/ihor-sokoliuk/mcp-searxng",
+        "https://github.com/ihor-sokoliuk/mcp-searxng/releases/tag/v1.12.0"
+      ],
+      "added_at": "2026-08-19T19:32:46Z"
+    },
+    {
+      "id": "GHSA-hpqj-7cj6-hfj8",
+      "purl_pattern": "pkg:npm/snyk",
+      "versions": "<1.996.0",
+      "reason": "command-injection",
+      "summary": "Snyk CLI affected by Command Injection vulnerability",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-hpqj-7cj6-hfj8",
+        "https://nvd.nist.gov/vuln/detail/CVE-2022-40764",
+        "https://github.com/snyk/cli",
+        "https://github.com/snyk/cli/releases/tag/v1.996.0",
+        "https://github.com/snyk/snyk-go-plugin/releases/tag/v1.19.1"
+      ],
+      "added_at": "2022-10-04T00:00:22Z"
+    },
+    {
+      "id": "GHSA-j4r7-8ph4-43g3",
+      "purl_pattern": "pkg:npm/faf-mcp",
+      "versions": "<2.1.3",
+      "reason": "path-traversal",
+      "summary": "faf-mcp has an arbitrary local file read/write via unconfined `path` argument in FAF tools",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-j4r7-8ph4-43g3",
+        "https://github.com/Wolfe-Jam/faf-mcp/security/advisories/GHSA-j4r7-8ph4-43g3",
+        "https://github.com/Wolfe-Jam/faf-mcp",
+        "https://github.com/Wolfe-Jam/faf-mcp/releases/tag/v2.1.3"
+      ],
+      "added_at": "2026-08-19T19:15:13Z"
+    },
+    {
+      "id": "GHSA-j7h9-2jh7-g967",
+      "purl_pattern": "pkg:npm/mcp-ssh-tool",
+      "versions": "<2.1.1",
+      "reason": "vulnerability",
+      "summary": "mcp-ssh-tool has file transfer path policy bypass and bearer token comparison hardening",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-j7h9-2jh7-g967",
+        "https://github.com/oaslananka/mcp-ssh-tool/security/advisories/GHSA-j7h9-2jh7-g967",
+        "https://github.com/oaslananka/mcp-ssh-tool"
+      ],
+      "added_at": "2026-05-07T21:45:16Z"
+    },
+    {
+      "id": "GHSA-mrvx-jmjw-vggc",
+      "purl_pattern": "pkg:npm/mcp-searxng",
+      "versions": "<1.7.1",
+      "reason": "credential-exfiltration",
+      "summary": "SearXNG MCP Server: DNS-resolved Private Hostname SSRF in `web_url_read`",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-mrvx-jmjw-vggc",
+        "https://github.com/ihor-sokoliuk/mcp-searxng/security/advisories/GHSA-mrvx-jmjw-vggc",
+        "https://github.com/ihor-sokoliuk/mcp-searxng"
+      ],
+      "added_at": "2026-06-19T21:42:46Z"
+    },
+    {
+      "id": "GHSA-p7w7-4929-vpj5",
+      "purl_pattern": "pkg:npm/%40dynatrace-oss/dynatrace-mcp-server",
+      "versions": "<2.0.0",
+      "reason": "credential-exfiltration",
+      "summary": "`@dynatrace-oss/dynatrace-mcp-server` has Unauthenticated HTTP MCP Tool Invocation",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-p7w7-4929-vpj5",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/security/advisories/GHSA-p7w7-4929-vpj5",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/pull/536",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/commit/8f12972481e9165e8bd24d63b0a9e71976f85a43",
+        "https://github.com/dynatrace-oss/dynatrace-mcp"
+      ],
+      "added_at": "2026-07-31T16:05:57Z"
+    },
+    {
+      "id": "GHSA-pc2w-4mq8-32qw",
+      "purl_pattern": "pkg:npm/%40dynatrace-oss/dynatrace-mcp-server",
+      "versions": "<1.8.7",
+      "reason": "vulnerability",
+      "summary": "@dynatrace-oss/dynatrace-mcp-server's create_dynatrace_notebook missing the human-approval gate",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-pc2w-4mq8-32qw",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/security/advisories/GHSA-pc2w-4mq8-32qw",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/pull/529",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/commit/2851d3ce29d834c93b67f0db903c10e0b488e7ac",
+        "https://github.com/dynatrace-oss/dynatrace-mcp"
+      ],
+      "added_at": "2026-07-29T15:36:19Z"
+    },
+    {
+      "id": "GHSA-pqh8-p93p-2rx7",
+      "purl_pattern": "pkg:npm/%40dynatrace-oss/dynatrace-mcp-server",
+      "versions": "<2.1.1",
+      "reason": "prompt-injection",
+      "summary": "@dynatrace-oss/dynatrace-mcp-server has a DQL injection via parameters not documented as DQL",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-pqh8-p93p-2rx7",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/security/advisories/GHSA-pqh8-p93p-2rx7",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/pull/562",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/commit/15d3546c0618ffbaeaeca477337e08e92f2151bc",
+        "https://github.com/dynatrace-oss/dynatrace-mcp"
+      ],
+      "added_at": "2026-07-31T15:56:12Z"
+    },
+    {
       "id": "GHSA-q66q-fx2p-7w4m",
       "purl_pattern": "pkg:npm/%40modelcontextprotocol/server-filesystem",
       "versions": "<=0.6.2",
-      "reason": "@modelcontextprotocol/server-filesystem allows for path validation bypass via prefix matching and symlink handling",
+      "reason": "path-traversal",
+      "summary": "@modelcontextprotocol/server-filesystem allows for path validation bypass via prefix matching and symlink handling",
       "severity": "high",
       "refs": [
         "https://osv.dev/vulnerability/GHSA-q66q-fx2p-7w4m",
@@ -137,10 +693,89 @@
       "added_at": "2025-07-01T20:13:56Z"
     },
     {
+      "id": "GHSA-q87f-qc2r-2gw4",
+      "purl_pattern": "pkg:npm/mcp-searxng",
+      "versions": "<1.2.1",
+      "reason": "credential-exfiltration",
+      "summary": "SearXNG MCP Server is Vulnerable to SSRF in web_url_read: the internal-address guard is disabled by default (MCP_HTTP_HARDEN off)",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-q87f-qc2r-2gw4",
+        "https://github.com/ihor-sokoliuk/mcp-searxng/security/advisories/GHSA-q87f-qc2r-2gw4",
+        "https://github.com/ihor-sokoliuk/mcp-searxng/issues/87#issuecomment-4645453694",
+        "https://github.com/ihor-sokoliuk/mcp-searxng",
+        "https://github.com/ihor-sokoliuk/mcp-searxng/releases/tag/v1.2.1"
+      ],
+      "added_at": "2026-08-19T19:23:08Z"
+    },
+    {
+      "id": "GHSA-r87g-78mx-3wg4",
+      "purl_pattern": "pkg:npm/%40wonderwhy-er/desktop-commander",
+      "versions": "<0.2.39",
+      "reason": "vulnerability",
+      "summary": "DesktopCommanderMCP is vulnerable to Uncontrolled Resource Consumption",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-r87g-78mx-3wg4",
+        "https://nvd.nist.gov/vuln/detail/CVE-2026-10691",
+        "https://github.com/wonderwhy-er/DesktopCommanderMCP/issues/375",
+        "https://github.com/wonderwhy-er/DesktopCommanderMCP/pull/400",
+        "https://github.com/wonderwhy-er/DesktopCommanderMCP/commit/4ce845f8749b6a159b57b38dcc3357f7222a8078"
+      ],
+      "added_at": "2026-06-03T00:30:27Z"
+    },
+    {
+      "id": "GHSA-rcm2-22f3-pqv3",
+      "purl_pattern": "pkg:npm/firebase-tools",
+      "versions": "<13.6.0",
+      "reason": "credential-exfiltration",
+      "summary": "Firebase vulnerable to CRSF attack",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-rcm2-22f3-pqv3",
+        "https://nvd.nist.gov/vuln/detail/CVE-2024-4128",
+        "https://github.com/firebase/firebase-tools/pull/6944",
+        "https://github.com/firebase/firebase-tools/commit/068a2b08dc308c7ab4b569617f5fc8821237e3a0",
+        "https://github.com/firebase/firebase-tools"
+      ],
+      "added_at": "2024-05-02T15:30:35Z"
+    },
+    {
+      "id": "GHSA-rr55-jp92-8wp2",
+      "purl_pattern": "pkg:npm/claude-faf-mcp",
+      "versions": "<5.7.2",
+      "reason": "path-traversal",
+      "summary": "claude-faf-mcp has an arbitrary local file read/write via unconfined `path` argument in FAF tools",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-rr55-jp92-8wp2",
+        "https://github.com/Wolfe-Jam/claude-faf-mcp/security/advisories/GHSA-rr55-jp92-8wp2",
+        "https://github.com/Wolfe-Jam/claude-faf-mcp",
+        "https://github.com/Wolfe-Jam/claude-faf-mcp/releases/tag/v5.7.2"
+      ],
+      "added_at": "2026-08-19T19:15:25Z"
+    },
+    {
+      "id": "GHSA-wppf-h75h-6pm6",
+      "purl_pattern": "pkg:npm/mcp-searxng",
+      "versions": "<1.2.1",
+      "reason": "ssrf",
+      "summary": "SearXNG MCP Server: Additional hardened-mode SSRF bypasses",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-wppf-h75h-6pm6",
+        "https://github.com/ihor-sokoliuk/mcp-searxng/security/advisories/GHSA-wppf-h75h-6pm6",
+        "https://github.com/ihor-sokoliuk/mcp-searxng",
+        "https://github.com/ihor-sokoliuk/mcp-searxng/releases/tag/v1.2.1"
+      ],
+      "added_at": "2026-08-19T19:23:16Z"
+    },
+    {
       "id": "GHSA-wvxp-jp4w-w8wg",
       "purl_pattern": "pkg:npm/mcp-server-kubernetes",
       "versions": "<2.9.8",
-      "reason": "mcp-server-kubernetes has potential security issue in exec_in_pod tool",
+      "reason": "command-injection",
+      "summary": "mcp-server-kubernetes has potential security issue in exec_in_pod tool",
       "severity": "advisory",
       "refs": [
         "https://osv.dev/vulnerability/GHSA-wvxp-jp4w-w8wg",
@@ -150,6 +785,121 @@
         "https://github.com/Flux159/mcp-server-kubernetes/commit/d091107ff92d9ffad1b3c295092f142d6578c48b"
       ],
       "added_at": "2025-12-03T20:44:45Z"
+    },
+    {
+      "id": "GHSA-x975-rgx4-5fh4",
+      "purl_pattern": "pkg:npm/appium-mcp",
+      "versions": "<1.85.10",
+      "reason": "credential-exfiltration",
+      "summary": "appium-mcp: Unescaped Locator Data XSS in MCP-UI Resource (createLocatorGeneratorUI)",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-x975-rgx4-5fh4",
+        "https://github.com/appium/appium-mcp/security/advisories/GHSA-x975-rgx4-5fh4",
+        "https://github.com/appium/appium-mcp/commit/e222bbbd6fe2b656a320efcd143563f08061a83d",
+        "https://github.com/appium/appium-mcp",
+        "https://github.com/appium/appium-mcp/releases/tag/v1.85.10"
+      ],
+      "added_at": "2026-06-19T21:43:14Z"
+    },
+    {
+      "id": "GHSA-xcqx-9jf5-w339",
+      "purl_pattern": "pkg:npm/mcp-searxng",
+      "versions": "<1.7.1",
+      "reason": "prompt-injection",
+      "summary": "SearXNG MCP Server: Unbounded Response Body Read Bypasses URL Size Limit in `web_url_read`",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-xcqx-9jf5-w339",
+        "https://github.com/ihor-sokoliuk/mcp-searxng/security/advisories/GHSA-xcqx-9jf5-w339",
+        "https://github.com/ihor-sokoliuk/mcp-searxng"
+      ],
+      "added_at": "2026-06-19T21:42:43Z"
+    },
+    {
+      "id": "GHSA-xrmc-c5cg-rv7x",
+      "purl_pattern": "pkg:npm/safeinstall-cli",
+      "versions": "<0.10.2",
+      "reason": "vulnerability",
+      "summary": "SafeInstall agent guard shell parsing can miss raw package execution",
+      "severity": "high",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-xrmc-c5cg-rv7x",
+        "https://github.com/Mickdownunder/SafeInstall/security/advisories/GHSA-xrmc-c5cg-rv7x",
+        "https://github.com/Mickdownunder/SafeInstall"
+      ],
+      "added_at": "2026-07-10T19:34:14Z"
+    },
+    {
+      "id": "GHSA-xrmj-5g4g-8987",
+      "purl_pattern": "pkg:npm/%40dynatrace-oss/dynatrace-mcp-server",
+      "versions": "<2.0.0",
+      "reason": "credential-exfiltration",
+      "summary": "@dynatrace-oss/dynatrace-mcp-server has a workflow template injection via create_workflow_for_notification",
+      "severity": "advisory",
+      "refs": [
+        "https://osv.dev/vulnerability/GHSA-xrmj-5g4g-8987",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/security/advisories/GHSA-xrmj-5g4g-8987",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/pull/547",
+        "https://github.com/dynatrace-oss/dynatrace-mcp/commit/64dfcb1095823d0fb43013635446288a6ff60e29",
+        "https://github.com/dynatrace-oss/dynatrace-mcp"
+      ],
+      "added_at": "2026-07-31T16:01:07Z"
+    },
+    {
+      "id": "MAL-2025-190909",
+      "purl_pattern": "pkg:npm/%40postman/postman-mcp-server",
+      "reason": "malicious-package",
+      "summary": "Malicious code in @postman/postman-mcp-server (npm)",
+      "severity": "critical",
+      "refs": [
+        "https://osv.dev/vulnerability/MAL-2025-190909",
+        "https://www.aikido.dev/blog/shai-hulud-strikes-again-hitting-zapier-ensdomains",
+        "https://www.wiz.io/blog/shai-hulud-2-0-ongoing-supply-chain-attack",
+        "https://www.stepsecurity.io/blog/sha1-hulud-the-second-coming-zapier-ens-domains-and-other-prominent-npm-packages-compromised"
+      ],
+      "added_at": "2025-11-24T16:31:47Z"
+    },
+    {
+      "id": "MAL-2025-191196",
+      "purl_pattern": "pkg:npm/%40browserbasehq/mcp-server-browserbase",
+      "reason": "malicious-package",
+      "summary": "Malicious code in @browserbasehq/mcp-server-browserbase (npm)",
+      "severity": "critical",
+      "refs": [
+        "https://osv.dev/vulnerability/MAL-2025-191196",
+        "https://www.aikido.dev/blog/shai-hulud-strikes-again-hitting-zapier-ensdomains",
+        "https://www.wiz.io/blog/shai-hulud-2-0-ongoing-supply-chain-attack",
+        "https://www.stepsecurity.io/blog/sha1-hulud-the-second-coming-zapier-ens-domains-and-other-prominent-npm-packages-compromised"
+      ],
+      "added_at": "2025-11-25T00:16:49Z"
+    },
+    {
+      "id": "MAL-2026-4069",
+      "purl_pattern": "pkg:npm/%40antv/mcp-server-chart",
+      "reason": "malicious-package",
+      "summary": "Malicious code in @antv/mcp-server-chart (npm)",
+      "severity": "critical",
+      "refs": [
+        "https://osv.dev/vulnerability/MAL-2026-4069",
+        "https://safedep.io/mini-shai-hulud-strikes-again-314-npm-packages-compromised/",
+        "https://socket.dev/blog/antv-packages-compromised",
+        "https://opensourcemalware.com/blog/teampcp-compromises-npm-maintainer-with-over-540-packages",
+        "https://github.com/advisories/GHSA-qgmj-c898-99rq"
+      ],
+      "added_at": "2026-05-19T00:00:00Z"
+    },
+    {
+      "id": "MAL-2026-4675",
+      "purl_pattern": "pkg:npm/supership-scan",
+      "reason": "malicious-package",
+      "summary": "Malicious code in supership-scan (npm)",
+      "severity": "critical",
+      "refs": [
+        "https://osv.dev/vulnerability/MAL-2026-4675",
+        "https://www.npmjs.com/package/supership-scan/v/1.0.0"
+      ],
+      "added_at": "2026-05-20T22:01:48Z"
     }
   ]
 }

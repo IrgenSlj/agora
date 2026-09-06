@@ -4,6 +4,10 @@ Agora covers a surface ordinary dependency scanners miss: MCP servers are spawne
 configuration and may appear in no `package.json`. The revocation feed turns published OSV
 advisories for those packages into offline, local-first gate evidence.
 
+**Building something that wants to consume this?** Read [`SPEC.md`](./SPEC.md) instead of this
+file. It is written for people with no relationship to Agora, and it is the contract — this
+README is the internal note on how the file gets made.
+
 Current behavior and limitations are tracked in [`../docs/STATUS.md`](../docs/STATUS.md); ordered
 hardening work is `REV-001` in [`../docs/NEXT.md`](../docs/NEXT.md).
 
@@ -13,9 +17,15 @@ hardening work is `REV-001` in [`../docs/NEXT.md`](../docs/NEXT.md).
 - `revocations.json` — packaged feed consumed by clients. It ships with `agora-hub` and is the
   bundled baseline.
 
-Do not hand-curate advisory counts or findings. `scripts/sync-feed.ts` queries OSV for catalog MCP
-package purls and rewrites the source data; `.github/workflows/sync-feed.yml` runs it on schedule.
-If an upstream package cannot be checked, previous entries are carried forward rather than erased.
+Do not hand-curate advisory counts or findings. `scripts/sync-feed.ts` walks the official MCP
+registry for the artifact universe — roughly 27,000 servers, of which about 8,000 ship an npm
+package — queries OSV for all of them in batches, and rewrites the source data;
+`.github/workflows/sync-feed.yml` runs it on schedule.
+
+Three failure paths all resolve the same way, because they are the same hazard: an artifact that was
+never asked about is not an artifact that came back clean. A partial registry walk, an unreachable
+OSV batch, and a batch response that does not line up with its queries each keep the existing
+entries and fail the job, rather than publishing a shorter feed.
 
 ## Trust model
 

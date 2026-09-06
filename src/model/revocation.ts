@@ -18,7 +18,17 @@ export const RevocationEntry = z
       .string()
       .describe('Purl pattern to match (e.g. pkg:npm/postmark-mcp matches all versions)'),
     versions: z.string().optional().describe('Version range constraint (e.g. <=1.0.16)'),
-    reason: z.string().describe('Reason for revocation (e.g. credential-exfiltration)'),
+    reason: z
+      .string()
+      .describe(
+        'Machine-readable reason slug (e.g. credential-exfiltration). Consumers branch on this, ' +
+          'so it is a closed-ish vocabulary rather than prose; treat an unrecognised value as ' +
+          '`vulnerability` rather than dropping the entry.'
+      ),
+    summary: z
+      .string()
+      .optional()
+      .describe('One-line human description, from the upstream advisory where it has one'),
     severity: RevocationSeverity,
     refs: z.array(z.string().url()).describe('Reference URLs (advisories, discussions)'),
     added_at: z.string().datetime().describe('ISO timestamp when added to the feed')

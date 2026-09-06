@@ -68,11 +68,48 @@ export function versionRangeFor(vuln: OsvVulnerability): string | undefined {
   return clauses.length ? clauses.join(' ') : undefined;
 }
 
+/**
+ * Classify an advisory into a machine-readable reason.
+ *
+ * `reason` used to carry the advisory's own summary sentence, truncated to 160
+ * characters — which made it a headline, not a field. A consumer cannot branch
+ * on "MCP Server Kubernetes has an Argument Injection in port_forward tool via
+ * space-splitting", and the data model documents this field as a slug
+ * (`credential-exfiltration`) precisely so that it can. The sentence is still
+ * worth keeping, so it moved to `summary` where prose belongs.
+ *
+ * Classification is keyword matching over the summary, which is crude and is
+ * chosen deliberately over something cleverer: every unmatched advisory lands
+ * on `vulnerability`, which is the honest general case, and no consumer is
+ * misled by a confident wrong label. CWE ids would be more precise where they
+ * exist, and most GHSA entries for MCP servers carry none.
+ */
 function reasonFor(vuln: OsvVulnerability): string {
+  // Not a heuristic. `MAL-*` comes from the OpenSSF malicious-packages feed:
+  // the package is hostile, not flawed.
   if (vuln.id.startsWith('MAL-')) return 'malicious-package';
-  const summary = vuln.summary?.trim();
-  if (summary) return summary.length > 160 ? `${summary.slice(0, 157)}…` : summary;
-  return 'security-advisory';
+
+  const text = `${vuln.summary ?? ''} ${vuln.details ?? ''}`.toLowerCase();
+  const match = (...needles: string[]) => needles.some((n) => text.includes(n));
+
+  if (match('exfiltrat', 'steal', 'leak credential', 'token exfiltration')) {
+    return 'credential-exfiltration';
+  }
+  if (match('command injection', 'argument injection', 'os command', 'flag injection')) {
+    return 'command-injection';
+  }
+  if (match('path traversal', 'path validation', 'directory traversal', '../')) {
+    return 'path-traversal';
+  }
+  if (match('prompt injection')) return 'prompt-injection';
+  if (match('tool poisoning', 'tool description')) return 'tool-poisoning';
+  if (match('typosquat')) return 'typosquat';
+  if (match('sql injection')) return 'sql-injection';
+  if (match('ssrf', 'server-side request forgery', 'dns rebinding')) return 'ssrf';
+  if (match('access control', 'authorization bypass', 'authentication bypass', 'privilege')) {
+    return 'access-control';
+  }
+  return 'vulnerability';
 }
 
 function refsFor(vuln: OsvVulnerability): string[] {
@@ -98,11 +135,13 @@ export function toRevocationEntry(
   now: Date = new Date()
 ): RevocationEntry {
   const versions = versionRangeFor(vuln);
+  const summary = vuln.summary?.trim();
   return {
     id: vuln.id,
     purl_pattern: purl,
     ...(versions ? { versions } : {}),
     reason: reasonFor(vuln),
+    ...(summary ? { summary: summary.length > 200 ? `${summary.slice(0, 197)}…` : summary } : {}),
     severity: severityFor(vuln),
     refs: refsFor(vuln),
     added_at: vuln.published ?? vuln.modified ?? now.toISOString()
