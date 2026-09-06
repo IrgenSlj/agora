@@ -14,7 +14,10 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # `contents: write` so the major tag can be moved. The Action is
+      # referenced as `@v0`, and a tag nobody creates is a README line that
+      # errors with "Unable to resolve action" — see the tag step below.
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v7
@@ -69,3 +72,24 @@ jobs:
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           TAG: ${{ github.event.inputs.tag || 'latest' }}
+
+      # `uses: IrgenSlj/agora@v0` is the surface the product is pointed at, and
+      # `v0` is a floating tag that has to be moved to each release by hand or
+      # by this step. It was never moved by hand: v0.7.0 shipped, the README
+      # advertised `@v0`, and no such tag existed, so the one call-to-action in
+      # the project errored for every reader.
+      #
+      # It runs after the publish step on purpose. The tag says "this ref is
+      # runnable", and it is not runnable until the npm package the composite
+      # action shells out to actually exists.
+      - name: Move the major tag the Action is referenced by
+        if: github.event_name == 'release'
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          major="v$(echo "${RELEASE_TAG#v}" | cut -d. -f1)"
+          echo "Moving $major to $RELEASE_TAG"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f "$major" "$RELEASE_TAG^{commit}"
+          git push -f origin "refs/tags/$major"
