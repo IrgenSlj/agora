@@ -94,6 +94,29 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'hook',
+    group: 'Stack',
+    summary: 'Block a revoked or drifted MCP tool at the moment it is called',
+    usage: 'agora hook install [--dry-run]\nagora hook check',
+    details:
+      'Installs a Claude Code PreToolUse hook that checks every MCP tool call against the ' +
+      'revocation feed and your approved baseline before it runs. This is the only surface where ' +
+      'Agora stops something rather than reporting it, and it runs on your machine with no ' +
+      'service to operate.\n\n' +
+      'It can only block. It never emits an allow decision, because that would bypass the ' +
+      'permission prompt Claude Code would otherwise have shown you — and "no known red flags" ' +
+      'is not a permission the user granted.\n\n' +
+      'Every failure is a non-block. A check that cannot run reports on stderr and lets the call ' +
+      'proceed: a security tool that breaks the agent gets uninstalled, and an uninstalled ' +
+      'tripwire protects nobody.\n\n' +
+      '`agora hook check` is the handler itself. It reads a PreToolUse payload on stdin and is ' +
+      'not meant to be run by hand.',
+    flags: [
+      { flag: '--dry-run', description: 'Print the merged settings.json instead of writing it' }
+    ],
+    examples: ['agora hook install', 'agora hook install --dry-run']
+  },
+  {
     name: 'approve',
     group: 'Stack',
     summary: 'Review install intents and re-run the gate before acting',

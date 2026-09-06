@@ -33,8 +33,11 @@ say() { printf '\n\033[1m%s\033[0m\n' "$1"; }
 
 # `agora <args>` from the installed package, in an isolated HOME so the run
 # cannot read the developer's real host configs and report a false pass.
+# stdin comes from /dev/null: `hook check` reads a payload from it, and an
+# inherited terminal or an open pipe would make every one of these wait on the
+# hook's stdin timeout instead of exiting immediately.
 run_agora() {
-  ( cd "$WORK/app" && HOME="$WORK/home" ./node_modules/.bin/agora "$@" )
+  ( cd "$WORK/app" && HOME="$WORK/home" ./node_modules/.bin/agora "$@" </dev/null )
 }
 
 # expect <exit-code> <description> -- <args...>
@@ -91,6 +94,27 @@ expect 0 "agora ci --json" -- ci --json
 expect 2 "unknown command exits USAGE" -- definitely-not-a-command
 expect 2 "agora lock verify with no lockfile exits USAGE" -- lock verify
 expect 0 "agora lock write --no-fetch (no baseline: pins nothing, still succeeds)" -- lock write --no-fetch
+
+# The hook is the enforcement surface and runs before every MCP tool call, so
+# its contract matters more than most: it must exit 0 on a payload it cannot
+# use rather than blocking the agent, and `hook install --dry-run` must not
+# write. Both are asserted against the installed binary because the fast path
+# in cli.ts bypasses the CLI entirely and would not be exercised otherwise.
+expect 0 "agora hook check (no payload on stdin)" -- hook check
+expect 0 "agora hook install --dry-run" -- hook install --dry-run
+expect 2 "agora hook with no subcommand exits USAGE" -- hook
+
+# The decision path, against the installed binary. A hook that blocks on its own
+# failure is worse than no hook at all, so the assertion is that a payload for a
+# server it has never heard of still exits 0 and prints nothing on stdout.
+hook_out="$(printf '%s' '{"tool_name":"mcp__nothing__x","cwd":"'"$WORK/app"'"}' \
+  | ( cd "$WORK/app" && HOME="$WORK/home" ./node_modules/.bin/agora hook check ) 2>/dev/null)"
+if [ -z "$hook_out" ]; then
+  printf '  \033[32m✓\033[0m hook check on an unknown server decides nothing\n'
+else
+  printf '  \033[31m✗\033[0m hook check printed a decision it should not have: %s\n' "$hook_out"
+  FAILURES=$((FAILURES + 1))
+fi
 
 # Acquire's dry run resolves federation, runs the scan, and evaluates policy
 # without writing. It is also the path that imports package.json from dist/,

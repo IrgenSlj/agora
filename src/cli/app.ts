@@ -143,6 +143,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       installed: async () => (await import('./commands/installed.js')).commandInstalled,
       doctor: async () => (await import('./commands/doctor.js')).commandDoctor,
       freeze: async () => (await import('./commands/freeze.js')).commandFreeze,
+      hook: async () => (await import('./commands/hook.js')).commandHook,
       sync: async () => (await import('./commands/sync.js')).commandSync,
       plan: async () => (await import('./commands/plan.js')).commandPlan,
       policy: async () => (await import('./commands/policy.js')).commandPolicy,

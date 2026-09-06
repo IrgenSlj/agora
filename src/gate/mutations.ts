@@ -153,6 +153,14 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
     'Every write runs scan, revocation, and Cedar through the shared gate; --skip-scan leaves an unknown that only --accept-risk clears, and the acceptance is recorded.'
   ),
   installed: readOnly('Reads host configuration.'),
+  hook: local(
+    'conditional',
+    ['host-config'],
+    'explicit-cli',
+    '`hook install` writes a PreToolUse entry into .claude/settings.json and nothing else; ' +
+      '`hook check` is read-only and can only deny a call, never allow one. No gate: it does not ' +
+      'install an artifact, and the write it makes is the one the user asked for by name.'
+  ),
   integrate: controlled(
     'conditional',
     ['host-config'],
