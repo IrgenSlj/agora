@@ -13,20 +13,16 @@ import {
   createInstallPlan,
   extractPostInstallHint,
   findMarketplaceItem,
-  getHotItems,
   getInstallKind,
   getMarketplaceItems,
   getTrendingItems,
   hasPermissions,
-  hasSharedRepositoryStars,
   type MarketplaceItem,
   type PackageMarketplaceItem,
   renderPermissionLines,
   searchMarketplaceItems,
   similarItems,
-  sortMarketplaceItems,
-  starCountLabel,
-  trendScore
+  sortMarketplaceItems
 } from '../src/catalog/bundled';
 import { describePermissionGlob } from '../src/catalog/permissions';
 import { samplePackages } from '../src/data';
@@ -643,69 +639,6 @@ describe('createInstallPlan — permissions', () => {
 
 // ── shared repo star labels/ranking ──────────────────────────────────────────
 
-function makeSharedRepoPkg(
-  id: string,
-  installs: number,
-  repository = 'https://github.com/acme/shared-tools'
-): PackageMarketplaceItem {
-  return {
-    kind: 'package',
-    id,
-    name: id,
-    description: 'test package',
-    author: 'acme',
-    version: '1.0.0',
-    category: 'mcp',
-    tags: [],
-    stars: 1000,
-    installs,
-    repository,
-    createdAt: '2026-01-01'
-  };
-}
-
-describe('shared repo stars', () => {
-  test('labels duplicate-repository stars as shared repo stars', () => {
-    const lowInstall = makeSharedRepoPkg('shared-low', 10);
-    const highInstall = makeSharedRepoPkg('shared-high', 1000);
-    const standalone = makeSharedRepoPkg('standalone', 500, 'https://github.com/acme/standalone');
-    const peers = [lowInstall, highInstall, standalone];
-
-    expect(hasSharedRepositoryStars(lowInstall, peers)).toBe(true);
-    expect(starCountLabel(lowInstall, peers)).toBe('shared repo ★');
-    expect(hasSharedRepositoryStars(standalone, peers)).toBe(false);
-    expect(starCountLabel(standalone, peers)).toBe('★');
-  });
-
-  test('labels known monorepo stars as shared repo stars', () => {
-    const item = makeSharedRepoPkg(
-      'mcp-filesystem',
-      1000,
-      'https://github.com/modelcontextprotocol/servers'
-    );
-
-    expect(starCountLabel(item, [item])).toBe('shared repo ★');
-  });
-
-  test('stars sort uses installs as the tie-break inside shared repositories', () => {
-    const lowInstall = makeSharedRepoPkg('shared-low', 10);
-    const highInstall = makeSharedRepoPkg('shared-high', 1000);
-
-    const sorted = [lowInstall, highInstall].sort(sortMarketplaceItems('stars', 'desc', ''));
-
-    expect(sorted.map((item) => item.id)).toEqual(['shared-high', 'shared-low']);
-  });
-
-  test('default sort prefers installs inside shared repositories', () => {
-    const lowInstall = makeSharedRepoPkg('shared-low', 10);
-    const highInstall = makeSharedRepoPkg('shared-high', 1000);
-
-    const sorted = [lowInstall, highInstall].sort(sortMarketplaceItems('relevance', 'desc', ''));
-
-    expect(sorted.map((item) => item.id)).toEqual(['shared-high', 'shared-low']);
-  });
-});
-
 // ── source filter logic ───────────────────────────────────────────────────────
 
 describe('marketplace source filter logic', () => {
@@ -797,98 +730,69 @@ describe('describePermissionGlob', () => {
 // ── trendScore + getHotItems ─────────────────────────────────────────────────
 
 // Helper: build a minimal PackageMarketplaceItem for scoring tests.
-function makePkg(id: string, stars: number, createdAt: string, pushedAt?: string): MarketplaceItem {
+
+// ── sortMarketplaceItems ────────────────────────────────────────────────────
+
+// This backs `agora search --sort`. Its previous tests were tie-break cases for
+// a shared-repository star rule that no longer exists, and they went with it;
+// these cover the comparator that is actually still wired up.
+
+function item(over: Partial<PackageMarketplaceItem>): PackageMarketplaceItem {
   return {
     kind: 'package',
-    id,
-    name: id,
-    description: 'test',
-    author: 'test',
-    version: '1.0.0',
+    id: 'id',
+    name: 'name',
+    description: '',
+    author: 'a',
     category: 'mcp',
     tags: [],
-    stars,
-    installs: stars,
-    repository: '',
-    createdAt,
-    ...(pushedAt !== undefined ? { pushedAt } : {})
+    stars: 0,
+    createdAt: '2026-01-01',
+    ...over
   } as PackageMarketplaceItem;
 }
 
-describe('trendScore', () => {
-  // Fixed reference time: 2026-05-22T00:00:00Z
-  const NOW = new Date('2026-05-22T00:00:00Z');
-
-  test('velocity beats absolute popularity — young riser > old giant', () => {
-    // Old giant: created 5 years ago, 50 000 stars, pushed 1 year ago.
-    // Growth rate ≈ 27 stars/day; recency ≈ 0 (pushedAt 8760h ago >> tau 720h).
-    const oldGiant = makePkg('old-giant', 50_000, '2021-05-22T00:00:00Z', '2025-05-22T00:00:00Z');
-    // Young riser: created 10 days ago, 800 stars, pushed 2 hours ago.
-    // Growth rate = 80 stars/day; recency ≈ exp(-2/720) ≈ 0.997 (very fresh).
-    // score ≈ 0.5*log10(801) + 1.0*log10(81) + 1.0*0.997 ≈ 1.45 + 1.91 + 0.997 ≈ 4.36
-    // vs oldGiant ≈ 0.5*log10(50001) + 1.0*log10(28.4) + 0  ≈ 2.35 + 1.45 + 0  ≈ 3.80
-    const youngRiser = makePkg('young-riser', 800, '2026-05-12T00:00:00Z', '2026-05-21T22:00:00Z');
-
-    const scoreOld = trendScore(oldGiant, NOW);
-    const scoreYoung = trendScore(youngRiser, NOW);
-
-    expect(Number.isFinite(scoreOld)).toBe(true);
-    expect(Number.isFinite(scoreYoung)).toBe(true);
-    expect(scoreYoung).toBeGreaterThan(scoreOld);
+describe('sortMarketplaceItems', () => {
+  test('desc inverts the comparator rather than using a second one', () => {
+    const a = item({ id: 'a', stars: 10 });
+    const b = item({ id: 'b', stars: 99 });
+    const asc = [a, b].slice().sort(sortMarketplaceItems('stars', 'asc', ''));
+    const desc = [a, b].slice().sort(sortMarketplaceItems('stars', 'desc', ''));
+    expect(asc.map((i) => i.id)).toEqual(desc.map((i) => i.id).reverse());
   });
 
-  test('recency decay — same stars/age, more-recent pushedAt → higher score', () => {
-    const older = makePkg('pkg-older', 1000, '2025-01-01T00:00:00Z', '2025-12-01T00:00:00Z');
-    const newer = makePkg('pkg-newer', 1000, '2025-01-01T00:00:00Z', '2026-05-01T00:00:00Z');
-    expect(trendScore(newer, NOW)).toBeGreaterThan(trendScore(older, NOW));
+  test('name sorts lexicographically', () => {
+    const items = [item({ id: 'c', name: 'charlie' }), item({ id: 'a', name: 'alpha' })];
+    const sorted = items.sort(sortMarketplaceItems('name', 'asc', ''));
+    expect(sorted.map((i) => i.name)).toEqual(['alpha', 'charlie']);
   });
 
-  test('invalid/garbage createdAt → finite score, no throw', () => {
-    const bad = makePkg('bad-date', 500, 'not-a-date');
-    expect(() => {
-      trendScore(bad, NOW);
-    }).not.toThrow();
-    expect(Number.isFinite(trendScore(bad, NOW))).toBe(true);
+  test('a missing install count sorts as absent, and does not throw', () => {
+    // `installs` is optional because "nobody measured" is not "zero", so the
+    // comparator has to tolerate it on either side.
+    const known = item({ id: 'known', installs: 5 });
+    const unknown = item({ id: 'unknown' });
+    const sorted = [unknown, known].sort(sortMarketplaceItems('installs', 'desc', ''));
+    expect(sorted[0].id).toBe('known');
   });
 
-  test('zero stars → score is finite and non-negative', () => {
-    const zeroStars = makePkg('zero-stars', 0, '2026-05-01T00:00:00Z', '2026-05-21T00:00:00Z');
-    const score = trendScore(zeroStars, NOW);
-    expect(Number.isFinite(score)).toBe(true);
-    expect(score).toBeGreaterThanOrEqual(0);
-  });
-});
-
-describe('getHotItems', () => {
-  test('default limit is 5', () => {
-    const items = getHotItems();
-    expect(items.length).toBe(5);
+  test('relevance with no query falls back to popularity', () => {
+    // The reachable relevance path. `agora search` skips this comparator
+    // entirely for its default 'relevance' mode (see marketplace.ts) because
+    // each source has already ranked its own results, and
+    // `searchMarketplaceItems` supplies BM25 scores whenever there is a query.
+    // What is left is the no-query case, which is popularity order.
+    const quiet = item({ id: 'quiet', installs: 5 });
+    const popular = item({ id: 'popular', installs: 10_000 });
+    const sorted = [quiet, popular].sort(sortMarketplaceItems('relevance', 'desc', ''));
+    expect(sorted[0].id).toBe('popular');
   });
 
-  test('custom limit is respected', () => {
-    const items = getHotItems({ limit: 3 });
-    expect(items.length).toBe(3);
-  });
-
-  test('category filter is respected', () => {
-    const packages = getHotItems({ category: 'package', limit: 10 });
-    expect(packages.every((i) => i.kind === 'package')).toBe(true);
-    expect(packages.length).toBeGreaterThan(0);
-  });
-
-  test('items are ranked by trendScore descending', () => {
-    // Verify the ordering is consistent with trendScore applied to each item.
-    const items = getHotItems({ limit: 10 });
-    const now = new Date();
-    for (let i = 0; i < items.length - 1; i++) {
-      expect(trendScore(items[i], now)).toBeGreaterThanOrEqual(trendScore(items[i + 1], now));
-    }
-  });
-
-  test('getTrendingItems order is unchanged (installs desc, then stars)', () => {
-    const items = getTrendingItems({ limit: 10 });
-    for (let i = 0; i < items.length - 1; i++) {
-      expect(items[i].installs ?? 0).toBeGreaterThanOrEqual(items[i + 1].installs ?? 0);
-    }
+  test('explicit BM25 scores win over the name heuristic', () => {
+    const a = item({ id: 'a', name: 'filesystem' });
+    const b = item({ id: 'b', name: 'unrelated' });
+    const scores = new Map([['b', 9]]);
+    const sorted = [a, b].sort(sortMarketplaceItems('relevance', 'desc', 'filesystem', scores));
+    expect(sorted[0].id).toBe('b');
   });
 });
