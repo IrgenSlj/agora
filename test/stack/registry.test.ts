@@ -31,13 +31,18 @@ describe('getAdapter', () => {
     expect(a).toBeUndefined();
   });
 
-  test('ALL_ADAPTERS has 4 entries', () => {
-    expect(ALL_ADAPTERS.length).toBe(4);
-    const ids = ALL_ADAPTERS.map((a) => a.id);
-    expect(ids).toContain('opencode');
-    expect(ids).toContain('claude-code');
-    expect(ids).toContain('cursor');
-    expect(ids).toContain('windsurf');
+  test('every supported host is registered', () => {
+    // Asserted as a set rather than a count. The count version broke on every
+    // added host while proving nothing about which hosts are there, and a
+    // missing adapter is invisible to the type system — `AgentToolId` is a
+    // union, and nothing forces the registry to cover all of it.
+    expect(ALL_ADAPTERS.map((a) => a.id).sort()).toEqual([
+      'claude-code',
+      'cursor',
+      'opencode',
+      'vscode',
+      'windsurf'
+    ]);
   });
 });
 
@@ -48,7 +53,7 @@ describe('detectTools', () => {
     try {
       const results = detectTools({ cwd, home });
       expect(results.every((r) => !r.present)).toBe(true);
-      expect(results.length).toBe(4);
+      expect(results.length).toBe(ALL_ADAPTERS.length);
     } finally {
       rmSync(cwd, { recursive: true, force: true });
       rmSync(home, { recursive: true, force: true });

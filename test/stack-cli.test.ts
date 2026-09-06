@@ -404,7 +404,7 @@ describe('agora doctor', () => {
     const home = makeTmp('agora-home-');
     try {
       const { io, err } = createIo(cwd, home);
-      const code = await runCli(['doctor', '--tool', 'vscode'], io);
+      const code = await runCli(['doctor', '--tool', 'notepad'], io);
       expect(code).not.toBe(0);
       expect(err()).toContain('Unknown tool');
     } finally {

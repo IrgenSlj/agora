@@ -2,12 +2,18 @@ import { type AcquireResult, acquire, renderAcquireResult } from '../../acquire.
 import { createProvenanceResolver } from '../../evidence/resolve-provenance.js';
 import type { SourceId } from '../../federation/types.js';
 import { manifestPath, readManifest } from '../../stack/manifest.js';
+import { ALL_ADAPTERS } from '../../stack/registry.js';
 import type { AgentToolId } from '../../stack/types.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
-const AGENT_TOOLS = new Set<AgentToolId>(['opencode', 'claude-code', 'cursor', 'windsurf']);
+// Derived, not listed. This was a hand-written literal that silently fell a
+// host behind the adapter registry: adding VS Code left `agora acquire --tool
+// vscode` rejecting a host every other command already supported, and the
+// compiler could not see it because a Set<AgentToolId> accepts a subset of the
+// union quite happily.
+const AGENT_TOOLS = new Set<AgentToolId>(ALL_ADAPTERS.map((a) => a.id));
 const SOURCE_IDS = new Set<SourceId>([
   'official',
   'glama',

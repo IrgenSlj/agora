@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import { claudeCodeAdapter } from './adapters/claude-code.js';
 import { cursorAdapter } from './adapters/cursor.js';
 import { opencodeAdapter } from './adapters/opencode.js';
+import { vscodeAdapter } from './adapters/vscode.js';
 import { windsurfAdapter } from './adapters/windsurf.js';
 import type {
   AgentToolId,
@@ -15,7 +16,8 @@ export const ALL_ADAPTERS: ToolAdapter[] = [
   opencodeAdapter,
   claudeCodeAdapter,
   cursorAdapter,
-  windsurfAdapter
+  windsurfAdapter,
+  vscodeAdapter
 ];
 
 export function getAdapter(id: AgentToolId): ToolAdapter | undefined {

@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { runCli } from '../../src/cli/app';
+import { ALL_ADAPTERS } from '../../src/stack/registry';
 
 function makeTmp(prefix: string): string {
   return mkdtempSync(join(tmpdir(), prefix));
@@ -68,7 +69,7 @@ describe('agora integrate', () => {
 
       const payload = JSON.parse(out());
       const tools = payload.targets.map((t: { tool: string }) => t.tool).sort();
-      expect(tools).toEqual(['claude-code', 'cursor', 'opencode', 'windsurf']);
+      expect(tools).toEqual(ALL_ADAPTERS.map((a) => a.id).sort());
       expect(payload.targets.every((t: { status: string }) => t.status === 'written')).toBe(true);
 
       // opencode user-scope config
@@ -86,6 +87,17 @@ describe('agora integrate', () => {
         readFileSync(join(home, '.codeium', 'windsurf', 'mcp_config.json'), 'utf8')
       );
       expect(windsurfConfig.mcpServers.agora.command).toBe('npx');
+
+      // VS Code, which is the one that does not match the others. Its map is
+      // `servers`, not `mcpServers`, and `type` is required rather than
+      // inferred from the presence of `command` — write it in any other host's
+      // shape and VS Code loads the file and silently sees no servers.
+      const vscodeConfig = JSON.parse(
+        readFileSync(join(home, '.copilot', 'mcp-config.json'), 'utf8')
+      );
+      expect(vscodeConfig.mcpServers).toBeUndefined();
+      expect(vscodeConfig.servers.agora.command).toBe('npx');
+      expect(vscodeConfig.servers.agora.type).toBe('stdio');
     } finally {
       rmSync(cwd, { recursive: true, force: true });
       rmSync(home, { recursive: true, force: true });

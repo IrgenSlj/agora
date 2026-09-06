@@ -1,4 +1,4 @@
-export type AgentToolId = 'opencode' | 'claude-code' | 'cursor' | 'windsurf';
+export type AgentToolId = 'opencode' | 'claude-code' | 'cursor' | 'windsurf' | 'vscode';
 
 /**
  * Where a *read* server came from — a superset of the hosts Agora can write to.

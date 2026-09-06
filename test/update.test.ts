@@ -416,9 +416,9 @@ describe('agora update command', () => {
 
   test('unknown --tool returns exit 2 with error', async () => {
     const { io, stderr } = createIo();
-    const code = await runCli(['update', '--tool', 'vscode'], io);
+    const code = await runCli(['update', '--tool', 'notepad'], io);
     expect(code).toBe(2);
-    expect(stderr.join('')).toContain('Unknown tool: vscode');
+    expect(stderr.join('')).toContain('Unknown tool: notepad');
   });
 
   test('server name filter with no match returns exit 2', async () => {
