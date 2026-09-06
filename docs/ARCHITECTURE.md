@@ -139,15 +139,12 @@ or update complete lock entries; the lock is still a partial implementation of b
 
 ## Supporting surfaces
 
-- **CLI** (`src/cli/`) — command dispatch, the interactive shell, the prompter, and the
-  full-screen TUI pages. Running `agora` with no arguments in a TTY opens the shell, where a
-  terminal command, an `agora` command, or plain text (routed to chat) all work without a mode
-  switch. Inference is **spawned, never hosted** (`src/inference/`): providers wrap a coding CLI
-  the user already has — `opencode` by default so the zero-cost path works with no key on first
-  run, or Claude Code via `AGORA_INFERENCE=claude`. Spawning `claude -p` uses the developer's
-  existing login, subscription included, so **no credential ever reaches Agora**. Each provider
-  translates its own stream into the renderer's event vocabulary, which is why
-  `src/cli/chat-renderer.ts` needs to know nothing about who produced a line.
+- **CLI** (`src/cli/`) — command dispatch and the command handlers. Running `agora` with no
+  arguments prints the welcome in every context; it used to open an interactive bash+chat REPL
+  when stdout was a TTY, which made the same invocation mean two different things depending on
+  whether anyone was watching. The shell, the prompter, the TUI pages and the local inference
+  providers were retired under brief DA-14 — Agora hosts no inference and never did, and a
+  second place to run commands you can already run was not worth the surface.
 - **`agora mcp`** (`src/cli/mcp-server.ts`) — exposes the stack manager and catalog as MCP tools,
   so any MCP-capable harness can call Agora directly. Acquire without confirmation is a full gate
   preview; confirmation calls `src/serve/request.ts`, which can write only an evidence-bearing
@@ -172,8 +169,11 @@ or update complete lock entries; the lock is still a partial implementation of b
 - **Agent-operable.** `--json` on every command and stable exit codes (brief §9): `0` ok · `1`
   policy forbid / drift / revocation hit · `2` usage · `3` network · `4` sandbox unavailable.
 - **The plugin stays thin.** No gate-bypassing write inside an LLM tool call.
-- **Working surfaces are preserved.** Shell, TUI, `today`, inference, federation sources, adapters,
-  plugins, and MCP integrations converge on shared services rather than being deleted for size.
+- **The trust spine is preserved.** The four planes, the host adapters, the plugins, the MCP
+  integration and `today` converge on shared services rather than being deleted for size. Brief
+  DA-14 narrowed this rule to that spine: it was written to stop panic-deletion during hardening,
+  and it had started protecting surfaces outside it that nobody had asked for. Anything outside
+  the spine may be retired through `src/cli/retired.ts` with a named reason.
 - **Graceful terminal degradation** under `NO_COLOR`, `TERM=dumb`, non-TTY pipes, narrow widths.
 
 ## The algorithms (fast, offline, original)
@@ -206,10 +206,9 @@ src/acquire.ts        capability-acquisition gateway (resolve → gate → polic
 src/scan.ts           the heuristic gate
 src/search/           offline BM25 index
 src/news/             feed sources + ranking (read-only, frozen)
-src/cli/              command handlers, dispatch, shell, prompter, TUI pages
+src/cli/              command handlers and dispatch
 src/plugin/           OpenCode plugin (tools, hooks)
 src/hubs/             GitHub + HuggingFace connectors
-src/inference/        inference providers (opencode, claude) — spawned, never hosted
 src/fetch.ts          the injectable `FetchLike` every network call takes
 feed/                 revocation feed: entries.json (OSV-generated) + revocations.json (bundled)
 ```

@@ -220,12 +220,6 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
     'none',
     'Successful federated queries may refresh per-source cache entries.'
   ),
-  shell: local(
-    'delegated',
-    ['external-process'],
-    'delegated',
-    'Routes Agora commands or arbitrary user shell commands.'
-  ),
   show: readOnly('Compatibility alias for config show.'),
   sync: controlled(
     'conditional',
@@ -301,12 +295,6 @@ export const PLUGIN_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
   agora_acquire: readOnly('Plugin acquire is preview-only.'),
   agora_browse: readOnly('Reads bundled catalog detail.'),
   agora_browse_category: readOnly('Reads bundled catalog categories.'),
-  agora_chat: local(
-    'delegated',
-    ['external-process'],
-    'agent-callable',
-    'Invokes the configured local inference provider or host client.'
-  ),
   agora_config: readOnly(
     'Reports config health and the repairs needed; the kernel refuses every agent-authorized host-config write, so fix:true only describes them.'
   ),

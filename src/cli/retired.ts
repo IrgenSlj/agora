@@ -1,4 +1,4 @@
-// Commands that existed in v0.6.1 and no longer do.
+// Commands that existed in an earlier release and no longer do.
 //
 // Removing a command is a promise broken. `Unknown command: news` tells a user
 // nothing: not that it was deliberate, not which version did it, not what to
@@ -49,12 +49,17 @@ export const RETIRED_COMMANDS: Record<string, RetiredCommand> = {
     why: 'The news reader folded into the daily digest.'
   },
   chat: {
-    replacement: 'agora',
-    why: 'Chat moved into the shell — run `agora` with no arguments and type.'
+    why: 'The interactive shell it moved into was retired; Agora ships no chat.'
   },
   use: {
     replacement: 'agora acquire',
     why: 'Installing now runs through the gate rather than writing config directly.'
+  },
+  // ── the interactive surfaces: retired per brief DA-14 ───────────────────
+  shell: {
+    why:
+      'The bash+chat REPL was a second place to run commands you can already ' +
+      'run, wrapped around an inference provider Agora had no business owning.'
   },
   workflows: {
     replacement: 'agora search --kind agent-skill',

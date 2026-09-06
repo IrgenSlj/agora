@@ -1,4 +1,3 @@
-import process from 'node:process';
 import { detectAgoraDataDir } from '../state.js';
 import { ExitCode } from './exit-codes.js';
 import type { CliIo, OutputStream, ParsedArgs } from './flags.js';
@@ -16,20 +15,6 @@ export function writeJson(stream: OutputStream, value: unknown): void {
 export function usageError(io: CliIo, message: string): number {
   writeLine(io.stderr, message);
   return ExitCode.USAGE;
-}
-
-/**
- * Returns true only when both stdout and stdin are real interactive TTYs AND the
- * environment supports colour (i.e. not NO_COLOR or TERM=dumb). The gate keeps
- * the interactive menu away from pipes, CI, and the test harness, all of which
- * use non-TTY mock streams.
- */
-export function isInteractive(io: CliIo, env: Record<string, string | undefined>): boolean {
-  if (env.NO_COLOR != null) return false;
-  if (env.TERM === 'dumb') return false;
-  const stdoutTTY = Boolean((io.stdout as { isTTY?: boolean }).isTTY);
-  const stdinTTY = Boolean((process.stdin as { isTTY?: boolean }).isTTY);
-  return stdoutTTY && stdinTTY;
 }
 
 // ── Flag helpers ─────────────────────────────────────────────────────────────

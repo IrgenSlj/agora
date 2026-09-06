@@ -37,7 +37,7 @@ import { COMMANDS, renderManual } from './commands-meta.js';
 import { ExitCode } from './exit-codes.js';
 import { type CliIo, parseArgs } from './flags.js';
 import { usage, welcome } from './format.js';
-import { isInteractive, writeLine } from './helpers.js';
+import { writeLine } from './helpers.js';
 import { RETIRED_COMMANDS, retiredMessage } from './retired.js';
 import { cliTheme } from './theme.js';
 import { runTui } from './tui.js';
@@ -128,11 +128,11 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     return 0;
   }
 
+  // Bare `agora` used to drop into an interactive shell when stdout was a TTY.
+  // It now prints the same welcome in both cases. A command that behaves
+  // differently depending on whether it is being watched is a command nobody
+  // can script against, and the shell it launched is gone.
   if (!parsed.command) {
-    if (isInteractive(io, env)) {
-      const { runShell } = await import('./shell.js');
-      return runShell(io, style);
-    }
     writeLine(io.stdout, welcome(useColor, supportsTrueColor(env), cliTheme(style, io), VERSION));
     return 0;
   }
@@ -221,10 +221,6 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
 
     if (parsed.command === 'tui') return await runTui(io, { initial: 'home' });
     if (parsed.command === 'completions') return await commandCompletions(parsed, io, style);
-    if (parsed.command === 'shell') {
-      const { runShell } = await import('./shell.js');
-      return runShell(io, style);
-    }
 
     // A command we deliberately removed explains itself. Falling through to
     // "Unknown command" would read as a broken install rather than a decision.

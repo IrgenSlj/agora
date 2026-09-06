@@ -129,66 +129,9 @@ describe('Edge Cases', () => {
 });
 
 describe('Plugin Tools', () => {
-  test('Agora plugin exports all 10 tools', async () => {
+  test('Agora plugin exports exactly the tools the gate inventory classifies', async () => {
     const plugin = await import('../src/plugin/index');
     const tools = (await plugin.Agora({} as any)).tool!;
     expect(Object.keys(tools).sort()).toEqual(Object.keys(PLUGIN_MUTATION_INVENTORY).sort());
-  });
-
-  test('agora_chat accepts message and optional model args', async () => {
-    const plugin = await import('../src/plugin/index');
-    const tools = (await plugin.Agora({} as any)).tool!;
-    expect(tools.agora_chat).toBeDefined();
-    // execute is a function — we verify the signature works
-    expect(typeof tools.agora_chat.execute).toBe('function');
-    // verify it has description (schema is validated by the plugin SDK)
-    expect(typeof tools.agora_chat.description).toBe('string');
-    expect(tools.agora_chat.description.length).toBeGreaterThan(0);
-  });
-
-  test('agora_chat prefers the OpenCode client when provided', async () => {
-    const plugin = await import('../src/plugin/index');
-    const promptCalls: Array<{ body: { model?: unknown } }> = [];
-    const tools = (
-      await plugin.Agora({
-        client: {
-          session: {
-            prompt: async (input: { body: { model?: unknown } }) => {
-              promptCalls.push(input);
-              return { data: { parts: [{ type: 'text', text: 'sdk response' }] } };
-            }
-          }
-        }
-      } as any)
-    ).tool!;
-
-    const result = await tools.agora_chat.execute(
-      { message: 'hello', model: 'anthropic/claude-test' },
-      { sessionID: 'session-1', directory: '/tmp' } as any
-    );
-    expect(result).toBe('sdk response');
-    expect(promptCalls).toHaveLength(1);
-    expect(promptCalls[0].body.model).toEqual({
-      providerID: 'anthropic',
-      modelID: 'claude-test'
-    });
-  });
-
-  test('agora_chat explains itself when no inference provider is installed', async () => {
-    const plugin = await import('../src/plugin/index');
-    const tools = (await plugin.Agora({} as any)).tool!;
-
-    const origPath = process.env.PATH;
-    process.env.PATH = '/dev/null';
-    try {
-      const result = await tools.agora_chat.execute({ message: 'test' }, {} as any);
-      // Agora hosts no inference, so "nothing installed" must name every
-      // option rather than assuming the user wanted one particular CLI.
-      expect(result).toContain('No inference provider found');
-      expect(result).toContain('opencode.ai');
-      expect(result).toContain('claude-code');
-    } finally {
-      process.env.PATH = origPath;
-    }
   });
 });

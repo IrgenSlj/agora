@@ -1,4 +1,4 @@
-import type { PluginInput, ToolDefinition } from '@opencode-ai/plugin';
+import type { ToolDefinition } from '@opencode-ai/plugin';
 import { tool } from '@opencode-ai/plugin';
 import { type AcquireInput, acquire, renderAcquireResult } from '../acquire.js';
 import {
@@ -106,7 +106,7 @@ async function pluginAcquirePreview(input: Pick<AcquireInput, 'id' | 'query' | '
   });
 }
 
-export function createAgoraTools(input?: PluginInput): Record<string, ToolDefinition> {
+export function createAgoraTools(): Record<string, ToolDefinition> {
   return {
     agora_search: tool({
       description: 'Search the Agora catalog for MCP servers, packages, and workflows',
@@ -329,6 +329,6 @@ Or run \`agora install ${item.id} --write\` in your terminal to do both automati
       }
     }),
 
-    ...createAgoraRuntimeTools(input)
+    ...createAgoraRuntimeTools()
   };
 }

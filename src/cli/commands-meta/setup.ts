@@ -119,23 +119,6 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
-    name: 'shell',
-    group: 'Setup',
-    summary: 'Start the interactive Agora shell (bash + chat hybrid)',
-    usage: 'agora shell [--verbose|--quiet]',
-    details:
-      'Opens an interactive REPL that dispatches between bash and AI chat. ' +
-      'Commands found on PATH run as bash; questions and everything else go to AI. ' +
-      'Special prefixes: !<cmd> force bash, ?<msg> force chat. ' +
-      'Type /help to see all meta commands. History is persisted across sessions. ' +
-      'Shell meta-commands: /env to view or set tracked environment variables.',
-    flags: [
-      { flag: '--verbose', description: 'Detailed AI responses' },
-      { flag: '--quiet', description: 'Minimal AI responses' }
-    ],
-    examples: ['agora shell']
-  },
-  {
     name: 'welcome',
     group: 'Setup',
     summary: 'Show a guided onboarding tour of the agora CLI',

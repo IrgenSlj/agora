@@ -5,7 +5,7 @@ import { createAgoraTools } from './tools.js';
 export const Agora: Plugin = async (input, options) => {
   return {
     ...createAgoraHooks(input, options),
-    tool: createAgoraTools(input)
+    tool: createAgoraTools()
   };
 };
 
