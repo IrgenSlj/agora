@@ -1,6 +1,6 @@
 # What to build next
 
-Last prioritized: 2026-09-05.
+Last prioritized: 2026-09-06.
 
 This is the ordered implementation backlog. Current behavior is documented in
 [`STATUS.md`](./STATUS.md); strategic phases are in [`../ROADMAP.md`](../ROADMAP.md); session
@@ -11,14 +11,56 @@ news/today, federation sources, host adapters, plugins, or MCP integration. Surf
 spine may be retired under brief DA-14; the shell, the prompter, local inference and the TUI pages
 already were.
 
-## Now — the CI wedge
+## Now — the feed is the product (DA-15)
 
-Agora's job, stated where it can be acted on: **fail the build when a tool you trusted changes.**
-CI is the only place that question gets asked automatically, forever, by someone who has already
-decided they care. Every primitive this needs already exists — `audit --json` exits 1 on a blocking
-advisory, `lock verify` exits 1 on drift, `doctor --strict` exits 1 on a broken server and is
-already documented "for CI/scripting". What is missing is one surface that composes them and a
-distribution channel that has discovery, which npm does not.
+A re-survey on 2026-09-06 found the post-install wedge occupied. Vercel shipped
+`fingerprintTools`/`detectToolDrift` into the core `ai` package on 2026-07-09; `mcp-pin` arrived at
+RFC 8785 + SHA-256 fingerprinting independently; PolicyLayer, MCPProxy, mcp-warden, MintMCP and
+several gateways cover adjacent ground. Drift detection is now a commodity primitive and Agora will
+not win it on distribution.
+
+What the same survey did not find is **any advisory or known-bad feed for agent tooling**. There is
+no CVE-equivalent, no revocation source, nothing a detector can ask "is this artifact known-bad?" —
+and every detector needs that answer. That is the gap, it is data rather than code, and it turns the
+competition into consumers.
+
+So: **the feed is the product; the CLI is its reference client.** The four planes stay as the
+architecture. Effort moves.
+
+- [ ] **FEED-001 — ingest the whole namespace.** `sync-feed` currently queries OSV for the ~30
+  servers in the bundled sample catalog and produces 10 entries, all straight GHSA re-exports. Widen
+  the purl set to every artifact federation can enumerate, so coverage stops being an accident of
+  what the sample catalog happens to list.
+- [ ] **FEED-002 — model what OSV cannot.** OSV describes vulnerable *code*. The MCP-native classes
+  are different and are the whole reason to exist: rug pulls, tool-description poisoning, repository
+  transfer to a new owner, typosquats, abandonment. Each needs an entry kind, a severity rule, and a
+  provenance field saying who asserted it and on what evidence.
+- [ ] **FEED-003 — publish the format before the client.** A stable URL, a versioned JSON Schema,
+  and a document another project can implement against without trusting Agora. Consumers adopting
+  the schema *is* the distribution strategy; every integration reaches more people than a year of
+  CLI installs would.
+- [ ] **HOOK-001 — `PreToolUse` for Claude Code.** Detection without enforcement is advice. A
+  host-native hook blocks on a feed hit or unapproved drift at the moment of the call, running on
+  the user's machine with no service to operate — a gateway's placement without a gateway's cost.
+- [ ] **HOST-001 — close the VS Code blind spot.** Adapters read `.mcp.json`, `.claude.json`,
+  Cursor's `mcp.json`, `opencode.json` and Windsurf's `mcp_config.json`, but not
+  `.vscode/mcp.json` or `.roo/mcp.json`. The largest editor install base in the market is invisible
+  to `agora ci` today. Cheap, and it multiplies what every other surface can see.
+- [ ] **FED-RETIRE — Federate stops being discovery.** Keep it as identity resolution; the feed
+  needs purl dedupe. Drop the ambition to be a search and browse surface against a registry with
+  ~9,652 records and aggregators with 18,000+. Not a deletion — a narrowing of what it is for.
+
+**This ordering is falsifiable.** Re-check it, do not defend it. It is wrong if OpenSSF or Anthropic
+ship an MCP advisory database, if the official registry adds revocation to its API, if advisory
+volume proves too low to curate, or if no second project adopts the schema within a quarter of
+publishing it.
+
+## Done — the CI wedge
+
+Shipped, and still correct: repo-level MCP config turns out to be real and growing, and
+`.mcp.json` / `.cursor/mcp.json` / `.vscode/mcp.json` / `.roo/mcp.json` are all documented as
+commit-to-repo team-shared files. The wedge needs the feed behind it to be worth running, which is
+what Now is for.
 
 - [x] **REL-000 — ship 0.8.0.** Publish the revocation feed, `audit`, and the gate. Correct the
   Agent Skills claim. Lead all copy with the post-install promise (DA-13).
@@ -31,6 +73,8 @@ distribution channel that has discovery, which npm does not.
   no npm knowledge. Inputs for what to fail on; a job-summary table; annotations on findings.
 - [x] **CI-004 — proof on a real repo.** Run it against this repository's own stack in CI, publicly.
   Agora holding Agora to its own standard is the demo.
+- [x] **CI-005 — the `v0` tag.** `publish.yml` creates and moves it on release. It had never
+  existed, so the README's one call-to-action errored for every reader.
 
 ## Later — the skills gap
 

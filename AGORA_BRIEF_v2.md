@@ -662,4 +662,42 @@ delegate where possible.**
   change: releasing to npm precedes further hardening, because five weeks of finished, unshipped
   work is a worse defect than any item left in `docs/NEXT.md`.
 
+- **DA-15 (2026-09-06) — the wedge is occupied; the feed is not. Lead with the advisory feed.**
+  DA-13 reoriented all user-facing copy around catching the artifact that changed after it was
+  trusted, on the stated reasoning that the post-install gap "remains empty". That was already
+  false when it was written and nobody checked. Vercel shipped `fingerprintTools` and
+  `detectToolDrift` into the core `ai` package on 2026-07-09 — description, resolved input schema
+  and title digested per tool, then diffed — which is this project's drift detection as a framework
+  primitive with distribution Agora cannot match. Independently: `mcp-pin` (RFC 8785 canonicalization
+  + SHA-256, the identical technique), PolicyLayer (manifest hash, block until re-approval),
+  MCPProxy (schema quarantine), mcp-warden, MintMCP, MCPGuard, Docker MCP Gateway.
+
+  What a re-survey does show is a hole: **there is no advisory or known-bad feed for agent tooling.**
+  No CVE-equivalent, no revocation source, nothing the detectors can ask "is this specific artifact
+  known-bad?" — and every one of them needs that answer. Meanwhile 30+ CVEs landed against MCP
+  servers in a single 60-day window this year, ~43% command injection, and `postmark-mcp` shipped a
+  version that BCC'd every processed email.
+
+  Amended: **the feed is the product; everything else is a client of it.** `osv/` is the ingest,
+  `revocation/` is the product, `gate/` + `policy/` is the client that acts on it, `ci/` and the
+  Action and the plugin are consumers, and `today` reports it — which is what finally gives the
+  digest something to say. The four planes stay as the architecture. What changes is where effort
+  goes: today revocation + gate are 1,613 of 29,204 lines in `src`, so 5.5% of the work carries all
+  of the defensibility.
+
+  Two consequences. **Federate is retired as a discovery ambition** and kept only as identity
+  resolution — the feed needs purl dedupe; it does not need to compete with a registry holding
+  ~9,652 records and aggregators holding 18,000+. And **enforcement arrives through host-native
+  hooks, not a gateway**: `PreToolUse` in Claude Code and the OpenCode plugin are runtime
+  enforcement points that run on the user's machine and cost nothing to operate, which is a
+  gateway's placement without a gateway's operating burden.
+
+  This decision is falsifiable and should be re-checked, not defended. It is wrong if OpenSSF or
+  Anthropic ship an MCP advisory database, if the official registry adds revocation to its API, if
+  advisory volume proves too low to curate, or if no second project adopts the schema within a
+  quarter of publishing it. DA-13's positioning copy stands — the tripwire is still what the
+  product does — but it is no longer the claim of an empty field, and the reason to believe it is
+  now the feed behind it. D2, D11, host-neutrality and the explicit-unknown discipline are
+  unchanged.
+
 — END OF BRIEF —
