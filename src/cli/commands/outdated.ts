@@ -1,8 +1,8 @@
 import { extractPackageFromConfig } from '../../config.js';
 import { detectOpenCodeConfigPath, loadOpenCodeConfig } from '../../config-files.js';
 import { checkOutdated } from '../../outdated.js';
+import { status } from '../components.js';
 import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
-import { status } from '../pages/components.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 

@@ -242,12 +242,6 @@ export const CLI_MUTATION_INVENTORY: Record<string, MutationDeclaration> = {
     'risk-acceptance',
     'Running the code is gated like a write: an unavailable or skipped scan is an unknown that only --accept-risk clears, and the acceptance is recorded.'
   ),
-  tui: local(
-    'delegated',
-    ['host-config', 'local-state', 'external-process'],
-    'delegated',
-    'Full-screen router; actions must inherit the declaration of the service they call.'
-  ),
   unquarantine: controlled(
     'always',
     ['host-config', 'local-state'],

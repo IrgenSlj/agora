@@ -2,7 +2,7 @@ import { getInstallKind, type MarketplaceItem, renderPermissionLines } from '../
 import { formatNumber } from '../format.js';
 import { renderBanner, renderBox } from '../ui.js';
 import { COMMANDS } from './commands-meta.js';
-import { kvRow, tagList } from './pages/components.js';
+import { kvRow, tagList } from './components.js';
 import type { Theme } from './theme.js';
 
 export function truncate(value: string, max: number): string {

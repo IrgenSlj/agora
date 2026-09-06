@@ -61,6 +61,12 @@ export const RETIRED_COMMANDS: Record<string, RetiredCommand> = {
       'The bash+chat REPL was a second place to run commands you can already ' +
       'run, wrapped around an inference provider Agora had no business owning.'
   },
+  tui: {
+    why:
+      'The full-screen browser was a second UI over the same commands, and the ' +
+      'one thing it did that they do not — browsing a catalog — is not what ' +
+      'Agora is for.'
+  },
   workflows: {
     replacement: 'agora search --kind agent-skill',
     why: 'The workflow artifact kind was retired; v2 has mcp-server and agent-skill.'

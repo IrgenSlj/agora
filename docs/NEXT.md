@@ -6,9 +6,10 @@ This is the ordered implementation backlog. Current behavior is documented in
 [`STATUS.md`](./STATUS.md); strategic phases are in [`../ROADMAP.md`](../ROADMAP.md); session
 procedure and handoff are in [`DEVELOPMENT.md`](./DEVELOPMENT.md).
 
-The overall feature set is preserved. Consolidation means shared models and services, not deletion
-of the shell, TUI, news/today, inference, federation sources, host adapters, plugins, or MCP
-integration. Only explicitly legacy surfaces may be retired.
+The trust spine is preserved. Consolidation means shared models and services, not deletion of
+news/today, federation sources, host adapters, plugins, or MCP integration. Surfaces outside the
+spine may be retired under brief DA-14; the shell, the prompter, local inference and the TUI pages
+already were.
 
 ## Now — the CI wedge
 
@@ -172,7 +173,7 @@ outstanding. Revisit when a user asks, or when the CI surface has an audience to
 - [ ] **REL-004 — supply-chain outputs.** npm provenance, SBOM, dependency review, and Agora's own
   committed evidence example.
 - [ ] **UI-001 — trust-plane consistency.** Feed the same evidence/decision service into CLI, shell,
-  TUI, `today`, plugins, and MCP so features remain while semantics stop drifting.
+  `today`, plugins, and MCP so features remain while semantics stop drifting.
 - [ ] **UI-002 — new improvements.** Add `agora why`, `agora diff`, richer policy-aware discovery,
   and stronger observation backends as foundations become ready.
 

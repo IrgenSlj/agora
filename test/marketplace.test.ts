@@ -29,7 +29,6 @@ import {
   trendScore
 } from '../src/catalog/bundled';
 import { describePermissionGlob } from '../src/catalog/permissions';
-import { sourceBadge } from '../src/cli/pages/search';
 import { samplePackages } from '../src/data';
 
 // ── searchMarketplaceItems ──────────────────────────────────────────────────
@@ -642,36 +641,6 @@ describe('createInstallPlan — permissions', () => {
   });
 });
 
-// ── sourceBadge helper ───────────────────────────────────────────────────────
-
-describe('sourceBadge', () => {
-  test('github source returns [gh] badge padded to 5 chars', () => {
-    const item = { kind: 'package', source: 'github' } as any;
-    expect(sourceBadge(item)).toBe('[gh] ');
-  });
-
-  test('hf source returns [hf] badge padded to 5 chars', () => {
-    const item = { kind: 'package', source: 'hf' } as any;
-    expect(sourceBadge(item)).toBe('[hf] ');
-  });
-
-  test('no source (curated) returns [c] badge padded to 5 chars', () => {
-    const item = { kind: 'package' } as any;
-    expect(sourceBadge(item)).toBe('[c]  ');
-  });
-
-  test('undefined source returns curated badge', () => {
-    const item = { kind: 'package', source: undefined } as any;
-    expect(sourceBadge(item)).toBe('[c]  ');
-  });
-
-  test('all badges are exactly 5 chars', () => {
-    expect(sourceBadge({ kind: 'package', source: 'github' } as any)).toHaveLength(5);
-    expect(sourceBadge({ kind: 'package', source: 'hf' } as any)).toHaveLength(5);
-    expect(sourceBadge({ kind: 'package' } as any)).toHaveLength(5);
-  });
-});
-
 // ── shared repo star labels/ranking ──────────────────────────────────────────
 
 function makeSharedRepoPkg(
@@ -744,13 +713,6 @@ describe('marketplace source filter logic', () => {
     const items = getMarketplaceItems();
     const curated = items.filter((i) => !(i as any).source);
     expect(curated.length).toBeGreaterThan(0);
-  });
-
-  test('sourceBadge distinguishes curated from hub items', () => {
-    const curatedItem = getMarketplaceItems()[0]!;
-    // All curated items have no source field
-    expect((curatedItem as any).source).toBeUndefined();
-    expect(sourceBadge(curatedItem)).toBe('[c]  ');
   });
 
   test('filter "curated" matches items with no source field', () => {

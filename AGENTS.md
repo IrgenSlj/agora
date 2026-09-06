@@ -39,10 +39,10 @@ is transitional, not enforced. See [`docs/STATUS.md`](./docs/STATUS.md).
 
 - **Local-first.** Every core feature works offline against an on-disk cache. Agora has no hosted
   backend — don't add one, and don't make a feature depend on one being reachable.
-- **Preserve the product surface.** Improve and consolidate the shell, TUI, `today`, inference,
-  federation sources, host adapters, plugins, MCP integration, and trust planes; do not delete them
-  merely to shrink the codebase. Only already-obsolete legacy surfaces may be retired, using the
-  explicit retired-command contract below.
+- **Preserve the trust spine.** Improve and consolidate `today`, federation sources, host adapters,
+  plugins, MCP integration, and the four trust planes; do not delete them merely to shrink the
+  codebase. Surfaces outside that spine may be retired (brief DA-14) using the explicit
+  retired-command contract below — a removal always names itself and says why.
 - **Honest output.** No fabricated data, no invented counts. If a source is unreachable, say so.
   "Passed the gate" means *no known red flags*, not "safe" — never blur that line. This is
   enforced, not aspirational: the bundled `workflow` catalog items were deleted precisely because

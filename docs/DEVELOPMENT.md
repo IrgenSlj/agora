@@ -19,9 +19,14 @@ Historical text remains useful context, but it cannot promote a partial capabili
 
 ## Feature-preservation rule
 
-Preserve Agora's overall concept and working functionality. Shell, TUI, `today`, inference,
-federation sources, host adapters, plugins, MCP integration, policy, observation, and stack
-management may be improved or consolidated; they are not deleted merely to shrink the codebase.
+Preserve the trust spine. The four planes, `today`, federation sources, host adapters, plugins,
+MCP integration, policy, observation, and stack management may be improved or consolidated; they
+are not deleted merely to shrink the codebase.
+
+Brief DA-14 narrowed this rule to that spine. It was written to stop panic-deletion during
+hardening and it did that job, but it had started protecting surfaces outside the spine that
+nobody had asked for. The shell, the prompter, local inference and the TUI pages were retired
+under it and are gone.
 
 Removal is allowed only when a path is already obsolete, is explicitly declared legacy, and is
 registered in `src/cli/retired.ts` with a migration message. Consolidation must retain the
@@ -137,8 +142,11 @@ gate were finished on `main` on 2026-08-02 and reached no one for five weeks, wh
   post-install answer is still unclaimed. "Trust plane" stays as the architecture's name, not the
   pitch. Taglines updated across CLI, shell, plugin runtime, and all three manifests.
 - **DA-14** — DA-11's preservation rule is narrowed to the trust spine plus adapters, plugins, and
-  MCP integration. Shell, TUI, inference, `hubs/`, `home/` are scheduled for retirement via
-  `retired.ts`. Nothing is removed in this release.
+  MCP integration. The shell, the prompter, the transcript store, local inference, the TUI and its
+  pages, and `home/` are retired via `retired.ts`; 7,100 lines removed. `hubs/` stays for now — it
+  is named in DA-14 but three federation adapters import it, so retiring it is a refactor rather
+  than a deletion and is not one to do in the same pass. The news *pipeline* is retained per DA-14;
+  `agora today` is untouched.
 - **Honesty fix** — README claimed Agora verifies where MCP servers *and Agent Skills* come from.
   `scan.ts`, `acquire.ts`, `gate/*`, and `evidence/*` contain no skill handling. The status table
   now carries an explicit *not built* row and the README states the correction rather than quietly

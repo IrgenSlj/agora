@@ -8,9 +8,9 @@ import { manifestPath, readManifest } from '../../stack/manifest.js';
 import { ALL_ADAPTERS, getAdapter, readAllServers } from '../../stack/registry.js';
 import type { AgentToolId, DesiredServer, StackEnv } from '../../stack/types.js';
 import { buildUpdatePlan, bumpCommand, collectPackages } from '../../update.js';
+import { status } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
-import { status } from '../pages/components.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 

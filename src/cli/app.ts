@@ -40,7 +40,6 @@ import { usage, welcome } from './format.js';
 import { writeLine } from './helpers.js';
 import { RETIRED_COMMANDS, retiredMessage } from './retired.js';
 import { cliTheme } from './theme.js';
-import { runTui } from './tui.js';
 
 const pkg = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as {
   version: string;
@@ -219,7 +218,6 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       return 0;
     }
 
-    if (parsed.command === 'tui') return await runTui(io, { initial: 'home' });
     if (parsed.command === 'completions') return await commandCompletions(parsed, io, style);
 
     // A command we deliberately removed explains itself. Falling through to

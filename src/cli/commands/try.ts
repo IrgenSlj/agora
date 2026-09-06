@@ -8,9 +8,9 @@ import { type ScanResult, scanItem } from '../../scan.js';
 import { capabilityKey, upsertCapabilities } from '../../stack/capability-cache.js';
 import { manifestPath, readManifest } from '../../stack/manifest.js';
 import { type McpProbeResult, probeMcpServer } from '../../stack/mcp-probe.js';
+import { status } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, numberFlag, usageError, writeJson, writeLine } from '../helpers.js';
-import { status } from '../pages/components.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 

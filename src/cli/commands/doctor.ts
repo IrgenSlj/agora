@@ -4,9 +4,9 @@ import { isBlocking } from '../../revocation/match.js';
 import { checkStack } from '../../stack/doctor.js';
 import { ALL_ADAPTERS, detectTools, readAllServers } from '../../stack/registry.js';
 import type { AgentToolId } from '../../stack/types.js';
+import { status } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
-import { status } from '../pages/components.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
