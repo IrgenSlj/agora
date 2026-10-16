@@ -75,7 +75,7 @@
   "dependencies": {
     "@cedar-policy/cedar-wasm": "^4.12.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
-    "better-sqlite3": "^13.0.2",
+    "better-sqlite3": "^13.0.3",
     "canonicalize": "^3.0.0",
     "packageurl-js": "^2.0.1",
     "sigstore": "^5.0.0",
