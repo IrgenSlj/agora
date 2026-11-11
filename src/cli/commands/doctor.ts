@@ -4,6 +4,7 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { POLICY_FILE } from '../../policy/engine.js';
 import { checkRevocations, refreshFeed } from '../../revocation/client.js';
 import { installedPurls } from '../../revocation/installed.js';
 import { isBlockingMatch } from '../../revocation/match.js';
@@ -14,8 +15,6 @@ import { detectDataDir, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import { hookInstalled } from './hook.js';
 import type { CommandHandler } from './types.js';
-
-export const POLICY_FILE = 'agora.cedar';
 
 export const commandDoctor: CommandHandler = async (parsed, io, style) => {
   const cwd = io.cwd ?? process.cwd();

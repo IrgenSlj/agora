@@ -1,67 +1,45 @@
-// Cedar entity schema for Agora's policy plane.
+// Cedar schema for agora.cedar: what a coding agent may do.
 //
-// Optionality here is load-bearing, not incidental. An attribute marked `?` is
-// one Agora may genuinely not know, and a policy that reads it without a `has`
-// guard is a policy that can fail open. `agora policy check` validates authored
-// files against this schema so that mistake is caught at authoring time rather
-// than discovered as a forbid that never fired.
+// Every session-log event becomes one request: principal is the agent's host,
+// action is what it did, resource is what it did it to. `agora policy check`
+// validates a policy file against this schema, so a rule reading an attribute
+// that does not exist is caught when it is written, not when it never fires.
 
-entity Project;
+// The host the agent runs in: "claude-code", "opencode" or "mcp-shim".
+entity Agent = {
+  host: String,
+};
 
-entity Artifact = {
-  // ── always known ──────────────────────────────────────────────────────────
+// A file. `path` is repository-relative ("src/app.ts") for files inside the
+// repository; outside it, only the class is known and `path` is "class:home",
+// "class:tmp", "class:system" or "class:other". `class` is "repo" or that class.
+entity File = {
+  path: String,
+  class: String,
+};
 
-  // "mcp-server" | "agent-skill"
-  kind: String,
+// A program a shell command ran first: "git", "bun". Never its arguments.
+entity Program = {
+  name: String,
+};
 
-  // Publisher namespace from the artifact's purl ("" when unscoped).
-  publisher_namespace: String,
+// A network peer, by host and port.
+entity Peer = {
+  host: String,
+  port: Long,
+};
 
-  // Whether a permission manifest was declared at all. Most artifacts declare
-  // none, so this is the honest way to ask "do we know what this thing wants?"
-  permissions_declared: Bool,
-
-  // ── present only alongside a declared permission manifest ────────────────
-  //
-  // There is deliberately no fs_read/fs_write split: no upstream source
-  // publishes that distinction, so synthesising one would let a policy block
-  // read-only servers while appearing to target writers.
-
-  fs?: Bool,
-  exec?: Bool,
-  net_hosts?: Set<String>,
-
-  // ── present only when the provenance plane produced a verdict ────────────
-
-  // True only when a signature verified AND bound to the declared source repo.
-  provenance_verified?: Bool,
-
-  // "sigstore" | "local" | "none". Absent means provenance was never checked;
-  // "none" means it was checked and no verified attestation exists.
-  attestation_tier?: String,
-
-  // ── present only when the revocation feed was consulted ──────────────────
-  // Absent means no feed was cached, which is not the same as "not revoked".
+// A tool. MCP tools have `mcp` true and a `server`; built-in tools have `mcp`
+// false and `server` "". `revoked` is present only when the revocation list was
+// consulted for this server, and every rule reading it must guard with `has`.
+entity Tool = {
+  name: String,
+  server: String,
+  mcp: Bool,
   revoked?: Bool,
-
-  // ── present only once a sandboxed vet has run ────────────────────────────
-  // Never set today: canary tokens were dropped when S6 became runtime
-  // observation. The attribute stays so a rule guarding on it is valid.
-  canary_triggered?: Bool,
-
-  // ── present only once behaviour was OBSERVED (`agora run`) ───────────────
-  // Worst divergence between what the artifact declared and what it did.
-  // Absent when the server has never been observed — which is not the same
-  // as "none", and every rule reading it must guard with `has`.
-  // "none" | "info" | "warn" | "critical"
-  divergence_max?: String,
-
-  // ── present only when a heuristic scan was performed ──────────────────────
-  // "none" | "info" | "warn" | "critical"
-  scan_max?: String,
 };
 
-action "Install", "Sync", "Serve" appliesTo {
-  principal: [Project],
-  resource: [Artifact]
-};
+action "read", "write" appliesTo { principal: [Agent], resource: [File] };
+action "exec" appliesTo { principal: [Agent], resource: [Program] };
+action "connect" appliesTo { principal: [Agent], resource: [Peer] };
+action "call" appliesTo { principal: [Agent], resource: [Tool] };

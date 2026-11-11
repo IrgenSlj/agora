@@ -4,6 +4,7 @@
  * The library surface: the pieces other tools may reasonably build on.
  */
 
-export { evaluatePolicy, loadPolicies } from './policy/engine.js';
+export { evaluate, lintPolicyText, loadPolicySet } from './policy/engine.js';
+export { requestFor } from './policy/requests.js';
 export { matchRevocations, versionInRange } from './revocation/match.js';
 export * from './stack/types.js';

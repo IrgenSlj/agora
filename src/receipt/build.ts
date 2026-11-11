@@ -13,6 +13,7 @@ import { listSessions, readEvents, readMeta, readRoot } from '../log/store.js';
 import { verifySession } from '../log/verify.js';
 import type { InTotoStatement } from '../model/attestation.js';
 import { sha256Hex } from '../model/hash.js';
+import { POLICY_FILE } from '../policy/engine.js';
 import { commitWindow, fileAt } from './git.js';
 import {
   RECEIPT_PREDICATE_TYPE,
@@ -21,7 +22,6 @@ import {
   type SignerLevel
 } from './predicate.js';
 
-export const POLICY_FILE = 'agora.cedar';
 const CAP = 200;
 
 /**
@@ -144,3 +144,5 @@ export function buildReceipt(input: {
     )
   };
 }
+
+export { POLICY_FILE };

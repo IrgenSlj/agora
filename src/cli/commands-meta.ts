@@ -30,20 +30,57 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora hook install', 'agora hook install --dry-run']
   },
   {
+    name: 'learn',
+    group: 'Enforce',
+    summary: 'Propose a minimal agora.cedar from what agents did in this repository',
+    usage: 'agora learn [--apply] [--session <id> | --all] [--json]',
+    details:
+      'Reads the recorded sessions for this repository (only those whose log verifies, and only ' +
+      'actions that ran) and proposes one permit per thing seen: paths grouped by top-level ' +
+      'directory, programs, hosts, MCP tools per server and built-in tools. Paths outside the ' +
+      'repository are permitted by class and flagged for review. Each rule says how often it was ' +
+      'seen. Shown as a diff; nothing is written without --apply, which replaces only the ' +
+      'learned block and keeps your own rules.',
+    flags: [
+      { flag: '--apply', description: 'Write the proposal to agora.cedar' },
+      { flag: '--session', description: 'Learn from one session' },
+      { flag: '--all', description: 'Learn from sessions in every repository' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora learn', 'agora learn --apply', 'agora replay']
+  },
+  {
     name: 'policy',
     group: 'Enforce',
-    summary: 'Scaffold, lint and test agora.cedar, the policy file for this repository',
-    usage: 'agora policy <init|check|test> [--ci] [--json]',
+    summary: 'Scaffold and validate agora.cedar, what agents may do in this repository',
+    usage: 'agora policy <init|check> [--json]',
     details:
-      'Policy is evaluated on top of the shipped baseline, which forbids revoked artifacts. ' +
-      'A project file can only make that stricter: in Cedar any forbid beats every permit. ' +
-      '`check` lints first, because a rule that reads a missing attribute is skipped by Cedar ' +
-      'and looks like protection without being it.',
+      'agora.cedar holds Cedar rules over agent actions: read and write on File, exec on ' +
+      'Program, connect on Peer, call on Tool. With it present, anything no rule permits is ' +
+      'denied. The shipped baseline is always added and only forbids (revoked MCP servers). ' +
+      '`check` validates the file strictly against the schema, so a rule reading an attribute ' +
+      'that does not exist fails here rather than silently never firing. Start a real policy ' +
+      'with `agora learn`, and test a change with `agora replay`.',
+    flags: [{ flag: '--json', description: 'Output as JSON' }],
+    examples: ['agora policy init', 'agora policy check']
+  },
+  {
+    name: 'replay',
+    group: 'Enforce',
+    summary: 'Report what a policy would have denied in sessions that already ran',
+    usage: 'agora replay [--policy <file>] [--session <id> | --all] [--json]',
+    details:
+      "Evaluates every action that actually ran in this repository's recorded sessions " +
+      'against a policy (default agora.cedar) and the baseline, and groups what it would have ' +
+      'denied. Sessions whose log does not verify are skipped and named. Exits 1 when anything ' +
+      'would have been denied, or when a rule was skipped on error.',
     flags: [
-      { flag: '--ci', description: 'Also fail when any decision is inconclusive' },
-      { flag: '--json', description: 'Output decisions as JSON' }
+      { flag: '--policy', description: 'Policy file to replay (default agora.cedar)' },
+      { flag: '--session', description: 'Replay one session' },
+      { flag: '--all', description: 'Replay sessions from every repository' },
+      { flag: '--json', description: 'Output as JSON' }
     ],
-    examples: ['agora policy init', 'agora policy check', 'agora policy test']
+    examples: ['agora replay', 'agora replay --policy stricter.cedar']
   },
   {
     name: 'run',
