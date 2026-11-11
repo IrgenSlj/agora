@@ -55,8 +55,21 @@ export function readNote(cwd: string, sha: string): string | undefined {
   return tryGit(cwd, ['notes', `--ref=${NOTES_REF}`, 'show', sha]);
 }
 
+/**
+ * Notes are commits, so git needs an identity to write one. A CI runner often
+ * has none; fall back to a neutral one rather than fail, without overriding an
+ * identity the user configured.
+ */
+function identityArgs(cwd: string): string[] {
+  const has = (key: string) => Boolean(tryGit(cwd, ['config', key]));
+  return [
+    ...(has('user.name') ? [] : ['-c', 'user.name=agora']),
+    ...(has('user.email') ? [] : ['-c', 'user.email=agora@localhost'])
+  ];
+}
+
 export function writeNote(cwd: string, sha: string, body: string): void {
-  git(cwd, ['notes', `--ref=${NOTES_REF}`, 'add', '-f', '-F', '-', sha], body);
+  git(cwd, [...identityArgs(cwd), 'notes', `--ref=${NOTES_REF}`, 'add', '-f', '-F', '-', sha], body);
 }
 
 /** Commits in `base..head`, oldest first. */
