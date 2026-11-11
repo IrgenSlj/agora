@@ -173,6 +173,8 @@ export function readEvents(dataDir: string, session: string): AgentEvent[] {
 export interface SessionSummary {
   session: string;
   events: number;
+  /** Permission prompts Claude Code showed a person. */
+  prompts: number;
   modified: string;
   closed: boolean;
 }
@@ -186,9 +188,11 @@ export function listSessions(dataDir: string): SessionSummary[] {
     .map((f) => {
       const session = f.slice(0, -'.jsonl'.length);
       const path = join(dir, f);
+      const lines = readFileSync(path, 'utf8').split('\n').filter(Boolean);
       return {
         session,
-        events: readFileSync(path, 'utf8').split('\n').filter(Boolean).length,
+        events: lines.length,
+        prompts: lines.filter((l) => l.includes('"kind":"approval"')).length,
         modified: statSync(path).mtime.toISOString(),
         closed: existsSync(rootPath(dataDir, session))
       };

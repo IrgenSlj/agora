@@ -33,6 +33,7 @@ export function hookConfig(): Record<string, Record<string, unknown>> {
       ]
     },
     PostToolUse: { matcher: '*', ...record(5) },
+    PermissionRequest: { matcher: '*', ...record(5) },
     PermissionDenied: { matcher: '*', ...record(5) },
     SessionStart: record(5),
     // SessionEnd hooks share a 1.5 s budget unless a timeout raises it.

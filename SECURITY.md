@@ -4,8 +4,8 @@
 
 | Version | Supported |
 |---|---|
-| 0.9.x | yes |
-| 0.8.x | security fixes when practical |
+| 2.x (unreleased; built on `main`) | yes |
+| 0.8.x, the last published release | security fixes when practical |
 | < 0.8 | no |
 
 ## Reporting a vulnerability

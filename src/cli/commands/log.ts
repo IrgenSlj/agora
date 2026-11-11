@@ -29,7 +29,7 @@ export const commandLog: CommandHandler = async (parsed, io, style) => {
     for (const s of sessions) {
       writeLine(
         io.stdout,
-        `${theme.accent(s.session)}  ${theme.dim(`${s.events} events · ${s.closed ? 'closed' : 'open'} · ${s.modified}`)}`
+        `${theme.accent(s.session)}  ${theme.dim(`${s.events} events · ${s.prompts} prompts · ${s.closed ? 'closed' : 'open'} · ${s.modified}`)}`
       );
     }
     return ExitCode.OK;

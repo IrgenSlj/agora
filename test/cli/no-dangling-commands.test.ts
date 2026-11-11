@@ -114,7 +114,7 @@ describe('no user-facing string names a command that does not exist', () => {
     expect(duplicates).toEqual([]);
   });
 
-  test('the 0.9 command surface is present', () => {
+  test('the 2.0 command surface is present', () => {
     const names = new Set(COMMANDS.map((c) => c.name));
     for (const required of [
       'hook',
@@ -128,7 +128,7 @@ describe('no user-facing string names a command that does not exist', () => {
       'ci',
       'doctor'
     ]) {
-      expect(names, `0.9 requires \`agora ${required}\``).toContain(required);
+      expect(names, `2.0 requires \`agora ${required}\``).toContain(required);
     }
   });
 });

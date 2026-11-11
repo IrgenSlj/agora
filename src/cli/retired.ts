@@ -13,70 +13,70 @@ export interface RetiredCommand {
 }
 
 const PIVOT =
-  'Agora 0.9 narrowed to one job: a written limit for coding agents and a receipt for ' +
+  'Agora 2.0 narrowed to one job: a written limit for coding agents and a receipt for ' +
   'what they did. Finding and installing tools is left to the hosts and registries.';
 const STACK =
-  'The agora.toml stack manager was removed with the 0.9 narrowing. Hosts manage their ' +
+  'The agora.toml stack manager was removed with the 2.0 narrowing. Hosts manage their ' +
   'own MCP servers; Agora now reads their configs and never installs into them.';
 const at = (since: string, why: string, replacement?: string): RetiredCommand =>
   replacement ? { since, why, replacement } : { since, why };
 
 export const RETIRED_COMMANDS: Record<string, RetiredCommand> = {
-  // ── 0.9.0: discovery and installation ───────────────────────────────────
-  search: at('0.9.0', PIVOT),
-  info: at('0.9.0', PIVOT),
-  browse: at('0.9.0', PIVOT),
-  open: at('0.9.0', PIVOT),
-  install: at('0.9.0', PIVOT),
-  acquire: at('0.9.0', PIVOT),
-  try: at('0.9.0', PIVOT),
-  approve: at('0.9.0', 'Install requests were removed with installation itself.'),
-  mcp: at('0.9.0', 'The agent-facing MCP server existed to search and install; both were removed.'),
-  scan: at('0.9.0', 'The regex pre-install scan was removed; it gave weak signal.', 'agora audit'),
+  // ── 2.0.0: discovery and installation ───────────────────────────────────
+  search: at('2.0.0', PIVOT),
+  info: at('2.0.0', PIVOT),
+  browse: at('2.0.0', PIVOT),
+  open: at('2.0.0', PIVOT),
+  install: at('2.0.0', PIVOT),
+  acquire: at('2.0.0', PIVOT),
+  try: at('2.0.0', PIVOT),
+  approve: at('2.0.0', 'Install requests were removed with installation itself.'),
+  mcp: at('2.0.0', 'The agent-facing MCP server existed to search and install; both were removed.'),
+  scan: at('2.0.0', 'The regex pre-install scan was removed; it gave weak signal.', 'agora audit'),
   verify: at(
-    '0.9.0',
+    '2.0.0',
     'The regex pre-install scan was removed; it gave weak signal.',
     'agora audit'
   ),
   trust: at(
-    '0.9.0',
+    '2.0.0',
     'The per-artifact verdict view was removed with the pre-install scan.',
     'agora audit'
   ),
-  export: at('0.9.0', 'Evidence bundles are replaced by per-commit receipts in a later release.'),
-  outdated: at('0.9.0', PIVOT),
-  refresh: at('0.9.0', 'There is no catalog left to refresh.'),
-  today: at('0.9.0', 'The daily digest was removed with the 0.9 narrowing.'),
-  watch: at('0.9.0', 'Removed with the daily digest.'),
-  notify: at('0.9.0', 'Removed with the daily digest.'),
-  welcome: at('0.9.0', 'Bare `agora` prints the command list.', 'agora'),
-  init: at('0.9.0', 'Project scaffolding was removed with the plugin tools.', 'agora policy init'),
+  export: at('2.0.0', 'Evidence bundles are replaced by per-commit receipts in a later release.'),
+  outdated: at('2.0.0', PIVOT),
+  refresh: at('2.0.0', 'There is no catalog left to refresh.'),
+  today: at('2.0.0', 'The daily digest was removed with the 2.0 narrowing.'),
+  watch: at('2.0.0', 'Removed with the daily digest.'),
+  notify: at('2.0.0', 'Removed with the daily digest.'),
+  welcome: at('2.0.0', 'Bare `agora` prints the command list.', 'agora'),
+  init: at('2.0.0', 'Project scaffolding was removed with the plugin tools.', 'agora policy init'),
   integrate: at(
-    '0.9.0',
+    '2.0.0',
     'Harness integration installed the removed plugin tools.',
     'agora hook install'
   ),
   config: at(
-    '0.9.0',
-    'OpenCode config editing was removed with the 0.9 narrowing.',
+    '2.0.0',
+    'OpenCode config editing was removed with the 2.0 narrowing.',
     'agora doctor'
   ),
-  show: at('0.9.0', 'OpenCode config editing was removed with the 0.9 narrowing.', 'agora doctor'),
-  edit: at('0.9.0', 'OpenCode config editing was removed with the 0.9 narrowing.'),
-  diff: at('0.9.0', 'OpenCode config editing was removed with the 0.9 narrowing.'),
-  preferences: at('0.9.0', 'Agora keeps no preferences any more.'),
-  history: at('0.9.0', 'Agora keeps no search history any more.'),
+  show: at('2.0.0', 'OpenCode config editing was removed with the 2.0 narrowing.', 'agora doctor'),
+  edit: at('2.0.0', 'OpenCode config editing was removed with the 2.0 narrowing.'),
+  diff: at('2.0.0', 'OpenCode config editing was removed with the 2.0 narrowing.'),
+  preferences: at('2.0.0', 'Agora keeps no preferences any more.'),
+  history: at('2.0.0', 'Agora keeps no search history any more.'),
 
-  // ── 0.9.0: the agora.toml stack manager ─────────────────────────────────
-  freeze: at('0.9.0', STACK),
-  sync: at('0.9.0', STACK),
-  update: at('0.9.0', STACK),
-  remove: at('0.9.0', STACK),
-  installed: at('0.9.0', STACK, 'agora doctor'),
-  lock: at('0.9.0', `${STACK} Receipts replace the lockfile in a later release.`),
-  capabilities: at('0.9.0', STACK),
-  quarantine: at('0.9.0', STACK),
-  unquarantine: at('0.9.0', STACK),
+  // ── 2.0.0: the agora.toml stack manager ─────────────────────────────────
+  freeze: at('2.0.0', STACK),
+  sync: at('2.0.0', STACK),
+  update: at('2.0.0', STACK),
+  remove: at('2.0.0', STACK),
+  installed: at('2.0.0', STACK, 'agora doctor'),
+  lock: at('2.0.0', `${STACK} Receipts replace the lockfile in a later release.`),
+  capabilities: at('2.0.0', STACK),
+  quarantine: at('2.0.0', STACK),
+  unquarantine: at('2.0.0', STACK),
 
   // ── earlier removals ────────────────────────────────────────────────────
   auth: at('0.7.0', 'Agora has no accounts and stores no credentials.'),

@@ -106,6 +106,6 @@ Unpublish only within 72 hours (`npm unpublish agora-hub@<version>`); after that
 
 | Change | Bump |
 |---|---|
-| Breaking CLI change or new feature | minor (`0.8.0` → `0.9.0`) |
+| Breaking CLI change or new feature | minor |
 | Bug fix or documentation | patch |
 | Changelog only | none; fold into the next release |

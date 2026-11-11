@@ -1,6 +1,7 @@
 // `agora hook record`: write what Claude Code did into the session log.
 //
-// Registered for SessionStart, PostToolUse, PermissionDenied and SessionEnd
+// Registered for SessionStart, PostToolUse, PermissionRequest, PermissionDenied
+// and SessionEnd
 // (https://code.claude.com/docs/en/hooks, read 2026-11-11). It never prints to
 // stdout, because PostToolUse reads stdout as a decision, and it always exits
 // 0: recording is never a reason to interfere with the agent (AGENTS.md rule 4).
@@ -66,6 +67,20 @@ export function recordPayload(payload: ClaudeCodePayload & { source?: string }):
     case 'PermissionDenied':
       recordDrafts(payload, 'denied');
       return;
+    case 'PermissionRequest': {
+      // Claude Code is about to ask a person. Counting these is how a policy
+      // shows it reduced prompts (docs/PLAN.md, phase 3 gate).
+      const tool = normaliseClaudeCode(payload, 'asked')[0];
+      if (tool) {
+        appendEvent(dataDirFor(payload), session, {
+          host: 'claude-code',
+          kind: 'approval',
+          subject: tool.subject,
+          decision: 'asked'
+        });
+      }
+      return;
+    }
     case 'SessionEnd':
       closeSession(dataDirFor(payload), session, label(payload.reason), 'claude-code');
       return;

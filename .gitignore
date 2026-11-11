@@ -7,7 +7,9 @@ dist/
 *.tsbuildinfo
 .envrc
 .direnv/
-.agora/
+.agora/*
+!.agora/signers.json
+!.agora/compiled.json
 .idea/
 .vscode/
 

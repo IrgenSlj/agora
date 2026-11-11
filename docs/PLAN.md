@@ -171,25 +171,29 @@ themselves.
 
 ## Build plan
 
-Six phases, each ending in a gate that is a runnable check, not an opinion. A phase does not start
-until the previous gate passes. Claude Code is the only host until phase 4.
+Six phases, each ending in a gate that is a runnable check, not an opinion. The plan is a list of
+steps, not a schedule: work moves on when a gate passes, and the steps are done in sessions as time
+allows. Claude Code is the only host until phase 4.
+
+**One release.** Nothing is published until every phase and idea in this plan is built; then
+2.0.0 ships once. Until then `main` is the product and npm stays at 0.8.
 
 ```mermaid
 flowchart LR
-  P0[0 · Clear the ground<br/>0.9.0] --> P1[1 · Record] --> P2[2 · Receipt] --> P3[3 · Learn and compile] --> P4[4 · Second host<br/>and canaries] --> P5[5 · Runner-signed receipts<br/>2.0.0]
+  P0[0 · Clear the ground] --> P1[1 · Record] --> P2[2 · Receipt] --> P3[3 · Learn and compile] --> P4[4 · Second host<br/>and canaries] --> P5[5 · Runner-signed receipts] --> R[Release 2.0.0]
 ```
 
-### Phase 0 — Clear the ground (release 0.9.0)
+### Phase 0 — Clear the ground
 
 - [x] Fix the feed: emit OSV `versions` as explicit lists; add a test that popular servers at
       current versions are not blocked
 - [x] Replace `compareVersions` with the `semver` package; fix `pkg@tag` purl parsing
 - [x] Retire the cut list through `retired.ts`; delete the modules; remove `better-sqlite3`
 - [x] Rewrite README to the new promise; mark everything not yet built as planned
-- [ ] Set up npm trusted publishing; publish 0.9.0; create the `v0` tag
+- [x] npm trusted publishing is set up; publishing waits for the single release
 
-**Gate:** `bun run verify:package` is green, `src/` is under 11,000 lines, and
-`npx -y agora-hub@0.9.0 doctor` runs on a clean machine.
+**Gate passed:** `bun run verify:package` is green, the packed tarball runs `agora doctor` in an
+empty directory, and `src/` was under 11,000 lines after the cut.
 
 ### Phase 1 — Record
 
@@ -247,14 +251,15 @@ How it was built, where it differs from the sketch above:
       lists gaps
 - [x] `agora replay --policy`: report what a policy would have denied
 
-**Gate:** on Agora's own repository, a policy learned from one week of sessions denies zero
-legitimate actions in replay, and the count of approval prompts per session drops measurably.
+**Gate:** on Agora's own repository, a policy learned from at least 20 real sessions denies zero
+legitimate actions when replayed against the next 10, and those 10 sessions ask for fewer
+approvals than the 20 before the policy was applied.
 
 **Gate open.** The code is in, and the loop works end to end on a real session: in a scratch
 repository, `agora learn --apply` and a tightened rule made `agora replay` predict a denial of
 `curl`, and a headless Claude Code session that was itself allowed to run `curl` was stopped by
-the hook with the policy's reason, the denial recorded in the log. The gate needs a week of real
-sessions on this repository, which needs the hooks installed here and `agora` on PATH.
+the hook with the policy's reason, the denial recorded in the log. The gate needs real sessions on this
+repository, which needs the hooks installed here and `agora` on PATH.
 
 Decisions made while building it:
 
@@ -280,7 +285,7 @@ Decisions made while building it:
 **Gate:** one policy file compiles to both hosts, and each host's enforcement gaps appear in
 `agora plan` and in the receipt.
 
-### Phase 5 — Runner-signed receipts and the evidence report (release 2.0.0)
+### Phase 5 — Runner-signed receipts and the evidence report
 
 - [ ] GitHub Action mode that signs receipts with Sigstore keyless via the runner's OIDC identity
 - [ ] `agora report`: a static evidence report for a repository and date range, built from its

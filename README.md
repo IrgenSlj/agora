@@ -24,9 +24,8 @@ repository. Agora will:
 - **sign a receipt** for each agent session, attached to the commits it produced, so a reviewer
   can ask "was this change made within policy?" and CI can answer.
 
-> **Status: this is a rebuild in progress.** Agora 0.9 is the cleared foundation. Learn, compile
-> and receipts are the plan, not the product yet. The table below says what works today, and it is
-> kept honest against the code.
+> **Status: Agora 2.0 is being built on `main` and is not released yet.** npm still has 0.8. The
+> table below says what works on `main` today, and it is kept honest against the code.
 
 ## Status
 
@@ -110,14 +109,14 @@ when an MCP server the repository configures has a malware, critical or high adv
 
 ## Upgrading from 0.8
 
-0.9 removed everything outside this plan: search, install and acquire, the `agora.toml` stack
+2.0 removes everything outside this plan: search, install and acquire, the `agora.toml` stack
 manager and lockfile, the pre-install scan, the daily digest and the agent-facing MCP server. Each
 removed command still runs and tells you what happened:
 
 ```
 $ agora search filesystem
-`agora search` was removed in v0.9.0.
-  Agora 0.9 narrowed to one job: a written limit for coding agents and a receipt for what
+`agora search` was removed in v2.0.0.
+  Agora 2.0 narrowed to one job: a written limit for coding agents and a receipt for what
   they did. Finding and installing tools is left to the hosts and registries.
 ```
 

@@ -68,6 +68,18 @@ describe('agora hook record', () => {
     expect(JSON.stringify(events)).not.toContain('SECRET');
   });
 
+  test('a permission prompt is recorded as an approval that was asked', () => {
+    hook('record', {
+      ...base,
+      cwd: repo,
+      hook_event_name: 'PermissionRequest',
+      tool_name: 'Bash',
+      tool_input: { command: 'rm -rf build SECRET' }
+    });
+    const [e] = readEvents(join(home, 'agora'), 'sess-1');
+    expect(e).toMatchObject({ kind: 'approval', subject: 'rm', decision: 'asked' });
+  });
+
   test('prints nothing on stdout and exits 0, even on garbage', () => {
     for (const input of [
       'not json',
@@ -134,7 +146,14 @@ describe('agora hook install', () => {
     const s = settings();
     expect(s.model).toBe('x');
     expect(Object.keys(s.hooks).sort()).toEqual(
-      ['PermissionDenied', 'PostToolUse', 'PreToolUse', 'SessionEnd', 'SessionStart'].sort()
+      [
+        'PermissionDenied',
+        'PermissionRequest',
+        'PostToolUse',
+        'PreToolUse',
+        'SessionEnd',
+        'SessionStart'
+      ].sort()
     );
     expect(s.hooks.PostToolUse).toHaveLength(2);
     expect(s.hooks.PreToolUse[0].hooks[0].command).toBe('agora hook check');

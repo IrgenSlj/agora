@@ -2,10 +2,10 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
-## Unreleased — 0.9.0, clearing the ground for Agora 2.0
+## Unreleased — Agora 2.0
 
 Agora 2.0 is a written limit for every coding agent and a receipt for every agent-made change
-([`docs/PLAN.md`](./docs/PLAN.md)). 0.9 removes everything that plan does not build on. `src/` goes
+([`docs/PLAN.md`](./docs/PLAN.md)). 2.0 removes everything that plan does not build on. `src/` goes
 from about 30,000 lines to 8,600.
 
 ### Added — policy over agent actions, learned and compiled (phase 3)
