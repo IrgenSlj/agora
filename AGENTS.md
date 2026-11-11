@@ -7,8 +7,9 @@ There is one plan; do not add another planning document.
 
 ## Standing rules
 
-1. **One task, one branch, one pull request.** A task is one checkbox in the build plan. Do not
-   start the next phase.
+1. **One task, one commit, pushed to `main`.** A task is one checkbox in the build plan. Keep
+   `main` green at every push (rule 10) and push often. Do not start the next phase before the
+   current gate passes.
 2. **Test first for security behaviour.** Write the failing test (tamper, deny, unknown) before the
    implementation.
 3. **Deny or no opinion, never allow.** No hook or compiled config may grant a permission the host

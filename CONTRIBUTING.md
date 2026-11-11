@@ -19,8 +19,8 @@ bun src/cli.ts <cmd>
 
 ## Workflow
 
-- One task from the build plan per branch and pull request. Pick the first unticked box in the
-  current phase unless a maintainer says otherwise.
+- One task from the build plan per change. Maintainers commit straight to `main` and keep it green;
+  outside contributors open a pull request. Pick the first unticked box in the current phase.
 - Security behaviour gets its failing test first: tamper, deny, unknown.
 - New commands support `--json` and the exit codes `0` clean, `1` policy failure, `2` usage, `3`
   could not check.
