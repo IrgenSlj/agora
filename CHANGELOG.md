@@ -8,6 +8,21 @@ Agora 2.0 is a written limit for every coding agent and a receipt for every agen
 ([`docs/PLAN.md`](./docs/PLAN.md)). 0.9 removes everything that plan does not build on. `src/` goes
 from about 30,000 lines to 8,600.
 
+### Added — receipts (phase 2)
+
+- **`agora receipt write|show|verify`.** A receipt is an in-toto statement about one commit, in a
+  DSSE envelope, stored as a git note under `refs/notes/agora`. It names the agent sessions that
+  ran in the working tree between the parent commit and this one, each with its log head, and what
+  they touched: files written and read, programs, hosts, MCP tools, denials. It states what the
+  host could not see. `write` refuses to summarise a log that does not verify.
+- **`agora signer init|trust|status`.** An ed25519 key held only in the macOS Keychain or the
+  Linux Secret Service signs receipts at level `local-keychain`; `.agora/signers.json` lists the
+  keys a repository trusts. Without a keystore, receipts stay `signer none` and say so.
+- **`agora ci` verifies receipts** for every commit of a pull request, trusting keys only from the
+  base. A rejected receipt or a canary hit fails; a missing receipt is not established;
+  `--require-signer` sets a minimum. The job summary lists each commit's receipt. The Action
+  fetches notes and gains a `require-signer` input; it needs `fetch-depth: 0`.
+
 ### Added — the session log (phase 1)
 
 - **`agora hook install` records every Claude Code session.** Alongside the MCP check it registers

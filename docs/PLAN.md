@@ -214,13 +214,30 @@ desktop keyring.
 
 ### Phase 2 — Receipt
 
-- [ ] Receipt predicate and builder; map sessions to commits by time window and working tree
-- [ ] Store and fetch via `refs/notes/agora`; `agora receipt show <commit>`
-- [ ] `agora ci` verifies receipts for a pull request's commits and writes a job summary
-- [ ] Signer process with an OS-keychain key; receipts report their signer level
+- [x] Receipt predicate and builder; map sessions to commits by time window and working tree
+- [x] Store and fetch via `refs/notes/agora`; `agora receipt show <commit>`
+- [x] `agora ci` verifies receipts for a pull request's commits and writes a job summary
+- [x] Signer process with an OS-keychain key; receipts report their signer level
 
 **Gate:** a pull request on Agora's own repository shows a receipt summary in CI, and a tampered
 receipt or log turns the check red.
+
+**Gate passed 2026-11-11** on PR #73, closed unmerged as planned. A headless Claude Code session made
+the commit with the hooks installed. Its receipt verified in the self-check run, and the rerun
+failed after a forged receipt (claiming a signature it did not carry) was pushed. `receipt write`
+refuses to summarise a log that does not verify.
+
+How it was built, where it differs from the sketch above:
+
+- Sessions bind to a commit when they ran in the same working tree, which the hooks record in a
+  local, unpublished metadata file, and have events after the parent commit and up to this one.
+- `touched` lists files written and read, programs, peers and MCP tools, each capped at 200.
+- Signing runs in-process, not in a separate signer process: a second process for the same user
+  adds no isolation. The key exists only in the macOS Keychain or the Linux Secret Service.
+  Without either, receipts stay `signer none`, which settles the Linux question until runner
+  signing in phase 5.
+- CI trusts keys from `.agora/signers.json` at the base of the range, so a pull request cannot add
+  the key that vouches for it. `--require-signer` rejects receipts below a level.
 
 ### Phase 3 — Learn and compile
 

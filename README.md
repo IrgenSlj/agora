@@ -35,11 +35,11 @@ repository. Agora will:
 | `agora hook` — Claude Code hooks that deny calls to revoked MCP servers and record each session | **Works** |
 | `agora run` / `agora observe` — record MCP tool calls and sampled network peers, never arguments or results | **Works** |
 | `agora audit` — look up every configured MCP server in OSV.dev | **Works** |
-| `agora ci` and the GitHub Action — fail a build on a blocking advisory | **Works** |
+| `agora receipt` — a receipt per commit in git notes, naming the agent sessions that produced it and what they touched; signed with a key that lives only in the OS keychain | **Works** |
+| `agora ci` and the GitHub Action — verify every commit's receipt in a pull request, and fail on a blocking advisory | **Works** |
 | `agora policy` — lint and test `agora.cedar` with a real Cedar engine | **Works** (artifact-level rules only) |
 | `agora doctor` — what Agora can see and enforce on this machine | **Works** |
 | `agora log` and the recording hooks — a hash-chained, tamper-evident log of every tool call, file touched, program run and host fetched | **Works** |
-| Signed receipts in git notes, verified in CI (phase 2) | Planned |
 | `agora learn`, `agora plan` / `apply` as a policy compiler, `agora replay` (phase 3) | Planned |
 | OpenCode support and canary files (phase 4) | Planned |
 | Runner-signed receipts and the evidence report (phase 5, release 2.0.0) | Planned |
@@ -67,6 +67,9 @@ Revocations
 ```bash
 agora hook install     # deny revoked MCP servers and record every session
 agora log show         # the last session as a timeline; `agora log verify` checks the chain
+agora signer init      # a signing key in your OS keychain; `agora signer trust` lists it here
+agora receipt write    # after a commit: record how agents produced it, as a git note
+git push origin refs/notes/agora
 agora policy init      # scaffold agora.cedar at the repository root
 agora audit            # look every configured server up in OSV.dev
 ```
@@ -77,14 +80,19 @@ Every command takes `--json` and uses the same exit codes: `0` clean, `1` policy
 ## Put it in CI
 
 ```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0
 - uses: IrgenSlj/agora@v0
   with:
-    fail-on-unknown: false
+    require-signer: none       # or local-keychain
+    fail-on-unknown: false     # true: a commit without a receipt fails the build
 ```
 
-Today this fails the build when an MCP server the repository configures has a malware, critical or
-high advisory. A server it cannot identify is reported as unchecked, never as clean. When receipts
-land, the same step will verify them for every commit in the pull request.
+This verifies the receipt on every commit of the pull request, against signing keys trusted at the
+pull request's base, and lists each commit with what its agent sessions did in the job summary. A
+commit without a receipt is reported as not established, never as a pass. It also fails the build
+when an MCP server the repository configures has a malware, critical or high advisory.
 
 ## What Agora will never do
 

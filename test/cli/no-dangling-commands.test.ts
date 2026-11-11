@@ -116,7 +116,18 @@ describe('no user-facing string names a command that does not exist', () => {
 
   test('the 0.9 command surface is present', () => {
     const names = new Set(COMMANDS.map((c) => c.name));
-    for (const required of ['hook', 'policy', 'run', 'observe', 'log', 'audit', 'ci', 'doctor']) {
+    for (const required of [
+      'hook',
+      'policy',
+      'run',
+      'observe',
+      'log',
+      'receipt',
+      'signer',
+      'audit',
+      'ci',
+      'doctor'
+    ]) {
       expect(names, `0.9 requires \`agora ${required}\``).toContain(required);
     }
   });

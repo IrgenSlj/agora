@@ -1,6 +1,6 @@
 # Status
 
-Last reviewed: 2026-11-11, after phase 1. The plan is [`PLAN.md`](./PLAN.md); this page says what
+Last reviewed: 2026-11-11, after phase 2. The plan is [`PLAN.md`](./PLAN.md); this page says what
 the code can actually prove. Labels:
 
 - **Works** — on a user-facing path and covered by tests.
@@ -12,13 +12,14 @@ the code can actually prove. Labels:
 | Revocation deny in Claude Code (`agora hook`) | Works | `PreToolUse` hook denies a call to an MCP server whose configured version is on the bundled revocation list. Never emits allow, fails open on every error, reads no network. | Becomes one deny source among policy rules in phase 3 |
 | Revocation list | Partial | Bundled list of 58 OSV-derived entries with exact semver ranges, including explicit malicious-version lists. A fetched copy can only add entries. `bun run refresh:feed` re-derives entries from OSV. | No automatic discovery of new advisories; `agora audit` is the live check |
 | Advisory lookup (`agora audit`) | Works | Queries OSV.dev for every npm-launched server across hosts; unidentifiable servers are reported as unchecked | — |
-| CI (`agora ci`, `action.yml`) | Partial | Fails on a blocking advisory, annotates, writes a job summary; no servers or an unreachable OSV is not established (exit 3 with `--fail-on-unknown`) | Receipt verification (phase 2) |
+| Receipts (`agora receipt`, `agora signer`) | Works | One in-toto receipt per commit in `refs/notes/agora`, naming the sessions that produced it, their log heads and what they touched; signed with an ed25519 key held only in the macOS Keychain or Linux Secret Service; `write` refuses a log that does not verify | Runner-signed receipts (phase 5); the commit range is bound by time and working tree, not by diff |
+| CI (`agora ci`, `action.yml`) | Works | Verifies the receipt of every commit in a pull request against keys trusted at its base, and fails on a blocking advisory; job summary lists each commit's receipt; a commit without a receipt is not established | Evaluating `agora.cedar` over the receipt (phase 3) |
 | Session log (`agora log`, `agora hook record`) | Works | Claude Code hooks record session start and end, every tool call that ran, and denials, as hash-chained `AgentEvent`s; a closed session records its root; `agora log verify` detects any changed byte and truncation of a closed log; 72 ms per hook call | Signing the root (phase 2); an open session cannot detect truncation |
 | MCP shim (`agora run`, `agora observe`) | Works | Byte-transparent stdio supervision records tool names and counts and sampled direct-process network peers, and writes them as events to a session of its own; never arguments or results | Joining the host's session |
 | Policy (`agora policy`) | Partial | Real Cedar engine with lint; `agora.cedar` at the repo root on top of a shipped baseline; the entity model describes MCP artifacts | Cedar schema for agent actions: tool, path, command, peer (phase 3) |
 | Host adapters | Works | Read MCP servers from Claude Code, Cursor, Windsurf, VS Code and OpenCode configs; atomic, key-preserving writes (used by `observe enable`) | Emit native permissions (phase 3) |
-| Attestation container | Partial | `evidence/dsse.ts` builds canonical in-toto statements in DSSE envelopes, with the DSSE pre-authentication encoding | Signing and the receipt predicate (phase 2) |
-| Receipts, learn, compile, replay, canaries, report | Planned | — | Phases 2 to 5 |
+
+| Learn, compile, replay, canaries, report | Planned | — | Phases 3 to 5 |
 
 ## Invariants enforced by tests
 
@@ -34,6 +35,9 @@ the code can actually prove. Labels:
 - `AgentEvent` is a strict object whose keys are pinned by a test.
 - Changing any single byte of a session log fails verification.
 - The recorder never prints to stdout and always exits 0.
+- A receipt claiming a signature it does not carry, moved to another commit, written under another
+  policy, or changed after signing does not verify.
+- A key added inside a pull request cannot vouch for that pull request's receipts.
 - Every removed command explains itself and exits 2; no user-facing string names a command that does
   not exist.
 
@@ -44,7 +48,11 @@ the code can actually prove. Labels:
 2. `agora ci` checks host configs committed to the repository; most MCP configs live in home
    directories, so CI often has nothing to check until receipts exist.
 3. The policy entity model still describes artifacts, not agent actions.
-4. Session logs are unsigned: anyone who can write the data directory can rewrite a whole chain
-   consistently. Signing arrives in phase 2.
+4. An unsigned receipt (`signer none`) is a self-report: anyone who can write git notes can replace
+   it with a consistent forgery. A `local-keychain` receipt resists an agent confined by the host's
+   sandbox, not an unsandboxed one running as the same user. `runner-oidc` (phase 5) removes the
+   developer's machine from the trust base.
+6. "Within policy" today means the receipt verifies against the commit's `agora.cedar` hash and
+   records no canary hit; Cedar is not yet evaluated over what the receipt says the agent did.
 5. Network peers reached by shell commands are not recorded; only `WebFetch` hosts and sampled MCP
    server connections are.
