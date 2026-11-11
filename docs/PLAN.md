@@ -296,6 +296,50 @@ Decisions made while building it:
 **Gate:** a stranger can verify a runner-signed receipt with only the public repository, and the
 report renders from git notes with no server.
 
+## Pitch and business case (agreed 2026-11-11)
+
+**Pitch.** Coding agents now open pull requests on their own. Tools already record what an agent
+said; none shows that it stayed inside a limit. Agora does. It learns a written limit from how your
+agents already work, enforces it in each agent host, and attaches a signed receipt to every commit,
+which CI checks: within policy, or not. It stores no prompts and no code, so a receipt can be
+published. Free and local for developers; teams pay for one policy across all their repositories
+and for evidence an auditor can read.
+
+**The proof point.** The phase 3 gate is the demo: zero legitimate actions denied, and fewer
+approval prompts than before. Do not pitch to investors before that number exists from real use.
+
+**Market, honestly.**
+
+- The need is validated. Entire (former GitHub CEO, $60M seed, February 2026) records agent
+  sessions in git. GitHub ships an `Agent-Logs-Url` trailer on Copilot commits and enterprise-managed
+  agent permissions (September 2026). Kosli and JFrog are adding agent evidence to their products.
+- **Where Agora is different:** others record the conversation. Agora proves the agent stayed inside
+  a limit. It does this across hosts, with no content captured, and with a CI verdict. Each host
+  vendor governs only its own agent.
+- Regulation is a tailwind, not the reason to buy. Most coding assistants are not high-risk under
+  the AI Act. Never sell compliance (see Law and regulation).
+
+**Who pays.** Platform and security teams at companies that run agents in more than one host. They
+pay for:
+
+- one policy across all their repositories;
+- receipts signed by their CI runner;
+- the evidence report;
+- support.
+
+The CLI stays free, open source and account-free.
+
+**Other outcomes.** Agora's receipts are in-toto attestations, so provenance platforms can consume
+them. Kosli, JFrog and Entire could each become a partner or a buyer, not only a competitor.
+
+**Risks to the case.**
+
+- Host vendors or Entire add learned limits themselves.
+- Agora is one founder with no users yet.
+- A paid tier makes Agora a manufacturer under the Cyber Resilience Act.
+
+Answer: ship the free tool, earn the gate number, and get real teams using it before charging.
+
 ## Law and regulation (checked 2026-11-11; re-check before the release)
 
 Agora is not an AI system; it records and limits what coding agents do. What applies:
