@@ -69,7 +69,11 @@ function identityArgs(cwd: string): string[] {
 }
 
 export function writeNote(cwd: string, sha: string, body: string): void {
-  git(cwd, [...identityArgs(cwd), 'notes', `--ref=${NOTES_REF}`, 'add', '-f', '-F', '-', sha], body);
+  git(
+    cwd,
+    [...identityArgs(cwd), 'notes', `--ref=${NOTES_REF}`, 'add', '-f', '-F', '-', sha],
+    body
+  );
 }
 
 /** Commits in `base..head`, oldest first. */
