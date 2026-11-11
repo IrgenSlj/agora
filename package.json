@@ -44,7 +44,8 @@
     "format": "biome format --write .",
     "format:check": "biome format .",
     "refresh:feed": "bun scripts/refresh-feed.ts",
-    "build:schemas": "bun scripts/generate-schemas.ts"
+    "build:schemas": "bun scripts/generate-schemas.ts",
+    "check": "bun run typecheck && bun run lint && bun run test"
   },
   "keywords": [
     "mcp",

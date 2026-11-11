@@ -105,7 +105,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       observe: async () => (await import('./commands/observe.js')).commandObserve,
       audit: async () => (await import('./commands/audit.js')).commandAudit,
       ci: async () => (await import('./commands/ci.js')).commandCi,
-      doctor: async () => (await import('./commands/doctor.js')).commandDoctor
+      doctor: async () => (await import('./commands/doctor.js')).commandDoctor,
+      log: async () => (await import('./commands/log.js')).commandLog
     };
 
     const load = cmd[parsed.command];

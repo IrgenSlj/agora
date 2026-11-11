@@ -74,6 +74,23 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora observe', 'agora observe enable --dry-run', 'agora observe disable']
   },
   {
+    name: 'log',
+    group: 'Record',
+    summary: 'List, show and verify the hash-chained session logs',
+    usage: 'agora log [list|show|verify] [<session>] [--all] [--json]',
+    details:
+      'Each agent session is one append-only log in which every event carries the hash of the one ' +
+      'before it. `verify` recomputes the chain; any changed byte fails it. A closed session also ' +
+      'records its final hash, so events removed from the end fail too; an open session cannot ' +
+      'detect that, and says so. Events hold tool names, paths, program names and network peers, ' +
+      'never arguments, results, prompts or file contents. Exits 1 when a log does not verify.',
+    flags: [
+      { flag: '--all', description: 'Verify every recorded session' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora log', 'agora log show', 'agora log verify --all']
+  },
+  {
     name: 'audit',
     group: 'Check',
     summary: 'Look up every configured MCP server in OSV.dev',
