@@ -1,6 +1,7 @@
 // `agora log`: the session logs that every later feature reads.
 
-import { listSessions, verifySession } from '../../log/store.js';
+import { listSessions } from '../../log/store.js';
+import { verifySession } from '../../log/verify.js';
 import { status } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, usageError, writeJson, writeLine } from '../helpers.js';

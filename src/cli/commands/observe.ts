@@ -223,10 +223,16 @@ export const commandRun: CommandHandler = async (parsed, io, _style) => {
   const pkg = pkgFrom(command);
   const dataDir = detectDataDir(parsed, io);
 
+  // The server's name as the shim knows it: its npm package, else its program.
+  const server = (pkg ?? command[0]?.split('/').pop() ?? 'unknown').replace(
+    /[^A-Za-z0-9_.:-]/g,
+    '_'
+  );
   const recorder = createSessionRecorder({
     dataDir,
     key: pkg ? npmPurl(pkg) : command.join(' '),
-    sampleConnections
+    sampleConnections,
+    eventLog: { session: `shim-${Date.now().toString(36)}-${process.pid}`, server }
   });
 
   return runSupervised({ command, recorder, env: process.env, cwd: io.cwd });

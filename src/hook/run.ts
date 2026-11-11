@@ -31,7 +31,7 @@ import {
  */
 const STDIN_TIMEOUT_MS = 2000;
 
-function readStdin(): Promise<string> {
+export function readStdin(): Promise<string> {
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
     let settled = false;
@@ -99,7 +99,16 @@ export async function runHookCheck(): Promise<number> {
 
     const rendered = renderDecision(decision);
     if (rendered) process.stdout.write(`${rendered}\n`);
-    else if (decision.kind === 'no-opinion' && decision.note) {
+    if (decision.kind === 'deny') {
+      // The call never reaches PostToolUse, so this is the only place the
+      // denial can enter the session log. Recording must not change the answer.
+      try {
+        const { recordDrafts } = await import('./record.js');
+        recordDrafts(payload, 'denied');
+      } catch {
+        process.stderr.write('agora hook: the denial was not recorded in the session log.\n');
+      }
+    } else if (decision.kind === 'no-opinion' && decision.note) {
       process.stderr.write(`agora hook: ${decision.note}\n`);
     }
     return 0;

@@ -6,28 +6,57 @@ import { writeLine } from '../helpers.js';
 import type { CommandHandler } from './types.js';
 
 /**
- * The hook configuration written into a project's `.claude/settings.json`.
+ * The hooks written into a project's `.claude/settings.json`, by event.
+ * Shapes per https://code.claude.com/docs/en/hooks, read 2026-11-11.
  *
- * `mcp__.*` rather than a per-server list on purpose: a matcher enumerating
- * today's servers would silently stop covering the one added tomorrow, and the
- * server nobody remembered to add is the one this exists for.
+ * The check runs on `mcp__.*` only: it decides about MCP servers and nothing
+ * else, and a matcher listing today's servers would miss tomorrow's. The
+ * recorder runs on every tool, because the session log is a record of
+ * everything the agent did, not only of MCP calls.
  */
-export function hookConfig(): Record<string, unknown> {
+export function hookConfig(): Record<string, Record<string, unknown>> {
+  const record = (timeout: number) => ({
+    hooks: [{ type: 'command', command: 'agora hook record', timeout }]
+  });
   return {
-    matcher: 'mcp__.*',
-    hooks: [
-      {
-        type: 'command',
-        command: 'agora hook check',
-        // Generous relative to what this does — the check is local, synchronous
-        // and typically single-digit milliseconds. The timeout is a guard
-        // against a pathological config, not a budget. A hook that times out
-        // does not block the call, which is the correct direction.
-        timeout: 10,
-        statusMessage: 'Checking the tool against the revocation feed…'
-      }
-    ]
+    PreToolUse: {
+      matcher: 'mcp__.*',
+      hooks: [
+        {
+          type: 'command',
+          command: 'agora hook check',
+          // A guard, not a budget: the check is local and takes milliseconds,
+          // and a hook that times out does not block the call.
+          timeout: 10,
+          statusMessage: 'Checking the tool against the revocation list…'
+        }
+      ]
+    },
+    PostToolUse: { matcher: '*', ...record(5) },
+    PermissionDenied: { matcher: '*', ...record(5) },
+    SessionStart: record(5),
+    // SessionEnd hooks share a 1.5 s budget unless a timeout raises it.
+    SessionEnd: record(5)
   };
+}
+
+const isAgoraEntry = (h: unknown): boolean =>
+  typeof h === 'object' &&
+  h !== null &&
+  Array.isArray((h as { hooks?: unknown }).hooks) &&
+  (h as { hooks: { command?: unknown }[] }).hooks.some(
+    (c) => typeof c.command === 'string' && c.command.startsWith('agora hook')
+  );
+
+function onPath(program: string, env: Record<string, string | undefined>): boolean {
+  const sepChar = process.platform === 'win32' ? ';' : ':';
+  return (env.PATH ?? '').split(sepChar).some((dir) => {
+    try {
+      return dir !== '' && existsSync(join(dir, program));
+    } catch {
+      return false;
+    }
+  });
 }
 
 /** Whether `.claude/settings.json` under `cwd` already carries Agora's hook. */
@@ -36,12 +65,7 @@ export function hookInstalled(cwd: string): boolean {
   if (!existsSync(path)) return false;
   try {
     const pre = JSON.parse(readFileSync(path, 'utf8'))?.hooks?.PreToolUse;
-    return (
-      Array.isArray(pre) &&
-      pre.some((h: { matcher?: string; hooks?: { command?: string }[] }) =>
-        h?.hooks?.some((c) => typeof c.command === 'string' && c.command.includes('agora'))
-      )
-    );
+    return Array.isArray(pre) && pre.some(isAgoraEntry);
   } catch {
     return false;
   }
@@ -75,38 +99,47 @@ function commandHookInstall(
     typeof doc.hooks === 'object' && doc.hooks !== null
       ? { ...(doc.hooks as Record<string, unknown>) }
       : {};
-  const pre = Array.isArray(hooks.PreToolUse) ? [...(hooks.PreToolUse as unknown[])] : [];
 
-  // Idempotent by matcher. Running install twice should not produce two hooks
-  // that both run on every tool call.
-  const already = pre.some(
-    (h) => typeof h === 'object' && h !== null && (h as { matcher?: string }).matcher === 'mcp__.*'
-  );
-  if (already) {
-    writeLine(io.stdout, `Already installed in ${path}.`);
-    return ExitCode.OK;
+  // Idempotent per event: an event that already runs an Agora hook is left
+  // exactly as it is, so installing twice never runs a hook twice.
+  const added: string[] = [];
+  for (const [event, entry] of Object.entries(hookConfig())) {
+    const list = Array.isArray(hooks[event]) ? [...(hooks[event] as unknown[])] : [];
+    if (list.some(isAgoraEntry)) continue;
+    list.push(entry);
+    hooks[event] = list;
+    added.push(event);
   }
-
-  pre.push(hookConfig());
-  hooks.PreToolUse = pre;
   doc.hooks = hooks;
 
   if (opts.dryRun) {
     writeLine(io.stdout, JSON.stringify(doc, null, 2));
     return ExitCode.OK;
   }
+  if (!added.length) {
+    writeLine(io.stdout, `Already installed in ${path}.`);
+    return ExitCode.OK;
+  }
 
   atomicWriteFile(path, `${JSON.stringify(doc, null, 2)}\n`, 0o644);
-  writeLine(io.stdout, `Installed the PreToolUse hook into ${path}.`);
+  writeLine(io.stdout, `Installed ${added.join(', ')} hooks into ${path}.`);
+  writeLine(io.stdout, 'MCP tool calls to revoked servers are denied before they run.');
   writeLine(
     io.stdout,
-    'Every MCP tool call is now checked against the revocation feed and your approved baseline ' +
-      'before it runs.'
+    'Every tool call is recorded in a hash-chained session log: names, paths, programs and peers, ' +
+      'never arguments or contents. See `agora log`.'
   );
   writeLine(
     io.stdout,
-    'It can only block. It never grants a permission Claude Code would otherwise have asked you for.'
+    'The hooks only deny; they never grant a permission Claude Code would have asked for.'
   );
+  if (!onPath('agora', io.env ?? {})) {
+    writeLine(
+      io.stderr,
+      'Warning: `agora` is not on PATH, so these hooks cannot run. Install it globally with ' +
+        '`npm i -g agora-hub`.'
+    );
+  }
   return ExitCode.OK;
 }
 
@@ -123,17 +156,23 @@ export const commandHook: CommandHandler = async (parsed, io, _style) => {
     return await runHookCheck();
   }
 
+  if (sub === 'record') {
+    const { runHookRecord } = await import('../../hook/record.js');
+    return await runHookRecord();
+  }
+
   if (sub === 'install') {
     const cwd = io.cwd ?? process.cwd();
     return commandHookInstall(io, cwd, { dryRun: Boolean(parsed.flags['dry-run']) });
   }
 
-  writeLine(io.stderr, 'Usage: agora hook <install|check>');
+  writeLine(io.stderr, 'Usage: agora hook <install|check|record>');
   writeLine(io.stderr, '');
-  writeLine(io.stderr, '  install   Add the PreToolUse hook to .claude/settings.json');
+  writeLine(io.stderr, '  install   Add the Agora hooks to .claude/settings.json');
   writeLine(
     io.stderr,
     '  check     Read a PreToolUse payload on stdin and decide (used by the hook)'
   );
+  writeLine(io.stderr, '  record    Read a hook payload on stdin and log it (used by the hooks)');
   return ExitCode.USAGE;
 };

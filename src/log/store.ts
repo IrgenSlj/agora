@@ -22,7 +22,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import type { AgentEvent, EventDraft } from '../events/schema.js';
-import { type ChainVerdict, chainEvent, verifyLines } from './chain.js';
+import { chainEvent } from './chain.js';
 
 const LOCK_WAIT_MS = 250;
 const LOCK_STALE_MS = 5_000;
@@ -194,34 +194,4 @@ export function listSessions(dataDir: string): SessionSummary[] {
       };
     })
     .sort((a, b) => b.modified.localeCompare(a.modified));
-}
-
-export interface SessionVerdict extends ChainVerdict {
-  session: string;
-  /** closed: a root was recorded and matches. open: no root yet, so truncation is undetectable. */
-  state: 'closed' | 'open';
-}
-
-export function verifySession(dataDir: string, session: string): SessionVerdict {
-  const path = logPath(dataDir, session);
-  if (!existsSync(path)) {
-    return {
-      session,
-      state: 'open',
-      ok: false,
-      events: 0,
-      problems: [{ line: 0, problem: 'no such session' }]
-    };
-  }
-  const verdict = verifyLines(session, readFileSync(path, 'utf8').split('\n'));
-  const root = readRoot(dataDir, session);
-  if (!root) return { session, state: 'open', ...verdict };
-  const problems = [...verdict.problems];
-  if (verdict.head !== root.root || verdict.events !== root.seq + 1) {
-    problems.push({
-      line: verdict.events,
-      problem: `log does not end at the recorded root (seq ${root.seq}); events were removed or added after close`
-    });
-  }
-  return { session, state: 'closed', ...verdict, ok: problems.length === 0, problems };
 }

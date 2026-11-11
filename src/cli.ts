@@ -13,6 +13,11 @@ if (process.argv[2] === 'hook' && process.argv[3] === 'check' && process.argv.le
   const { runHookCheck } = await import('./hook/run.js');
   process.exit(await runHookCheck());
 }
+// Same reasoning for the recorder, which runs after every tool call.
+if (process.argv[2] === 'hook' && process.argv[3] === 'record' && process.argv.length === 4) {
+  const { runHookRecord } = await import('./hook/record.js');
+  process.exit(await runHookRecord());
+}
 
 const { runCli } = await import('./cli/app.js');
 

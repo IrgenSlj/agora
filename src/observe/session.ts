@@ -20,6 +20,8 @@
 
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { EventSubject } from '../events/schema.js';
+import { appendEvent, closeSession } from '../log/store.js';
 import type { ConnectionSample } from './connections.js';
 import { calledToolName, type Frame, toolNamesFromResult } from './protocol.js';
 
@@ -63,6 +65,12 @@ export interface RecorderOptions {
   /** Samples network connections for a pid; omitted → no network observation. */
   sampleConnections?: (pid: number) => Promise<ConnectionSample>;
   now?: () => Date;
+  /**
+   * Also write AgentEvents into the session log (docs/PLAN.md, phase 1). The
+   * shim cannot see the host's own session id, so it keeps a session of its
+   * own, named here, and labels tools with `server`.
+   */
+  eventLog?: { session: string; server: string };
 }
 
 /**
@@ -83,6 +91,26 @@ export function createSessionRecorder(options: RecorderOptions): SessionRecorder
     hostsContacted: [],
     networkSampled: false,
     networkSampling: 'not-requested'
+  };
+
+  // Never throws: a broken log must not become a broken server.
+  const logEvent = (kind: 'tool_call' | 'net', subject: string) => {
+    if (!options.eventLog || !EventSubject.safeParse(subject).success) return;
+    try {
+      appendEvent(
+        options.dataDir,
+        options.eventLog.session,
+        {
+          host: 'mcp-shim',
+          kind,
+          subject,
+          decision: 'allowed'
+        },
+        now()
+      );
+    } catch {
+      /* a lost event must never surface as a broken server */
+    }
   };
 
   let pid: number | undefined;
@@ -129,7 +157,9 @@ export function createSessionRecorder(options: RecorderOptions): SessionRecorder
 
     clientFrame(frame) {
       const tool = calledToolName(frame);
-      if (tool) session.toolCalls[tool] = (session.toolCalls[tool] ?? 0) + 1;
+      if (!tool) return;
+      session.toolCalls[tool] = (session.toolCalls[tool] ?? 0) + 1;
+      logEvent('tool_call', `mcp:${options.eventLog?.server ?? 'unknown'}/${tool}`);
     },
 
     serverFrame(frame) {
@@ -146,6 +176,20 @@ export function createSessionRecorder(options: RecorderOptions): SessionRecorder
       session.durationMs = ended.getTime() - startedAt.getTime();
       session.exitCode = exitCode;
       session.hostsContacted = [...hosts].sort();
+      for (const host of session.hostsContacted) logEvent('net', host);
+      if (options.eventLog) {
+        try {
+          closeSession(
+            options.dataDir,
+            options.eventLog.session,
+            `exit:${exitCode}`,
+            'mcp-shim',
+            ended
+          );
+        } catch {
+          /* see logEvent */
+        }
+      }
 
       try {
         mkdirSync(options.dataDir, { recursive: true });

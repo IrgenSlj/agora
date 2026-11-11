@@ -15,7 +15,9 @@
 
 import { z } from 'zod';
 
-export const EVENT_VERSION = 1 as const;
+import { EVENT_VERSION, GENESIS } from './constants.js';
+
+export { EVENT_VERSION, GENESIS };
 
 const Digest = z.string().regex(/^sha256:[0-9a-f]{64}$/, 'sha256:<64 hex>');
 
@@ -65,9 +67,6 @@ export const AgentEvent = z
   })
   .strict();
 export type AgentEvent = z.infer<typeof AgentEvent>;
-
-/** The `prev` of a session's first event. */
-export const GENESIS = `sha256:${'0'.repeat(64)}`;
 
 /** The event before it is chained: what a normaliser produces. */
 export type EventDraft = Pick<AgentEvent, 'host' | 'kind' | 'subject'> & {

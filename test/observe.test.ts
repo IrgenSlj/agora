@@ -233,6 +233,35 @@ describe('session recording', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  test('writes tool calls and sampled peers into a verifiable session log', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'agora-observe-log-'));
+    const recorder = createSessionRecorder({
+      dataDir: dir,
+      key: 'k',
+      sampleConnections: async () => ({ status: 'sampled', hosts: ['api.github.com:443'] }),
+      eventLog: { session: 'shim-test', server: 'github' }
+    });
+    recorder.started(['npx', 'x'], 111);
+    recorder.clientFrame({
+      method: 'tools/call',
+      params: { name: 'create_issue', arguments: { body: 'SECRET-BODY' } }
+    });
+    await new Promise((r) => setTimeout(r, 10));
+    await recorder.finished(0);
+
+    const { readEvents } = await import('../src/log/store');
+    const { verifySession } = await import('../src/log/verify');
+    expect(verifySession(dir, 'shim-test')).toMatchObject({ ok: true, state: 'closed' });
+    const events = readEvents(dir, 'shim-test');
+    expect(events.map((e) => [e.kind, e.subject])).toEqual([
+      ['tool_call', 'mcp:github/create_issue'],
+      ['net', 'api.github.com:443'],
+      ['session', 'end:exit:0']
+    ]);
+    expect(JSON.stringify(events)).not.toContain('SECRET');
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   test('an unsampled session is not reported as having contacted nothing', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'agora-observe-nosample-'));
     const recorder = createSessionRecorder({ dataDir: dir, key: 'k' });

@@ -4,7 +4,8 @@ import { ExitCode } from '../cli/exit-codes.js';
 import type { CliIo } from '../cli/flags.js';
 import { writeJson, writeLine } from '../cli/helpers.js';
 import type { Theme } from '../cli/theme.js';
-import { readEvents, readRoot, verifySession } from './store.js';
+import { readEvents, readRoot } from './store.js';
+import { verifySession } from './verify.js';
 
 const KIND_LABEL: Record<string, string> = {
   session: 'session',

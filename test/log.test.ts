@@ -3,14 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import type { EventDraft } from '../src/events/schema';
-import {
-  appendEvent,
-  closeSession,
-  listSessions,
-  logPath,
-  readEvents,
-  verifySession
-} from '../src/log/store';
+import { appendEvent, closeSession, listSessions, logPath, readEvents } from '../src/log/store';
+import { verifySession } from '../src/log/verify';
 
 let dir: string;
 const S = 'session-1';
