@@ -296,6 +296,21 @@ Decisions made while building it:
 **Gate:** a stranger can verify a runner-signed receipt with only the public repository, and the
 report renders from git notes with no server.
 
+## Law and regulation (checked 2026-11-11; re-check before the release)
+
+Agora is not an AI system; it records and limits what coding agents do. What applies:
+
+| Law | Status now | What it means for Agora |
+|---|---|---|
+| EU AI Act | Prohibitions, AI literacy, general-purpose model rules and Article 50 transparency apply. The Digital Omnibus (Regulation (EU) 2026/1744, in force 27 July 2026) moved stand-alone high-risk obligations to 2 December 2027 and product-embedded ones to 2 August 2028. | Most coding assistants are not high-risk. Where a team must keep records of AI use, Agora's logs and receipts are evidence. Never claim they make anyone compliant. |
+| Cyber Resilience Act | Manufacturers must report actively exploited vulnerabilities from 11 September 2026; open-source stewards from 11 December 2027; full obligations from 11 December 2027. | Free, non-commercial Agora is not a manufacturer. A paid team layer would make it one. Keep a private vulnerability channel (SECURITY.md) and a fix process now. |
+| GDPR | Applies to personal data. | Logs stay on the user's machine. Published receipts carry random session ids, repository paths, program names and timestamps, nothing else. Keep it that way; never add user names, emails or home paths. |
+
+Sources: [Digital Omnibus on AI](https://artificialintelligenceact.eu/ai-act-explorer/digital-omnibus/),
+[Freshfields on the final Omnibus](https://www.freshfields.com/en/our-thinking/blogs/technology-quotient/eu-ai-act-unpacked-34-the-final-digital-omnibus-on-ai-key-amendments-to-the-a-102nber),
+[Commission: CRA reporting](https://digital-strategy.ec.europa.eu/en/policies/cra-reporting),
+[OpenSSF on the 11 September deadline](https://openssf.org/blog/2026/09/11/a-community-guide-to-the-eu-cra-september-11-deadline-for-manufacturers/).
+
 ## Risks and known limits
 
 | Risk | Consequence | Response |
