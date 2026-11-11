@@ -1,5 +1,5 @@
 name: 'Agora'
-description: 'Fail the build when an MCP server this repository configures has a blocking advisory. Receipt verification arrives in a later release.'
+description: 'Verify the receipt on every commit of a pull request, and fail on a blocking advisory for a configured MCP server. Needs actions/checkout with fetch-depth: 0.'
 author: 'IrgenSlj'
 
 branding:
@@ -23,6 +23,12 @@ inputs:
       one fails. Off by default.
     required: false
     default: 'false'
+  require-signer:
+    description: >-
+      Reject receipts signed below this level: none, local-keychain or
+      runner-oidc. Default none accepts unsigned receipts, which say so.
+    required: false
+    default: 'none'
   working-directory:
     description: 'Directory to run in. Host configs are read relative to it.'
     required: false
@@ -41,12 +47,21 @@ runs:
   steps:
     - id: agora
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
+      require-signer:
+    description: >-
+      Reject receipts signed below this level: none, local-keychain or
+      runner-oidc. Default none accepts unsigned receipts, which say so.
+    required: false
+    default: 'none'
+  working-directory: ${{ inputs.working-directory }}
       env:
         AGORA_VERSION: ${{ inputs.version }}
         AGORA_FAIL_ON_UNKNOWN: ${{ inputs.fail-on-unknown }}
+        AGORA_REQUIRE_SIGNER: ${{ inputs.require-signer }}
       run: |
-        args=()
+        # Receipts live in git notes, which actions/checkout does not fetch.
+        git fetch --no-tags origin 'refs/notes/agora:refs/notes/agora' 2>/dev/null || true
+        args=(--require-signer "$AGORA_REQUIRE_SIGNER")
         if [ "$AGORA_FAIL_ON_UNKNOWN" = "true" ]; then
           args+=(--fail-on-unknown)
         fi
@@ -61,11 +76,11 @@ runs:
         status=$?
         set -e
 
-        # `ci` landed in 0.8.0. Resolving to an older release exits 2 with
+        # `ci` landed in 0.8.0 and receipts in 0.9.0. An older release exits 2 with
         # "Unknown command", which reads like a broken Action rather than a
         # version mismatch. Say which it is.
         if [ "$status" -eq 2 ] && [ ! -s "$report" ]; then
-          echo "::error title=agora-hub too old::\`agora ci\` requires agora-hub >= 0.8.0; resolved '${AGORA_VERSION}'. Pin the action's \`version\` input to a release that has it."
+          echo "::error title=agora-hub too old::\`agora ci\` requires agora-hub >= 0.8.0, and receipts >= 0.9.0; resolved '${AGORA_VERSION}'. Pin the action's \`version\` input to a release that has it."
           exit 2
         fi
 

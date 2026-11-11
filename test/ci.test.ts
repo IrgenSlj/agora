@@ -101,7 +101,7 @@ describe('agora ci', () => {
     await runCli(['ci', '--json'], cliIo as never);
     const report = JSON.parse(out()) as CiReport;
 
-    expect(report.checks.map((c) => c.name)).toEqual(['advisories']);
+    expect(report.checks.map((c) => c.name)).toEqual(['receipts', 'advisories']);
     expect(report.checks.find((c) => c.name === 'advisories')?.state).toBe('pass');
   });
 
@@ -144,6 +144,7 @@ describe('agora ci', () => {
 describe('ci rendering', () => {
   const base = (over: Partial<CiReport>): CiReport => ({
     checks: [],
+    receipts: [],
     ok: true,
     failed: [],
     notEstablished: [],

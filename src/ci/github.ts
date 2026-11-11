@@ -69,6 +69,7 @@ const LABEL: Record<CiCheck['state'], string> = {
 };
 
 const QUESTION: Record<CiCheck['name'], string> = {
+  receipts: 'Was each commit made within policy?',
   advisories: 'Does any configured MCP server have a published advisory?'
 };
 
@@ -82,7 +83,9 @@ export function jobSummary(report: CiReport): string {
     '## Agora',
     '',
     !report.ok
-      ? 'A configured MCP server has a blocking advisory.'
+      ? report.failed.includes('receipts')
+        ? 'A commit in this change carries a receipt that does not verify.'
+        : 'A configured MCP server has a blocking advisory.'
       : report.notEstablished.length || report.unavailable.length
         ? // Not "all clear". A run with an unanswerable question in it has not
           // earned that sentence, and this is the surface most likely to be read
@@ -95,6 +98,21 @@ export function jobSummary(report: CiReport): string {
     ...rows,
     ''
   ];
+
+  if (report.receipts.length) {
+    out.push('### Receipts', '');
+    for (const c of report.receipts) {
+      const head =
+        c.state === 'valid'
+          ? `✅ \`${c.sha.slice(0, 12)}\` receipt verifies · signer ${c.level}`
+          : c.state === 'invalid'
+            ? `❌ \`${c.sha.slice(0, 12)}\` receipt rejected: ${c.problems.join('; ')}`
+            : `❔ \`${c.sha.slice(0, 12)}\` no receipt (not established)`;
+      out.push(`<details><summary>${head}</summary>`, '');
+      if (c.lines.length) out.push('```', ...c.lines, '```');
+      out.push('', '</details>', '');
+    }
+  }
 
   const detailed = report.checks.filter((c) => c.state !== 'pass' && c.findings.length);
   if (detailed.length) {
@@ -112,7 +130,7 @@ export function jobSummary(report: CiReport): string {
   if (report.notEstablished.length) {
     out.push(
       '> A check that is *not established* has not passed. It means Agora could not ask the ' +
-        'question — most often because nothing is pinned yet. Use `--fail-on-unknown` to treat ' +
+        'question, most often because a commit has no receipt. Use `--fail-on-unknown` to treat ' +
         'that as a failure.',
       ''
     );

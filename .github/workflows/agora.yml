@@ -1,9 +1,7 @@
-name: Agora checks its own stack
+name: Agora checks its own receipts
 
-# The demo, and the honesty test. A tool that tells you to gate your agent
-# tooling in CI and does not gate its own is asking for trust it has not spent
-# anything to earn — the same reasoning that made `agora integrate` hold Agora's
-# own package to the gate before installing it into a harness.
+# The demo, and the honesty test: a tool that asks repositories to verify
+# agent receipts in CI verifies its own.
 #
 # Runs from source rather than through `action.yml`, on purpose: the Action runs
 # the published package, and this has to work on a commit that has not been
@@ -31,6 +29,13 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Receipts are verified per commit across the pull request's range.
+          fetch-depth: 0
+
+      # Receipts live in git notes, which a checkout does not fetch.
+      - name: Fetch receipts
+        run: git fetch --no-tags origin 'refs/notes/agora:refs/notes/agora' || echo "no receipts pushed yet"
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -39,10 +44,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run build
 
-      # Not `--fail-on-unknown`. This repository has no `agora.lock` yet —
-      # acquisition does not create one (EVD-002) — and a self-check that goes
-      # red for a gap the product already documents would be theatre. The run
-      # reports drift as not established, which is the true answer, and this
-      # becomes strict the day the lockfile is real.
+      # Not `--fail-on-unknown`: commits made by hand carry no receipt, and
+      # that is reported as not established, which is the true answer.
       - name: agora ci
         run: node dist/cli.js ci

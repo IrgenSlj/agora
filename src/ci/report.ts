@@ -1,15 +1,17 @@
 // `agora ci`: the check a repository runs on every pull request.
 //
-// In 0.9 it asks one question, whether any MCP server this repository
-// configures has a published advisory. Receipt verification replaces and
-// extends it in a later release (docs/PLAN.md, phase 2).
+// Two questions: was each commit in the change made within policy (its
+// receipt verifies), and does any MCP server the repository configures have
+// a published advisory.
 //
 // The standing rule: an absent answer is not a passing answer. A check that
 // could not run is `not_established` or `unavailable`, never `pass`.
 
 import { type AdvisorySweep, sweepAdvisories } from '../cli/commands/audit.js';
 import type { CliIo } from '../cli/flags.js';
+import type { SignerLevel } from '../receipt/predicate.js';
 import { readAllServers } from '../stack/registry.js';
+import { type ReceiptCommit, rangeFromGithubEvent, receiptsCheck } from './receipts.js';
 
 /**
  * Deliberately four states, not two.
@@ -21,7 +23,7 @@ import { readAllServers } from '../stack/registry.js';
  */
 export type CheckState = 'pass' | 'fail' | 'not_established' | 'unavailable';
 
-export type CheckName = 'advisories';
+export type CheckName = 'receipts' | 'advisories';
 
 export interface CiFinding {
   /** Short label — becomes an annotation title. */
@@ -42,6 +44,8 @@ export interface CiCheck {
 
 export interface CiReport {
   checks: CiCheck[];
+  /** Per-commit receipt results, for the job summary. */
+  receipts: ReceiptCommit[];
   ok: boolean;
   failed: CheckName[];
   notEstablished: CheckName[];
@@ -51,6 +55,9 @@ export interface CiReport {
 export interface CiOptions {
   /** Treat `not_established` as a failure. */
   failOnUnknown?: boolean;
+  /** `base..head`; defaults to the GitHub event's range. */
+  range?: string;
+  requireSigner?: SignerLevel;
 }
 
 function advisoriesCheck(sweep: AdvisorySweep): CiCheck {
@@ -116,7 +123,12 @@ function advisoriesCheck(sweep: AdvisorySweep): CiCheck {
 export async function runCiChecks(io: CliIo, opts: CiOptions = {}): Promise<CiReport> {
   const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
   const servers = readAllServers(env).filter((s) => s.enabled);
-  const checks: CiCheck[] = [advisoriesCheck(await sweepAdvisories(io, servers))];
+  const receipts = receiptsCheck({
+    cwd: io.cwd ?? process.cwd(),
+    range: opts.range ?? rangeFromGithubEvent(io.env ?? {}),
+    ...(opts.requireSigner ? { requireSigner: opts.requireSigner } : {})
+  });
+  const checks: CiCheck[] = [receipts.check, advisoriesCheck(await sweepAdvisories(io, servers))];
 
   const failed = checks.filter((c) => c.state === 'fail').map((c) => c.name);
   const notEstablished = checks.filter((c) => c.state === 'not_established').map((c) => c.name);
@@ -124,6 +136,7 @@ export async function runCiChecks(io: CliIo, opts: CiOptions = {}): Promise<CiRe
 
   return {
     checks,
+    receipts: receipts.commits,
     failed,
     notEstablished,
     unavailable,

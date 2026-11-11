@@ -13,6 +13,7 @@ import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 const QUESTION: Record<CiCheck['name'], string> = {
+  receipts: 'made within policy',
   advisories: 'known-vulnerable'
 };
 
@@ -20,7 +21,20 @@ export const commandCi: CommandHandler = async (parsed, io, style) => {
   const failOnUnknown =
     parsed.flags.failOnUnknown === true || parsed.flags['fail-on-unknown'] === true;
 
-  const report = await runCiChecks(io, { failOnUnknown });
+  const range = stringFlag(parsed, 'range');
+  const require = stringFlag(parsed, 'require-signer') ?? stringFlag(parsed, 'requireSigner');
+  if (require && !['none', 'local-keychain', 'runner-oidc'].includes(require)) {
+    writeLine(
+      io.stderr,
+      `--require-signer must be none, local-keychain or runner-oidc, not ${require}`
+    );
+    return ExitCode.USAGE;
+  }
+  const report = await runCiChecks(io, {
+    failOnUnknown,
+    ...(range ? { range } : {}),
+    ...(require ? { requireSigner: require as 'none' | 'local-keychain' | 'runner-oidc' } : {})
+  });
 
   // `--json-file` exists so one run can serve both consumers. Annotations are
   // workflow commands on stdout, so redirecting stdout to capture the report
