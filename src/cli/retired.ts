@@ -18,10 +18,6 @@ const PIVOT =
 const STACK =
   'The agora.toml stack manager was removed with the 0.9 narrowing. Hosts manage their ' +
   'own MCP servers; Agora now reads their configs and never installs into them.';
-const RETURNS = (what: string) =>
-  `${STACK} \`${what}\` returns in a later release as the policy compiler: agora.cedar ` +
-  "translated into each host's native permissions.";
-
 const at = (since: string, why: string, replacement?: string): RetiredCommand =>
   replacement ? { since, why, replacement } : { since, why };
 
@@ -72,8 +68,6 @@ export const RETIRED_COMMANDS: Record<string, RetiredCommand> = {
   history: at('0.9.0', 'Agora keeps no search history any more.'),
 
   // ── 0.9.0: the agora.toml stack manager ─────────────────────────────────
-  plan: at('0.9.0', RETURNS('plan')),
-  apply: at('0.9.0', RETURNS('apply')),
   freeze: at('0.9.0', STACK),
   sync: at('0.9.0', STACK),
   update: at('0.9.0', STACK),

@@ -9,10 +9,10 @@ import type { CommandHandler } from './types.js';
  * The hooks written into a project's `.claude/settings.json`, by event.
  * Shapes per https://code.claude.com/docs/en/hooks, read 2026-11-11.
  *
- * The check runs on `mcp__.*` only: it decides about MCP servers and nothing
- * else, and a matcher listing today's servers would miss tomorrow's. The
- * recorder runs on every tool, because the session log is a record of
- * everything the agent did, not only of MCP calls.
+ * The check runs on every tool: it denies calls to revoked MCP servers, and
+ * when the repository has an agora.cedar, anything that policy does not
+ * permit. Without an agora.cedar it returns on a non-MCP call before loading
+ * anything. The recorder also runs on every tool.
  */
 export function hookConfig(): Record<string, Record<string, unknown>> {
   const record = (timeout: number) => ({
@@ -20,7 +20,7 @@ export function hookConfig(): Record<string, Record<string, unknown>> {
   });
   return {
     PreToolUse: {
-      matcher: 'mcp__.*',
+      matcher: '*',
       hooks: [
         {
           type: 'command',
@@ -28,7 +28,7 @@ export function hookConfig(): Record<string, Record<string, unknown>> {
           // A guard, not a budget: the check is local and takes milliseconds,
           // and a hook that times out does not block the call.
           timeout: 10,
-          statusMessage: 'Checking the tool against the revocation list…'
+          statusMessage: 'Checking against agora.cedar and the revocation list…'
         }
       ]
     },
@@ -100,13 +100,15 @@ function commandHookInstall(
       ? { ...(doc.hooks as Record<string, unknown>) }
       : {};
 
-  // Idempotent per event: an event that already runs an Agora hook is left
-  // exactly as it is, so installing twice never runs a hook twice.
+  // Idempotent per event: Agora's own entry is added, or replaced when it
+  // differs from the current configuration; anything else is left alone.
   const added: string[] = [];
   for (const [event, entry] of Object.entries(hookConfig())) {
     const list = Array.isArray(hooks[event]) ? [...(hooks[event] as unknown[])] : [];
-    if (list.some(isAgoraEntry)) continue;
-    list.push(entry);
+    const at = list.findIndex(isAgoraEntry);
+    if (at >= 0 && JSON.stringify(list[at]) === JSON.stringify(entry)) continue;
+    if (at >= 0) list[at] = entry;
+    else list.push(entry);
     hooks[event] = list;
     added.push(event);
   }
@@ -123,7 +125,10 @@ function commandHookInstall(
 
   atomicWriteFile(path, `${JSON.stringify(doc, null, 2)}\n`, 0o644);
   writeLine(io.stdout, `Installed ${added.join(', ')} hooks into ${path}.`);
-  writeLine(io.stdout, 'MCP tool calls to revoked servers are denied before they run.');
+  writeLine(
+    io.stdout,
+    'Calls to revoked MCP servers, and anything agora.cedar does not permit, are denied before they run.'
+  );
   writeLine(
     io.stdout,
     'Every tool call is recorded in a hash-chained session log: names, paths, programs and peers, ' +

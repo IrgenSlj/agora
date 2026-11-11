@@ -83,7 +83,8 @@ expect 0 "agora doctor --json" -- doctor --json
 expect 0 "agora audit (no servers configured)" -- audit
 expect 0 "agora observe (no sessions recorded)" -- observe
 expect 0 "agora policy check (bundled baseline loads)" -- policy check
-expect 0 "agora policy test (baseline fixtures)" -- policy test
+expect 0 "agora plan (no policy, writes nothing)" -- plan
+expect 2 "agora replay with no policy exits USAGE" -- replay
 
 # The CI wedge. `uses: IrgenSlj/agora@v0` runs exactly this, so a break here
 # breaks the surface the product is being pointed at.

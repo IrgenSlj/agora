@@ -50,6 +50,33 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora learn', 'agora learn --apply', 'agora replay']
   },
   {
+    name: 'plan',
+    group: 'Enforce',
+    summary: "Show how agora.cedar compiles into each host's settings; write nothing",
+    usage: 'agora plan [--json]',
+    details:
+      'Compiles agora.cedar for Claude Code. The hooks enforce the whole policy: the PreToolUse ' +
+      'check denies anything it does not permit, before Claude Code asks. Permits that translate ' +
+      'exactly also become permissions.allow rules, so permitted actions stop prompting. Every ' +
+      'rule is listed as compiled, enforced by the hook only, or not enforceable because Claude ' +
+      'Code cannot see it. Allow rules are only ever copies of permits in agora.cedar.',
+    flags: [{ flag: '--json', description: 'Output as JSON' }],
+    examples: ['agora plan', 'agora apply']
+  },
+  {
+    name: 'apply',
+    group: 'Enforce',
+    summary: 'Write what `agora plan` shows into .claude/settings.json',
+    usage: 'agora apply [--json]',
+    details:
+      'Merges the hooks and compiled allow rules into .claude/settings.json, keeping every other ' +
+      'key, hook and allow rule. Agora tracks the rules it wrote in .agora/compiled.json, so a ' +
+      'permit removed from agora.cedar is removed from settings on the next apply, and nothing ' +
+      'a person wrote is. Commit both files.',
+    flags: [{ flag: '--json', description: 'Output as JSON' }],
+    examples: ['agora apply']
+  },
+  {
     name: 'policy',
     group: 'Enforce',
     summary: 'Scaffold and validate agora.cedar, what agents may do in this repository',

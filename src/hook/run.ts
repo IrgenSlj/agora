@@ -8,9 +8,12 @@
 // Every path returns 0. See `pretooluse.ts` for why a hook that fails closed is
 // worse than useless.
 
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { detectAgoraDataDir } from '../state.js';
 import {
   decidePreToolUse,
+  type HookDecision,
   type PreToolUsePayload,
   renderDecision,
   serverFromToolName
@@ -74,28 +77,42 @@ export async function runHookCheck(): Promise<number> {
     return 0;
   }
 
-  // Before anything is loaded. A hook configured with a broader matcher — or a
-  // host that routes every tool through it — would otherwise pay the whole
-  // config-and-feed read to be told this was a `Bash` call. The check is a
-  // string prefix; the imports below are ~50ms.
-  if (!serverFromToolName(payload.tool_name)) return 0;
+  // Before anything is loaded: a non-MCP call in a repository without an
+  // agora.cedar has nothing to be checked against, and this hook runs on
+  // every tool call. Two existsSync calls; the imports below are ~50ms.
+  const cwd = payload.cwd ?? process.cwd();
+  const { findGitRoot } = await import('../log/store.js');
+  const root = findGitRoot(cwd) ?? cwd;
+  const hasPolicy = existsSync(join(root, 'agora.cedar'));
+  const isMcp = Boolean(serverFromToolName(payload.tool_name));
+  if (!isMcp && !hasPolicy) return 0;
 
   try {
-    const [{ checkRevocations }, { installedPurls }, { readAllServers }] = await Promise.all([
-      import('../revocation/client.js'),
-      import('../revocation/installed.js'),
-      import('../stack/registry.js')
-    ]);
-
-    const cwd = payload.cwd ?? process.cwd();
     const dataDir = detectAgoraDataDir({ cwd, env: process.env });
-    const servers = readAllServers({ cwd, home: process.env.HOME });
-
-    const decision = decidePreToolUse(payload, {
-      servers,
-      revocations: (purls) => checkRevocations(dataDir, [...purls]),
-      purlsFor: (server) => installedPurls([server]).addressable.map((a) => a.purl)
-    });
+    let decision: HookDecision = { kind: 'no-opinion' };
+    if (isMcp) {
+      // Only MCP calls need the revocation list and the host configs.
+      const [{ checkRevocations }, { installedPurls }, { readAllServers }] = await Promise.all([
+        import('../revocation/client.js'),
+        import('../revocation/installed.js'),
+        import('../stack/registry.js')
+      ]);
+      decision = decidePreToolUse(payload, {
+        servers: readAllServers({ cwd, home: process.env.HOME }),
+        revocations: (purls) => checkRevocations(dataDir, [...purls]),
+        purlsFor: (server) => installedPurls([server]).addressable.map((a) => a.purl)
+      });
+    }
+    // Revocation first: it carries the advisory. Then the repository's policy.
+    if (decision.kind !== 'deny' && hasPolicy) {
+      const { decidePolicy } = await import('./policy.js');
+      const byPolicy = await decidePolicy(payload as never, {
+        root,
+        dataDir,
+        home: process.env.HOME
+      });
+      if (byPolicy.kind === 'deny' || byPolicy.note) decision = byPolicy;
+    }
 
     const rendered = renderDecision(decision);
     if (rendered) process.stdout.write(`${rendered}\n`);
