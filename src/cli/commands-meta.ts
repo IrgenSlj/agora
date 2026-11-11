@@ -123,6 +123,23 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'signer',
+    group: 'Setup',
+    summary: 'Create and trust the key that signs receipts on this machine',
+    usage: 'agora signer [status|init|trust] [--name <label>] [--json]',
+    details:
+      '`init` creates an ed25519 key in the OS keystore (macOS Keychain, or the Linux Secret ' +
+      'Service through secret-tool) and nowhere else. `trust` adds its public key to ' +
+      '.agora/signers.json in this repository; commit that file. With a key, `agora receipt ' +
+      'write` signs at level local-keychain: an agent confined by the host sandbox could not have ' +
+      'rewritten and re-signed the log. Without a keystore, receipts stay unsigned and say so.',
+    flags: [
+      { flag: '--name', description: 'Label for the key in .agora/signers.json' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora signer init', 'agora signer trust --name laptop', 'agora signer status']
+  },
+  {
     name: 'audit',
     group: 'Check',
     summary: 'Look up every configured MCP server in OSV.dev',

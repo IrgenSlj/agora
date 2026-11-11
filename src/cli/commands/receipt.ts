@@ -41,8 +41,8 @@ export const commandReceipt: CommandHandler = async (parsed, io, style) => {
   if (sub === 'write') {
     const dataDir = detectDataDir(parsed, io);
     const { signReceiptEnvelope, signerAvailable } = await import('../../signer/client.js');
-    const level = parsed.flags['no-sign'] ? 'none' : await signerAvailable(io.env ?? {});
-    const built = buildReceipt({ dataDir, repo, sha, signer: level });
+    let level = parsed.flags['no-sign'] ? 'none' : await signerAvailable(io.env ?? {});
+    let built = buildReceipt({ dataDir, repo, sha, signer: level });
     if (built.status === 'no-sessions') {
       if (parsed.flags.json) writeJson(io.stdout, { commit: sha, status: 'no-sessions' });
       else
@@ -61,7 +61,22 @@ export const commandReceipt: CommandHandler = async (parsed, io, style) => {
       return ExitCode.POLICY_FORBID;
     }
     let env = envelope(built.statement);
-    if (level !== 'none') env = await signReceiptEnvelope(env, io.env ?? {});
+    if (level !== 'none') {
+      try {
+        env = await signReceiptEnvelope(env, io.env ?? {});
+      } catch (e) {
+        // An unsigned receipt that claims a signer would never verify. Say what
+        // happened and write the honest, unsigned one instead.
+        writeLine(
+          io.stderr,
+          `Signing failed (${e instanceof Error ? e.message : String(e)}); writing an unsigned receipt.`
+        );
+        level = 'none';
+        built = buildReceipt({ dataDir, repo, sha, signer: level });
+        if (built.status !== 'built') return ExitCode.COULD_NOT_CHECK;
+        env = envelope(built.statement);
+      }
+    }
     const body = JSON.stringify(env);
     if (parsed.flags['dry-run']) {
       writeJson(io.stdout, { commit: sha, envelope: env, predicate: built.predicate });
