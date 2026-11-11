@@ -8,6 +8,23 @@ Agora 2.0 is a written limit for every coding agent and a receipt for every agen
 ([`docs/PLAN.md`](./docs/PLAN.md)). 0.9 removes everything that plan does not build on. `src/` goes
 from about 30,000 lines to 8,600.
 
+### Added — policy over agent actions, learned and compiled (phase 3)
+
+- **`agora.cedar` governs what agents do.** Every session event is a Cedar request: read and write
+  on a File, exec on a Program, connect on a Peer, call on a Tool. With an `agora.cedar` present,
+  anything no rule permits is denied. The shipped baseline forbids calls to revoked MCP servers.
+  This replaces the artifact-level policy model of 0.8.
+- **`agora learn`** proposes a minimal policy from this repository's verified sessions, as a diff:
+  paths by top-level directory, programs, hosts, MCP tools per server, built-in tools, with paths
+  outside the repository flagged and each rule's evidence counted. `--apply` writes it, replacing
+  only its own block.
+- **`agora replay`** reports what a policy would have denied in sessions that already ran.
+- **`agora plan` / `agora apply`** compile `agora.cedar` for Claude Code. The PreToolUse hook now
+  runs on every tool and denies what the policy does not permit; permits with an exact equivalent
+  become `permissions.allow` rules, tracked in `.agora/compiled.json`. Every rule is reported as
+  compiled, enforced by the hook only, or not enforceable because Claude Code cannot see it.
+- `agora policy test` is removed; `agora replay` tests a policy against what actually ran.
+
 ### Added — receipts (phase 2)
 
 - **`agora receipt write|show|verify`.** A receipt is an in-toto statement about one commit, in a

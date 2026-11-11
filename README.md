@@ -37,10 +37,10 @@ repository. Agora will:
 | `agora audit` — look up every configured MCP server in OSV.dev | **Works** |
 | `agora receipt` — a receipt per commit in git notes, naming the agent sessions that produced it and what they touched; signed with a key that lives only in the OS keychain | **Works** |
 | `agora ci` and the GitHub Action — verify every commit's receipt in a pull request, and fail on a blocking advisory | **Works** |
-| `agora policy` — lint and test `agora.cedar` with a real Cedar engine | **Works** (artifact-level rules only) |
+| `agora learn` and `agora replay` — propose a least-privilege `agora.cedar` from what agents did, and see what a policy would have denied | **Works** |
+| `agora plan` / `apply` — compile `agora.cedar` into Claude Code: the hook enforces it on every tool call, exact permits become allow rules | **Works** (Claude Code) |
 | `agora doctor` — what Agora can see and enforce on this machine | **Works** |
 | `agora log` and the recording hooks — a hash-chained, tamper-evident log of every tool call, file touched, program run and host fetched | **Works** |
-| `agora learn`, `agora plan` / `apply` as a policy compiler, `agora replay` (phase 3) | Planned |
 | OpenCode support and canary files (phase 4) | Planned |
 | Runner-signed receipts and the evidence report (phase 5, release 2.0.0) | Planned |
 
@@ -67,6 +67,9 @@ Revocations
 ```bash
 agora hook install     # deny revoked MCP servers and record every session
 agora log show         # the last session as a timeline; `agora log verify` checks the chain
+agora learn --apply    # write agora.cedar from what agents actually did here
+agora replay           # what that policy would have denied in past sessions
+agora apply            # compile it into .claude/settings.json; the hook enforces it
 agora signer init      # a signing key in your OS keychain; `agora signer trust` lists it here
 agora receipt write    # after a commit: record how agents produced it, as a git note
 git push origin refs/notes/agora
@@ -96,8 +99,9 @@ when an MCP server the repository configures has a malware, critical or high adv
 
 ## What Agora will never do
 
-- **Grant a permission.** The hook can deny or stay silent. It never says "allow", because that
-  would skip a prompt the user would otherwise have seen.
+- **Grant a permission you did not write.** The hook can deny or stay silent; it never says
+  "allow". `agora apply` writes allow rules only as exact copies of permits in your own
+  `agora.cedar`, and removes them when the permit goes.
 - **Block your agent because Agora broke.** Hooks fail open and say so on stderr. CI fails closed.
 - **Record what your agent read or wrote.** Events hold tool names, paths, commands and peers, never
   arguments, results, prompts or file contents.
@@ -117,8 +121,8 @@ $ agora search filesystem
   they did. Finding and installing tools is left to the hosts and registries.
 ```
 
-`plan` and `apply` come back in a later release with a new meaning: compiling `agora.cedar` into
-host permissions. See [`CHANGELOG.md`](./CHANGELOG.md) for the full list.
+`plan` and `apply` are back with a new meaning: compiling `agora.cedar` into host settings. See
+[`CHANGELOG.md`](./CHANGELOG.md) for the full list.
 
 ## Development
 

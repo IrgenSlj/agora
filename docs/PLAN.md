@@ -241,14 +241,35 @@ How it was built, where it differs from the sketch above:
 
 ### Phase 3 — Learn and compile
 
-- [ ] Cedar schema for agent actions (tool, path, command, peer)
-- [ ] `agora learn`: synthesise a minimal policy from logged sessions, as a reviewable diff
-- [ ] Claude Code emitter: policy to native permissions plus hook enforcement; capability matrix
+- [x] Cedar schema for agent actions (tool, path, command, peer)
+- [x] `agora learn`: synthesise a minimal policy from logged sessions, as a reviewable diff
+- [x] Claude Code emitter: policy to native permissions plus hook enforcement; capability matrix
       lists gaps
-- [ ] `agora replay --policy`: report what a policy would have denied
+- [x] `agora replay --policy`: report what a policy would have denied
 
 **Gate:** on Agora's own repository, a policy learned from one week of sessions denies zero
 legitimate actions in replay, and the count of approval prompts per session drops measurably.
+
+**Gate open.** The code is in, and the loop works end to end on a real session: in a scratch
+repository, `agora learn --apply` and a tightened rule made `agora replay` predict a denial of
+`curl`, and a headless Claude Code session that was itself allowed to run `curl` was stopped by
+the hook with the policy's reason, the denial recorded in the log. The gate needs a week of real
+sessions on this repository, which needs the hooks installed here and `agora` on PATH.
+
+Decisions made while building it:
+
+- **Rule 3 and allow rules.** The hook never allows. `agora apply` writes `permissions.allow` rules
+  only as exact copies of permits in the repository's own `agora.cedar`, written by a person
+  running `apply`, and tracks them in `.agora/compiled.json` so they leave when the permit does.
+  That is the only grant Agora writes, and it is what makes prompts drop.
+- **Enforcement is the hook.** Claude Code runs PreToolUse hooks before its own permission check,
+  and a hook's deny holds against an allow rule, so the hook evaluates `agora.cedar` exactly.
+  Allow rules are compiled only from shapes with an exact equivalent; everything else is listed as
+  enforced by the hook only.
+- **Learn generalises to the top-level directory** and no further, and flags any permission outside
+  the repository for review.
+- **Cost.** Checking a call against a policy takes about 130 ms per tool call, about 45 ms of it
+  Cedar. A long-lived evaluator or a compiled matcher can cut that if it matters.
 
 ### Phase 4 — Second host and canaries
 

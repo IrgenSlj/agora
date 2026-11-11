@@ -12,8 +12,9 @@ There is one plan; do not add another planning document.
    current gate passes.
 2. **Test first for security behaviour.** Write the failing test (tamper, deny, unknown) before the
    implementation.
-3. **Deny or no opinion, never allow.** No hook or compiled config may grant a permission the host
-   would not have granted.
+3. **Deny or no opinion, never allow.** No hook may allow. A compiled config may grant only an
+   exact copy of a permit in the repository's own `agora.cedar`, written by a person running
+   `agora apply`; nothing else may grant a permission the host would not have granted.
 4. **Fail open in hooks, fail closed in CI.** A hook error must not block a tool call; a CI
    verification error must not pass.
 5. **Unknown stays unknown.** Anything not checked or not enforceable is reported as such in output
