@@ -2,7 +2,6 @@ import { PackageURL } from 'packageurl-js';
 
 /**
  * Parse a purl string into its components.
- * Source: AGORA_BRIEF_v2.md §5.1 (D16)
  */
 export function parsePurl(purl: string): {
   type: string;
@@ -25,7 +24,6 @@ export function parsePurl(purl: string): {
 
 /**
  * Build a purl string from components.
- * Source: AGORA_BRIEF_v2.md §5.1 (D16)
  */
 export function buildPurl(components: {
   type: string;

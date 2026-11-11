@@ -2,21 +2,18 @@ import { z } from 'zod';
 
 /**
  * Vet level — how deeply the artifact was observed.
- * Source: AGORA_BRIEF_v2.md §5.3
  */
 export const VetLevel = z.enum(['L0-offline', 'L1-proxied-net']);
 export type VetLevel = z.infer<typeof VetLevel>;
 
 /**
  * Sandbox backend used for vetting.
- * Source: AGORA_BRIEF_v2.md §5.3, D9
  */
 export const VetBackend = z.enum(['docker', 'bwrap', 'sandbox-exec']);
 export type VetBackend = z.infer<typeof VetBackend>;
 
 /**
  * Network contact observed during vetting.
- * Source: AGORA_BRIEF_v2.md §5.3
  */
 export const NetworkContact = z
   .object({
@@ -29,7 +26,6 @@ export type NetworkContact = z.infer<typeof NetworkContact>;
 
 /**
  * Divergence between declared and observed behavior.
- * Source: AGORA_BRIEF_v2.md §5.3
  */
 export const DivergenceKind = z.enum([
   'undeclared-egress',
@@ -54,7 +50,6 @@ export type Divergence = z.infer<typeof Divergence>;
 
 /**
  * Observed behavior — what the artifact actually did during vetting.
- * Source: AGORA_BRIEF_v2.md §5.3
  */
 export const ObservedBehavior = z
   .object({
@@ -71,7 +66,6 @@ export type ObservedBehavior = z.infer<typeof ObservedBehavior>;
 /**
  * ObservedProfile — the complete record of what an artifact actually did.
  * Output of `agora vet` (Section 6.2).
- * Source: AGORA_BRIEF_v2.md §5.3
  */
 export const ObservedProfile = z
   .object({
@@ -85,5 +79,5 @@ export const ObservedProfile = z
     observed: ObservedBehavior,
     divergence: z.array(Divergence).describe('Differences between declared and observed behavior')
   })
-  .describe('What the artifact actually did during sandboxed execution (AGORA_BRIEF_v2.md §5.3)');
+  .describe('What the artifact actually did during sandboxed execution');
 export type ObservedProfile = z.infer<typeof ObservedProfile>;

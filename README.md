@@ -1,11 +1,9 @@
 <p align="center">
-  <img src="./docs/assets/banner.svg" alt="Agora — catch the tool that changed after you trusted it" width="100%">
+  <img src="./docs/assets/banner.svg" alt="Agora — a written limit for every coding agent, a receipt for every change" width="100%">
 </p>
 
-> **Agora catches the tool that changed after you trusted it.** It verifies where your MCP servers
-> come from, pins exactly what you approved, watches for the update that quietly rewrites a tool's
-> behaviour, and enforces *your* policy across every host — VS Code, Claude Code, Cursor, Windsurf,
-> OpenCode.
+> **Agora gives every coding agent a written limit and every agent-made change a receipt.**
+> Local-first, open source, no account.
 
 <p>
   <a href="https://www.npmjs.com/package/agora-hub"><img src="https://img.shields.io/npm/v/agora-hub" alt="npm"></a>
@@ -13,286 +11,117 @@
   <a href="https://github.com/IrgenSlj/agora/actions"><img src="https://img.shields.io/github/actions/workflow/status/IrgenSlj/agora/ci.yml?branch=main" alt="CI"></a>
 </p>
 
-You vetted that MCP server on install day. Then it shipped a new version. The tool descriptions
-changed, an advisory landed, the maintainer handed the repo to someone else — and nothing on your
-machine said a word.
+Coding agents now run for minutes or hours at a stretch. Nobody clicks through every approval
+prompt for that long, so people either babysit the agent or switch the prompts off. Neither gives
+you what you need: a limit you set up front, and proof afterwards that the agent stayed inside it.
 
-That is the gap. Scanning a server *before* you install it is a crowded field and getting better.
-**Almost nothing watches what happens after.** The agent-tooling ecosystem still has no revocation
-mechanism at all: no feed, no kill switch, no way to be told that the thing you already installed
-went bad.
+Agora is that layer, and it works across hosts. You keep one policy file, `agora.cedar`, in the
+repository. Agora will:
 
-Agora is that layer. It deals in **evidence** — verifiable, inspectable attestations — never opaque
-numeric "trust scores," and it says plainly what it does *not* know. It is host-neutral and
-local-first: no accounts, no hosted backend you depend on, `--json` on every command.
+- **learn** a minimal policy from what your agents actually do in this repo,
+- **compile** it into each host's own permission, sandbox and hook settings, and list every rule a
+  host cannot enforce rather than dropping it quietly,
+- **sign a receipt** for each agent session, attached to the commits it produced, so a reviewer
+  can ask "was this change made within policy?" and CI can answer.
 
-```console
-$ agora trust @modelcontextprotocol/server-filesystem
+> **Status: this is a rebuild in progress.** Agora 0.9 is the cleared foundation. Learn, compile
+> and receipts are the plan, not the product yet. The table below says what works today, and it is
+> kept honest against the code.
 
-  ✓ provenance signed by modelcontextprotocol/servers
-  ⚠ scan       6 pass · 2 warn · 0 fail
-  ? policy     not evaluated
-  ⚠ revocation 2 advisories for this package — no version pinned, so it is unknown
-               whether yours is affected (feed 1m old)
-  ? observed   never run through `agora run` — no behaviour recorded
-
-  incomplete — policy, observed not established
-```
-
-Every plane's verdict for one artifact, including the unknowns. **"Passed the gate" means *no known
-red flags*, never "safe."** That distinction is deliberate and appears everywhere a verdict is
-shown. Agora never fabricates data or counts; if a source is unreachable, it says so.
-
-## Put it in CI
-
-The question above only helps if somebody keeps asking it. People don't; CI does.
-
-```yaml
-- uses: IrgenSlj/agora@v0
-```
-
-That runs `agora ci`, which answers the whole post-install question once, with one exit code:
-**advisories** against the servers you actually run, **drift** against the artifacts you approved,
-and whether the **stack** still resolves. It reads your committed `agora.toml` as well as any host
-configs in the repository — a runner has your repository, not your laptop, and `agora.toml` is the
-part you commit. Findings are annotated on the pull request against the file that declares the
-offending server, and the verdict lands on the run summary.
-
-```console
-$ agora ci
-
-  ✗ advisories  known-vulnerable
-      1 server with a MALWARE/CRITICAL/HIGH advisory
-      · HIGH GHSA-hc55-p739-j48w — filesystem
-
-  ✓ drift       changed since approval
-      every locked artifact still hashes to what was approved
-
-  ✓ health      stack coherent
-      3 configured servers resolve cleanly
-
-  Something you trusted has changed.
-```
-
-Drift needs a baseline, so pin one first — once, and again whenever you deliberately accept a
-change:
-
-```bash
-agora doctor --probe   # learn what each server currently advertises
-agora lock write       # pin it — tools, schemas, and tarball bytes — and commit agora.lock
-```
-
-Exit `0` nothing failed · `1` a blocking advisory or drift · `3` OSV unreachable. A check Agora
-could not perform is reported as **not established**, never as a pass — a repository with no
-`agora.lock` has not proved the absence of drift, and this says so instead of showing a green tick.
-`--fail-on-unknown` turns that absence into a failure.
-
-Two deliberate non-behaviours, because a gate people delete protects nothing: it never starts a
-configured server (a CI runner should not be talked into executing a stranger's processes on a pull
-request), and an unresolvable server does not fail the build (on a fresh runner almost nothing is
-installed — and a server that was never installed here has not *changed*).
-
-<p align="center">
-  <img src="./docs/assets/demo.gif" alt="agora doctor, search, scan, and freeze in the terminal" width="100%">
-</p>
-
-<p align="center">
-  <sub><em>audit what you already run · search every registry at once · gate what comes in · freeze it into a portable profile</em></sub>
-</p>
-
-## Why this exists
-
-The agent-tooling ecosystem has 20k+ published MCP servers, near-zero signing and provenance
-discipline, a documented 2025–2026 record of supply-chain attacks (typosquatted servers, rug-pulls,
-description poisoning, credential exfiltration) — and **no revocation mechanism at all**.
-
-The defense the field now converges on is: pin the exact version, hash the tool definitions you
-approved, and force a human re-review when either changes. That is precisely what Agora is built to
-do — plus the part nobody else does, which is telling you when the answer changes *after* the
-install. Provenance is verified, behaviour is sampled while you actually use a server, policy is
-evaluated over that evidence, and a revocation can reach you offline. Sampling is evidence, not
-complete behavior coverage.
-
-## Install
-
-```bash
-npx -y agora-hub doctor      # zero-install: audit every MCP server across your hosts
-npm i -g agora-hub && agora  # or install once
-```
-
-Register `agora` with any MCP client (Claude Code, Cursor, Windsurf, Gemini/Codex CLI, Zed) as an MCP
-server — zero-install command `npx -y agora-hub mcp`. From source (requires [bun](https://bun.sh)):
-`git clone` · `bun install` · `bun run build` · `bun link`.
-
-## The four planes
-
-Agora is organized as four planes over your agent stack (see [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md)
-for the full specification):
-
-- **Federate** — one search across multi-source upstream registries (the official MCP Registry as
-  canonical, then Glama, GitHub, and GitHub-hosted Agent Skills). Agora never competes on catalog
-  size; its effective catalog is everyone's, deduped by
-  [purl](https://github.com/package-url/purl-spec). PulseMCP is wired but disabled — it has no
-  self-serve API. Smithery and Hugging Face are non-canonical, opt-in research sources.
-  **Agent Skills are discoverable here and nothing more** — see the status table below.
-- **Verify (evidence)** — provenance verification (Sigstore / npm & GitHub attestations),
-  schema-and-description hashing with rug-pull **drift** detection, and runtime **observation**:
-  `agora run -- <server>` supervises an MCP server while you actually use it and records what it
-  advertised and which tools were called, plus sampled network peers. Evidence export uses standard
-  **in-toto / DSSE envelopes**, with explicit unknowns; digest resolution and predicate-specific
-  schema enforcement are still being completed. See [`docs/EVIDENCE.md`](./docs/EVIDENCE.md).
-- **Gate (policy)** — a real policy engine ([Cedar](https://www.cedarpolicy.com/)): your `.cedar` rules
-  evaluate evidence per project, alongside a bundled OSV-derived **revocation feed**. Network copies
-  are unsigned and additive-only: they may add findings but cannot suppress bundled ones.
-- **Manage** — a portable `agora.toml` profile, per-host surgical writes, and an `agora.lock` model
-  intended to record exact installed artifacts. Lock verification exists; automatic lock creation
-  during acquisition is still being completed. `agora mcp` exposes Agora to agents, but its current
-  confirming acquire path is transitional until the request-only human approval boundary lands.
-
-## Status — honestly
-
-Agora is mid-build against the v2.0 brief. The plane descriptions above are the **design**;
-[`docs/STATUS.md`](./docs/STATUS.md) is the detailed authority on what the current code proves, and
-[`docs/NEXT.md`](./docs/NEXT.md) is the ordered backlog.
+## Status
 
 | Capability | State |
 |---|---|
-| **Manage** — stack manager, multi-host adapters, `plan`/`apply`, `sync --from` | ✅ live |
-| **Federate** — multi-source, offline-first catalog search (`agora search`) | ✅ live *(4 of 8 sources query by default)* |
-| **Verify** — live Sigstore provenance (Fulcio + CT + Rekor, identity-bound) · schema drift · poisoning heuristics | ✅ live |
-| **Observe** — `agora observe enable` records MCP activity and sampled direct-process network peers | ✅ live, limited sampling |
-| **Gate** — heuristic customs gate **plus** Cedar, provenance, drift, and revocation | 🔄 primary acquire path live; all-write unification pending |
-| **Gate** — revocation feed, generated from OSV daily, bundled with the package | ✅ live |
-| **Gate** — `agora audit`: advisories against the servers you actually run | ✅ live |
-| **Lock** — `lock write` pins the approved tool baseline; `lock verify` and `agora ci` detect drift | ✅ live *(tarball digest and policy verdict come with the acquisition transaction)* |
-| **Export** — schema-valid portable evidence | 🔄 bundle/envelope exist; predicate schema validation pending |
-| **Serve** — agent-facing MCP acquisition | 🔄 preview + request-only intent live; policy/evidence tools and strong consent boundary pending |
-| **Agent Skills** — trust plane coverage (scan, gate, evidence, host install) | ⬜ **not built** — skills are searchable only |
-| **Sandboxed pre-install `vet`** | ⬜ deferred — replaced by runtime observation above |
+| `agora hook` — a Claude Code `PreToolUse` hook that denies calls to revoked MCP servers | **Works** |
+| `agora run` / `agora observe` — record MCP tool calls and sampled network peers, never arguments or results | **Works** |
+| `agora audit` — look up every configured MCP server in OSV.dev | **Works** |
+| `agora ci` and the GitHub Action — fail a build on a blocking advisory | **Works** |
+| `agora policy` — lint and test `agora.cedar` with a real Cedar engine | **Works** (artifact-level rules only) |
+| `agora doctor` — what Agora can see and enforce on this machine | **Works** |
+| Hash-chained session log (phase 1) | Planned |
+| Signed receipts in git notes, verified in CI (phase 2) | Planned |
+| `agora learn`, `agora plan` / `apply` as a policy compiler, `agora replay` (phase 3) | Planned |
+| OpenCode support and canary files (phase 4) | Planned |
+| Runner-signed receipts and the evidence report (phase 5, release 2.0.0) | Planned |
 
-> **On Agent Skills.** Earlier copy said Agora verifies where your MCP servers *and Agent Skills*
-> come from. That was true of the roadmap, not the code: skills are federated into search, but no
-> skill passes through `scan`, the gate, or the evidence store today. The claim is corrected here
-> rather than quietly kept, and closing that gap is the next release's main work.
+The full plan, with a runnable gate for each phase, is in [`docs/PLAN.md`](./docs/PLAN.md).
 
-## What works today
-
-```bash
-agora ci                         # the whole post-install question, one exit code (for CI)
-agora lock write                 # pin what is installed now, so drift has a baseline
-agora doctor                     # one table of every MCP server across all your hosts + drift
-agora search postgres            # multi-source catalog search across upstream registries
-agora acquire mcp-postgres       # resolve → gate → write config (the customs office)
-agora plan                       # Terraform-style diff of your stack vs. agora.toml (no writes)
-agora apply                      # reconcile host configs to match the profile
-agora sync --from <git-url>      # clone someone's whole agent setup — every entry runs the gate
-agora integrate --all            # install Agora into every host, using its own stack machinery
-agora observe enable             # route every server through the shim; agora observe reports
-agora audit                      # advisories against every MCP server you have configured
-agora trust mcp-filesystem       # every plane's verdict for one artifact, including the unknowns
-agora export --attestations <id> # the evidence as a portable in-toto/DSSE bundle
-```
-
-### The one that explains why Agora exists
+## Try it
 
 ```console
-$ npm audit
-found 0 vulnerabilities
+$ npx -y agora-hub doctor
 
-$ agora audit
-✗ filesystem   HIGH  GHSA-hc55-p739-j48w  path validation bypass
-✗ k8s          HIGH  GHSA-gjv4-ghm7-q58q  command injection
-✗ playwright   HIGH  GHSA-6fg3-hvw7-2fwq  DNS rebinding
-None of these appear in any package.json, which is why `npm audit` reports nothing.
+Hosts
+  ✓ Claude Code · 3 MCP servers
+  ✓ Cursor · 1 MCP server
+  · VS Code · not found
+
+Enforcement
+  ⚠ Claude Code hook not installed · run `agora hook install`
+  ⚠ no agora.cedar · run `agora policy init`
+
+Revocations
+  ✓ no configured server is on the revocation list (4 checked)
 ```
 
-Same directory, same machine. `npm audit` is not deficient — **MCP servers are spawned commands in
-host configs, not declared dependencies**, so anything that walks a dependency tree cannot see them
-by construction. That gap is the product.
-
-Advisories come from [OSV.dev](https://osv.dev) and are refreshed daily by a workflow; nobody
-curates a list. The same data fills the revocation feed, which ships *inside* the package — so it
-works offline, on first run, with no key to manage.
-
-Turn observation on across every host with `agora observe enable` (`--dry-run` shows the exact
-command diff first; `disable` puts every command back). The shim is byte-transparent, and it
-records tool *names* and counts plus sampled network peers: never arguments, results, or prompt
-text. A missed or unavailable network sample stays unknown.
-
-`agora.toml` is a portable, declarative profile of your whole installation — commit it and anyone
-reproduces your setup with `agora sync --from <url>`. Writes are **surgical**: adapters preserve every
-unrelated host-config key and write atomically. `agora freeze` writes `env_from` names rather than
-host environment values; those names resolve locally during plan/apply and a missing value stops the
-write. Do not put credential literals in a hand-authored manifest.
-
-## Upgrading from 0.6.x
-
-0.7.0 is the first release carrying the trust plane, and it removes nineteen commands from the
-v1 catalog surface — the accounts, community and curation pillars the
-[v2 brief](./AGORA_BRIEF_v2.md) deleted.
-
-Running one of them tells you what happened rather than printing `Unknown command`:
-
-```
-$ agora news
-`agora news` was removed in v0.7.0.
-  The news reader folded into the daily digest.
-
-  Use `agora today` instead.
+```bash
+agora hook install     # deny revoked MCP servers at the moment they are called
+agora policy init      # scaffold agora.cedar at the repository root
+agora audit            # look every configured server up in OSV.dev
 ```
 
-`news`/`trending` → `today` · `use` → `acquire` · `curate` → `search` · `workflows` →
-`search --kind agent-skill`. The interactive surfaces — `shell`, `tui` and `chat` — have **no
-replacement**: the bash+chat REPL was a second place to run commands you can already run, the
-full-screen browser was a second UI over the same ones, and Agora hosts no inference. The account
-and community commands
-(`auth`, `login`, `logout`, `whoami`, `author`, `share`, `save`, `saved`, `bookmarks`, `similar`,
-`compare`, `tutorial`, `tutorials`) have **no replacement** — Agora has no accounts and stores no
-credentials. `install`, `acquire`, `scan`, `doctor`, `freeze`, `plan`, `apply`, `sync`, `search`
-and `browse` are unchanged.
+Every command takes `--json` and uses the same exit codes: `0` clean, `1` policy failure, `2` usage,
+`3` could not check.
 
-## Positioning
+## Put it in CI
 
-- **The tripwire, not the turnstile.** Checking an artifact once, on install day, is the crowded
-  half of this problem. Agora's job is the answer that changes afterwards.
-- **A customs office, not a registry.** Agora searches existing registries; it never competes on
-  catalog size.
-- **Evidence, not scores.** Every verdict is policy evaluated over verifiable attestations — no opaque
-  numeric trust score exists anywhere in the product.
-- **Host-neutral.** VS Code, Claude Code, Cursor, Windsurf and OpenCode are five equal integrations, not one
-  identity.
-- **Local-first, no accounts.** Every core feature works offline against an on-disk cache — degraded,
-  never broken. No auth, no sessions, no hosted backend you depend on.
-- **Unknown stays unknown.** Absence of evidence is never rendered as a clean result, and the status
-  table above is kept accurate against the code rather than against the plan.
+```yaml
+- uses: IrgenSlj/agora@v0
+  with:
+    fail-on-unknown: false
+```
 
-## Host integration
+Today this fails the build when an MCP server the repository configures has a malware, critical or
+high advisory. A server it cannot identify is reported as unchecked, never as clean. When receipts
+land, the same step will verify them for every commit in the pull request.
 
-| Host | Mechanism |
-|---|---|
-| Any MCP client (Claude Code, Cursor, Windsurf, Gemini/Codex CLI, Zed) | Register `agora mcp` — `npx -y agora-hub mcp` |
-| OpenCode | Native plugin (tools **+** hooks) |
-| Claude Code | `/plugin marketplace add IrgenSlj/agora` → `/plugin install agora` (tools + `/agora` + skill) |
+## What Agora will never do
 
-`agora integrate [host|--all]` installs Agora into each host using its own stack-manager machinery —
-the first thing the stack manager manages is Agora itself.
+- **Grant a permission.** The hook can deny or stay silent. It never says "allow", because that
+  would skip a prompt the user would otherwise have seen.
+- **Block your agent because Agora broke.** Hooks fail open and say so on stderr. CI fails closed.
+- **Record what your agent read or wrote.** Events hold tool names, paths, commands and peers, never
+  arguments, results, prompts or file contents.
+- **Turn unknown into clean.** A check that did not run is reported as not established.
+- **Score anything, or call it safe.** Agora states what it checked and what it could not.
+
+## Upgrading from 0.8
+
+0.9 removed everything outside this plan: search, install and acquire, the `agora.toml` stack
+manager and lockfile, the pre-install scan, the daily digest and the agent-facing MCP server. Each
+removed command still runs and tells you what happened:
+
+```
+$ agora search filesystem
+`agora search` was removed in v0.9.0.
+  Agora 0.9 narrowed to one job: a written limit for coding agents and a receipt for what
+  they did. Finding and installing tools is left to the hosts and registries.
+```
+
+`plan` and `apply` come back in a later release with a new meaning: compiling `agora.cedar` into
+host permissions. See [`CHANGELOG.md`](./CHANGELOG.md) for the full list.
 
 ## Development
 
 ```bash
 bun install
-bun run test        # vitest, hermetic (no network)
-bun run lint        # biome
-bun run typecheck   # tsc
-bun run build       # tsc + copy catalog + chmod +x dist/cli.js
-bun src/cli.ts <cmd> # run from source, no build needed
+bun run typecheck && bun run lint && bun run test && bun run verify:package
+bun src/cli.ts <cmd>   # run from source
 ```
 
-Node ≥ 22.22.2, ESM only. Direction is locked by
-[`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md); current truth is
-[`docs/STATUS.md`](./docs/STATUS.md), the execution plan is [`docs/NEXT.md`](./docs/NEXT.md), and
-multi-session handoffs live in [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md). Working non-legacy
-features are preserved and improved in place. PRs welcome — see [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Node ≥ 22.22.2, ESM only. Read [`AGENTS.md`](./AGENTS.md) for the rules, [`docs/PLAN.md`](./docs/PLAN.md)
+for the plan and [`docs/STATUS.md`](./docs/STATUS.md) for what is built. Pull requests welcome; see
+[`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## License
 

@@ -1,86 +1,44 @@
 # Contributing
 
-`agora` is the local-first trust plane for agentic tooling. It searches multiple upstream registries,
-collects evidence, gates installs through policy, and manages MCP servers and Agent Skills across
-OpenCode, Claude Code, Cursor, and Windsurf. There is no hosted backend dependency in the core.
+Agora gives every coding agent a written limit and every agent-made change a receipt. It is
+local-first, has no hosted backend and no account.
 
-Before structural changes, read [`README.md`](./README.md), [`AGORA_BRIEF_v2.md`](./AGORA_BRIEF_v2.md),
-[`docs/STATUS.md`](./docs/STATUS.md), [`docs/NEXT.md`](./docs/NEXT.md), and the latest handoff in
-[`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md).
+Before a structural change, read [`docs/PLAN.md`](./docs/PLAN.md) (the one plan),
+[`docs/STATUS.md`](./docs/STATUS.md) (what is built) and [`AGENTS.md`](./AGENTS.md) (the rules,
+which apply to people as much as to agents).
 
-## Quick Start
+## Quick start
 
 ```bash
 git clone https://github.com/IrgenSlj/agora.git
 cd agora
 bun install
-bun run test        # vitest, hermetic / no network
-bun run lint        # biome
-bun run typecheck   # tsc
-bun run build       # tsc + catalog copy + executable dist/cli.js
+bun run typecheck && bun run lint && bun run test && bun run verify:package
 bun src/cli.ts <cmd>
 ```
 
-Run `bun run typecheck && bun run lint && bun run build && bun run test` before opening a PR.
-
 ## Workflow
 
-External contributions should use focused branches and PRs. Continue the first unblocked item in
-`docs/NEXT.md` unless the issue or maintainer explicitly reprioritizes it, and update the handoff when
-a change spans sessions.
+- One task from the build plan per branch and pull request. Pick the first unticked box in the
+  current phase unless a maintainer says otherwise.
+- Security behaviour gets its failing test first: tamper, deny, unknown.
+- New commands support `--json` and the exit codes `0` clean, `1` policy failure, `2` usage, `3`
+  could not check.
+- Output stays honest: unreachable or unchecked is reported as such, never as clean.
+- A new runtime dependency needs a reason in the pull request. No native modules.
 
-For every behavior change:
+## Layout
 
-1. Keep the edit scoped to the owning module.
-2. Add focused tests proportional to the blast radius.
-3. Preserve `--json` and stable exit codes on new commands.
-4. Use plan/apply or dry-run separation for writes.
-5. Keep terminal output honest: unreachable sources and unknown evidence must be reported as such.
-6. Preserve working non-legacy product surfaces; consolidation should move them onto shared
-   services, not silently delete functionality.
-
-## Code Style
-
-- TypeScript strict mode, ESM, Node >= 22.22.2.
-- Tests use Vitest, lint/format use Biome.
-- Prefer repo-local helper APIs and existing module patterns.
-- Do not add hosted-backend dependencies to core flows.
-- Do not put credentials in `agora.toml`.
-- Use `src/atomic-write.ts` for config/state writes that touch user files.
-- No opaque numeric trust scores. Verdicts come from evidence and policy.
-
-## Project Layout
-
-```text
-src/model/           v2 zod wire/disk schemas, purl helpers, JCS/SHA-256 hashing
-schemas/             generated JSON Schema artifacts
-src/store/           SQLite store + CAS blob cache
-src/federation/      federated catalog sources; target is adapters + sync by purl
-src/stack/           stack manager: agora.toml, plan/apply, host adapters, doctor
-src/scan.ts          heuristic evidence producer used alongside Cedar
-src/acquire.ts       resolve -> gate -> write path; lock/store transaction still in progress
-src/cli/             CLI, shell, TUI, command metadata
-src/plugin/          thin OpenCode / Claude Code plugin tools and hooks
-src/news/            read-only news feed, frozen except maintenance
-src/marketplace.ts   compatibility catalog/install-planner barrel; converge without dropping features
-test/                Vitest suite
+```
+src/cli/            command dispatch, help, retired commands
+src/hook/           Claude Code PreToolUse decision and fast-path handler
+src/observe/        byte-transparent MCP shim and session recording
+src/policy/         Cedar engine, entities, shipped baseline
+src/revocation/     bundled revocation list, matching, installed-server purls
+src/osv/            OSV.dev client and advisory translation
+src/stack/          host adapters (read and surgical write) and registry
+src/evidence/       in-toto / DSSE helpers
+src/ci/             `agora ci` report, annotations and job summary
 ```
 
-## Adding Commands
-
-1. Add `src/cli/commands/<name>.ts`.
-2. Wire dispatch in `src/cli/app.ts`.
-3. Add command metadata under `src/cli/commands-meta/`.
-4. Support `--json`.
-5. Return v2 exit codes: `0` ok, `1` policy forbid / drift / revocation hit, `2` usage, `3`
-   network, `4` sandbox unavailable.
-6. Add tests.
-
-If the command writes anything, preserve unrelated keys and write atomically.
-
-## Help Wanted
-
-The current scheduled work is in [`docs/NEXT.md`](./docs/NEXT.md). Security invariants and a single
-mutation gate come first, followed by the lock/evidence transaction, agent authorization, data-model
-convergence, and release hardening. See [`docs/DEVELOPMENT.md`](./docs/DEVELOPMENT.md) for the latest
-session handoff.
+Report security issues privately; see [`SECURITY.md`](./SECURITY.md).

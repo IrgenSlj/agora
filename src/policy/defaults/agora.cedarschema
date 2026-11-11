@@ -1,4 +1,4 @@
-// Cedar entity schema for Agora's policy plane (AGORA_BRIEF_v2.md §7.1).
+// Cedar entity schema for Agora's policy plane.
 //
 // Optionality here is load-bearing, not incidental. An attribute marked `?` is
 // one Agora may genuinely not know, and a policy that reads it without a `has`

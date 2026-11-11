@@ -2,6 +2,61 @@
 
 All notable changes to `agora`. Format inspired by [Keep a Changelog](https://keepachangelog.com).
 
+## Unreleased — 0.9.0, clearing the ground for Agora 2.0
+
+Agora 2.0 is a written limit for every coding agent and a receipt for every agent-made change
+([`docs/PLAN.md`](./docs/PLAN.md)). 0.9 removes everything that plan does not build on. `src/` goes
+from about 30,000 lines to 8,600.
+
+### Fixed — revocations block the bad versions, not the whole package
+
+- Malware advisories list the exact hostile versions and no range. The OSV translation read only
+  ranges, so four entries became "all versions" and **blocked every release of the official Postman
+  MCP server**, `@browserbasehq/mcp-server-browserbase`, `@antv/mcp-server-chart` and
+  `supership-scan`. Explicit version lists now become `2.4.10 || 2.4.11 || 2.4.12`.
+- Disjoint affected ranges are ORed instead of keeping only the first. Two
+  `@modelcontextprotocol/server-filesystem` advisories had dropped their `2025.x` range and now
+  cover it.
+- An advisory naming several packages contributes only the matching package's range.
+- The hand-written version comparator is replaced with `semver`.
+- `npx -y @scope/server@latest` no longer folds `@latest` into the package name (which matched
+  nothing), and a tag or range is treated as an unknown version, not a version.
+- `agora policy test` shipped a fixture that has failed since scan results stopped driving
+  denials; it is removed with the scan.
+
+### Removed
+
+Every removed command still runs, says which version removed it and why, and exits 2.
+
+- **Discovery and installation:** `search`, `info`, `browse`, `open`, `install`, `acquire`, `try`,
+  `approve`, `outdated`, `refresh`, and the agent-facing `agora mcp` server.
+- **The `agora.toml` stack manager and lockfile:** `plan`, `apply`, `freeze`, `sync`, `update`,
+  `remove`, `installed`, `lock`, `capabilities`, `quarantine`, `unquarantine`. `plan` and `apply`
+  return later as the policy compiler.
+- **The pre-install scan and evidence export:** `scan`, `verify`, `trust`, `export`, Sigstore
+  provenance verification and tarball hashing.
+- **The digest and setup surfaces:** `today`, `watch`, `notify`, `welcome`, `init`, `integrate`,
+  `config`, `show`, `edit`, `diff`, `preferences`, `history`.
+- The OpenCode plugin tools, the Claude Code and Gemini plugin manifests, the `/agora` slash
+  command, the bundled skill, the catalog, the SQLite store, the generated JSON Schemas, the feed
+  spec and its daily sync workflow.
+- Dependencies: `better-sqlite3`, `sigstore`, `@modelcontextprotocol/sdk`, `smol-toml`, and the
+  OpenCode plugin SDK peer dependency.
+
+### Changed
+
+- **Exit code 3 now means "could not check"**, and exit code 4 is gone. `agora ci
+  --fail-on-unknown` exits 3, not 1, when nothing could be established.
+- `agora doctor` is rewritten: hosts and their servers, whether the hook is installed, whether the
+  repository has an `agora.cedar`, and any revoked server. Exits 1 only when a configured server is
+  revoked.
+- `agora policy` reads `agora.cedar` at the repository root; `policy init` writes it there.
+- `agora ci` checks advisories only. Lockfile drift and stack health went with the lockfile and the
+  stack manager.
+- The hook denies on revocation only; drift and quarantine denials went with the stack manager.
+- `AGORA_BRIEF_v2.md`, `ROADMAP.md`, `docs/NEXT.md`, `docs/ARCHITECTURE.md`, `docs/EVIDENCE.md` and
+  `docs/OPEN_QUESTIONS.md` are replaced by `docs/PLAN.md`.
+
 ## [0.8.0] — 2026-09-05 — revocation actually applies
 
 ### Removed — the surfaces outside the trust spine (brief DA-14)

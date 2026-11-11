@@ -27,27 +27,37 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
     name: t.adapter.displayName,
     present: t.present
   }));
-  const servers = readAllServers(env);
+  // The same file can be read as both the user and the project config when the
+  // repository is the home directory, so count each (host, file, name) once.
+  const seen = new Set<string>();
+  const servers = readAllServers(env).filter((s) => {
+    const key = `${s.tool}\0${s.configPath}\0${s.name}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   const hook = hookInstalled(cwd);
   const policy = existsSync(join(cwd, POLICY_FILE));
 
   // Refreshing is opportunistic and never fails the report; the lookup is offline.
   await refreshFeed({ dataDir, fetcher: io.fetcher }).catch(() => undefined);
   const addressed = installedPurls(servers);
-  const revocations = checkRevocations(
-    dataDir,
-    addressed.addressable.map((a) => a.purl)
-  );
-  const revoked = addressed.addressable.flatMap((a) =>
-    revocations.matches
-      .filter((m) => m.purl === a.purl && isBlockingMatch(m))
-      .map((m) => ({
+  const revocations = checkRevocations(dataDir, [
+    ...new Set(addressed.addressable.map((a) => a.purl))
+  ]);
+  const revoked = new Map<string, { server: string; tool: string; id: string; reason: string }>();
+  for (const a of addressed.addressable) {
+    for (const m of revocations.matches) {
+      if (m.purl !== a.purl || !isBlockingMatch(m)) continue;
+      const r = {
         server: a.server.name,
         tool: a.server.tool,
         id: m.entry.id,
         reason: m.entry.reason
-      }))
-  );
+      };
+      revoked.set(`${r.server}\0${r.tool}\0${r.id}`, r);
+    }
+  }
 
   if (parsed.flags.json) {
     writeJson(io.stdout, {
@@ -64,11 +74,11 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
       revocations: {
         feedVersion: revocations.feedVersion,
         stale: revocations.stale,
-        revoked,
+        revoked: [...revoked.values()],
         unchecked: addressed.unaddressable.map((s) => s.name)
       }
     });
-    return revoked.length ? ExitCode.POLICY_FORBID : ExitCode.OK;
+    return revoked.size ? ExitCode.POLICY_FORBID : ExitCode.OK;
   }
 
   const theme = cliTheme(style, io);
@@ -105,8 +115,8 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
 
   writeLine(io.stdout, '');
   writeLine(io.stdout, theme.muted('Revocations'));
-  if (revoked.length) {
-    for (const r of revoked) {
+  if (revoked.size) {
+    for (const r of revoked.values()) {
       writeLine(
         io.stdout,
         `  ${status('error', `${r.server} (${r.tool}) is revoked: ${r.id} · ${r.reason}`, theme)}`
@@ -127,5 +137,5 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
   if (revocations.stale) line('warn', 'the cached revocation list is more than a week old');
   writeLine(io.stdout, '');
 
-  return revoked.length ? ExitCode.POLICY_FORBID : ExitCode.OK;
+  return revoked.size ? ExitCode.POLICY_FORBID : ExitCode.OK;
 };

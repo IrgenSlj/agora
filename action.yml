@@ -1,5 +1,5 @@
 name: 'Agora'
-description: 'Fail the build when an MCP server you trusted changes — advisories, lockfile drift, and stack health in one check.'
+description: 'Fail the build when an MCP server this repository configures has a blocking advisory. Receipt verification arrives in a later release.'
 author: 'IrgenSlj'
 
 branding:
@@ -19,13 +19,12 @@ inputs:
     default: 'latest'
   fail-on-unknown:
     description: >-
-      Fail when a check could not be established rather than only when one fails.
-      Most repositories have no agora.lock yet, so this is off by default — a gate
-      that goes red on day one for not having adopted a feature gets deleted.
+      Fail (exit 3) when a check could not be established rather than only when
+      one fails. Off by default.
     required: false
     default: 'false'
   working-directory:
-    description: 'Directory to run in. Host configs and agora.lock are read relative to it.'
+    description: 'Directory to run in. Host configs are read relative to it.'
     required: false
     default: '.'
 

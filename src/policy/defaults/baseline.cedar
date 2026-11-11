@@ -1,4 +1,4 @@
-// Agora's shipped baseline policy (AGORA_BRIEF_v2.md §7.1).
+// Agora's shipped baseline policy.
 //
 // Permissive but safe, deliberately: a default that forbade everything
 // unsigned would block essentially the entire MCP ecosystem on day one, and a

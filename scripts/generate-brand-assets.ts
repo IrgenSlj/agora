@@ -131,8 +131,8 @@ function heroBanner(): string {
   <rect x="1" y="1" width="${W - 2}" height="${H - 2}" fill="none" stroke="${BRICK}" stroke-width="2" opacity="0.5"/>
   ${meander(48, topRule, W - 96, 7, STONE_DIM)}
 ${mark.svg.replace('translate(0 0)', `translate(${markX} ${markY})`)}
-  <text x="${W / 2}" y="${taglineY}" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="25" letter-spacing="0.14em" fill="${CREAM}">THE TRUST PLANE FOR AGENTIC TOOLING</text>
-  <text x="${W / 2}" y="${subtitleY}" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="${AMBER}" opacity="0.85">verify · gate · manage — MCP servers and Agent Skills, across every host</text>
+  <text x="${W / 2}" y="${taglineY}" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="25" letter-spacing="0.14em" fill="${CREAM}">RECEIPTS FOR AGENT-WRITTEN CODE</text>
+  <text x="${W / 2}" y="${subtitleY}" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" fill="${AMBER}" opacity="0.85">a written limit for every coding agent · a receipt for every change</text>
   ${meander(48, bottomRule, W - 96, 7, STONE_DIM)}`,
     'Agora — the trust plane for agentic tooling'
   );
@@ -162,8 +162,8 @@ function socialPreview(): string {
   <rect x="26" y="26" width="${W - 52}" height="${H - 52}" fill="none" stroke="${BRICK}" stroke-width="2" opacity="0.55"/>
   ${meander(74, topRule, W - 148, 8, STONE_DIM)}
 ${mark.svg.replace('translate(0 0)', `translate(${markX} ${markY})`)}
-  <text x="${W / 2}" y="${taglineY}" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="30" letter-spacing="0.15em" fill="${CREAM}">THE TRUST PLANE FOR AGENTIC TOOLING</text>
-  <text x="${W / 2}" y="${subtitleY}" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="19" fill="${AMBER}" opacity="0.85">evidence, not scores · local-first · no accounts</text>
+  <text x="${W / 2}" y="${taglineY}" text-anchor="middle" font-family="ui-sans-serif, -apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="30" letter-spacing="0.15em" fill="${CREAM}">RECEIPTS FOR AGENT-WRITTEN CODE</text>
+  <text x="${W / 2}" y="${subtitleY}" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="19" fill="${AMBER}" opacity="0.85">least-privilege policy · signed receipts · local-first</text>
   ${meander(74, bottomRule, W - 148, 8, STONE_DIM)}
   <text x="${W / 2}" y="${cmdY}" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="18" fill="${TERRACOTTA}">npx -y agora-hub doctor</text>`,
     'Agora — the trust plane for agentic tooling'

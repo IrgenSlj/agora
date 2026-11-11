@@ -6,10 +6,6 @@ Generated, not hand-drawn. Regenerate with:
 bun scripts/generate-brand-assets.ts
 ```
 
-Brand and demo assets remain part of the preserved product surface. Changes to trust semantics must
-update demo scripts/captions rather than deleting the assets; generated output should continue to
-come from repository sources so it can be reproduced in later sessions.
-
 The wordmark is built from `AGORA_WORDMARK_RELIEF` and `BANNER_GRADIENT` in
 [`src/ui.ts`](../../src/ui.ts) — the same constants the CLI renders at runtime — so the README and
 the terminal can never drift apart. Editing the letterforms means editing `src/ui.ts` and re-running
@@ -19,11 +15,10 @@ the generator.
 |---|---|---|
 | `banner.svg` | 1200×~370 | README hero |
 | `social-preview.svg` | 1280×640 | source for the social card |
-| `social-preview.png` | 1280×640 | **upload this** to Settings → Social preview (GitHub needs a raster) |
+| `social-preview.png` | 1280×640 | **upload this** to Settings → Social preview (GitHub needs a raster). Still shows the 0.8 tagline until regenerated. |
 | `logomark.svg` | 512×512 | square icon / avatar |
 | `wordmark-dark.svg` | — | wordmark on the dark panel |
 | `wordmark-light.svg` | — | wordmark on the light panel |
-| `demo.gif` | 1200×700 | README terminal demo — see below |
 
 ## Palette — "marble & terracotta"
 
@@ -50,19 +45,6 @@ rm social-preview.svg.png
 ```
 
 (`qlmanage` pads to a square, hence the crop.)
-
-## Re-recording the demo GIF
-
-```bash
-bun run build
-bash scripts/demo-sandbox.sh          # seeds /tmp/agora-demo
-vhs scripts/demo.tape                 # writes docs/assets/demo.gif
-```
-
-Requires [vhs](https://github.com/charmbracelet/vhs). The tape records four beats — `doctor`,
-`search`, `scan`, `freeze` — against a throwaway sandbox HOME, so it never touches your real agent
-configs. Beats 2 and 3 hit the network on purpose (live registry search, and the scan's GitHub/npm
-checks), so the exact rows differ between takes.
 
 Architecture diagrams may be added here when they can distinguish live, partial, and planned paths
 without overstating capability. Their source or generation instructions must be committed alongside

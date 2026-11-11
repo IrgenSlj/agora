@@ -1,5 +1,5 @@
 // The policy plane: real Cedar evaluation over the evidence Agora collected
-// (AGORA_BRIEF_v2.md §7.1).
+//.
 //
 // Why a policy engine rather than more heuristics: heuristics answer "does this
 // look bad to Agora", which is Agora's opinion. A policy answers "does this

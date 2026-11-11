@@ -1,80 +1,39 @@
-# Security Policy
+# Security policy
 
-## Supported Versions
-
-Agora is pre-1.0 and moving quickly against the locked v2 trust-plane brief.
+## Supported versions
 
 | Version | Supported |
 |---|---|
-| 0.7.x | yes |
-| 0.6.x | security fixes only when practical |
-| < 0.6 | no |
+| 0.9.x | yes |
+| 0.8.x | security fixes when practical |
+| < 0.8 | no |
 
-## Reporting A Vulnerability
+## Reporting a vulnerability
 
 Do **not** open a public issue. Use GitHub's
-[private vulnerability reporting](https://github.com/IrgenSlj/agora/security/advisories/new) with
-a description, reproduction steps, affected commands, and impact. Expect a response within 48 hours.
+[private vulnerability reporting](https://github.com/IrgenSlj/agora/security/advisories/new) with a
+description, reproduction steps, affected commands and impact. Expect a response within 48 hours.
 
-## Current Security Model
+## Security model
 
-Agora is local-first and has no hosted auth backend in the v2 direction. Core state is on disk:
+Agora is local-first: no hosted backend, no account, nothing sent anywhere except lookups to
+OSV.dev (`agora audit`, `agora ci`) and an optional fetch of the revocation list from this
+repository.
 
-- `~/.agora/agora.db` — SQLite evidence/catalog/store state (S1).
-- `~/.agora/cas/<sha256>` — content-addressed artifact blobs (S1).
-- `agora.toml` — portable human intent; generated manifests use `env_from` references and never copy
-  host environment values.
-- `agora.lock` — intended committed machine truth. Verification exists; automatic creation/update
-  from acquisition is still partial and tracked in `docs/NEXT.md`.
-- Legacy `~/.config/agora/*` state files may still exist while S1/S2 retire pre-v2 surfaces.
+- **The hook can only deny or stay silent.** It never emits `allow`, so it can never grant a
+  permission the host would not have granted.
+- **Hooks fail open; CI fails closed.** A hook error lets the call proceed and says so on stderr. A
+  CI check that could not run is reported as not established, never as a pass.
+- **No content capture.** Observation records tool names, counts and sampled network peers. It never
+  stores tool arguments, results, prompt text or file contents.
+- **The fetched revocation list can only add entries**, never remove one, so it needs no signing
+  key to be safe to merge.
+- **Host config writes are surgical and atomic** (`src/atomic-write.ts`) and preserve unrelated keys.
 
-Config and state writes must be surgical and atomic via `src/atomic-write.ts`. Secrets belong in
-the local process environment, settings/state, or host-native secret stores. `env_from` resolves
-names locally during plan/apply and fails before writing when a value is missing. Manually authored
-literal environment values remain backward-readable but must not contain credentials.
+"No known advisories" or "nothing denied" means no known red flags, never "safe".
 
-## Gate Semantics
+## Known limits
 
-Today's gate adapts heuristic/Sigstore scan results, revocation state, and Cedar into one typed
-authorization decision on the primary acquire path. Not every mutation command uses the full
-combination yet; central gate unification is a current security task, so local
-`apply`/`sync`/`update` must not be described as fully governed. It is not a sandbox and does not
-formally verify code.
-
-**"Passed the gate" means "no known red flags," not "safe."**
-
-The v2 build is integrating these into one mandatory authorization service:
-
-- S1: zod schemas, JSON Schema export, purl handling, SQLite/CAS, `agora lock verify`.
-- S3/S6: provenance, schema/description hashing, runtime observation (which replaced the
-  sandboxed `vet`), and exportable DSSE attestations.
-- S4/S5: revocation feed (OSV-generated, bundled, monotonic) and Cedar policy enforcement.
-
-## Execution Safety
-
-- Every config-writing command must support preview/plan separation or an explicit dry run.
-- MCP acquisition is request-only: confirmation records an inert intent and returns an approval
-  command; no model-controlled field can write the stack. Agent rationale remains untrusted,
-  length-bounded text and is stripped of terminal control bytes when displayed. The OpenCode plugin
-  config write and terminal approval channel remain security-sensitive until GATE-003/AGENT-002 in
-  `docs/NEXT.md` are complete.
-- Network failures must degrade honestly; do not fabricate source counts or trust results.
-- Runtime observation records MCP tool names/counts and sampled network peers only. Sampling is
-  direct-process, polling-based, and fallible; unavailable or unsampled is never “contacted nothing.”
-- Exit codes follow the v2 contract: `0` ok, `1` policy forbid / drift / revocation hit, `2`
-  usage, `3` network, `4` sandbox unavailable.
-
-## Known Transitional Risks
-
-The v1 catalog surface (19 commands including auth, community, and account features) was removed in
-v0.7.0. Legacy `~/.config/agora/*` state files may still exist and can be safely deleted.
-
-The remaining high-priority risks are maintained in [`docs/STATUS.md`](./docs/STATUS.md): gate
-coverage still missing on `apply`, `sync`, `update`, `integrate`, and `doctor --probe`; the weak
-terminal approval boundary for shell-capable agents; a partial acquire/lock transaction;
-predicate/schema mismatch; and non-round-trip `agora.toml` rewriting.
-
-No flag disables the trust gate. `--skip-scan` means the heuristic scan did not run, which the gate
-records as an explicit unknown; `--accept-risk` accepts that unknown and is written to
-`gate-audit.jsonl`. Neither can clear a revocation or a policy denial, and an agent caller can do
-neither.
+The open gaps are listed in [`docs/STATUS.md`](./docs/STATUS.md). Receipts written before signing
+lands (phase 2) are self-reported and forgeable by an agent with shell access; the receipt states
+its own signer level for that reason.

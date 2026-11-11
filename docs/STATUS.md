@@ -1,87 +1,41 @@
-# Capability status
+# Status
 
-Last reviewed: 2026-09-05.
+Last reviewed: 2026-11-11, after phase 0. The plan is [`PLAN.md`](./PLAN.md); this page says what
+the code can actually prove. Labels:
 
-This is the authority on what the current source tree can prove. The locked product intent lives in
-[`AGORA_BRIEF_v2.md`](../AGORA_BRIEF_v2.md), the strategic sequence in
-[`ROADMAP.md`](../ROADMAP.md), and the actionable backlog in [`NEXT.md`](./NEXT.md).
+- **Works** — on a user-facing path and covered by tests.
+- **Partial** — useful, but the full guarantee is not enforced.
+- **Planned** — in the plan; do not tell users it works.
 
-State labels are deliberately strict:
-
-- **Live** — wired into a user-facing path and covered by focused tests.
-- **Partial** — useful implementation exists, but the full product guarantee is not enforced.
-- **Planned** — design or scaffolding exists; users must not be told it works.
-- **Retired** — intentionally removed and represented in `src/cli/retired.ts`.
-
-## Current capabilities
-
-| Plane or surface | State | What is true now | What remains |
+| Capability | State | What is true now | What remains |
 |---|---|---|---|
-| Federated search | Live | Multi-source adapters, purl-aware dedupe, offline cache, honest source status | Unify the older catalog/hub types around one artifact model; repair automated catalog refresh |
-| Provenance | Live | Sigstore verification checks Fulcio, CT, Rekor, subject digest, and repository identity, and the structured verdict is carried on `ScanResult` rather than only rendered as a check | Persist it against resolved bytes; the tarball digest is still never computed |
-| Schema and description drift | Live | Capability hashing, comparison, quarantine, and poisoning heuristics exist | Route every mutation through the same drift decision |
-| Runtime observation | Live with limits | Byte-transparent MCP supervision records tool names/counts and sampled direct-process network peers; arguments/results are excluded | Descendant-process coverage and stronger platform backends; sampled data must never be described as complete behavior |
-| Cedar policy and mutation gate | Live with limits | Engine, linting, CLI, baseline, complete mutation inventory, typed scan/revocation/Cedar/identity adapters, and central authorization on every artifact-installing command; no bypass flag remains | Give provenance/drift independent signals beyond their aggregate scan state |
-| Revocation and OSV audit | Partial | Bundled OSV-derived feed and additive monotonic merge work; `audit` covers configured MCP packages. Coverage is the official registry walked in full (thousands of npm artifacts) rather than the ~30-item bundled sample catalog, unioned with that catalog as a floor; a partial walk is reported as incomplete and never as absence | Model the MCP-native incident classes OSV cannot (rug pulls, tool poisoning, repo transfer, typosquats, abandonment), then publish the schema for other tools to consume — see FEED-002/003 |
-| Stack management | Live with limits | Host adapters, plan/apply, atomic host-config writes, freeze, sync, drift and quarantine work, and every apply/sync/update write passes the shared gate | Round-trip-preserving edits of existing `agora.toml` |
-| Portable environment configuration | Live | `freeze` emits `env_from` references, never copied host environment values; plan/apply resolve locally and fail before writing when missing | Secret scanning for manually authored literal values and sensitive command/URL material |
-| Lockfile and evidence store | Live with limits | `lock write` builds declared manifests from the approved probe baseline and writes `agora.lock` and the store together; `lock verify` and `agora ci` detect drift against it; `lock write` resolves and hashes each pinned tarball and cross-checks npm's published integrity; provenance and policy verdict are omitted rather than filled | Acquisition still does not produce the lock as part of one transaction, so the tarball digest and install-time policy verdict remain absent |
-| Evidence export | Partial | Bundle/envelope generation and explicit `not_established` reporting exist | Resolve subjects from the lock/store and validate each predicate payload against its named schema |
-| Agent-facing MCP | Live with limits | `agora mcp` exposes search, status, plan, and acquire preview; confirmation creates only an evidence-bearing install intent and returns an approval command | Add first-class evidence/policy tools and a human-consent boundary an agent with shell access cannot self-assert |
-| Serve | Partial | Install-intent records, the request service, and `agora approve` exist; agent requests cannot mutate the stack | Unified policy-filtered MCP surface and a strong out-of-band/host-native approval boundary |
-| today/news | Live | The digest pipeline and `agora today`; retained by brief DA-14 as the audience surface | Publish the digest rather than only printing it |
-| Shell, TUI, inference | Removed | Retired under brief DA-14; `agora shell` and `agora tui` explain themselves and exit 2 | Drop the `retired.ts` entries at 2.0.0 |
-| OpenCode/Claude integrations | Partial | Adapters, plugin code, MCP registration, and integration command exist | Test the packed plugin path in real hosts and keep all agent-facing writes behind the gate |
-| Runtime enforcement (`agora hook`) | Live, Claude Code only | `PreToolUse` hook denies a call whose server is revoked, drifted, or quarantined; never emits an allow, fails open on every error, bounded stdin, 95ms for a non-MCP call | Cover the other hosts as they expose a tool-call boundary; OpenCode's plugin already has one |
-| CI gate (`agora ci`, `action.yml`) | Live | One read-only verdict over advisories, lockfile drift, and stack resolution, with GitHub Actions annotations and job summary; health and a missing lock report as not established rather than pass | `publish.yml` now creates the `v0` tag on release; make the self-check strict once acquisition writes a lockfile |
-| Agent Skills through the trust plane | Planned | `agent-skill` is a federated search result and a manifest kind. `scan.ts`, `acquire.ts`, `gate/*`, and `evidence/*` contain no skill handling, and no host adapter installs one | Route skills through scan, gate, evidence, and the adapters; hash skill instructions and diff them across versions |
-| Pre-install sandbox backend | Planned | Runtime observation replaced it for current use; model leaves room for a future backend | Build only when a concrete policy need justifies it |
+| Revocation deny in Claude Code (`agora hook`) | Works | `PreToolUse` hook denies a call to an MCP server whose configured version is on the bundled revocation list. Never emits allow, fails open on every error, reads no network. | Becomes one deny source among policy rules in phase 3 |
+| Revocation list | Partial | Bundled list of 58 OSV-derived entries with exact semver ranges, including explicit malicious-version lists. A fetched copy can only add entries. `bun run refresh:feed` re-derives entries from OSV. | No automatic discovery of new advisories; `agora audit` is the live check |
+| Advisory lookup (`agora audit`) | Works | Queries OSV.dev for every npm-launched server across hosts; unidentifiable servers are reported as unchecked | — |
+| CI (`agora ci`, `action.yml`) | Partial | Fails on a blocking advisory, annotates, writes a job summary; no servers or an unreachable OSV is not established (exit 3 with `--fail-on-unknown`) | Receipt verification (phase 2) |
+| MCP shim (`agora run`, `agora observe`) | Works | Byte-transparent stdio supervision records tool names and counts and sampled direct-process network peers; never arguments or results | Emit `AgentEvent`s into the session log (phase 1) |
+| Policy (`agora policy`) | Partial | Real Cedar engine with lint; `agora.cedar` at the repo root on top of a shipped baseline; the entity model describes MCP artifacts | Cedar schema for agent actions: tool, path, command, peer (phase 3) |
+| Host adapters | Works | Read MCP servers from Claude Code, Cursor, Windsurf, VS Code and OpenCode configs; atomic, key-preserving writes (used by `observe enable`) | Emit native permissions (phase 3) |
+| Attestation container | Partial | `evidence/dsse.ts` builds canonical in-toto statements in DSSE envelopes, with the DSSE pre-authentication encoding | Signing and the receipt predicate (phase 2) |
+| Session log, receipts, learn, compile, replay, canaries, report | Planned | — | Phases 1 to 5 |
 
-## Security invariants currently enforced
+## Invariants enforced by tests
 
-- Generated `agora.toml` files do not contain copied environment values.
-- A missing `env_from` value fails before host configuration is changed.
-- `lsof` sampling intersects PID and network filters with `-a`.
-- A missing or failed sampler is recorded as unavailable, not as sampled with zero peers.
-- Observation never persists MCP tool arguments, results, prompt text, or file contents.
-- Unknown evidence remains unknown; absence is not rendered as a negative finding.
-- Every active CLI, MCP, and plugin entry point has a mutation/effect/consent declaration checked
-  against the actual registered surfaces.
-- The shared authorization kernel denies agent-authorized host/project/manifest writes and treats
-  missing required evidence as inconclusive.
-- Human acquire consumes typed scan, revocation, and Cedar signals before its write.
-- Agent-facing acquire confirmation writes only a pending intent. Failed or inconclusive required
-  evidence writes no intent; no agent parameter can write host config or `agora.toml`.
-- Approving a request installs only the reviewed artifact: resolution is by exact id, and a changed
-  package or version fails a required identity signal instead of installing.
-- The approval path evaluates the project's Cedar policy files, exactly as a direct acquire does.
-- No flag skips the gate. `--skip-scan` records an explicit unknown; only `--accept-risk` clears it,
-  and never a deny — a revocation or a policy rule cannot be waived from the command line.
-- An agent cannot accept risk on a human's behalf, and no plugin tool can write host configuration.
-- A refused install or try-run leaves the filesystem byte-identical, including the `--save` case
-  where two files would have been written.
-- Every mutation that proceeded on an accepted unknown is recorded in `gate-audit.jsonl` (a local
-  accountability log, not signed evidence).
-- `apply`/`sync` evaluate revocation and Cedar for every manifest entry, local or remote, and match
-  a revocation against the exact version pinned in the launch command.
-- `update` evaluates the version it is moving to, not the one already installed.
-- `integrate` holds Agora's own package to the same gate before installing it into a harness.
-- Quarantining a drifted server is never blocked by the gate: disabling is the fail-safe direction.
+- The hook never emits `allow`, and every failure path exits 0 with a note on stderr.
+- A launch command pinned to a tag or range (`pkg@latest`, `pkg@^1`) is an unknown version, never a
+  version, and the tag never leaks into the package name.
+- A malware advisory blocks only the versions it names. Popular servers at current versions are not
+  blocked by the bundled list.
+- A version range that cannot be parsed matches (reports) rather than silently clearing.
+- An unreachable OSV or an absent server set is never reported as a pass.
+- Observation never persists tool arguments, results, prompt text or file contents.
+- Every removed command explains itself and exits 2; no user-facing string names a command that does
+  not exist.
 
-## Known high-priority gaps
+## Known gaps
 
-0. Agent Skills are discoverable but not verified, gated, or installable. Copy that claimed
-   otherwise was corrected in 0.8.0; the capability itself is unbuilt.
-1. Terminal `agora approve` is not a strong consent boundary when an agent also has shell access.
-2. Acquire does not atomically produce the artifact digest, evidence records, and lockfile entry.
-3. Export predicates are not yet checked against their predicate-specific schemas.
-4. Existing `agora.toml` files are parsed and reconstructed rather than edited with full
-   comment/unknown-key preservation.
-5. Release CI does not yet build, pack, install, and smoke-test the exact published artifact on all
-   supported platforms.
-
-## Verification snapshot
-
-After the third 2026-08-02 hardening session, typecheck, lint, build, and the full suite pass: 1,775
-tests passed with one skipped. Each development session must refresh this snapshot in
-[`DEVELOPMENT.md`](./DEVELOPMENT.md) after running the applicable gates.
+1. The revocation list is a floor, not a feed: new advisories reach the hook only through a release
+   or the fetched copy.
+2. `agora ci` checks host configs committed to the repository; most MCP configs live in home
+   directories, so CI often has nothing to check until receipts exist.
+3. The policy entity model still describes artifacts, not agent actions.
