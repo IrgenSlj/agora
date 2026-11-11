@@ -29,7 +29,10 @@
   "publishConfig": {
     "access": "public"
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "schemas"
+  ],
   "scripts": {
     "build": "rm -rf dist && tsc && cp feed/revocations.json dist/revocations.json && mkdir -p dist/policy/defaults && cp src/policy/defaults/* dist/policy/defaults/ && chmod +x dist/cli.js",
     "build:binary": "bun build src/cli.ts --compile --outfile dist/agora",
@@ -43,7 +46,8 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "format:check": "biome format .",
-    "refresh:feed": "bun scripts/refresh-feed.ts"
+    "refresh:feed": "bun scripts/refresh-feed.ts",
+    "build:schemas": "bun scripts/generate-schemas.ts"
   },
   "keywords": [
     "mcp",
