@@ -7,7 +7,7 @@
 
 import { type ClaudeCodePayload, normaliseClaudeCode } from '../events/claude-code.js';
 import type { EventDecision } from '../events/schema.js';
-import { appendEvent, closeSession } from '../log/store.js';
+import { appendEvent, closeSession, ensureMeta } from '../log/store.js';
 import { detectAgoraDataDir } from '../state.js';
 import { readStdin } from './run.js';
 
@@ -44,6 +44,13 @@ export function recordPayload(payload: ClaudeCodePayload & { source?: string }):
   }
   const label = (value: unknown) =>
     typeof value === 'string' && LABEL.test(value) ? value : 'other';
+  if (typeof payload.cwd === 'string' && payload.cwd) {
+    try {
+      ensureMeta(dataDirFor(payload), session, payload.cwd);
+    } catch {
+      note('session metadata not written; receipts cannot bind this session to commits.');
+    }
+  }
 
   switch (payload.hook_event_name) {
     case 'SessionStart':

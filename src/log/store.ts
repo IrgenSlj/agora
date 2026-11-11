@@ -195,3 +195,49 @@ export function listSessions(dataDir: string): SessionSummary[] {
     })
     .sort((a, b) => b.modified.localeCompare(a.modified));
 }
+
+/**
+ * Local facts about a session that are not part of its chain: where it ran.
+ * Used to bind sessions to commits in the same repository. Never published:
+ * a receipt carries the session id and log head, not the user's paths.
+ */
+export interface SessionMeta {
+  cwd: string;
+  /** The enclosing git working tree, when there is one. */
+  git_root?: string;
+}
+
+function metaPath(dataDir: string, session: string): string {
+  return logPath(dataDir, session).replace(/\.jsonl$/, '.meta.json');
+}
+
+/** The nearest ancestor holding `.git` (a directory, or a file in a worktree). */
+export function findGitRoot(start: string): string | undefined {
+  let dir = start;
+  for (;;) {
+    if (existsSync(join(dir, '.git'))) return dir;
+    const parent = join(dir, '..');
+    if (parent === dir) return undefined;
+    dir = parent;
+  }
+}
+
+/** Writes the session's metadata once. Cheap enough for every hook call. */
+export function ensureMeta(dataDir: string, session: string, cwd: string): void {
+  const path = metaPath(dataDir, session);
+  if (existsSync(path)) return;
+  mkdirSync(sessionsDir(dataDir), { recursive: true, mode: 0o700 });
+  const gitRoot = findGitRoot(cwd);
+  const meta: SessionMeta = { cwd, ...(gitRoot ? { git_root: gitRoot } : {}) };
+  writeFileSync(path, `${JSON.stringify(meta)}\n`, { mode: 0o600 });
+}
+
+export function readMeta(dataDir: string, session: string): SessionMeta | undefined {
+  const path = metaPath(dataDir, session);
+  if (!existsSync(path)) return undefined;
+  try {
+    return JSON.parse(readFileSync(path, 'utf8')) as SessionMeta;
+  } catch {
+    return undefined;
+  }
+}

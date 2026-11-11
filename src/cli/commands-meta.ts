@@ -91,6 +91,38 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora log', 'agora log show', 'agora log verify --all']
   },
   {
+    name: 'receipt',
+    group: 'Check',
+    summary: 'Write, show and verify the receipt that says how agents produced a commit',
+    usage:
+      'agora receipt write [<commit>] [--dry-run] [--no-sign]\n' +
+      'agora receipt show [<commit>]\n' +
+      'agora receipt verify [<commit>] [--trusted-from <rev>] [--fail-on-unknown]',
+    details:
+      'A receipt is an in-toto statement about one commit, stored as a git note under ' +
+      'refs/notes/agora. It names the agent sessions that ran in this repository between the ' +
+      'parent commit and this one, the hash of each session log at that point, and what they ' +
+      'touched: files written and read, programs run, hosts reached, MCP tools called and ' +
+      'calls denied. It also states what the host could not see. Never arguments or contents.\n\n' +
+      'A receipt states its signer level. `none` is a self-reported log that an agent with ' +
+      'shell access could forge. A signed level verifies only against keys listed in ' +
+      '.agora/signers.json at --trusted-from (default HEAD; CI uses the pull request base). ' +
+      'Push receipts with `git push origin refs/notes/agora`. `write` refuses a log that does ' +
+      'not verify. `verify` exits 1 on an invalid receipt; a missing one is not established.',
+    flags: [
+      { flag: '--dry-run', description: 'Print the receipt instead of writing the note' },
+      { flag: '--no-sign', description: 'Write an unsigned receipt' },
+      { flag: '--trusted-from', description: 'Read trusted keys from this revision' },
+      { flag: '--fail-on-unknown', description: 'Exit 3 when the commit has no receipt' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora receipt write',
+      'agora receipt show HEAD~1',
+      'git push origin refs/notes/agora'
+    ]
+  },
+  {
     name: 'audit',
     group: 'Check',
     summary: 'Look up every configured MCP server in OSV.dev',
