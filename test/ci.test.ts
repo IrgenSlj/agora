@@ -58,7 +58,7 @@ describe('agora ci', () => {
     const { io: cliIo, out } = io((() => respond([advisory('GHSA-x', 'HIGH')])) as never);
 
     expect(await runCli(['ci'], cliIo as never)).toBe(1);
-    expect(out()).toContain('Something you trusted has changed.');
+    expect(out()).toContain('blocking advisory');
   });
 
   test('a non-blocking advisory is reported without failing the build', async () => {
@@ -70,62 +70,17 @@ describe('agora ci', () => {
     expect(await runCli(['ci'], cliIo as never)).toBe(0);
   });
 
-  test('a missing lockfile is not established, and never renders as clean', async () => {
-    // The core claim of the command. Most repositories have no agora.lock, so
-    // this is the path almost every first run takes — and the one where a green
-    // "nothing changed" would be a lie by omission.
-    config({ fs: server });
+  test('no configured servers is not established, and never renders as clean', async () => {
     const { io: cliIo, out } = io((() => respond([])) as never);
 
     expect(await runCli(['ci'], cliIo as never)).toBe(0);
-    expect(out()).toContain('nothing is pinned');
-    expect(out()).toContain('that is not the same as clean');
-    expect(out()).not.toContain('Nothing you trusted has changed.');
+    expect(out()).toContain('not the same as clean');
   });
 
-  test('an unresolvable server does not fail the build — CI runners have no servers installed', async () => {
-    // Deliberate asymmetry with `doctor --strict`. On a fresh runner almost no
-    // `npx`-resolved server exists, and going red for that would be both
-    // useless and untrue: this command promises nothing you trusted has
-    // *changed*, and a server never installed here has not changed. If this
-    // ever starts failing the build, the step gets deleted in week two.
-    config({ fs: { type: 'local', command: ['definitely-not-on-path'], enabled: true } });
-    const { io: cliIo, out } = io((() => respond([])) as never);
-
-    expect(await runCli(['ci'], cliIo as never)).toBe(0);
-    expect(out()).toContain('could not be resolved in this environment');
-  });
-
-  test('a repository that commits only agora.toml is still checked', async () => {
-    // The adoption case that matters most and was broken first: `agora.toml` is
-    // the artifact this product spends a whole plane telling people to commit,
-    // and a CI runner has the repository, not somebody's host configs. Reading
-    // only host adapters meant the users who had adopted Agora correctly were
-    // the ones who got an empty report.
-    writeFileSync(join(dir, 'agora.toml'), '[mcp.fs]\ncommand = ["npx", "@scope/server@1.0.0"]\n');
-    const { io: cliIo, out } = io((() => respond([advisory('GHSA-x', 'HIGH')])) as never);
-
-    expect(await runCli(['ci'], cliIo as never)).toBe(1);
-    expect(out()).toContain('GHSA-x');
-  });
-
-  test('a manifest entry disabled in agora.toml is not checked', async () => {
-    config({ fs: server });
-    writeFileSync(
-      join(dir, 'agora.toml'),
-      '[mcp.fs]\ncommand = ["npx", "@scope/server@1.0.0"]\nenabled = false\n'
-    );
-    const { io: cliIo, out } = io((() => respond([advisory('GHSA-x', 'HIGH')])) as never);
-
-    expect(await runCli(['ci'], cliIo as never)).toBe(0);
-    expect(out()).not.toContain('GHSA-x');
-  });
-
-  test('--fail-on-unknown turns an unanswerable check into a failure', async () => {
-    config({ fs: server });
+  test('--fail-on-unknown turns an unanswerable check into exit 3', async () => {
     const { io: cliIo } = io((() => respond([])) as never);
 
-    expect(await runCli(['ci', '--fail-on-unknown'], cliIo as never)).toBe(1);
+    expect(await runCli(['ci', '--fail-on-unknown'], cliIo as never)).toBe(3);
   });
 
   test('an unreachable OSV exits 3, not 0 — unchecked is not clean', async () => {
@@ -146,8 +101,7 @@ describe('agora ci', () => {
     await runCli(['ci', '--json'], cliIo as never);
     const report = JSON.parse(out()) as CiReport;
 
-    expect(report.checks.map((c) => c.name)).toEqual(['advisories', 'drift', 'health']);
-    expect(report.notEstablished).toContain('drift');
+    expect(report.checks.map((c) => c.name)).toEqual(['advisories']);
     expect(report.checks.find((c) => c.name === 'advisories')?.state).toBe('pass');
   });
 
@@ -182,7 +136,7 @@ describe('agora ci', () => {
 
     await runCli(['ci'], cliIo as never);
     const summary = readFileSync(summaryPath, 'utf8');
-    expect(summary).toContain('Something you trusted has changed.');
+    expect(summary).toContain('blocking advisory');
     expect(summary).toContain('GHSA-x');
   });
 });
@@ -199,23 +153,17 @@ describe('ci rendering', () => {
 
   test('a clean run says so only when every check was actually established', () => {
     const clean = base({
-      checks: [
-        { name: 'advisories', state: 'pass', summary: '1 checked', findings: [] },
-        { name: 'drift', state: 'pass', summary: 'locked', findings: [] },
-        { name: 'health', state: 'pass', summary: 'fine', findings: [] }
-      ]
+      checks: [{ name: 'advisories', state: 'pass', summary: '1 checked', findings: [] }]
     });
-    expect(jobSummary(clean)).toContain('Nothing you trusted has changed.');
+    expect(jobSummary(clean)).toContain('No known blocking advisories');
 
     const partial = base({
-      notEstablished: ['drift'],
+      notEstablished: ['advisories'],
       checks: [
-        { name: 'advisories', state: 'pass', summary: '1 checked', findings: [] },
-        { name: 'drift', state: 'not_established', summary: 'no lockfile', findings: [] },
-        { name: 'health', state: 'pass', summary: 'fine', findings: [] }
+        { name: 'advisories', state: 'not_established', summary: 'no servers', findings: [] }
       ]
     });
-    expect(jobSummary(partial)).not.toContain('Nothing you trusted has changed.');
+    expect(jobSummary(partial)).not.toContain('No known blocking advisories');
     expect(jobSummary(partial)).toContain('not the same as clean');
   });
 

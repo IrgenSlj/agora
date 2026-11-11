@@ -31,13 +31,10 @@
 // ── 3. It never touches the network ─────────────────────────────────────────
 //
 // A hook that waits on a fetch adds that latency to every tool call and hangs
-// the agent when the network does. The revocation check reads the bundled feed
-// and whatever the last refresh cached; drift is read from the lockfile. Both
-// are local and synchronous. A feed that is stale is reported as stale, not
-// refreshed here.
+// the agent when the network does. The revocation check reads the bundled list,
+// which is local and synchronous.
 
 import type { RevocationStatus } from '../revocation/client.js';
-import type { CapabilityDriftBlock } from '../stack/drift-blocks.js';
 import type { ConfiguredServer } from '../stack/types.js';
 
 /** The subset of Claude Code's PreToolUse payload this needs. */
@@ -77,20 +74,11 @@ export interface DecisionContext {
   servers: readonly ConfiguredServer[];
   /** Offline revocation lookup for the purls a server resolves to. */
   revocations: (purls: readonly string[]) => RevocationStatus;
-  /** Offline drift check against the approved lockfile baseline. */
-  driftBlocks: () => readonly CapabilityDriftBlock[];
   /** npm purls for one configured server. */
   purlsFor: (server: ConfiguredServer) => readonly string[];
 }
 
-/**
- * Decide whether this tool call should be blocked.
- *
- * Ordering is deliberate: revocation before drift. A revoked artifact is a
- * published claim that this exact thing is bad, and it is the more actionable
- * message of the two — being told a tool's schema changed is less useful than
- * being told the package it came from is malware.
- */
+/** Decide whether this tool call should be blocked. */
 export function decidePreToolUse(payload: PreToolUsePayload, ctx: DecisionContext): HookDecision {
   const serverName = serverFromToolName(payload.tool_name);
 
@@ -124,34 +112,10 @@ export function decidePreToolUse(payload: PreToolUsePayload, ctx: DecisionContex
         reason:
           `\`${serverName}\` is revoked: ${entry.reason} [${entry.severity}]${detail}\n` +
           `  ${entry.id} · ${entry.refs[0] ?? 'no reference'}${age}\n` +
-          `  Run \`agora audit\` for the full picture, or \`agora quarantine ${serverName}\` to ` +
-          `take it out of your stack.`
+          `  Run \`agora audit\` for the full picture, then remove or upgrade the server in your ` +
+          `host config.`
       };
     }
-  }
-
-  const blocked = ctx.driftBlocks().find((b) => b.name === serverName);
-  if (blocked) {
-    // Quarantine and drift both stop the call and are not the same event. One
-    // is a decision the user already made and is entitled to be reminded of in
-    // their own terms; the other is a detection they have not seen yet.
-    if (blocked.reason === 'quarantined') {
-      return {
-        kind: 'deny',
-        reason:
-          `\`${serverName}\` is quarantined: ${blocked.detail}\n` +
-          `  You put it here. Run \`agora unquarantine ${serverName}\` to let it run again.`
-      };
-    }
-    return {
-      kind: 'deny',
-      reason:
-        `\`${serverName}\` no longer matches what was approved: ${blocked.detail}\n` +
-        `  The tools this server offers changed after it was pinned, which is the ` +
-        `shape of a rug pull.\n` +
-        `  Review with \`agora trust ${serverName}\`, then \`agora approve ${serverName}\` if ` +
-        `the change is expected.`
-    };
   }
 
   // Nothing known against it. Deliberately silent rather than an `allow` — see

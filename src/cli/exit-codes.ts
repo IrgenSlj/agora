@@ -1,25 +1,17 @@
 /**
- * Exit codes for Agora CLI commands.
- * Source: AGORA_BRIEF_v2.md §9
+ * Exit codes for every Agora command (docs/PLAN.md, standing rule 9).
  *
- * 0 — ok
- * 1 — policy forbid / drift / revocation hit
+ * 0 — clean
+ * 1 — policy failure: a deny, a revocation hit, a receipt that does not verify
  * 2 — usage
- * 3 — network
- * 4 — sandbox unavailable
+ * 3 — could not check: a source was unreachable or evidence was missing, and
+ *     the command was asked to treat that as failure
  */
-
 export const ExitCode = {
-  /** Success */
   OK: 0,
-  /** Policy forbid / drift / revocation hit */
   POLICY_FORBID: 1,
-  /** Usage error (bad arguments, missing required fields) */
   USAGE: 2,
-  /** Network error (unreachable, timeout, DNS failure) */
-  NETWORK: 3,
-  /** Sandbox unavailable (Docker not running, sandbox backend missing) */
-  SANDBOX_UNAVAILABLE: 4
+  COULD_NOT_CHECK: 3
 } as const;
 
 export type ExitCode = (typeof ExitCode)[keyof typeof ExitCode];

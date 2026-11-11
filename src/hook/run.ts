@@ -1,7 +1,7 @@
 // The PreToolUse handler, reachable without loading the CLI.
 //
 // `src/cli.ts` routes `agora hook check` straight here. Everything it needs is
-// local and synchronous — a config read, a feed read, a lockfile read — so the
+// local and synchronous — a config read and a feed read — so the
 // only reason to go through the command layer would be argument parsing, and
 // there are no arguments.
 //
@@ -81,15 +81,9 @@ export async function runHookCheck(): Promise<number> {
   if (!serverFromToolName(payload.tool_name)) return 0;
 
   try {
-    const [
-      { checkRevocations },
-      { installedPurls },
-      { findConfiguredServerDriftBlocks },
-      { readAllServers }
-    ] = await Promise.all([
+    const [{ checkRevocations }, { installedPurls }, { readAllServers }] = await Promise.all([
       import('../revocation/client.js'),
       import('../revocation/installed.js'),
-      import('../stack/drift-blocks.js'),
       import('../stack/registry.js')
     ]);
 
@@ -100,7 +94,6 @@ export async function runHookCheck(): Promise<number> {
     const decision = decidePreToolUse(payload, {
       servers,
       revocations: (purls) => checkRevocations(dataDir, [...purls]),
-      driftBlocks: () => findConfiguredServerDriftBlocks(servers, dataDir),
       purlsFor: (server) => installedPurls([server]).addressable.map((a) => a.purl)
     });
 

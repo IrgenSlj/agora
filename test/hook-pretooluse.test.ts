@@ -30,7 +30,6 @@ function ctx(over: Partial<DecisionContext> = {}): DecisionContext {
   return {
     servers: [server('filesystem')],
     revocations: () => clean,
-    driftBlocks: () => [],
     purlsFor: () => ['pkg:npm/filesystem-mcp@1.0.0'],
     ...over
   };
@@ -131,58 +130,6 @@ describe('decidePreToolUse', () => {
       ctx({ revocations: () => advisory })
     );
     expect(d.kind).toBe('no-opinion');
-  });
-
-  test('denies a drifted server with the rug-pull framing', () => {
-    const d = decidePreToolUse(
-      { tool_name: 'mcp__filesystem__read_file' },
-      ctx({
-        driftBlocks: () => [
-          {
-            name: 'filesystem',
-            key: 'k',
-            reason: 'description-drift',
-            detail: '2 tool descriptions changed'
-          }
-        ]
-      })
-    );
-
-    expect(d.kind).toBe('deny');
-    if (d.kind !== 'deny') return;
-    expect(d.reason).toContain('no longer matches what was approved');
-    expect(d.reason).toContain('agora approve filesystem');
-  });
-
-  test('a quarantined server is told it was the user’s own decision', () => {
-    // Quarantine and drift both stop the call and are not the same event.
-    // Telling someone their own decision looks like a detection is how a tool
-    // makes itself feel unpredictable.
-    const d = decidePreToolUse(
-      { tool_name: 'mcp__filesystem__read_file' },
-      ctx({
-        driftBlocks: () => [
-          { name: 'filesystem', key: 'k', reason: 'quarantined', detail: 'quarantined by you' }
-        ]
-      })
-    );
-
-    expect(d.kind === 'deny' && d.reason).toContain('You put it here');
-    expect(d.kind === 'deny' && d.reason).toContain('agora unquarantine filesystem');
-  });
-
-  test('revocation is reported ahead of drift when both apply', () => {
-    // "The package is malware" is more actionable than "its schema changed".
-    const d = decidePreToolUse(
-      { tool_name: 'mcp__filesystem__read_file' },
-      ctx({
-        revocations: () => revoked(),
-        driftBlocks: () => [
-          { name: 'filesystem', key: 'k', reason: 'description-drift', detail: 'changed' }
-        ]
-      })
-    );
-    expect(d.kind === 'deny' && d.reason).toContain('malicious-package');
   });
 
   test('a server Agora cannot see is a note, never a block', () => {

@@ -1,7 +1,7 @@
 {
   "name": "agora-hub",
   "version": "0.8.0",
-  "description": "Catch the MCP server that changed after you trusted it — local-first provenance, drift detection, revocation, policy, and stack management across every agent host.",
+  "description": "A written limit for every coding agent and a receipt for every agent-made change. Local-first, open source, no account.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
@@ -10,7 +10,6 @@
   },
   "exports": {
     ".": "./dist/index.js",
-    "./opencode": "./dist/plugin/index.js",
     "./package.json": "./package.json"
   },
   "repository": {
@@ -27,67 +26,51 @@
     "qs": "6.15.2",
     "uuid": "13.0.1"
   },
-  "peerDependencies": {
-    "@opencode-ai/plugin": ">=1.18.4"
-  },
-  "peerDependenciesMeta": {
-    "@opencode-ai/plugin": {
-      "optional": true
-    }
-  },
   "publishConfig": {
     "access": "public"
   },
-  "files": ["dist", "schemas"],
+  "files": ["dist"],
   "scripts": {
-    "build": "rm -rf dist && tsc && cp src/catalog.json dist/catalog.json && cp feed/revocations.json dist/revocations.json && mkdir -p dist/policy/defaults && cp src/policy/defaults/* dist/policy/defaults/ && chmod +x dist/cli.js",
+    "build": "rm -rf dist && tsc && cp feed/revocations.json dist/revocations.json && mkdir -p dist/policy/defaults && cp src/policy/defaults/* dist/policy/defaults/ && chmod +x dist/cli.js",
     "build:binary": "bun build src/cli.ts --compile --outfile dist/agora",
-    "build:schemas": "bun scripts/generate-schemas.ts",
-    "dev": "bun run build && cp -r dist/* ~/.config/opencode/plugins/agora/",
     "typecheck": "bun run typecheck:cli",
     "typecheck:cli": "tsc -p tsconfig.check.json",
     "test": "vitest run",
     "verify:package": "bash scripts/verify-package.sh",
     "test:watch": "vitest",
     "prepublishOnly": "bun run build",
-    "refresh:data": "bun scripts/refresh-data.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
-    "format:check": "biome format ."
+    "format:check": "biome format .",
+    "refresh:feed": "bun scripts/refresh-feed.ts"
   },
   "keywords": [
     "mcp",
     "model-context-protocol",
-    "package-manager",
-    "stack-manager",
-    "agent",
-    "cli",
-    "opencode",
+    "coding-agent",
+    "agent-permissions",
     "claude-code",
-    "cursor",
-    "windsurf",
-    "trust",
-    "federation"
+    "opencode",
+    "cedar",
+    "policy",
+    "in-toto",
+    "provenance",
+    "receipts",
+    "least-privilege"
   ],
   "author": "IrgenSlj",
   "license": "MIT",
   "dependencies": {
     "@cedar-policy/cedar-wasm": "^4.12.0",
-    "@modelcontextprotocol/sdk": "^1.30.0",
-    "better-sqlite3": "^13.0.2",
     "canonicalize": "^3.0.0",
     "packageurl-js": "^2.0.1",
     "semver": "7.7.2",
-    "sigstore": "^5.0.0",
-    "smol-toml": "^1.7.1",
     "yargs": "^18.1.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.6",
-    "@opencode-ai/plugin": "^1.18.10",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/bun": "^1.3.14",
     "@types/node": "^26.1.2",
     "@types/semver": "7.7.0",

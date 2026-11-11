@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 import canonicalize from 'canonicalize';
-import type { DeclaredManifest } from './manifest.js';
 
 export function canonicalJson(value: unknown): string {
   const canonical = canonicalize(value);
@@ -20,9 +19,4 @@ export function hashJson(value: unknown): string {
 
 export function hashText(value: string): string {
   return sha256Hex(value);
-}
-
-export function hashDeclaredManifest(manifest: DeclaredManifest): string {
-  const { manifest_sha256: _manifestSha256, ...hashable } = manifest;
-  return hashJson(hashable);
 }

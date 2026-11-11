@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import type { StackEnv } from '../types.js';
@@ -60,4 +61,9 @@ export function parseJson(path: string): unknown | null {
   } catch {
     return null;
   }
+}
+
+/** `sha256:<hex>` of a UTF-8 string; how adapters fingerprint instruction blocks. */
+export function hashContent(content: string): string {
+  return `sha256:${createHash('sha256').update(content, 'utf8').digest('hex')}`;
 }

@@ -1,16 +1,8 @@
-// `agora ci` — the whole post-install question, once, with an exit code.
+// `agora ci`: one verdict a pull request can carry, with an exit code.
 //
-// This is the command the product is for. Every other surface asks a person to
-// remember to ask; this one is wired into something that already runs on every
-// push and does not get bored. The three checks it composes each exist as their
-// own command (`audit`, `lock verify`, `doctor --strict`); what did not exist
-// was one verdict, and chaining three commands in a workflow means three exit
-// codes to reconcile and three chances to get the reconciliation wrong.
-//
-// Read-only by construction: it queries OSV, hashes what is on disk, and reads
-// host configs. It starts no servers — see `healthCheck` — because a CI runner
-// executing a stranger's configured processes on a pull request is a worse
-// outcome than any check this command could offer.
+// Read-only by construction: it queries OSV and reads host configs. It starts
+// no servers, because a CI runner executing a stranger's configured processes
+// on a pull request is worse than anything this command could report.
 
 import { writeFileSync } from 'node:fs';
 import { annotationsFor, isGithubActions, writeJobSummary } from '../../ci/github.js';
@@ -18,23 +10,17 @@ import { type CiCheck, runCiChecks } from '../../ci/report.js';
 import { ExitCode } from '../exit-codes.js';
 import { stringFlag, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
-import { verifyLockfileForCi } from './lock.js';
 import type { CommandHandler } from './types.js';
 
 const QUESTION: Record<CiCheck['name'], string> = {
-  advisories: 'known-vulnerable',
-  drift: 'changed since approval',
-  health: 'stack coherent'
+  advisories: 'known-vulnerable'
 };
 
 export const commandCi: CommandHandler = async (parsed, io, style) => {
   const failOnUnknown =
     parsed.flags.failOnUnknown === true || parsed.flags['fail-on-unknown'] === true;
 
-  const report = await runCiChecks(io, {
-    failOnUnknown,
-    lockVerify: (cliIo) => verifyLockfileForCi(cliIo)
-  });
+  const report = await runCiChecks(io, { failOnUnknown });
 
   // `--json-file` exists so one run can serve both consumers. Annotations are
   // workflow commands on stdout, so redirecting stdout to capture the report
@@ -82,7 +68,7 @@ export const commandCi: CommandHandler = async (parsed, io, style) => {
     }
 
     if (report.failed.length) {
-      writeLine(io.stdout, theme.error(`  Something you trusted has changed.`));
+      writeLine(io.stdout, theme.error('  A configured server has a blocking advisory.'));
     } else if (report.notEstablished.length && !failOnUnknown) {
       // The line that keeps this command honest. A green run with an
       // unanswerable question in it is not a clean bill of health, and the one
@@ -94,7 +80,10 @@ export const commandCi: CommandHandler = async (parsed, io, style) => {
         )
       );
     } else if (report.ok) {
-      writeLine(io.stdout, theme.accent('  Nothing you trusted has changed.'));
+      writeLine(
+        io.stdout,
+        theme.accent('  No known blocking advisories. That is not the same as safe.')
+      );
     }
     writeLine(io.stdout, '');
   }
@@ -105,9 +94,8 @@ export const commandCi: CommandHandler = async (parsed, io, style) => {
   }
 
   if (report.failed.length) return ExitCode.POLICY_FORBID;
-  if (failOnUnknown && report.notEstablished.length) return ExitCode.POLICY_FORBID;
-  // An unreachable OSV is a network condition, not a clean run and not a policy
-  // hit. The exit contract already has a code for exactly this.
-  if (report.unavailable.length) return ExitCode.NETWORK;
+  // Could not check: OSV unreachable, or nothing to check under --fail-on-unknown.
+  if (report.unavailable.length) return ExitCode.COULD_NOT_CHECK;
+  if (failOnUnknown && report.notEstablished.length) return ExitCode.COULD_NOT_CHECK;
   return ExitCode.OK;
 };

@@ -1,7 +1,7 @@
 // `agora observe enable` / `disable` — switching observation on across hosts.
 //
 // Planning is separated from writing, the same way `agora plan` is separated
-// from `agora apply`, because this rewrites the launch command of every MCP
+// from host config management, because this rewrites the launch command of every MCP
 // server the user depends on. They get to see the exact diff first.
 //
 // Writes go through the existing `ToolAdapter.writeServers`, which preserves
@@ -55,18 +55,6 @@ export function planObserve(
     // Disabling only ever needs to touch what is currently wrapped, so the
     // "is this observable" question does not apply — a remote server is
     // already not wrapped and simply falls through to `unchanged`.
-    // A manifest-sourced entry has no host config to rewrite: `agora.toml` is
-    // declared intent, and the shim belongs in the launch command a host
-    // actually spawns. Run `agora apply` first, then observe the real entries.
-    if (server.tool === 'agora') {
-      skipped.push({
-        name: server.name,
-        tool: 'opencode',
-        reason: 'declared in agora.toml, not in a host config — run `agora apply` first'
-      });
-      continue;
-    }
-
     if (mode === 'enable') {
       const reason = unobservableReason(server);
       if (reason) {

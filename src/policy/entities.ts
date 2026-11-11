@@ -24,7 +24,10 @@
 // than merely react to it. See defaults/baseline.cedar.
 
 import type { Divergence as ObservedDivergence } from '../model/observed.js';
-import type { ScanResult } from '../scan.js';
+/** The part of a heuristic scan result the entity model reads. */
+export interface ScanResult {
+  summary: { fail: number; warn: number };
+}
 
 export type AttestationTier = 'sigstore' | 'local' | 'none';
 export type Divergence = 'none' | 'info' | 'warn' | 'critical';

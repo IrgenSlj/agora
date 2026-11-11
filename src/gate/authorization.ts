@@ -1,4 +1,12 @@
-import type { MutationEffect } from './mutations.js';
+/** What a mutation touches. Agents may never write the last three on their own. */
+export type MutationEffect =
+  | 'cache'
+  | 'local-state'
+  | 'observation-log'
+  | 'external-process'
+  | 'host-config'
+  | 'portable-manifest'
+  | 'project-files';
 
 export type AuthorizationActor = 'human-cli' | 'agent' | 'automation';
 export type AuthorizationSignalVerdict = 'allow' | 'warn' | 'deny' | 'unknown';

@@ -12,18 +12,18 @@ import {
   schemaAttributeNames,
   validatePolicyText
 } from '../src/policy/engine';
+import type { ScanResult } from '../src/policy/entities';
 import {
   artifactAttributes,
   buildEntities,
   divergenceFromObservation,
   divergenceFromScan
 } from '../src/policy/entities';
-import type { ScanResult } from '../src/scan';
 
 const PURL = 'pkg:npm/thing@1.0.0';
 
 function scanWith(summary: { pass: number; warn: number; fail: number }): ScanResult {
-  return { id: 'thing', itemKind: 'package', checks: [], summary };
+  return { summary };
 }
 
 describe('evidence → Cedar attributes', () => {

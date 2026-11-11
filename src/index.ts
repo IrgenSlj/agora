@@ -1,18 +1,9 @@
 /**
- * agora-hub — catch the tool that changed after you trusted it.
+ * agora-hub — a written limit for every coding agent, a receipt for every change.
  *
- * This is the library surface: types and functions for programmatic use
- * (the `agora mcp` server and integrations build on these). The OpenCode
- * plugin is a *separate* entry point — import it from `agora-hub/opencode`,
- * never from the package root, so plugin-loaders never scan this surface.
+ * The library surface: the pieces other tools may reasonably build on.
  */
 
-export type { AcquireDeps, AcquireInput, AcquireResult } from './acquire.js';
-// Capability acquisition (resolve -> scan-gate -> write).
-export { acquire, renderAcquireResult } from './acquire.js';
-export type { CheckStatus, ScanCheck, ScanOptions, ScanResult } from './scan.js';
-// Trust gate.
-export { scanItem } from './scan.js';
-export * from './stack/manifest.js';
-// Stack manager — adapter contract, manifest, sync.
+export { evaluatePolicy, loadPolicies } from './policy/engine.js';
+export { matchRevocations, versionInRange } from './revocation/match.js';
 export * from './stack/types.js';

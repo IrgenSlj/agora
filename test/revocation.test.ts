@@ -1,9 +1,8 @@
 import { generateKeyPairSync } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, test } from 'vitest';
-import { acquire } from '../src/acquire';
 import type { RevocationEntry, RevocationFeed } from '../src/model/revocation';
 import type { FetchLike } from '../src/retry';
 import {
@@ -362,129 +361,5 @@ describe('checkRevocations', () => {
     const status = checkRevocations(dir, ['pkg:npm/thing@1.0.0']);
     expect(status.matches[0]!.entry.id).toBe('B');
     rmSync(dir, { recursive: true, force: true });
-  });
-});
-
-describe('the acquire gate refuses a revoked artifact', () => {
-  test('a critical revocation blocks the install before anything is written', async () => {
-    const dataDir = mkdtempSync(join(tmpdir(), 'agora-revoke-acquire-'));
-    const configPath = join(dataDir, 'opencode.json');
-
-    // mcp-filesystem ships @modelcontextprotocol/server-filesystem in the
-    // bundled catalog; revoke exactly that.
-    const feed = makeFeed(1, [
-      entry({
-        id: 'AGR-2026-0001',
-        purl_pattern: 'pkg:npm/%40modelcontextprotocol/server-filesystem',
-        versions: undefined,
-        severity: 'critical',
-        reason: 'test-revocation'
-      })
-    ]);
-    await refreshFeed({
-      dataDir,
-      fetcher: (async () => new Response(JSON.stringify(feed), { status: 200 })) as FetchLike,
-      keys: KEYS,
-      force: true
-    });
-
-    const result = await acquire({
-      query: 'mcp-filesystem',
-      configPath,
-      dataDir,
-      acceptWarnings: true,
-      scanOptions: { offline: true },
-      deps: { fetchFederatedItem: async () => null }
-    });
-
-    expect(result.status).toBe('blocked');
-    expect(result.reason).toContain('revoked');
-    expect(result.reason).toContain('AGR-2026-0001');
-    // Nothing may have been written.
-    expect(existsSync(configPath)).toBe(false);
-
-    rmSync(dataDir, { recursive: true, force: true });
-  });
-
-  test('an advisory revocation does not block', async () => {
-    const dataDir = mkdtempSync(join(tmpdir(), 'agora-revoke-advisory-'));
-    const configPath = join(dataDir, 'opencode.json');
-
-    const feed = makeFeed(1, [
-      entry({
-        id: 'AGR-2026-0002',
-        purl_pattern: 'pkg:npm/%40modelcontextprotocol/server-filesystem',
-        versions: undefined,
-        severity: 'advisory'
-      })
-    ]);
-    await refreshFeed({
-      dataDir,
-      fetcher: (async () => new Response(JSON.stringify(feed), { status: 200 })) as FetchLike,
-      keys: KEYS,
-      force: true
-    });
-
-    const result = await acquire({
-      query: 'mcp-filesystem',
-      configPath,
-      dataDir,
-      acceptWarnings: true,
-      scanOptions: { offline: true },
-      deps: { fetchFederatedItem: async () => null }
-    });
-
-    expect(result.status).not.toBe('blocked');
-    rmSync(dataDir, { recursive: true, force: true });
-  });
-
-  test('an advisory revocation requires explicit warning acceptance', async () => {
-    const dataDir = mkdtempSync(join(tmpdir(), 'agora-revoke-advisory-review-'));
-    const configPath = join(dataDir, 'opencode.json');
-    const feed = makeFeed(1, [
-      entry({
-        id: 'AGR-2026-0003',
-        purl_pattern: 'pkg:npm/%40modelcontextprotocol/server-filesystem',
-        versions: undefined,
-        severity: 'advisory'
-      })
-    ]);
-    await refreshFeed({
-      dataDir,
-      fetcher: (async () => new Response(JSON.stringify(feed), { status: 200 })) as FetchLike,
-      keys: KEYS,
-      force: true
-    });
-
-    const result = await acquire({
-      query: 'mcp-filesystem',
-      configPath,
-      dataDir,
-      scanOptions: { offline: true },
-      deps: { fetchFederatedItem: async () => null }
-    });
-
-    expect(result.status).toBe('needs_confirmation');
-    expect(result.authorization?.verdict).toBe('review');
-    expect(result.reason).toContain('revocation');
-    expect(existsSync(configPath)).toBe(false);
-    rmSync(dataDir, { recursive: true, force: true });
-  });
-
-  test('with no feed cached, acquire proceeds — absence of data is not a block', async () => {
-    const dataDir = mkdtempSync(join(tmpdir(), 'agora-revoke-nofeed-'));
-    const configPath = join(dataDir, 'opencode.json');
-
-    const result = await acquire({
-      query: 'mcp-filesystem',
-      configPath,
-      dataDir,
-      acceptWarnings: true,
-      scanOptions: { offline: true },
-      deps: { fetchFederatedItem: async () => null }
-    });
-
-    expect(result.status).not.toBe('blocked');
-    rmSync(dataDir, { recursive: true, force: true });
   });
 });

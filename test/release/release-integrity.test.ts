@@ -9,10 +9,8 @@ import { describe, expect, test } from 'vitest';
 //      It panics on this suite (NAPI fatal error, exit 132), so the release
 //      workflow died 42s in and npm stayed on 0.6.1 while main carried the
 //      entire trust plane.
-//   2. The 0.7.0 bump landed only in package.json. The plugin manifests and
-//      packages/opencode-agora still said 0.6.1, and opencode-agora pinned
-//      `agora-hub: 0.6.1` — so a *successful* publish would have shipped a
-//      plugin demanding the version it was meant to replace.
+//   2. The 0.7.0 bump landed only in package.json while other manifests kept
+//      the old version.
 //
 // Neither is visible from a normal push: publish.yml only runs on a release.
 // These assertions run on every push instead.
@@ -25,40 +23,12 @@ const readText = (rel: string) => readFileSync(join(REPO, rel), 'utf8');
 describe('release integrity', () => {
   const root = readJson('package.json');
 
-  test('every manifest carries the same version as package.json', () => {
-    // Each of these is a separate distribution channel for the same release.
-    // A stale one ships the old version number to that channel's users.
-    const manifests = ['.claude-plugin/plugin.json', 'gemini-extension.json'];
-
-    const drift = manifests
-      .map((rel) => ({ rel, version: readJson(rel).version as string }))
-      .filter((m) => m.version !== root.version);
-
-    expect(drift, `these manifests disagree with package.json (${root.version})`).toEqual([]);
-  });
-
   test('the declared node engine is not below what the dependencies require', () => {
-    // `>=20` was declared while `better-sqlite3` requires `>=22` and the entire
-    // sigstore tree requires `^22.22.2 || ^24.15.0 || >=26.0.0`. A Node 20 user
-    // would have installed on the strength of that claim and got a Verify plane
-    // that could not verify — the one thing the product is for.
-    //
-    // Deliberately a floor rather than a mirror of sigstore's exact range:
-    // sigstore excludes odd-numbered Node releases, but Agora is verified
-    // working on them, and claiming otherwise would be a false negative.
+    // Node 20 is end-of-life; the floor is 22.
     const declared = (root.engines?.node ?? '') as string;
     const floor = declared.match(/^>=\s*(\d+)/)?.[1];
     expect(floor, `engines.node should be a ">=<major>" floor, got "${declared}"`).toBeDefined();
     expect(Number(floor)).toBeGreaterThanOrEqual(22);
-  });
-
-  test('the generated schemas ship with the package', () => {
-    // 39 JSON Schemas are generated from src/model/ and CI-guarded against
-    // drift, but `files: ["dist"]` kept them out of the tarball — so the one
-    // artifact that lets someone else read Agora's evidence format without
-    // trusting Agora was visible only to people already reading the repo.
-    // "Evidence, not scores" is only checkable if the format is published.
-    expect(root.files).toContain('schemas');
   });
 
   test('publish.yml runs the vitest suite, not bun test', () => {

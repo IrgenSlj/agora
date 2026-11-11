@@ -79,21 +79,21 @@ say "Smoke tests against the installed binary"
 expect 0 "agora --version" -- --version
 expect 0 "agora --help" -- --help
 expect 0 "agora doctor (no servers configured)" -- doctor
+expect 0 "agora doctor --json" -- doctor --json
 expect 0 "agora audit (no servers configured)" -- audit
-expect 0 "agora installed" -- installed
-expect 0 "agora search (network, degrades to cache)" -- search filesystem
+expect 0 "agora observe (no sessions recorded)" -- observe
 expect 0 "agora policy check (bundled baseline loads)" -- policy check
+expect 0 "agora policy test (baseline fixtures)" -- policy test
 
 # The CI wedge. `uses: IrgenSlj/agora@v0` runs exactly this, so a break here
 # breaks the surface the product is being pointed at.
 expect 0 "agora ci (nothing established, nothing failed)" -- ci
-expect 1 "agora ci --fail-on-unknown (absence is a failure)" -- ci --fail-on-unknown
+expect 3 "agora ci --fail-on-unknown (could not check)" -- ci --fail-on-unknown
 expect 0 "agora ci --json" -- ci --json
 
 # The exit-code contract the Action and any script depend on.
 expect 2 "unknown command exits USAGE" -- definitely-not-a-command
-expect 2 "agora lock verify with no lockfile exits USAGE" -- lock verify
-expect 0 "agora lock write --no-fetch (no baseline: pins nothing, still succeeds)" -- lock write --no-fetch
+expect 2 "a retired command explains itself and exits USAGE" -- search filesystem
 
 # The hook is the enforcement surface and runs before every MCP tool call, so
 # its contract matters more than most: it must exit 0 on a payload it cannot
@@ -115,21 +115,6 @@ else
   printf '  \033[31m✗\033[0m hook check printed a decision it should not have: %s\n' "$hook_out"
   FAILURES=$((FAILURES + 1))
 fi
-
-# Acquire's dry run resolves federation, runs the scan, and evaluates policy
-# without writing. It is also the path that imports package.json from dist/,
-# which resolves differently in a published layout than in the repo.
-expect 0 "agora acquire --dry-run" -- acquire mcp-filesystem --dry-run
-
-say "Schemas ship with the package"
-for schema in lockfile.v1.json artifact-lock-entry.v1.json revocation-feed.v1.json; do
-  if [ -f "$WORK/app/node_modules/agora-hub/schemas/$schema" ]; then
-    printf '  \033[32m✓\033[0m %s\n' "$schema"
-  else
-    printf '  \033[31m✗\033[0m %s missing from the package\n' "$schema"
-    FAILURES=$((FAILURES + 1))
-  fi
-done
 
 say "Revocation feed is bundled and parses"
 FEED="$WORK/app/node_modules/agora-hub/dist/revocations.json"

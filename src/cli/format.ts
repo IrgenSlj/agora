@@ -1,151 +1,12 @@
-import { getInstallKind, type MarketplaceItem, renderPermissionLines } from '../catalog/bundled.js';
-import { formatNumber } from '../format.js';
-import { renderBanner, renderBox } from '../ui.js';
-import { COMMANDS } from './commands-meta.js';
-import { kvRow, tagList } from './components.js';
+import { renderBanner } from '../ui.js';
+import { COMMANDS, type CommandGroup } from './commands-meta.js';
 import type { Theme } from './theme.js';
 
+const TAGLINE = 'a written limit for every coding agent, a receipt for every change';
+const GROUPS: CommandGroup[] = ['Enforce', 'Record', 'Check', 'Setup'];
+
 export function truncate(value: string, max: number): string {
-  if (value.length <= max) return value;
-  return value.slice(0, max - 1) + '…';
-}
-
-export function formatItemList(items: MarketplaceItem[], theme: Theme): string {
-  const idWidth = Math.max(...items.map((item) => item.id.length));
-  return items
-    .map((item) => {
-      // Only metrics the source actually published. Most upstream registries
-      // measure no installs, and printing `0 installs · 0 ★` on every row put a
-      // fabricated measurement beside every result and made a working search
-      // look broken. Nothing is the honest rendering of nothing.
-      const parts: string[] = [];
-      if (item.installs !== undefined && item.installs > 0) {
-        parts.push(`${formatNumber(item.installs)} installs`);
-      }
-      if (item.stars > 0) parts.push(`${formatNumber(item.stars)} ★`);
-      const metrics = parts.join(' · ');
-      return [
-        metrics
-          ? `${theme.accent(item.id.padEnd(idWidth))}  ${theme.dim(metrics)}`
-          : theme.accent(item.id),
-        theme.dim(item.name),
-        truncate(item.description, 88),
-        theme.dim(`${item.category} · by ${item.author}`)
-      ].join('\n');
-    })
-    .join('\n\n');
-}
-
-export function formatItemTable(items: MarketplaceItem[], theme: Theme): string {
-  const idW = Math.max(4, ...items.map((i) => i.id.length));
-  const nameW = Math.max(4, ...items.map((i) => i.name.length));
-  const starW = 6;
-  const installW = 9;
-  const totalW = idW + 3 + nameW + 3 + starW + 3 + installW + 4;
-
-  const top = '┌' + '─'.repeat(totalW - 2) + '┐';
-  const bot = '└' + '─'.repeat(totalW - 2) + '┘';
-  const sep = '│';
-
-  const hdr =
-    sep +
-    ' ' +
-    'id'.padEnd(idW) +
-    ' │ ' +
-    'name'.padEnd(nameW) +
-    ' │ ' +
-    'stars'.padStart(starW) +
-    ' │ ' +
-    'installs'.padStart(installW) +
-    ' │';
-
-  const rows = items.map(
-    (item) =>
-      sep +
-      ' ' +
-      theme.accent(item.id.padEnd(idW)) +
-      ' │ ' +
-      theme.dim(item.name.padEnd(nameW)) +
-      ' │ ' +
-      theme.dim(formatNumber(item.stars).padStart(starW)) +
-      ' │ ' +
-      theme.dim(
-        (item.installs === undefined ? '—' : formatNumber(item.installs)).padStart(installW)
-      ) +
-      ' │'
-  );
-
-  return [top, hdr, ...rows, bot].join('\n');
-}
-
-const KV_KEY_WIDTH = 10;
-
-export function formatItemDetail(item: MarketplaceItem, theme: Theme): string {
-  const lines = [
-    theme.bold(item.name),
-    kvRow('id', theme.accent(item.id), KV_KEY_WIDTH, theme),
-    kvRow('type', item.kind, KV_KEY_WIDTH, theme),
-    kvRow('category', item.category, KV_KEY_WIDTH, theme),
-    kvRow('author', item.author, KV_KEY_WIDTH, theme),
-    kvRow('stars', formatNumber(item.stars), KV_KEY_WIDTH, theme),
-    kvRow('install', getInstallKind(item), KV_KEY_WIDTH, theme),
-    '',
-    item.description,
-    '',
-    kvRow('tags', tagList(item.tags, theme), KV_KEY_WIDTH, theme)
-  ];
-
-  if (item.kind === 'package') {
-    lines.splice(5, 0, kvRow('version', item.version, KV_KEY_WIDTH, theme));
-    if (item.installs !== undefined) {
-      lines.push(kvRow('installs', formatNumber(item.installs), KV_KEY_WIDTH, theme));
-    }
-    if (item.repository) lines.push(kvRow('repo', item.repository, KV_KEY_WIDTH, theme));
-    if (item.npmPackage) lines.push(kvRow('npm', item.npmPackage, KV_KEY_WIDTH, theme));
-    if (item.permissions) {
-      const permRows = renderPermissionLines(item.permissions);
-      if (permRows.length > 1) {
-        lines.push('');
-        // First row is "Permissions" label; subsequent rows are the indented values.
-        lines.push(theme.muted(permRows[0]!));
-        for (const row of permRows.slice(1)) lines.push(row);
-      }
-    }
-  }
-
-  return lines.join('\n');
-}
-export function welcome(color: boolean, trueColor: boolean, theme: Theme, version: string): string {
-  if (!color) {
-    return [
-      '',
-      `agora · catch the tool that changed after you trusted it · v${version}`,
-      '',
-      '  Audit     agora doctor · agora installed',
-      '  Search    agora search <query> · agora browse <id>',
-      '  Acquire   agora scan <id> · agora acquire <id>',
-      '  Stack     agora freeze --write · agora plan · agora apply',
-      '  Setup     agora init [--mcp] · agora integrate --all',
-      ''
-    ].join('\n');
-  }
-  const banner = renderBanner({ color, trueColor });
-  const box = renderBox(
-    'Welcome to Agora',
-    [
-      'catch the tool that changed after you trusted it - type a command, bash or chat:',
-      `v${version} · run \`agora help\` to get started`
-    ],
-    { color, trueColor }
-  );
-  const hint = [
-    `${theme.muted('Audit')}     agora doctor · agora installed`,
-    `${theme.muted('Search')}    agora search <query> · agora browse <id>`,
-    `${theme.muted('Acquire')}   agora scan <id> · agora acquire <id>`,
-    `${theme.muted('Stack')}     agora freeze --write · agora plan · agora apply`,
-    `${theme.muted('Setup')}     agora init [--mcp] · agora integrate --all`
-  ].join('\n');
-  return `\n${banner}\n\n${box}\n\n${hint}\n`;
+  return value.length <= max ? value : `${value.slice(0, max - 1)}…`;
 }
 
 export function header(title: string, meta: string[], theme: Theme): string {
@@ -153,25 +14,22 @@ export function header(title: string, meta: string[], theme: Theme): string {
 }
 
 export function usage(theme: Theme, version: string): string {
-  const nameWidth = Math.max(...COMMANDS.map((c) => c.name.length));
-  const groups = ['Catalog', 'Setup', 'Stack'] as const;
-
-  const lines: string[] = [
-    `${theme.accent('agora')}${theme.dim(` · catch the tool that changed after you trusted it · v${version}`)}`,
-    ''
-  ];
-
-  for (const group of groups) {
-    const groupCmds = COMMANDS.filter((c) => c.group === group);
-    if (groupCmds.length === 0) continue;
+  const w = Math.max(...COMMANDS.map((c) => c.name.length));
+  const lines = [`${theme.accent('agora')}${theme.dim(` · ${TAGLINE} · v${version}`)}`, ''];
+  for (const group of GROUPS) {
+    const cmds = COMMANDS.filter((c) => c.group === group);
+    if (!cmds.length) continue;
     lines.push(theme.muted(group));
-    for (const cmd of groupCmds) {
-      lines.push(`  ${theme.accent(cmd.name.padEnd(nameWidth))}  ${theme.dim(cmd.summary)}`);
-    }
+    for (const c of cmds)
+      lines.push(`  ${theme.accent(c.name.padEnd(w))}  ${theme.dim(c.summary)}`);
     lines.push('');
   }
-
   lines.push(theme.dim('Run `agora help <command>` for details on any command.'));
-
   return lines.join('\n');
+}
+
+export function welcome(color: boolean, trueColor: boolean, theme: Theme, version: string): string {
+  const body = usage(theme, version);
+  if (!color) return `\n${body}\n`;
+  return `\n${renderBanner({ color, trueColor })}\n\n${body}\n`;
 }

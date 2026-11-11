@@ -25,7 +25,7 @@ const readText = (rel: string) => readFileSync(join(REPO, rel), 'utf8');
 const readJson = (rel: string) => JSON.parse(readText(rel));
 
 /** Files that quote the Action at a reader as something to copy. */
-const DOCS_QUOTING_THE_ACTION = ['README.md', 'docs/NEXT.md'];
+const DOCS_QUOTING_THE_ACTION = ['README.md'];
 
 const ACTION_REF = /uses:\s*IrgenSlj\/agora@(v\d+)/g;
 

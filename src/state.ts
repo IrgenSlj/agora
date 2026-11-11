@@ -1,9 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
-import { atomicWriteFile } from './atomic-write.js';
-import type { MarketplaceItem } from './catalog/bundled.js';
-import { findMarketplaceItem } from './catalog/bundled.js';
 
 export interface StatePathOptions {
   explicitDir?: string;
@@ -12,169 +8,21 @@ export interface StatePathOptions {
   env?: Record<string, string | undefined>;
 }
 
-export interface SavedItem {
-  id: string;
-  savedAt: string;
-  item?: MarketplaceItem;
-}
-
-export interface HomeMeta {
-  lastSeenAt?: string;
-  serverCount?: number;
-}
-
-export interface AgoraState {
-  version: 1;
-  savedItems: SavedItem[];
-  home?: HomeMeta;
-}
-
-export interface ResolvedSavedItem {
-  saved: SavedItem;
-  item: MarketplaceItem | null;
-}
-
-const STATE_FILE = 'state.json';
-
+/** Agora's data directory: `$AGORA_HOME`, else `$XDG_CONFIG_HOME/agora`, else `~/.config/agora`. */
 export function detectAgoraDataDir(options: StatePathOptions = {}): string {
   const cwd = options.cwd || process.cwd();
   const home = options.home || homedir();
   const env = options.env || process.env;
   const configured = options.explicitDir || env.AGORA_HOME;
-
-  if (configured) {
-    return resolvePath(configured, cwd, home);
-  }
-
-  const xdgConfigHome = env.XDG_CONFIG_HOME
+  if (configured) return resolvePath(configured, cwd, home);
+  const xdg = env.XDG_CONFIG_HOME
     ? resolvePath(env.XDG_CONFIG_HOME, cwd, home)
     : join(home, '.config');
-
-  return join(xdgConfigHome, 'agora');
+  return join(xdg, 'agora');
 }
 
-export function getAgoraStatePath(dataDir: string): string {
-  return join(dataDir, STATE_FILE);
-}
-
-export function loadAgoraState(dataDir: string): AgoraState {
-  const statePath = getAgoraStatePath(dataDir);
-
-  if (!existsSync(statePath)) {
-    return createEmptyState();
-  }
-
-  try {
-    const parsed = JSON.parse(readFileSync(statePath, 'utf8')) as Partial<AgoraState>;
-    return normalizeState(parsed);
-  } catch {
-    console.error(`Warning: ${statePath} was unreadable and has been reset`);
-    return createEmptyState();
-  }
-}
-
-export function writeAgoraState(dataDir: string, state: AgoraState): void {
-  atomicWriteFile(
-    getAgoraStatePath(dataDir),
-    `${JSON.stringify(normalizeState(state), null, 2)}\n`
-  );
-}
-
-export function saveItemToState(
-  state: AgoraState,
-  item: MarketplaceItem,
-  now = new Date()
-): { state: AgoraState; added: boolean } {
-  if (state.savedItems.some((saved) => saved.id === item.id)) {
-    return { state: normalizeState(state), added: false };
-  }
-
-  return {
-    state: normalizeState({
-      ...state,
-      savedItems: [
-        {
-          id: item.id,
-          savedAt: now.toISOString(),
-          item
-        },
-        ...state.savedItems
-      ]
-    }),
-    added: true
-  };
-}
-
-export function resolveSavedItems(state: AgoraState): ResolvedSavedItem[] {
-  return normalizeState(state).savedItems.map((saved) => ({
-    saved,
-    item: saved.item || findMarketplaceItem(saved.id)
-  }));
-}
-
-function createEmptyState(): AgoraState {
-  return {
-    version: 1,
-    savedItems: []
-  };
-}
-
-function normalizeState(state: Partial<AgoraState>): AgoraState {
-  const seen = new Set<string>();
-  const savedItems = Array.isArray(state.savedItems)
-    ? state.savedItems
-        .filter((saved): saved is SavedItem => {
-          return Boolean(
-            saved && typeof saved.id === 'string' && typeof saved.savedAt === 'string'
-          );
-        })
-        .map((saved) => ({
-          id: saved.id,
-          savedAt: saved.savedAt,
-          item: isMarketplaceItem(saved.item) ? saved.item : undefined
-        }))
-        .filter((saved) => {
-          if (seen.has(saved.id)) return false;
-          seen.add(saved.id);
-          return true;
-        })
-    : [];
-
-  const home = normalizeHomeMeta(state.home);
-
-  return {
-    version: 1,
-    savedItems,
-    ...(home !== undefined ? { home } : {})
-  };
-}
-
-function normalizeHomeMeta(home: unknown): HomeMeta | undefined {
-  if (!home || typeof home !== 'object') return undefined;
-  const candidate = home as Record<string, unknown>;
-  const result: HomeMeta = {};
-  if (typeof candidate.lastSeenAt === 'string' && candidate.lastSeenAt) {
-    result.lastSeenAt = candidate.lastSeenAt;
-  }
-  if (typeof candidate.serverCount === 'number') {
-    result.serverCount = candidate.serverCount;
-  }
-  return result;
-}
-
-function resolvePath(filePath: string, cwd: string, home: string): string {
-  const expanded =
-    filePath === '~' || filePath.startsWith('~/') ? join(home, filePath.slice(2)) : filePath;
-
-  return isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
-}
-
-function isMarketplaceItem(value: unknown): value is MarketplaceItem {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<MarketplaceItem>;
-  return Boolean(
-    typeof candidate.id === 'string' &&
-      typeof candidate.name === 'string' &&
-      (candidate.kind === 'package' || candidate.kind === 'workflow')
-  );
+function resolvePath(value: string, cwd: string, home: string): string {
+  if (value === '~') return home;
+  if (value.startsWith('~/')) return join(home, value.slice(2));
+  return isAbsolute(value) ? value : resolve(cwd, value);
 }

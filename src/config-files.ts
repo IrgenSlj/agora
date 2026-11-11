@@ -1,18 +1,20 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { dirname, isAbsolute, join, resolve } from 'node:path';
-import {
-  extractPackageFromConfig,
-  formatConfigJson,
-  type OpenCodeConfig,
-  parseOpenCodeConfig
-} from './config.js';
+import { existsSync, readFileSync } from 'node:fs';
 
-export interface ConfigPathOptions {
-  explicitPath?: string;
-  cwd?: string;
-  home?: string;
-  env?: Record<string, string | undefined>;
+/** The part of `opencode.json` Agora reads. */
+export interface OpenCodeConfig {
+  $schema?: string;
+  mcp?: Record<
+    string,
+    {
+      type: 'local' | 'remote';
+      command?: string[];
+      url?: string;
+      environment?: Record<string, string>;
+      enabled?: boolean;
+      timeout?: number;
+    }
+  >;
+  plugin?: string[];
 }
 
 export interface LoadedConfig {
@@ -22,101 +24,17 @@ export interface LoadedConfig {
   error?: string;
 }
 
-export interface ConfigDoctorReport {
-  path: string;
-  exists: boolean;
-  valid: boolean;
-  error?: string;
-  mcpServers: number;
-  plugins: number;
-  packages: string[];
-}
-
-export function detectOpenCodeConfigPath(options: ConfigPathOptions = {}): string {
-  const cwd = options.cwd || process.cwd();
-  const home = options.home || homedir();
-  const env = options.env || process.env;
-  const configured = options.explicitPath || env.OPENCODE_CONFIG || env.OPENCODE_CONFIG_PATH;
-
-  if (configured) {
-    return resolvePath(configured, cwd, home);
-  }
-
-  const candidates = [
-    join(cwd, 'opencode.json'),
-    join(home, '.config', 'opencode', 'opencode.json'),
-    join(home, '.opencode.json')
-  ];
-
-  // Prefer an existing config wherever it lives; otherwise fall back to a
-  // project-local opencode.json so `init`/`use` never silently mutate the
-  // user's global config.
-  return candidates.find((candidate) => existsSync(candidate)) || candidates[0];
-}
-
+/** Reads an opencode.json. A missing or unparseable file yields an empty config and a reason. */
 export function loadOpenCodeConfig(configPath: string): LoadedConfig {
-  if (!existsSync(configPath)) {
-    return {
-      path: configPath,
-      exists: false,
-      config: {}
-    };
-  }
-
+  if (!existsSync(configPath)) return { path: configPath, exists: false, config: {} };
   try {
-    const content = readFileSync(configPath, 'utf8');
-    const parsed = parseOpenCodeConfig(content);
-
-    if (!parsed) {
-      return {
-        path: configPath,
-        exists: true,
-        config: {},
-        error: 'Config file is not valid JSON'
-      };
-    }
-
-    return {
-      path: configPath,
-      exists: true,
-      config: parsed
-    };
+    return { path: configPath, exists: true, config: JSON.parse(readFileSync(configPath, 'utf8')) };
   } catch (error) {
     return {
       path: configPath,
       exists: true,
       config: {},
-      error: error instanceof Error ? error.message : String(error)
+      error: error instanceof Error ? error.message : 'Config file is not valid JSON'
     };
   }
-}
-
-export function writeOpenCodeConfig(configPath: string, config: OpenCodeConfig): void {
-  mkdirSync(dirname(configPath), { recursive: true });
-  const tmpPath = `${configPath}.tmp`;
-  writeFileSync(tmpPath, `${formatConfigJson(config)}\n`, 'utf8');
-  renameSync(tmpPath, configPath);
-}
-
-export function doctorOpenCodeConfig(configPath: string): ConfigDoctorReport {
-  const loaded = loadOpenCodeConfig(configPath);
-  const mcpServers = Object.keys(loaded.config.mcp || {}).length;
-  const plugins = loaded.config.plugin?.length || 0;
-
-  return {
-    path: loaded.path,
-    exists: loaded.exists,
-    valid: !loaded.error,
-    error: loaded.error,
-    mcpServers,
-    plugins,
-    packages: extractPackageFromConfig(loaded.config)
-  };
-}
-
-function resolvePath(filePath: string, cwd: string, home: string): string {
-  const expanded =
-    filePath === '~' || filePath.startsWith('~/') ? join(home, filePath.slice(2)) : filePath;
-
-  return isAbsolute(expanded) ? expanded : resolve(cwd, expanded);
 }

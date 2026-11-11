@@ -60,13 +60,8 @@ function levenshtein(a: string, b: string): number {
 // caller's stream + env; defaults to plain so any direct formatter use is safe.
 let style: Styler = createStyler(false);
 
-/**
- * Every CLI token that can reach a handler. Most come from user-facing command
- * metadata; the remainder are compatibility aliases or the help router. Gate
- * inventory tests consume this so a newly documented command cannot appear
- * without an explicit mutation classification.
- */
-export const HIDDEN_CLI_ENTRYPOINTS = ['help', 'show', 'edit', 'diff', 'verify', 'mcp'] as const;
+/** Every CLI token that can reach a handler: documented commands plus the help router. */
+export const HIDDEN_CLI_ENTRYPOINTS = ['help'] as const;
 export const ACTIVE_CLI_ENTRYPOINTS = [
   ...new Set([...COMMANDS.map((command) => command.name), ...HIDDEN_CLI_ENTRYPOINTS])
 ].sort();
@@ -95,71 +90,22 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     return 0;
   }
 
-  // Bare `agora` used to drop into an interactive shell when stdout was a TTY.
-  // It now prints the same welcome in both cases. A command that behaves
-  // differently depending on whether it is being watched is a command nobody
-  // can script against, and the shell it launched is gone.
   if (!parsed.command) {
     writeLine(io.stdout, welcome(useColor, supportsTrueColor(env), cliTheme(style, io), VERSION));
     return 0;
   }
 
   try {
-    // Every handler is behind a dynamic import, and it matters more than it
-    // looks. Importing all thirty eagerly meant `agora --version` resolved 322
-    // modules and paid 107ms for sigstore plus 75ms for the MCP SDK before
-    // printing a string it already had. The GitHub Action pays that on every
-    // run of every repository that adopts it.
-    //
-    // `src/policy/engine.ts` already did this for cedar-wasm, for the same
-    // reason and with the same comment. This is that rule applied to the
-    // dispatch table instead of one dependency.
+    // Every handler is behind a dynamic import so `agora --version` and the
+    // GitHub Action do not pay for cedar-wasm or anything else they never use.
     const cmd: Record<string, () => Promise<CommandHandler>> = {
-      search: async () => (await import('./commands/marketplace.js')).commandSearch,
-      info: async () => (await import('./commands/marketplace.js')).commandInfo,
-      browse: async () => (await import('./commands/marketplace.js')).commandBrowse,
-      init: async () => (await import('./commands/init.js')).commandInit,
-      install: async () => (await import('./commands/operations.js')).commandInstall,
-      mcp: async () => (await import('./commands/operations.js')).commandMcp,
-      preferences: async () => (await import('./commands/operations.js')).commandPreferences,
-      history: async () => (await import('./commands/operations.js')).commandHistory,
-      config: async () => (await import('./commands/operations.js')).commandConfig,
-      show: () => configAlias('show'),
-      edit: () => configAlias('edit'),
-      diff: () => configAlias('diff'),
-      export: async () => (await import('./commands/export.js')).commandExport,
-      watch: async () => (await import('./commands/watch.js')).commandWatch,
-      notify: async () => (await import('./commands/notify.js')).commandNotify,
-      observe: async () => (await import('./commands/observe.js')).commandObserve,
-      run: async () => (await import('./commands/observe.js')).commandRun,
-      today: async () => (await import('./commands/today.js')).commandToday,
-      open: async () => (await import('./commands/browse.js')).commandOpen,
-      scan: async () => (await import('./commands/scan.js')).commandScan,
-      verify: async () => (await import('./commands/scan.js')).commandScan,
-      acquire: async () => (await import('./commands/acquire.js')).commandAcquire,
-      outdated: async () => (await import('./commands/outdated.js')).commandOutdated,
-      refresh: async () => (await import('./commands/refresh.js')).commandRefresh,
-      remove: async () => (await import('./commands/remove.js')).commandRemove,
-      installed: async () => (await import('./commands/installed.js')).commandInstalled,
-      doctor: async () => (await import('./commands/doctor.js')).commandDoctor,
-      freeze: async () => (await import('./commands/freeze.js')).commandFreeze,
       hook: async () => (await import('./commands/hook.js')).commandHook,
-      sync: async () => (await import('./commands/sync.js')).commandSync,
-      plan: async () => (await import('./commands/plan.js')).commandPlan,
       policy: async () => (await import('./commands/policy.js')).commandPolicy,
-      quarantine: async () => (await import('./commands/quarantine.js')).commandQuarantine,
-      unquarantine: async () => (await import('./commands/quarantine.js')).commandUnquarantine,
-      apply: async () => (await import('./commands/apply.js')).commandApply,
-      update: async () => (await import('./commands/update.js')).commandUpdate,
-      approve: async () => (await import('./commands/approve.js')).commandApprove,
+      run: async () => (await import('./commands/observe.js')).commandRun,
+      observe: async () => (await import('./commands/observe.js')).commandObserve,
       audit: async () => (await import('./commands/audit.js')).commandAudit,
       ci: async () => (await import('./commands/ci.js')).commandCi,
-      trust: async () => (await import('./commands/trust.js')).commandTrust,
-      try: async () => (await import('./commands/try.js')).commandTry,
-      capabilities: async () => (await import('./commands/capabilities.js')).commandCapabilities,
-      integrate: async () => (await import('./commands/integrate.js')).commandIntegrate,
-      lock: async () => (await import('./commands/lock.js')).commandLock,
-      welcome: async () => (await import('./commands/welcome.js')).commandWelcome
+      doctor: async () => (await import('./commands/doctor.js')).commandDoctor
     };
 
     const load = cmd[parsed.command];
@@ -187,7 +133,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     // "Unknown command" would read as a broken install rather than a decision.
     const retired = RETIRED_COMMANDS[parsed.command];
     if (retired) {
-      writeLine(io.stderr, retiredMessage(parsed.command, retired, VERSION));
+      writeLine(io.stderr, retiredMessage(parsed.command, retired));
       return ExitCode.USAGE;
     }
 
@@ -200,17 +146,6 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     writeLine(io.stderr, error instanceof Error ? error.message : String(error));
     return ExitCode.USAGE;
   }
-}
-
-/**
- * `agora show|edit|diff` are compatibility aliases for `agora config <verb>`.
- * They rewrite the parsed arguments rather than calling a second entry point,
- * so the aliases cannot drift from the command they stand for.
- */
-async function configAlias(verb: 'show' | 'edit' | 'diff'): Promise<CommandHandler> {
-  const { commandConfig } = await import('./commands/operations.js');
-  return (parsed, io, style) =>
-    commandConfig({ ...parsed, args: [verb, ...parsed.args], command: 'config' }, io, style);
 }
 
 export function commandManual(name: string): string {

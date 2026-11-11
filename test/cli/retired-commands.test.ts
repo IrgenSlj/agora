@@ -33,8 +33,8 @@ describe('a removed command explains itself', () => {
 
   test('a replacement is named where one exists', async () => {
     const { io, err } = createIo();
-    await runCli(['news'], io);
-    expect(err()).toContain('agora today');
+    await runCli(['scan'], io);
+    expect(err()).toContain('agora audit');
   });
 
   test('no replacement is invented where none exists', async () => {

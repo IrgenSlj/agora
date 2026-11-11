@@ -3,16 +3,14 @@ import { dirname, join, relative } from 'node:path';
 import { evaluatePolicy, isConclusive, lintPolicyText, loadPolicies } from '../../policy/engine.js';
 import { checkRevocations } from '../../revocation/client.js';
 import { installedPurls } from '../../revocation/installed.js';
-import { manifestPath, readManifest } from '../../stack/manifest.js';
 import { readAllServers } from '../../stack/registry.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
-const SCAFFOLD = `// Project policy for agora. Evaluated on top of the shipped baseline
-// (which already forbids revoked artifacts, tripped canaries, and installing
-// something whose evidence critically contradicts its claims).
+const SCAFFOLD = `// agora.cedar: this repository's policy for coding agents. Evaluated on top of the shipped baseline
+// (which already forbids revoked MCP servers).
 //
 // A project file can only ever make the baseline STRICTER: Cedar is
 // order-independent and any forbid beats every permit.
@@ -25,10 +23,6 @@ const SCAFFOLD = `// Project policy for agora. Evaluated on top of the shipped b
 // Example: refuse anything that declares no permission manifest at all.
 // forbid (principal, action, resource)
 // when { resource.permissions_declared == false };
-
-// Example: require verified provenance before installing.
-// forbid (principal, action == Action::"Install", resource)
-// unless { resource has provenance_verified && resource.provenance_verified };
 
 // Example: refuse servers that declare the ability to execute binaries.
 // forbid (principal, action, resource)
@@ -46,9 +40,12 @@ function policyLabel(path: string, cwd: string): string {
     : relative(cwd, path);
 }
 
-function policyFilesFrom(io: { cwd?: string; env?: Record<string, string | undefined> }): string[] {
-  const manifest = readManifest(manifestPath({ cwd: io.cwd, env: io.env }));
-  return manifest?.policy?.files ?? [];
+/** The repository's policy file, committed at its root. */
+export const POLICY_FILE = 'agora.cedar';
+
+function policyFilesFrom(io: { cwd?: string }): string[] {
+  const cwd = io.cwd ?? process.cwd();
+  return existsSync(join(cwd, POLICY_FILE)) ? [POLICY_FILE] : [];
 }
 
 export const commandPolicy: CommandHandler = async (parsed, io, style) => {
@@ -59,7 +56,7 @@ export const commandPolicy: CommandHandler = async (parsed, io, style) => {
   if (!sub || sub === 'help') {
     writeLine(io.stdout, 'Usage: agora policy <init|check|test> [--json] [--ci]');
     writeLine(io.stdout, '');
-    writeLine(io.stdout, '  init   scaffold a project policy file and register it in agora.toml');
+    writeLine(io.stdout, `  init   scaffold ${POLICY_FILE} at the repository root`);
     writeLine(io.stdout, '  check  lint policy files, then evaluate every installed server');
     writeLine(io.stdout, '  test   evaluate the policy set against built-in fixture artifacts');
     return sub ? ExitCode.OK : ExitCode.USAGE;
@@ -67,7 +64,7 @@ export const commandPolicy: CommandHandler = async (parsed, io, style) => {
 
   // ── init ────────────────────────────────────────────────────────────────
   if (sub === 'init') {
-    const target = join(cwd, 'policies', 'team.cedar');
+    const target = join(cwd, POLICY_FILE);
     if (existsSync(target)) {
       return usageError(io, `${relative(cwd, target)} already exists`);
     }
@@ -75,12 +72,7 @@ export const commandPolicy: CommandHandler = async (parsed, io, style) => {
     writeFileSync(target, SCAFFOLD, 'utf8');
 
     writeLine(io.stdout, `Created ${theme.accent(relative(cwd, target))}`);
-    writeLine(io.stdout, '');
-    writeLine(io.stdout, 'Register it by adding to agora.toml:');
-    writeLine(io.stdout, theme.dim('  [policy]'));
-    writeLine(io.stdout, theme.dim('  files = ["policies/team.cedar"]'));
-    writeLine(io.stdout, '');
-    writeLine(io.stdout, theme.dim('Then run `agora policy check`.'));
+    writeLine(io.stdout, theme.dim('Commit it, then run `agora policy check`.'));
     return ExitCode.OK;
   }
 
@@ -226,17 +218,6 @@ export const commandPolicy: CommandHandler = async (parsed, io, style) => {
         label: 'revoked artifact',
         expect: 'deny',
         input: { purl: 'pkg:npm/revoked@1.0.0', policyFiles: files, cwd, revoked: true }
-      },
-      {
-        label: 'critical divergence on install',
-        expect: 'deny',
-        input: {
-          purl: 'pkg:npm/diverged@1.0.0',
-          policyFiles: files,
-          cwd,
-          action: 'Install',
-          scan: { id: 'x', itemKind: 'package', checks: [], summary: { pass: 0, warn: 0, fail: 1 } }
-        }
       }
     ];
 

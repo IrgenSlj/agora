@@ -1,21 +1,11 @@
-import { getMarketplaceItems } from '../../catalog/bundled.js';
 import { applyObserve, planObserve } from '../../observe/enable.js';
 import { aggregate, divergences } from '../../observe/profile.js';
 import { readSessions } from '../../observe/session.js';
-import { npmPackageFromCommand } from '../../revocation/installed.js';
 import { readAllServers } from '../../stack/registry.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
-
-/** Declared network hosts for a command, from the bundled catalog manifest. */
-function declaredNetFor(command: string[]): string[] | undefined {
-  const pkg = npmPackageFromCommand(command);
-  if (!pkg) return undefined;
-  const item = getMarketplaceItems().find((i) => i.kind === 'package' && i.npmPackage === pkg);
-  return item && item.kind === 'package' ? item.permissions?.net : undefined;
-}
 
 export const commandObserve: CommandHandler = async (parsed, io, style) => {
   const sub = parsed.args[0] ?? 'status';
@@ -33,10 +23,11 @@ export const commandObserve: CommandHandler = async (parsed, io, style) => {
   const sessions = readSessions(dataDir);
   const observations = aggregate(sessions);
 
-  // Attach declared capabilities so divergence means something.
+  // No catalog declares network hosts any more, so divergence has nothing to
+  // compare against and stays empty rather than inventing a baseline.
   const rows = observations.map((observation) => ({
     observation,
-    divergence: divergences(observation, { net: declaredNetFor(observation.command) })
+    divergence: divergences(observation, {})
   }));
 
   if (parsed.flags.json) {

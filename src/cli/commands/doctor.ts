@@ -1,199 +1,131 @@
+// `agora doctor`: what Agora can see and enforce on this machine, for this
+// repository. Informational; it exits non-zero only when a configured server
+// is revoked, because that is something the user must act on.
+
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { checkRevocations, refreshFeed } from '../../revocation/client.js';
 import { installedPurls } from '../../revocation/installed.js';
-import { isBlocking } from '../../revocation/match.js';
-import { checkStack } from '../../stack/doctor.js';
-import { ALL_ADAPTERS, detectTools, readAllServers } from '../../stack/registry.js';
-import type { AgentToolId } from '../../stack/types.js';
+import { isBlockingMatch } from '../../revocation/match.js';
+import { detectTools, readAllServers } from '../../stack/registry.js';
 import { status } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
-import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
+import { detectDataDir, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
+import { hookInstalled } from './hook.js';
 import type { CommandHandler } from './types.js';
 
-const KNOWN_TOOL_IDS: AgentToolId[] = ALL_ADAPTERS.map((a) => a.id);
+export const POLICY_FILE = 'agora.cedar';
 
 export const commandDoctor: CommandHandler = async (parsed, io, style) => {
-  const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
-
-  const toolFlag = stringFlag(parsed, 'tool');
-  if (toolFlag !== undefined) {
-    if (!KNOWN_TOOL_IDS.includes(toolFlag as AgentToolId)) {
-      return usageError(
-        io,
-        `Unknown tool: ${toolFlag}. Valid values: ${KNOWN_TOOL_IDS.join(', ')}`
-      );
-    }
-  }
-
-  const probe = Boolean(parsed.flags.probe);
-  const strict = Boolean(parsed.flags.strict);
-
-  let servers = readAllServers(env);
-  if (toolFlag) {
-    servers = servers.filter((s) => s.tool === toolFlag);
-  }
-
-  if (servers.length === 0) {
-    if (parsed.flags.json) {
-      writeJson(io.stdout, { servers: [], summary: { ok: 0, warn: 0, error: 0 } });
-      return 0;
-    }
-    const theme = cliTheme(style, io);
-    const toolResults = detectTools(env);
-    const detected = toolResults.filter((t) => t.present).map((t) => t.adapter.displayName);
-    writeLine(io.stdout, theme.muted('No MCP servers configured.'));
-    if (detected.length > 0) {
-      writeLine(io.stdout, theme.muted('Detected tools: ' + detected.join(', ')));
-    } else {
-      writeLine(io.stdout, theme.muted('No supported agent tools detected.'));
-    }
-    writeLine(
-      io.stdout,
-      theme.muted('Run `agora search` to find servers, `agora install` to add them.')
-    );
-    return 0;
-  }
-
-  const theme = cliTheme(style, io);
-
-  if (probe) {
-    writeLine(
-      io.stdout,
-      theme.muted('Probing: starting each local server briefly to verify it runs…')
-    );
-  }
-
+  const cwd = io.cwd ?? process.cwd();
+  const env = { cwd, home: io.env?.HOME, env: io.env };
   const dataDir = detectDataDir(parsed, io);
-  const health = await checkStack(servers, { ...env, probe, dataDir, quarantineOnDrift: probe });
 
-  // Revocation is opportunistic: refresh at most every 6h and never let a feed
-  // failure affect the health report the user asked for. The lookup itself is
-  // offline, against whatever is cached.
-  await refreshFeed({ dataDir, fetcher: io.fetcher });
+  const hosts = detectTools(env).map((t) => ({
+    id: t.adapter.id,
+    name: t.adapter.displayName,
+    present: t.present
+  }));
+  const servers = readAllServers(env);
+  const hook = hookInstalled(cwd);
+  const policy = existsSync(join(cwd, POLICY_FILE));
+
+  // Refreshing is opportunistic and never fails the report; the lookup is offline.
+  await refreshFeed({ dataDir, fetcher: io.fetcher }).catch(() => undefined);
   const addressed = installedPurls(servers);
   const revocations = checkRevocations(
     dataDir,
     addressed.addressable.map((a) => a.purl)
   );
-  // `doctor` groups a server by name across hosts, so key the lookup by name:
-  // if any instance resolves to a revoked purl, the group is revoked.
-  const matchByPurl = new Map(revocations.matches.map((m) => [m.purl, m]));
-  const revokedByName = new Map(
-    addressed.addressable
-      .map((a) => [a.server.name, matchByPurl.get(a.purl)] as const)
-      .filter((pair): pair is [string, NonNullable<(typeof pair)[1]>] => Boolean(pair[1]))
-  );
-  const driftOrQuarantine = health.servers.some((server) =>
-    server.checks.some((check) => check.name === 'description-drift' || check.name === 'quarantine')
+  const revoked = addressed.addressable.flatMap((a) =>
+    revocations.matches
+      .filter((m) => m.purl === a.purl && isBlockingMatch(m))
+      .map((m) => ({
+        server: a.server.name,
+        tool: a.server.tool,
+        id: m.entry.id,
+        reason: m.entry.reason
+      }))
   );
 
   if (parsed.flags.json) {
     writeJson(io.stdout, {
-      ...health,
+      hosts,
+      servers: servers.map((s) => ({
+        name: s.name,
+        host: s.tool,
+        scope: s.scope,
+        transport: s.transport,
+        enabled: s.enabled
+      })),
+      hook: { claudeCode: hook },
+      policy: { path: POLICY_FILE, present: policy },
       revocations: {
         feedVersion: revocations.feedVersion,
-        // `unknown` is not "clean" — it means no feed has ever been fetched.
-        unknown: revocations.unknown,
         stale: revocations.stale,
-        blocked: revocations.blocked,
-        matches: revocations.matches.map((m) => ({
-          purl: m.purl,
-          id: m.entry.id,
-          reason: m.entry.reason,
-          severity: m.entry.severity,
-          refs: m.entry.refs
-        })),
-        uncheckable: addressed.unaddressable.map((s2) => s2.name)
+        revoked,
+        unchecked: addressed.unaddressable.map((s) => s.name)
       }
     });
-    if (revocations.blocked) return ExitCode.POLICY_FORBID;
-    return driftOrQuarantine ? ExitCode.POLICY_FORBID : ExitCode.OK;
+    return revoked.length ? ExitCode.POLICY_FORBID : ExitCode.OK;
   }
 
-  for (const server of health.servers) {
-    const glyph =
-      server.status === 'ok'
-        ? status('success', '', theme)
-        : server.status === 'warn'
-          ? status('warning', '', theme)
-          : status('error', '', theme);
+  const theme = cliTheme(style, io);
+  const line = (ok: boolean | 'warn', text: string) =>
+    writeLine(
+      io.stdout,
+      `  ${status(ok === true ? 'success' : ok === 'warn' ? 'warning' : 'info', text, theme)}`
+    );
 
-    let serverLine = `${glyph}  ${theme.bold(server.name)}`;
-
-    if (probe) {
-      if (server.status === 'ok') {
-        const probeCheck = server.checks.find((c) => c.name === 'probe');
-        if (probeCheck?.ok && probeCheck.detail) {
-          const toolMatch = probeCheck.detail.match(/(\d+) tool\(s\)/);
-          if (toolMatch) {
-            serverLine += theme.dim(` (${toolMatch[1]} tools)`);
-          }
-        }
-      }
-      // Additive DRIFT chip (P2): checkStack already computes description-drift
-      // on --probe; surface it inline next to the server name rather than
-      // only inside the detail lines below.
-      if (server.checks.some((c) => c.name === 'description-drift')) {
-        serverLine += `  ${theme.warning('DRIFT')}`;
-      }
-    }
-
-    const revoked = revokedByName.get(server.name);
-    if (revoked) {
-      serverLine += `  ${isBlocking(revoked.entry) ? theme.error('REVOKED') : theme.warning('ADVISORY')}`;
-    }
-
-    writeLine(io.stdout, serverLine);
-
-    if (revoked) {
-      writeLine(
-        io.stdout,
-        `     ${theme.dim(`${revoked.entry.id} — ${revoked.entry.reason} (${revoked.entry.severity})`)}`
-      );
-      for (const ref of revoked.entry.refs.slice(0, 2)) {
-        writeLine(io.stdout, `     ${theme.dim(ref)}`);
-      }
-    }
-
-    if (server.status !== 'ok') {
-      for (const check of server.checks) {
-        if (!check.ok && check.detail) {
-          writeLine(io.stdout, `     ${theme.dim(check.detail)}`);
-        }
-      }
-    }
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, theme.muted('Hosts'));
+  for (const h of hosts) {
+    const count = servers.filter((s) => s.tool === h.id).length;
+    line(
+      h.present,
+      h.present
+        ? `${h.name} · ${count} MCP server${count === 1 ? '' : 's'}`
+        : theme.dim(`${h.name} · not found`)
+    );
   }
 
-  writeLine(io.stdout);
-  const { ok, warn, error } = health.summary;
-  writeLine(
-    io.stdout,
-    `${theme.success(`ok: ${ok}`)}  ${theme.warning(`warn: ${warn}`)}  ${theme.error(`error: ${error}`)}`
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, theme.muted('Enforcement'));
+  line(
+    hook ? true : 'warn',
+    hook
+      ? 'Claude Code hook installed in this repository'
+      : 'Claude Code hook not installed · run `agora hook install`'
+  );
+  line(
+    policy ? true : 'warn',
+    policy ? `${POLICY_FILE} found` : `no ${POLICY_FILE} · run \`agora policy init\``
   );
 
-  if (revocations.unknown) {
-    writeLine(
-      io.stdout,
-      theme.muted('revocations: no feed cached yet — nothing has been checked against it')
-    );
-  } else if (revocations.stale) {
-    const days = Math.floor((revocations.ageMs ?? 0) / 86_400_000);
-    writeLine(
-      io.stdout,
-      theme.warning(`revocations: feed is ${days}d old — it may be missing recent entries`)
-    );
-  }
-  if (addressed.unaddressable.length > 0) {
-    writeLine(
-      io.stdout,
-      theme.muted(
-        `revocations: ${addressed.unaddressable.length} server(s) could not be checked (remote or non-npm launcher)`
-      )
+  writeLine(io.stdout, '');
+  writeLine(io.stdout, theme.muted('Revocations'));
+  if (revoked.length) {
+    for (const r of revoked) {
+      writeLine(
+        io.stdout,
+        `  ${status('error', `${r.server} (${r.tool}) is revoked: ${r.id} · ${r.reason}`, theme)}`
+      );
+    }
+  } else {
+    line(
+      true,
+      `no configured server is on the revocation list (${addressed.addressable.length} checked)`
     );
   }
+  if (addressed.unaddressable.length) {
+    line(
+      'warn',
+      `${addressed.unaddressable.length} server(s) not checkable: remote or not launched from npm`
+    );
+  }
+  if (revocations.stale) line('warn', 'the cached revocation list is more than a week old');
+  writeLine(io.stdout, '');
 
-  if (revocations.blocked) return ExitCode.POLICY_FORBID;
-  if (driftOrQuarantine) return ExitCode.POLICY_FORBID;
-  if (strict && error > 0) return ExitCode.POLICY_FORBID;
-  return ExitCode.OK;
+  return revoked.length ? ExitCode.POLICY_FORBID : ExitCode.OK;
 };

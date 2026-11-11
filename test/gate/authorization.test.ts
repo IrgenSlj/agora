@@ -85,7 +85,7 @@ describe('central authorization decision contract', () => {
       request({
         action: 'RequestInstall',
         actor: 'agent',
-        effects: ['install-intent']
+        effects: ['local-state']
       })
     );
     expect(decision.verdict).toBe('allow');
@@ -154,7 +154,7 @@ describe('accepting a risk, which is what replaces a bypass flag', () => {
       ...unknownScan,
       action: 'RequestInstall',
       actor: 'agent',
-      effects: ['install-intent'],
+      effects: ['local-state'],
       acknowledged: ['scan']
     });
 

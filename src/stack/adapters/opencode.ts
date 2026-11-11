@@ -2,7 +2,6 @@ import { existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
 import { loadOpenCodeConfig } from '../../config-files.js';
-import { hashContent } from '../manifest.js';
 import type {
   AdapterInstructionsLocation,
   ConfiguredInstruction,
@@ -14,7 +13,7 @@ import type {
   ToolAdapter,
   ToolConfigLocation
 } from '../types.js';
-import { resolveCwd, resolveHome } from './shared.js';
+import { hashContent, resolveCwd, resolveHome } from './shared.js';
 
 /**
  * Fix 1: Merge a DesiredServer into an existing opencode entry, preserving unknown keys.

@@ -31,7 +31,7 @@ function sourceFiles(dir: string, out: string[] = []): string[] {
 async function registeredCommands(): Promise<Set<string>> {
   const names = new Set(COMMANDS.map((c) => c.name));
   // Routed in app.ts outside the COMMANDS metadata table.
-  for (const extra of ['help', 'tui', 'completions', 'shell', 'verify', 'mcp']) names.add(extra);
+  for (const extra of ['help']) names.add(extra);
   return names;
 }
 
@@ -114,26 +114,10 @@ describe('no user-facing string names a command that does not exist', () => {
     expect(duplicates).toEqual([]);
   });
 
-  test('the brief §9 contract surface is present', () => {
-    // AGORA_BRIEF_v2.md §9 is the locked CLI contract. These were missing:
-    // quarantine/unquarantine had shipping machinery but no CLI, so the only
-    // way out of a quarantine was hand-editing capabilities.json.
+  test('the 0.9 command surface is present', () => {
     const names = new Set(COMMANDS.map((c) => c.name));
-    for (const required of [
-      'search',
-      'info',
-      'acquire',
-      'remove',
-      'update',
-      'sync',
-      'doctor',
-      'policy',
-      'quarantine',
-      'unquarantine',
-      'lock',
-      'export'
-    ]) {
-      expect(names, `brief §9 requires \`agora ${required}\``).toContain(required);
+    for (const required of ['hook', 'policy', 'run', 'observe', 'audit', 'ci', 'doctor']) {
+      expect(names, `0.9 requires \`agora ${required}\``).toContain(required);
     }
   });
 });

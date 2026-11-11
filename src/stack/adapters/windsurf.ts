@@ -1,7 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
-import { hashContent } from '../manifest.js';
 import type {
   AdapterInstructionsLocation,
   ConfiguredInstruction,
@@ -15,6 +14,7 @@ import type {
 } from '../types.js';
 import { extractMarkerSections, mergeMarkerSections } from './instruction-markers.js';
 import {
+  hashContent,
   isRemoteEntry,
   LOCAL_TYPES,
   type McpEntry,

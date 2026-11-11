@@ -30,6 +30,23 @@ export function hookConfig(): Record<string, unknown> {
   };
 }
 
+/** Whether `.claude/settings.json` under `cwd` already carries Agora's hook. */
+export function hookInstalled(cwd: string): boolean {
+  const path = join(cwd, '.claude', 'settings.json');
+  if (!existsSync(path)) return false;
+  try {
+    const pre = JSON.parse(readFileSync(path, 'utf8'))?.hooks?.PreToolUse;
+    return (
+      Array.isArray(pre) &&
+      pre.some((h: { matcher?: string; hooks?: { command?: string }[] }) =>
+        h?.hooks?.some((c) => typeof c.command === 'string' && c.command.includes('agora'))
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
 /** `agora hook install` — merge the hook into `.claude/settings.json`. */
 function commandHookInstall(
   io: Parameters<CommandHandler>[1],

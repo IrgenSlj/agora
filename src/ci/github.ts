@@ -69,9 +69,7 @@ const LABEL: Record<CiCheck['state'], string> = {
 };
 
 const QUESTION: Record<CiCheck['name'], string> = {
-  advisories: 'Is anything you run known-vulnerable?',
-  drift: 'Do the artifacts still match what you approved?',
-  health: 'Is the stack coherent?'
+  advisories: 'Does any configured MCP server have a published advisory?'
 };
 
 export function jobSummary(report: CiReport): string {
@@ -84,13 +82,13 @@ export function jobSummary(report: CiReport): string {
     '## Agora',
     '',
     !report.ok
-      ? 'Something you trusted has changed.'
+      ? 'A configured MCP server has a blocking advisory.'
       : report.notEstablished.length || report.unavailable.length
         ? // Not "all clear". A run with an unanswerable question in it has not
           // earned that sentence, and this is the surface most likely to be read
           // as a guarantee — it is the one thing on the run page.
           `Nothing failed. ${[...report.notEstablished, ...report.unavailable].join(', ')} could not be checked — that is not the same as clean.`
-        : 'Nothing you trusted has changed.',
+        : 'No known blocking advisories. That is not the same as safe.',
     '',
     '| | Check | Result |',
     '| --- | --- | --- |',

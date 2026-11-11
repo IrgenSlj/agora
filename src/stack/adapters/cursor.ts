@@ -1,7 +1,6 @@
 import { existsSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
-import { hashContent } from '../manifest.js';
 import type {
   AdapterInstructionsLocation,
   ConfiguredInstruction,
@@ -14,6 +13,7 @@ import type {
   ToolConfigLocation
 } from '../types.js';
 import {
+  hashContent,
   isRemoteEntry,
   LOCAL_TYPES,
   type McpEntry,
