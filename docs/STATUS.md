@@ -1,7 +1,7 @@
 # Status
 
 Last reviewed: 2026-11-11, after phase 1. The plan is [`PLAN.md`](./PLAN.md); this page says what
-the code can actually prove. Labels:
+the code can actually prove. Labels: Receipts landed in phase 2.
 
 - **Works** — on a user-facing path and covered by tests.
 - **Partial** — useful, but the full guarantee is not enforced.
