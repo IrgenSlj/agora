@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
 import { appendEvent, ensureMeta, logPath } from '../src/log/store';
+import { writeNote } from '../src/receipt/git';
 import { commitAt } from './helpers/git';
 
 let root: string;
@@ -28,10 +29,8 @@ const note = (sha: string) =>
     cwd: repo,
     encoding: 'utf8'
   });
-const setNote = (sha: string, body: string) =>
-  execFileSync('git', ['notes', '--ref=refs/notes/agora', 'add', '-f', '-m', body, sha], {
-    cwd: repo
-  });
+// Through the real writer, which supplies a git identity on machines without one.
+const setNote = (sha: string, body: string) => writeNote(repo, sha, body);
 
 let sha: string;
 beforeEach(() => {
