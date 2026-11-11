@@ -8,6 +8,8 @@
 // does not stop an acquire, so an over-broad advisory costs a user a warning
 // while an over-narrow critical costs them a compromise.
 
+import semver from 'semver';
+import { parsePurl } from '../model/purl.js';
 import type { RevocationEntry, RevocationSeverity } from '../model/revocation.js';
 import type { OsvVulnerability } from './types.js';
 
@@ -32,40 +34,63 @@ export function severityFor(vuln: OsvVulnerability): RevocationSeverity {
 }
 
 /**
- * Version range, in the syntax `src/revocation/match.ts` evaluates.
+ * Version range as a semver range, which `src/revocation/match.ts` evaluates.
  *
- * Returns `undefined` when the advisory covers every version, which the matcher
- * treats as "all versions" — correct, and different from an empty string.
+ * Returns `undefined` only when the advisory covers every version. Malware
+ * advisories usually carry no range at all, just the exact versions that were
+ * hostile; those become an explicit `a || b || c` list. Treating them as "all
+ * versions" used to block every release of packages like the official Postman
+ * server because three of its versions were compromised.
  *
- * Only the first SEMVER-ish range is read. OSV can express several disjoint
- * ranges and the matcher ANDs its clauses, so emitting all of them would build
- * an expression that matches nothing. One range that is too broad is the safe
- * direction; an AND of disjoint ranges is silently empty.
+ * Disjoint ranges are ORed, so a package fixed on two release lines is
+ * described exactly rather than by its first range only.
  */
 export function versionRangeFor(vuln: OsvVulnerability): string | undefined {
-  const range = vuln.affected?.flatMap((a) => a.ranges ?? []).find((r) => r.type !== 'GIT');
-  if (!range) return undefined;
+  const ranges = (vuln.affected ?? [])
+    .flatMap((a) => a.ranges ?? [])
+    .filter((r) => r.type !== 'GIT');
+  const parts: string[] = [];
+  let coversEverything = false;
 
-  let introduced: string | undefined;
-  let upper: string | undefined;
-  let upperOp: '<' | '<=' | undefined;
-
-  for (const event of range.events ?? []) {
-    if (event.introduced && event.introduced !== '0') introduced = event.introduced;
-    if (event.fixed) {
-      upper = event.fixed;
-      upperOp = '<';
-    } else if (event.last_affected) {
-      upper = event.last_affected;
-      upperOp = '<=';
+  for (const range of ranges) {
+    let introduced: string | undefined;
+    let upper: string | undefined;
+    let upperOp: '<' | '<=' | undefined;
+    for (const event of range.events ?? []) {
+      if (event.introduced !== undefined) {
+        introduced = event.introduced === '0' ? undefined : event.introduced;
+      }
+      if (event.fixed) {
+        upper = event.fixed;
+        upperOp = '<';
+      } else if (event.last_affected) {
+        upper = event.last_affected;
+        upperOp = '<=';
+      }
     }
+    const clauses: string[] = [];
+    if (introduced) clauses.push(`>=${introduced}`);
+    if (upper && upperOp) clauses.push(`${upperOp}${upper}`);
+    if (clauses.length) parts.push(clauses.join(' '));
+    else coversEverything = true;
   }
 
-  const clauses: string[] = [];
-  if (introduced) clauses.push(`>=${introduced}`);
-  if (upper && upperOp) clauses.push(`${upperOp}${upper}`);
+  // An explicit version list is more precise than an open-ended range event,
+  // which is how OSV writes "introduced: 0" for a malware report.
+  const listed = [
+    ...new Set((vuln.affected ?? []).flatMap((a) => a.versions ?? []).filter(Boolean))
+  ].sort(compareLoose);
+  if (listed.length && (parts.length === 0 || coversEverything)) return listed.join(' || ');
 
-  return clauses.length ? clauses.join(' ') : undefined;
+  if (coversEverything || parts.length === 0) return undefined;
+  return parts.join(' || ');
+}
+
+function compareLoose(a: string, b: string): number {
+  const va = semver.valid(a, { loose: true });
+  const vb = semver.valid(b, { loose: true });
+  if (va && vb) return semver.compare(va, vb);
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /**
@@ -122,6 +147,24 @@ function refsFor(vuln: OsvVulnerability): string[] {
 }
 
 /**
+ * One advisory can name several packages, each with its own fixed version.
+ * Only the package this entry is about may contribute its range: mixing in a
+ * sibling's `<2.31.3` would mark versions of this package as affected that are
+ * not. When no affected block names the package, the advisory is kept whole.
+ */
+export function narrowToPackage(vuln: OsvVulnerability, purl: string): OsvVulnerability {
+  let name: string;
+  try {
+    const p = parsePurl(purl);
+    name = p.namespace ? `${p.namespace}/${p.name}` : p.name;
+  } catch {
+    return vuln;
+  }
+  const own = (vuln.affected ?? []).filter((a) => a.package?.name === name);
+  return own.length ? { ...vuln, affected: own } : vuln;
+}
+
+/**
  * One advisory → one revocation entry.
  *
  * `purl` is passed in rather than read from the advisory: OSV echoes the
@@ -134,7 +177,7 @@ export function toRevocationEntry(
   purl: string,
   now: Date = new Date()
 ): RevocationEntry {
-  const versions = versionRangeFor(vuln);
+  const versions = versionRangeFor(narrowToPackage(vuln, purl));
   const summary = vuln.summary?.trim();
   return {
     id: vuln.id,

@@ -6,75 +6,22 @@
 // running a revoked package is worse than the one that makes them look at a
 // warning for a version that turns out to be fine.
 
+import semver from 'semver';
 import { parsePurl } from '../model/purl.js';
 import type { RevocationEntry } from '../model/revocation.js';
 
-/** Compares dotted numeric versions segment by segment; non-numeric parts sort as text. */
-export function compareVersions(a: string, b: string): number {
-  const clean = (v: string) => v.replace(/^v/, '').split(/[.+-]/);
-  const av = clean(a);
-  const bv = clean(b);
-  const len = Math.max(av.length, bv.length);
-
-  for (let i = 0; i < len; i++) {
-    const ap = av[i];
-    const bp = bv[i];
-    if (ap === bp) continue;
-    if (ap === undefined) return -1;
-    if (bp === undefined) return 1;
-    const an = Number(ap);
-    const bn = Number(bp);
-    if (Number.isFinite(an) && Number.isFinite(bn)) {
-      if (an !== bn) return an < bn ? -1 : 1;
-      continue;
-    }
-    return ap < bp ? -1 : 1;
-  }
-  return 0;
-}
-
 /**
- * Evaluates a range expression such as `<=1.0.16`, `<2`, `>=1.2 <1.9`, or an
- * exact `1.0.3`. Comma or whitespace separated clauses are ANDed.
+ * Whether `version` falls inside `range`, a semver range such as `<=1.0.16`,
+ * `>=1.2.0 <1.9.0`, or an explicit list `2.4.10 || 2.4.11`.
  *
- * Returns `true` for an unparseable clause — see the note at the top of the file.
+ * An empty range means every version. A range or version that cannot be read
+ * returns `true` — see the note at the top of the file.
  */
 export function versionInRange(version: string, range: string | undefined): boolean {
   if (!range?.trim()) return true;
-
-  const clauses = range
-    .split(/[,\s]+/)
-    .map((c) => c.trim())
-    .filter(Boolean);
-
-  for (const clause of clauses) {
-    const match = clause.match(/^(<=|>=|<|>|=|==)?\s*(.+)$/);
-    if (!match) return true;
-    const operator = match[1] ?? '=';
-    const target = match[2];
-    if (!target) return true;
-
-    // A target that is not version-shaped (`^1.2`, `~x`, a caret range we do
-    // not implement) is not something we can evaluate. Say "matches" rather
-    // than quietly deciding the revocation does not apply — comparing against
-    // it as if it were a version would silently skip the entry.
-    if (!/^v?\d/.test(target)) return true;
-
-    const cmp = compareVersions(version, target);
-    const satisfied =
-      operator === '<'
-        ? cmp < 0
-        : operator === '<='
-          ? cmp <= 0
-          : operator === '>'
-            ? cmp > 0
-            : operator === '>='
-              ? cmp >= 0
-              : cmp === 0;
-
-    if (!satisfied) return false;
-  }
-  return true;
+  const target = semver.valid(version, { loose: true }) ?? semver.coerce(version)?.version;
+  if (!target || !semver.validRange(range, { loose: true })) return true;
+  return semver.satisfies(target, range, { loose: true, includePrerelease: true });
 }
 
 /**

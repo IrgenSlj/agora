@@ -14,7 +14,6 @@ import {
 } from '../src/revocation/client';
 import { signFeed, signingPayload, verifyFeed } from '../src/revocation/feed';
 import {
-  compareVersions,
   isBlocking,
   matchRevocations,
   purlPatternMatches,
@@ -124,9 +123,9 @@ describe('anti-rollback', () => {
 
 describe('version range matching', () => {
   test('compares dotted versions numerically, not lexically', () => {
-    expect(compareVersions('1.10.0', '1.9.0')).toBeGreaterThan(0);
-    expect(compareVersions('2.0.0', '10.0.0')).toBeLessThan(0);
-    expect(compareVersions('1.0.0', '1.0.0')).toBe(0);
+    expect(versionInRange('1.10.0', '>1.9.0')).toBe(true);
+    expect(versionInRange('2.0.0', '<10.0.0')).toBe(true);
+    expect(versionInRange('1.0.0', '1.0.0')).toBe(true);
   });
 
   test('handles <= ranges', () => {

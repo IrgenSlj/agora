@@ -6,48 +6,45 @@
 // hand-rolled binary is not "clean", it is *not checkable*, and the caller is
 // told which is which rather than being left to assume.
 
+import semver from 'semver';
 import { buildPurl } from '../model/purl.js';
 import type { ConfiguredServer } from '../stack/types.js';
 
 /** npm CLIs that take the package name as their first non-flag argument. */
 const NPM_RUNNERS = new Set(['npx', 'bunx', 'pnpx']);
 
-/**
- * Pulls the package name out of a launch command such as
- * `["npx", "-y", "@scope/server"]`.
- */
-export function npmPackageFromCommand(command: readonly string[] | undefined): string | undefined {
-  if (!command || command.length < 2) return undefined;
-
-  const runner = command[0]?.split(/[\\/]/).pop() ?? '';
-  if (!NPM_RUNNERS.has(runner)) return undefined;
-
-  for (const arg of command.slice(1)) {
-    if (!arg || arg.startsWith('-')) continue;
-    // Strip a trailing @version so the purl carries it in the right field.
-    const at = arg.lastIndexOf('@');
-    if (at > 0) {
-      const version = arg.slice(at + 1);
-      if (/^\d/.test(version)) return arg.slice(0, at);
-    }
-    return arg;
-  }
-  return undefined;
+/** Splits `@scope/name@spec` or `name@spec` into name and the text after `@`. */
+function splitSpec(arg: string): { name: string; spec?: string } {
+  const at = arg.indexOf('@', arg.startsWith('@') ? 1 : 0);
+  return at > 0 ? { name: arg.slice(0, at), spec: arg.slice(at + 1) } : { name: arg };
 }
 
-/** Version pinned in the command, when one is (`@scope/server@1.2.3`). */
+function firstPackageArg(command: readonly string[] | undefined): string | undefined {
+  if (!command || command.length < 2) return undefined;
+  const runner = command[0]?.split(/[\\/]/).pop() ?? '';
+  if (!NPM_RUNNERS.has(runner)) return undefined;
+  return command.slice(1).find((arg) => arg && !arg.startsWith('-'));
+}
+
+/**
+ * Pulls the package name out of a launch command such as
+ * `["npx", "-y", "@scope/server@latest"]`. Any `@version`, `@tag` or `@range`
+ * is removed: it belongs in the purl's version field, or nowhere.
+ */
+export function npmPackageFromCommand(command: readonly string[] | undefined): string | undefined {
+  const arg = firstPackageArg(command);
+  return arg ? splitSpec(arg).name : undefined;
+}
+
+/**
+ * The exact version pinned in the command (`@scope/server@1.2.3`). A tag such
+ * as `latest` or a range such as `^1.2` names no single version, so the answer
+ * is unknown and the caller must treat it as unknown.
+ */
 export function versionFromCommand(command: readonly string[] | undefined): string | undefined {
-  if (!command) return undefined;
-  for (const arg of command.slice(1)) {
-    if (!arg || arg.startsWith('-')) continue;
-    const at = arg.lastIndexOf('@');
-    if (at > 0) {
-      const version = arg.slice(at + 1);
-      if (/^\d/.test(version)) return version;
-    }
-    return undefined;
-  }
-  return undefined;
+  const arg = firstPackageArg(command);
+  const spec = arg ? splitSpec(arg).spec : undefined;
+  return spec && semver.valid(spec) ? spec : undefined;
 }
 
 /** Builds an npm purl, splitting a scoped name so the `@` is encoded per spec. */

@@ -525,7 +525,7 @@
     {
       "id": "GHSA-hc55-p739-j48w",
       "purl_pattern": "pkg:npm/%40modelcontextprotocol/server-filesystem",
-      "versions": "<=0.6.2",
+      "versions": "<=0.6.2 || >=2025.1.14 <2025.7.1",
       "reason": "path-traversal",
       "summary": "@modelcontextprotocol/server-filesystem vulnerability allows for path validation bypass via colliding path prefix",
       "severity": "high",
@@ -541,7 +541,7 @@
     {
       "id": "GHSA-hhfx-wfvq-7g9c",
       "purl_pattern": "pkg:npm/%40azure/mcp",
-      "versions": ">=2.0.0-beta.1 <2.0.0-beta.17",
+      "versions": ">=2.0.0-beta.1 <2.0.0-beta.17 || >=1.0.0 <1.0.2",
       "reason": "ssrf",
       "summary": "Azure MCP Server has Server-Side Request Forgery issue that allows authorized attacker to elevate privileges over a network",
       "severity": "high",
@@ -679,7 +679,7 @@
     {
       "id": "GHSA-q66q-fx2p-7w4m",
       "purl_pattern": "pkg:npm/%40modelcontextprotocol/server-filesystem",
-      "versions": "<=0.6.2",
+      "versions": "<=0.6.2 || >=2025.1.14 <2025.7.1",
       "reason": "path-traversal",
       "summary": "@modelcontextprotocol/server-filesystem allows for path validation bypass via prefix matching and symlink handling",
       "severity": "high",
@@ -858,7 +858,8 @@
         "https://www.wiz.io/blog/shai-hulud-2-0-ongoing-supply-chain-attack",
         "https://www.stepsecurity.io/blog/sha1-hulud-the-second-coming-zapier-ens-domains-and-other-prominent-npm-packages-compromised"
       ],
-      "added_at": "2025-11-24T16:31:47Z"
+      "added_at": "2025-11-24T16:31:47Z",
+      "versions": "2.4.10 || 2.4.11 || 2.4.12"
     },
     {
       "id": "MAL-2025-191196",
@@ -872,7 +873,8 @@
         "https://www.wiz.io/blog/shai-hulud-2-0-ongoing-supply-chain-attack",
         "https://www.stepsecurity.io/blog/sha1-hulud-the-second-coming-zapier-ens-domains-and-other-prominent-npm-packages-compromised"
       ],
-      "added_at": "2025-11-25T00:16:49Z"
+      "added_at": "2025-11-25T00:16:49Z",
+      "versions": "2.4.2"
     },
     {
       "id": "MAL-2026-4069",
@@ -887,7 +889,8 @@
         "https://opensourcemalware.com/blog/teampcp-compromises-npm-maintainer-with-over-540-packages",
         "https://github.com/advisories/GHSA-qgmj-c898-99rq"
       ],
-      "added_at": "2026-05-19T00:00:00Z"
+      "added_at": "2026-05-19T00:00:00Z",
+      "versions": "0.10.10 || 0.11.10"
     },
     {
       "id": "MAL-2026-4675",
@@ -899,7 +902,8 @@
         "https://osv.dev/vulnerability/MAL-2026-4675",
         "https://www.npmjs.com/package/supership-scan/v/1.0.0"
       ],
-      "added_at": "2026-05-20T22:01:48Z"
+      "added_at": "2026-05-20T22:01:48Z",
+      "versions": "1.0.0"
     }
   ]
 }
