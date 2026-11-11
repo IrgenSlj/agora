@@ -32,13 +32,13 @@ repository. Agora will:
 
 | Capability | State |
 |---|---|
-| `agora hook` — a Claude Code `PreToolUse` hook that denies calls to revoked MCP servers | **Works** |
+| `agora hook` — Claude Code hooks that deny calls to revoked MCP servers and record each session | **Works** |
 | `agora run` / `agora observe` — record MCP tool calls and sampled network peers, never arguments or results | **Works** |
 | `agora audit` — look up every configured MCP server in OSV.dev | **Works** |
 | `agora ci` and the GitHub Action — fail a build on a blocking advisory | **Works** |
 | `agora policy` — lint and test `agora.cedar` with a real Cedar engine | **Works** (artifact-level rules only) |
 | `agora doctor` — what Agora can see and enforce on this machine | **Works** |
-| Hash-chained session log (phase 1) | Planned |
+| `agora log` and the recording hooks — a hash-chained, tamper-evident log of every tool call, file touched, program run and host fetched | **Works** |
 | Signed receipts in git notes, verified in CI (phase 2) | Planned |
 | `agora learn`, `agora plan` / `apply` as a policy compiler, `agora replay` (phase 3) | Planned |
 | OpenCode support and canary files (phase 4) | Planned |
@@ -65,7 +65,8 @@ Revocations
 ```
 
 ```bash
-agora hook install     # deny revoked MCP servers at the moment they are called
+agora hook install     # deny revoked MCP servers and record every session
+agora log show         # the last session as a timeline; `agora log verify` checks the chain
 agora policy init      # scaffold agora.cedar at the repository root
 agora audit            # look every configured server up in OSV.dev
 ```

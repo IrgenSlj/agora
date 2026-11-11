@@ -8,6 +8,21 @@ Agora 2.0 is a written limit for every coding agent and a receipt for every agen
 ([`docs/PLAN.md`](./docs/PLAN.md)). 0.9 removes everything that plan does not build on. `src/` goes
 from about 30,000 lines to 8,600.
 
+### Added — the session log (phase 1)
+
+- **`agora hook install` records every Claude Code session.** Alongside the MCP check it registers
+  a recorder for `SessionStart`, `PostToolUse`, `PermissionDenied` and `SessionEnd`. Each tool call
+  becomes an `AgentEvent`: a repository-relative path or a path class for reads and writes, a
+  program name for shell commands, `host:port` for fetches, a tool name for everything else. Never
+  arguments, results, prompts or file contents.
+- **Hash-chained and tamper-evident.** Each event carries the hash of the one before it; a closed
+  session records its root. `agora log verify` fails on any changed byte, and on truncation of a
+  closed session.
+- **`agora log list|show|verify`**, with `--json`.
+- **The MCP shim writes events too**, for hosts without hooks.
+- `schemas/agent-event.v1.json` ships in the package.
+- Recording costs about 12 ms over Node's own startup per tool call.
+
 ### Fixed — revocations block the bad versions, not the whole package
 
 - Malware advisories list the exact hostile versions and no range. The OSV translation read only

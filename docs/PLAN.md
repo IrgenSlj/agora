@@ -193,18 +193,24 @@ flowchart LR
 
 ### Phase 1 — Record
 
-- [ ] `AgentEvent` zod schema and JSON Schema export
-- [ ] Hash-chained session log under the data directory; `agora log verify`
-- [ ] Claude Code `PreToolUse` and `PostToolUse` hooks emit events; the MCP shim emits `tool_call`
+- [x] `AgentEvent` zod schema and JSON Schema export
+- [x] Hash-chained session log under the data directory; `agora log verify`
+- [x] Claude Code `PreToolUse` and `PostToolUse` hooks emit events; the MCP shim emits `tool_call`
       events
-- [ ] `agora log show` renders a session as a readable timeline
+- [x] `agora log show` renders a session as a readable timeline
 
 **Gate:** a real session yields a chain that verifies; changing any byte of the log fails
 verification; hook overhead stays under 100 ms per call.
 
-Open questions to settle here: whether Claude Code's hooks expose enough to record file reads and
-network peers, or only tool calls; and which key store the signer uses on Linux without a desktop
-keyring.
+**Gate passed 2026-11-11.** A headless Claude Code session in a scratch repository, with the hooks
+installed, produced a closed five-event chain that verifies; a one-character edit fails it; the
+recorder costs 72 ms per call against Node's 60 ms startup.
+
+Settled: Claude Code hooks expose every built-in tool's input, so file reads, writes, programs and
+fetched hosts are recorded; peers contacted by a shell command (`curl`) are not visible. Also
+recorded: `SessionStart`, `SessionEnd` and `PermissionDenied`, and a `session` event kind for start
+and end markers. Still open, for phase 2: which key store the signer uses on Linux without a
+desktop keyring.
 
 ### Phase 2 — Receipt
 
