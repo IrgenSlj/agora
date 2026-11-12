@@ -48,7 +48,7 @@ describe('agora doctor', () => {
     const { io, out } = cli();
     expect(await runCli(['doctor'], io as never)).toBe(0);
     expect(out()).toContain('hook not installed');
-    expect(out()).toContain('no agora.cedar');
+    expect(out()).toContain('baseline rules only');
   });
 
   test('exits 1 and names the server when a configured version is revoked', async () => {
