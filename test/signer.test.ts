@@ -53,35 +53,35 @@ const trust = (key: Buffer) => parseSigners(JSON.stringify({ keys: [identityOf(k
 describe('signed receipts', () => {
   const key = generateKey();
 
-  test('a receipt signed by a trusted key verifies at local-keychain', () => {
-    const v = verifyReceipt(JSON.stringify(signed(key)), SHA, {
+  test('a receipt signed by a trusted key verifies at local-keychain', async () => {
+    const v = await verifyReceipt(JSON.stringify(signed(key)), SHA, {
       policySha256: null,
       trusted: trust(key)
     });
     expect(v).toMatchObject({ valid: true, level: 'local-keychain' });
   });
 
-  test('changing a signed receipt fails verification', () => {
+  test('changing a signed receipt fails verification', async () => {
     const env = signed(key);
     const stmt = JSON.parse(Buffer.from(env.payload, 'base64').toString('utf8'));
     stmt.predicate.touched.written.items = ['innocent.ts'];
     const tampered = { ...env, payload: Buffer.from(JSON.stringify(stmt)).toString('base64') };
-    const v = verifyReceipt(JSON.stringify(tampered), SHA, {
+    const v = await verifyReceipt(JSON.stringify(tampered), SHA, {
       policySha256: null,
       trusted: trust(key)
     });
     expect(v.valid).toBe(false);
   });
 
-  test('a signature from a key the repository does not trust proves nothing', () => {
-    const v = verifyReceipt(JSON.stringify(signed(generateKey())), SHA, {
+  test('a signature from a key the repository does not trust proves nothing', async () => {
+    const v = await verifyReceipt(JSON.stringify(signed(generateKey())), SHA, {
       policySha256: null,
       trusted: trust(key)
     });
     expect(v).toMatchObject({ valid: false, level: 'none' });
   });
 
-  test('a signers entry whose id does not match its key is ignored', () => {
+  test('a signers entry whose id does not match its key is ignored', async () => {
     const id = identityOf(key);
     const other = identityOf(generateKey());
     expect(parseSigners(JSON.stringify({ keys: [{ ...id, keyid: other.keyid }] }))).toEqual([]);

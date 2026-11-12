@@ -5,7 +5,7 @@
 // receipt is "not established", never "clean", and every host gap the receipts
 // list is repeated here (AGENTS.md rule 5). It makes no compliance claim.
 
-import { policyShaAt, trustedKeysAt } from '../cli/commands/receipt.js';
+import { policyShaAt, trustedKeysAt, trustedRunnersAt } from '../cli/commands/receipt.js';
 import { git, readNote } from '../receipt/git.js';
 import type { ReceiptPredicate, SignerLevel } from '../receipt/predicate.js';
 import { verifyReceipt } from '../receipt/verify.js';
@@ -43,14 +43,14 @@ export interface Report {
   not_enforced: string[];
 }
 
-export function buildReport(opts: {
+export async function buildReport(opts: {
   repo: string;
   name: string;
   rev?: string;
   since?: string;
   until?: string;
   now?: Date;
-}): Report {
+}): Promise<Report> {
   const rev = opts.rev ?? 'HEAD';
   const args = ['log', '--format=%H%x09%cI%x09%s', '--no-merges'];
   if (opts.since) args.push(`--since=${opts.since}`);
@@ -60,12 +60,19 @@ export function buildReport(opts: {
   // Keys trusted at the reported revision, the same rule `agora ci` applies.
   const trusted = trustedKeysAt(opts.repo, rev);
 
-  const commits: ReportCommit[] = (out ? out.split('\n') : []).map((line) => {
+  const runners = trustedRunnersAt(opts.repo, rev);
+  const commits: ReportCommit[] = [];
+  for (const line of out ? out.split('\n') : []) commits.push(await reportCommit(line));
+  async function reportCommit(line: string): Promise<ReportCommit> {
     const [sha = '', date = '', ...rest] = line.split('\t');
     const base = { sha, date, subject: rest.join('\t') };
     const note = readNote(opts.repo, sha);
     if (!note) return { ...base, state: 'missing', problems: [] };
-    const v = verifyReceipt(note, sha, { policySha256: policyShaAt(opts.repo, sha), trusted });
+    const v = await verifyReceipt(note, sha, {
+      policySha256: policyShaAt(opts.repo, sha),
+      trusted,
+      runners
+    });
     const problems = [...v.problems];
     if (v.predicate && v.predicate.canary_hits > 0)
       problems.push(`${v.predicate.canary_hits} canary hit(s): an agent touched a decoy`);
@@ -76,7 +83,7 @@ export function buildReport(opts: {
       problems,
       ...(v.predicate ? { predicate: v.predicate } : {})
     };
-  });
+  }
 
   const withReceipt = commits.filter((c) => c.predicate);
   const preds = withReceipt.map((c) => c.predicate as ReceiptPredicate);

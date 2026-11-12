@@ -57,26 +57,28 @@ beforeEach(() => {
 afterEach(() => rmSync(root, { recursive: true, force: true }));
 
 describe('receipts check', () => {
-  test('every commit with a valid receipt passes', () => {
+  test('every commit with a valid receipt passes', async () => {
     const head = agentCommit(2000, 'a.ts');
-    const { check, commits } = receiptsCheck({ cwd: repo, range: `${base}..${head}` });
+    const { check, commits } = await receiptsCheck({ cwd: repo, range: `${base}..${head}` });
     expect(check.state).toBe('pass');
     expect(commits.map((c) => c.state)).toEqual(['valid']);
   });
 
-  test('a commit with no receipt is not established, never a pass', () => {
+  test('a commit with no receipt is not established, never a pass', async () => {
     agentCommit(2000, 'a.ts');
     const head = commitAt(repo, 3000, 'by-hand.ts');
-    const { check } = receiptsCheck({ cwd: repo, range: `${base}..${head}` });
+    const { check } = await receiptsCheck({ cwd: repo, range: `${base}..${head}` });
     expect(check.state).toBe('not_established');
     expect(check.summary).toContain('1 of 2 commits carry a valid receipt');
   });
 
-  test('a signed receipt changed after signing fails the check', () => {
+  test('a signed receipt changed after signing fails the check', async () => {
     const key = generateKey();
     const trustedBase = trustKey(key, 1500);
     const head = agentCommit(2000, 'a.ts', { sign: key });
-    expect(receiptsCheck({ cwd: repo, range: `${trustedBase}..${head}` }).check.state).toBe('pass');
+    expect((await receiptsCheck({ cwd: repo, range: `${trustedBase}..${head}` })).check.state).toBe(
+      'pass'
+    );
 
     const note = execFileSync('git', ['notes', '--ref=refs/notes/agora', 'show', head], {
       cwd: repo,
@@ -87,21 +89,23 @@ describe('receipts check', () => {
     stmt.predicate.touched.written.items = ['harmless.ts'];
     env.payload = Buffer.from(JSON.stringify(stmt)).toString('base64');
     writeNote(repo, head, JSON.stringify(env));
-    expect(receiptsCheck({ cwd: repo, range: `${trustedBase}..${head}` }).check.state).toBe('fail');
+    expect((await receiptsCheck({ cwd: repo, range: `${trustedBase}..${head}` })).check.state).toBe(
+      'fail'
+    );
   });
 
-  test('a pull request cannot add the key that vouches for it', () => {
+  test('a pull request cannot add the key that vouches for it', async () => {
     const key = generateKey();
     // The key is trusted only inside the range being checked, not at its base.
     trustKey(key, 1500);
     const head = agentCommit(2000, 'a.ts', { sign: key });
-    const { check } = receiptsCheck({ cwd: repo, range: `${base}..${head}` });
+    const { check } = await receiptsCheck({ cwd: repo, range: `${base}..${head}` });
     expect(check.state).toBe('fail');
   });
 
-  test('--require-signer rejects unsigned receipts', () => {
+  test('--require-signer rejects unsigned receipts', async () => {
     const head = agentCommit(2000, 'a.ts');
-    const { check } = receiptsCheck({
+    const { check } = await receiptsCheck({
       cwd: repo,
       range: `${base}..${head}`,
       requireSigner: 'local-keychain'
@@ -109,11 +113,11 @@ describe('receipts check', () => {
     expect(check.state).toBe('fail');
   });
 
-  test('no range is not established', () => {
-    expect(receiptsCheck({ cwd: repo }).check.state).toBe('not_established');
+  test('no range is not established', async () => {
+    expect((await receiptsCheck({ cwd: repo })).check.state).toBe('not_established');
   });
 
-  test('reads the range from a GitHub pull_request event', () => {
+  test('reads the range from a GitHub pull_request event', async () => {
     const path = join(root, 'event.json');
     writeFileSync(
       path,

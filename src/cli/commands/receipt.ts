@@ -5,9 +5,10 @@ import { envelope } from '../../evidence/dsse.js';
 import { sha256Hex } from '../../model/hash.js';
 import { buildReceipt, POLICY_FILE } from '../../receipt/build.js';
 import { fileAt, readNote, repoRoot, resolveCommit, writeNote } from '../../receipt/git.js';
-import { parseSigners, SIGNERS_FILE, type TrustedKey } from '../../receipt/keys.js';
+import { parseRunners, parseSigners, SIGNERS_FILE, type TrustedKey } from '../../receipt/keys.js';
 import { receiptLines } from '../../receipt/render.js';
 import { verifyReceipt } from '../../receipt/verify.js';
+import type { TrustedRunner } from '../../signer/runner.js';
 import { status } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
@@ -17,6 +18,11 @@ import type { CommandHandler } from './types.js';
 export function policyShaAt(repo: string, sha: string): string | null {
   const policy = fileAt(repo, sha, POLICY_FILE);
   return policy ? `sha256:${sha256Hex(policy)}` : null;
+}
+
+export function trustedRunnersAt(repo: string, rev: string | undefined): TrustedRunner[] {
+  if (!rev) return [];
+  return parseRunners(fileAt(repo, rev, SIGNERS_FILE)?.toString('utf8'));
 }
 
 export function trustedKeysAt(repo: string, rev: string | undefined): TrustedKey[] {
@@ -93,9 +99,16 @@ export const commandReceipt: CommandHandler = async (parsed, io, style) => {
       return ExitCode.POLICY_FORBID;
     }
     let env = envelope(built.statement);
+    let body = JSON.stringify(env);
     if (level !== 'none') {
       try {
-        env = await signReceiptEnvelope(env, io.env ?? {});
+        if (level === 'runner-oidc') {
+          const { signWithRunner } = await import('../../signer/runner.js');
+          body = await signWithRunner(env);
+        } else {
+          env = await signReceiptEnvelope(env, io.env ?? {});
+          body = JSON.stringify(env);
+        }
       } catch (e) {
         // An unsigned receipt that claims a signer would never verify. Say what
         // happened and write the honest, unsigned one instead.
@@ -107,9 +120,9 @@ export const commandReceipt: CommandHandler = async (parsed, io, style) => {
         built = buildReceipt({ dataDir, repo, sha, signer: level });
         if (built.status !== 'built') return ExitCode.COULD_NOT_CHECK;
         env = envelope(built.statement);
+        body = JSON.stringify(env);
       }
     }
-    const body = JSON.stringify(env);
     if (parsed.flags['dry-run']) {
       writeJson(io.stdout, { commit: sha, envelope: env, predicate: built.predicate });
       return ExitCode.OK;
@@ -141,9 +154,11 @@ export const commandReceipt: CommandHandler = async (parsed, io, style) => {
     }
     const trustedRev =
       stringFlag(parsed, 'trusted-from') ?? stringFlag(parsed, 'trustedFrom') ?? 'HEAD';
-    const verdict = verifyReceipt(note, sha, {
+    const trustedAt = resolveCommit(repo, trustedRev);
+    const verdict = await verifyReceipt(note, sha, {
       policySha256: policyShaAt(repo, sha),
-      trusted: trustedKeysAt(repo, resolveCommit(repo, trustedRev))
+      trusted: trustedKeysAt(repo, trustedAt),
+      runners: trustedRunnersAt(repo, trustedAt)
     });
     if (parsed.flags.json) {
       writeJson(io.stdout, {

@@ -5,7 +5,7 @@
 // its head, so a pull request cannot add the key that vouches for it.
 
 import { readFileSync } from 'node:fs';
-import { policyShaAt, trustedKeysAt } from '../cli/commands/receipt.js';
+import { policyShaAt, trustedKeysAt, trustedRunnersAt } from '../cli/commands/receipt.js';
 import { commitsIn, readNote, repoRoot, resolveCommit } from '../receipt/git.js';
 import type { SignerLevel } from '../receipt/predicate.js';
 import { receiptLines } from '../receipt/render.js';
@@ -37,10 +37,14 @@ export function rangeFromGithubEvent(env: Record<string, string | undefined>): s
   }
 }
 
-export function receiptsCheck(opts: { cwd: string; range?: string; requireSigner?: SignerLevel }): {
+export async function receiptsCheck(opts: {
+  cwd: string;
+  range?: string;
+  requireSigner?: SignerLevel;
+}): Promise<{
   check: CiCheck;
   commits: ReceiptCommit[];
-} {
+}> {
   const none = (summary: string) => ({
     check: { name: 'receipts' as const, state: 'not_established' as const, summary, findings: [] },
     commits: []
@@ -61,10 +65,17 @@ export function receiptsCheck(opts: { cwd: string; range?: string; requireSigner
   if (!shas.length) return none('no commits in range');
 
   const trusted = trustedKeysAt(repo, base);
-  const commits: ReceiptCommit[] = shas.map((sha) => {
-    const note = readNote(repo, sha);
+  const runners = trustedRunnersAt(repo, base);
+  const commits: ReceiptCommit[] = [];
+  for (const sha of shas) commits.push(await checkCommit(sha));
+  async function checkCommit(sha: string): Promise<ReceiptCommit> {
+    const note = readNote(repo as string, sha);
     if (!note) return { sha, state: 'missing', problems: [], lines: [] };
-    const v = verifyReceipt(note, sha, { policySha256: policyShaAt(repo, sha), trusted });
+    const v = await verifyReceipt(note, sha, {
+      policySha256: policyShaAt(repo as string, sha),
+      trusted,
+      runners
+    });
     const problems = [...v.problems];
     if (v.predicate && v.predicate.canary_hits > 0) {
       problems.push(`${v.predicate.canary_hits} canary hit(s): an agent touched a decoy`);
@@ -79,7 +90,7 @@ export function receiptsCheck(opts: { cwd: string; range?: string; requireSigner
       problems,
       lines: v.predicate ? receiptLines(v.predicate) : []
     };
-  });
+  }
 
   const invalid = commits.filter((c) => c.state === 'invalid');
   const missing = commits.filter((c) => c.state === 'missing');

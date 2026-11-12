@@ -17,9 +17,9 @@ export const commandReport: CommandHandler = async (parsed, io, style) => {
   const repo = repoRoot(cwd);
   if (!repo) return usageError(io, 'agora report works inside a git repository.');
 
-  let report: ReturnType<typeof buildReport>;
+  let report: Awaited<ReturnType<typeof buildReport>>;
   try {
-    report = buildReport({
+    report = await buildReport({
       repo,
       name: basename(repo),
       rev: stringFlag(parsed, 'rev'),

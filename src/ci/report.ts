@@ -123,7 +123,7 @@ function advisoriesCheck(sweep: AdvisorySweep): CiCheck {
 export async function runCiChecks(io: CliIo, opts: CiOptions = {}): Promise<CiReport> {
   const env = { cwd: io.cwd, home: io.env?.HOME, env: io.env };
   const servers = readAllServers(env).filter((s) => s.enabled);
-  const receipts = receiptsCheck({
+  const receipts = await receiptsCheck({
     cwd: io.cwd ?? process.cwd(),
     range: opts.range ?? rangeFromGithubEvent(io.env ?? {}),
     ...(opts.requireSigner ? { requireSigner: opts.requireSigner } : {})

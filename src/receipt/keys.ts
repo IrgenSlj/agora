@@ -8,7 +8,15 @@ import { z } from 'zod';
 
 export const SIGNERS_FILE = '.agora/signers.json';
 
+const Runner = z.object({
+  issuer: z.string().url(),
+  identity: z.string().url(),
+  name: z.string().max(128).optional()
+});
+
 export const SignersFile = z.object({
+  /** CI workflows whose Sigstore certificate identity this repository trusts. */
+  runners: z.array(Runner).optional(),
   keys: z.array(
     z.object({
       keyid: z.string().regex(/^sha256:[0-9a-f]{64}$/),
@@ -45,4 +53,17 @@ export function parseSigners(text: string | undefined): TrustedKey[] {
       return [];
     }
   });
+}
+
+/** Runner identities a signers file trusts. */
+export function parseRunners(
+  text: string | undefined
+): { issuer: string; identity: string; name?: string }[] {
+  if (!text) return [];
+  try {
+    const parsed = SignersFile.safeParse(JSON.parse(text));
+    return parsed.success ? (parsed.data.runners ?? []) : [];
+  } catch {
+    return [];
+  }
 }

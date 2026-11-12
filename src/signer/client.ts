@@ -43,6 +43,9 @@ export async function signerAvailable(
   env: Record<string, string | undefined>,
   store: KeyStore | undefined = detectKeyStore(env)
 ): Promise<SignerLevel> {
+  // On a CI runner that can prove its workflow identity, that beats any key.
+  const { runnerAvailable } = await import('./runner.js');
+  if (runnerAvailable(env)) return 'runner-oidc';
   return store?.get() ? 'local-keychain' : 'none';
 }
 

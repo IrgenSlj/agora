@@ -232,19 +232,31 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'signer',
     group: 'Setup',
-    summary: 'Create and trust the key that signs receipts on this machine',
-    usage: 'agora signer [status|init|trust] [--name <label>] [--json]',
+    summary: 'Create and trust the keys and CI workflows that sign receipts',
+    usage:
+      'agora signer [status|init|trust] [--name <label>] [--json]\n' +
+      'agora signer trust --workflow <file.yml> [--ref <ref>] [--name <label>]',
     details:
       '`init` creates an ed25519 key in the OS keystore (macOS Keychain, or the Linux Secret ' +
       'Service through secret-tool) and nowhere else. `trust` adds its public key to ' +
       '.agora/signers.json in this repository; commit that file. With a key, `agora receipt ' +
       'write` signs at level local-keychain: an agent confined by the host sandbox could not have ' +
-      'rewritten and re-signed the log. Without a keystore, receipts stay unsigned and say so.',
+      'rewritten and re-signed the log. Without a keystore, receipts stay unsigned and say so.\n\n' +
+      'On a GitHub Actions runner with `permissions: id-token: write`, `agora receipt write` ' +
+      'signs with Sigstore keyless instead, as the workflow that is running: level runner-oidc, ' +
+      "with the developer's machine out of the trust base. `trust --workflow agent.yml` trusts " +
+      "that workflow's identity on --ref (default refs/heads/main) in .agora/signers.json.",
     flags: [
       { flag: '--name', description: 'Label for the key in .agora/signers.json' },
+      { flag: '--workflow', description: 'Trust a GitHub Actions workflow to sign receipts' },
+      { flag: '--ref', description: 'The ref that workflow runs on (default refs/heads/main)' },
       { flag: '--json', description: 'Output as JSON' }
     ],
-    examples: ['agora signer init', 'agora signer trust --name laptop', 'agora signer status']
+    examples: [
+      'agora signer init',
+      'agora signer trust --name laptop',
+      'agora signer trust --workflow agent.yml'
+    ]
   },
   {
     name: 'audit',

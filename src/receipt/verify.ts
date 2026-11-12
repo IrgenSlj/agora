@@ -9,6 +9,7 @@
 import { verify as verifySignature } from 'node:crypto';
 import { preAuthEncoding } from '../evidence/dsse.js';
 import { DSSEEnvelope, InTotoStatement } from '../model/attestation.js';
+import { type BundleVerifier, type TrustedRunner, verifyRunnerBundle } from '../signer/runner.js';
 import type { TrustedKey } from './keys.js';
 import { RECEIPT_PREDICATE_TYPE, ReceiptPredicate, type SignerLevel } from './predicate.js';
 
@@ -18,13 +19,43 @@ export interface ReceiptVerdict {
   level: SignerLevel;
   problems: string[];
   predicate?: ReceiptPredicate;
+  /** The runner identity that signed, for runner-oidc receipts. */
+  runner?: string;
 }
 
-export function verifyReceipt(
+export interface VerifyContext {
+  policySha256: string | null;
+  trusted: readonly TrustedKey[];
+  /** Workflow identities trusted to sign runner-oidc receipts. */
+  runners?: readonly TrustedRunner[];
+  /** Injected in tests; the default checks against Sigstore's public trust root. */
+  verifyBundle?: BundleVerifier;
+}
+
+const isObj = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/**
+ * A note holds either a DSSE envelope (unsigned or locally signed) or, for a
+ * runner-signed receipt, a Sigstore bundle that wraps one.
+ */
+function unwrap(note: unknown): { envelope: unknown; bundle?: unknown } {
+  if (
+    isObj(note) &&
+    typeof note.mediaType === 'string' &&
+    note.mediaType.startsWith('application/vnd.dev.sigstore.bundle') &&
+    isObj(note.dsseEnvelope)
+  ) {
+    return { envelope: note.dsseEnvelope, bundle: note };
+  }
+  return { envelope: note };
+}
+
+export async function verifyReceipt(
   note: string,
   sha: string,
-  ctx: { policySha256: string | null; trusted: readonly TrustedKey[] }
-): ReceiptVerdict {
+  ctx: VerifyContext
+): Promise<ReceiptVerdict> {
   const invalid = (problem: string, predicate?: ReceiptPredicate): ReceiptVerdict => ({
     valid: false,
     level: 'none',
@@ -33,8 +64,11 @@ export function verifyReceipt(
   });
 
   let envelope: DSSEEnvelope;
+  let bundle: unknown;
   try {
-    const parsed = DSSEEnvelope.safeParse(JSON.parse(note));
+    const unwrapped = unwrap(JSON.parse(note));
+    bundle = unwrapped.bundle;
+    const parsed = DSSEEnvelope.safeParse(unwrapped.envelope);
     if (!parsed.success) return invalid('note is not a DSSE envelope');
     envelope = parsed.data;
   } catch {
@@ -80,6 +114,7 @@ export function verifyReceipt(
   });
 
   let level: SignerLevel = 'none';
+  let runner: string | undefined;
   if (predicate.signer === 'local-keychain') {
     if (signedBy.length) level = 'local-keychain';
     else
@@ -87,13 +122,21 @@ export function verifyReceipt(
         'claims a local-keychain signature, but no signature verifies against a trusted key'
       );
   } else if (predicate.signer === 'runner-oidc') {
-    problems.push('runner-oidc receipts are not supported yet');
+    if (!bundle) problems.push('claims a runner signature, but carries no Sigstore bundle');
+    else {
+      const r = await verifyRunnerBundle(bundle, ctx.runners ?? [], ctx.verifyBundle);
+      if ('runner' in r) {
+        level = 'runner-oidc';
+        runner = r.runner.identity;
+      } else problems.push(r.problem);
+    }
   }
 
   return {
     valid: problems.length === 0,
     level: problems.length ? 'none' : level,
     problems,
-    predicate
+    predicate,
+    ...(runner && !problems.length ? { runner } : {})
   };
 }

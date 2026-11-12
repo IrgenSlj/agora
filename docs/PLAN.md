@@ -324,6 +324,19 @@ Canaries, checked the same way:
 **Gate:** a stranger can verify a runner-signed receipt with only the public repository, and the
 report renders from git notes with no server.
 
+How runner signing works:
+
+- On a GitHub Actions runner with `permissions: id-token: write`, `agora receipt write` signs with
+  Sigstore keyless as the running workflow. The note holds the Sigstore bundle; its certificate
+  names the workflow, and Rekor logs the signature publicly.
+- `agora signer trust --workflow agent.yml` adds that workflow's identity to `.agora/signers.json`.
+  Verification checks the bundle against Sigstore's public trust root and that identity, read from
+  the pull request base like keys are.
+- New runtime dependency, `sigstore` (v5, pure JavaScript, maintained by the Sigstore and npm
+  teams): Fulcio certificates, Rekor entries and bundle verification are security code that should
+  not be rewritten. It is imported only when a receipt is runner-signed or verified.
+
+
 ## Pitch and business case (agreed 2026-11-11)
 
 **Pitch.** Coding agents now open pull requests on their own. Tools already record what an agent
