@@ -37,12 +37,15 @@ const env = (signer = 'runner-oidc') =>
       predicate(signer)
     )
   );
-const bundle = (signer = 'runner-oidc') =>
-  JSON.stringify({
+// Shaped like sigstore's output: keyless signatures carry no keyid at all.
+const bundle = (signer = 'runner-oidc') => {
+  const e = env(signer);
+  return JSON.stringify({
     mediaType: 'application/vnd.dev.sigstore.bundle.v0.3+json',
     verificationMaterial: {},
-    dsseEnvelope: env(signer)
+    dsseEnvelope: { ...e, signatures: [{ sig: 'c2ln' }] }
   });
+};
 
 const runners = [{ issuer: GITHUB_OIDC_ISSUER, identity: WORKFLOW }];
 /** Stands in for Sigstore: accepts only the given workflow identity. */

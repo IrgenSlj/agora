@@ -46,7 +46,12 @@ function unwrap(note: unknown): { envelope: unknown; bundle?: unknown } {
     note.mediaType.startsWith('application/vnd.dev.sigstore.bundle') &&
     isObj(note.dsseEnvelope)
   ) {
-    return { envelope: note.dsseEnvelope, bundle: note };
+    // Sigstore's JSON omits an empty keyid on keyless signatures.
+    const env = note.dsseEnvelope as Record<string, unknown>;
+    const signatures = Array.isArray(env.signatures)
+      ? env.signatures.map((s) => (isObj(s) ? { keyid: '', ...s } : s))
+      : env.signatures;
+    return { envelope: { ...env, signatures }, bundle: note };
   }
   return { envelope: note };
 }
