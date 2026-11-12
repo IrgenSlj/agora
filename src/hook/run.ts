@@ -10,6 +10,8 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { CANARY_STATE } from '../canary/canary.js';
+import type { HookPayload } from '../events/hook-payload.js';
 import { detectAgoraDataDir } from '../state.js';
 import {
   decidePreToolUse,
@@ -61,15 +63,41 @@ export function readStdin(): Promise<string> {
   });
 }
 
+async function canaryCheck(
+  payload: HookPayload,
+  root: string
+): Promise<{ file: string; decision: HookDecision } | undefined> {
+  const [{ canaryHit, readCanaries }, { normaliseHook }] = await Promise.all([
+    import('../canary/canary.js'),
+    import('../events/hook-payload.js')
+  ]);
+  const command = payload.tool_input?.command;
+  const file = canaryHit(
+    readCanaries(root),
+    normaliseHook({ ...payload, cwd: root }),
+    typeof command === 'string' ? command : undefined
+  );
+  if (!file) return undefined;
+  return {
+    file,
+    decision: {
+      kind: 'deny',
+      reason:
+        `${file} is a canary planted by \`agora canary install\`: no task needs it. ` +
+        'This attempt was recorded, and `agora ci` will flag the commit.'
+    }
+  };
+}
+
 export async function runHookCheck(): Promise<number> {
-  let payload: PreToolUsePayload;
+  let payload: PreToolUsePayload & HookPayload;
   try {
     const raw = await readStdin();
     if (!raw.trim()) {
       process.stderr.write('agora hook: no payload on stdin — nothing checked.\n');
       return 0;
     }
-    payload = JSON.parse(raw) as PreToolUsePayload;
+    payload = JSON.parse(raw) as PreToolUsePayload & HookPayload;
   } catch (e) {
     process.stderr.write(
       `agora hook: unreadable payload (${e instanceof Error ? e.message : String(e)}) — nothing checked.\n`
@@ -84,11 +112,26 @@ export async function runHookCheck(): Promise<number> {
   const { findGitRoot } = await import('../log/store.js');
   const root = findGitRoot(cwd) ?? cwd;
   const hasPolicy = existsSync(join(root, 'agora.cedar'));
+  const hasCanary = existsSync(join(root, CANARY_STATE));
   const isMcp = Boolean(serverFromToolName(payload.tool_name));
-  if (!isMcp && !hasPolicy) return 0;
+  if (!isMcp && !hasPolicy && !hasCanary) return 0;
 
   try {
     const dataDir = detectAgoraDataDir({ cwd, env: process.env });
+    // A decoy first: no task needs it, and the hit must be recorded as one.
+    if (hasCanary) {
+      const hit = await canaryCheck(payload, root);
+      if (hit) {
+        process.stdout.write(`${renderDecision(hit.decision)}\n`);
+        try {
+          const { recordCanary } = await import('./record.js');
+          recordCanary(payload, hit.file);
+        } catch {
+          process.stderr.write('agora hook: the canary hit was not recorded in the session log.\n');
+        }
+        return 0;
+      }
+    }
     let decision: HookDecision = { kind: 'no-opinion' };
     if (isMcp) {
       // Only MCP calls need the revocation list and the host configs.

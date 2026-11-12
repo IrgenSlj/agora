@@ -37,6 +37,20 @@ export function recordDrafts(payload: HookPayload, decision: EventDecision): num
   return written;
 }
 
+/** Records a touch of a canary: a `canary` event, denied, naming the decoy. */
+export function recordCanary(payload: HookPayload, file: string): void {
+  const session = payload.session_id;
+  if (!session || !SESSION.test(session)) return;
+  const dataDir = dataDirFor(payload);
+  if (typeof payload.cwd === 'string' && payload.cwd) ensureMeta(dataDir, session, payload.cwd);
+  appendEvent(dataDir, session, {
+    host: hostOf(payload),
+    kind: 'canary',
+    subject: file,
+    decision: 'denied'
+  });
+}
+
 export function recordPayload(payload: HookPayload & { source?: string }): void {
   const session = payload.session_id;
   if (!session || !SESSION.test(session)) {

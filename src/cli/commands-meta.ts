@@ -189,6 +189,22 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'canary',
+    group: 'Setup',
+    summary: 'Plant a decoy credential file that no agent task should touch',
+    usage: 'agora canary [status|install|remove] [--file <path>] [--json]',
+    details:
+      '`install` writes fake credentials to .env.production.local (or --file) and hides it from ' +
+      'git through .git/info/exclude. The hook denies any tool call that reads or writes it, or ' +
+      'any shell command that names it, and records a canary event; receipts count hits and ' +
+      '`agora ci` fails on them. A program that opens the file without naming it is not seen.',
+    flags: [
+      { flag: '--file', description: 'Where to plant the decoy, relative to the repository' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: ['agora canary install', 'agora canary status', 'agora canary remove']
+  },
+  {
     name: 'signer',
     group: 'Setup',
     summary: 'Create and trust the key that signs receipts on this machine',
