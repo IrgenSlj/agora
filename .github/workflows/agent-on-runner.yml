@@ -1,0 +1,68 @@
+name: Agent on a runner
+
+# Phase 5 gate: an agent session that runs on a GitHub runner, with a receipt
+# the runner signs through Sigstore keyless. OpenCode with a free model makes a
+# one-line change on a branch of its own (never main); the receipt is written,
+# verified and pushed with the branch. Anyone can then check it with only the
+# public repository:
+#
+#   git fetch origin agent/runner-<run id> refs/notes/agora:refs/notes/agora
+#   agora receipt verify FETCH_HEAD
+#
+# The workflow identity it signs as is trusted in .agora/signers.json.
+
+on: workflow_dispatch
+
+permissions:
+  contents: write # push the branch and refs/notes/agora
+  id-token: write # the OIDC token Sigstore turns into a signing certificate
+
+jobs:
+  agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build agora and put it on PATH
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+          mkdir -p "$HOME/.local/bin"
+          ln -s "$PWD/dist/cli.js" "$HOME/.local/bin/agora"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install OpenCode
+        run: |
+          curl -fsSL https://opencode.ai/install | bash
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+
+      - name: Agent session
+        env:
+          AGORA_HOME: ${{ runner.temp }}/agora
+        run: |
+          git switch -c "agent/runner-${{ github.run_id }}"
+          git fetch --no-tags origin 'refs/notes/agora:refs/notes/agora' || true
+          mkdir -p .opencode
+          agora apply
+          opencode run -m opencode/big-pickle \
+            "Append exactly one line to docs/runner-log.md (create it if missing) saying: Run ${{ github.run_id }} made this change on a GitHub runner. Use your write or edit tool. Then stop."
+          agora log list
+
+      - name: Commit, sign the receipt, verify it, push
+        env:
+          AGORA_HOME: ${{ runner.temp }}/agora
+        run: |
+          git config user.name 'agora runner'
+          git config user.email 'agora-runner@users.noreply.github.com'
+          git add docs/runner-log.md
+          git commit -m "Agent change on a runner (run ${{ github.run_id }})"
+          agora receipt write
+          agora receipt verify --trusted-from origin/main
+          git push origin HEAD 'refs/notes/agora'

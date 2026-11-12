@@ -1,0 +1,10 @@
+{
+  "keys": [],
+  "runners": [
+    {
+      "issuer": "https://token.actions.githubusercontent.com",
+      "identity": "https://github.com/IrgenSlj/agora/.github/workflows/agent-on-runner.yml@refs/heads/main",
+      "name": "Agent on a runner"
+    }
+  ]
+}
