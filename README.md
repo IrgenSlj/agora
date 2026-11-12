@@ -37,11 +37,14 @@ repository. Agora will:
 | `agora receipt` — a receipt per commit in git notes, naming the agent sessions that produced it and what they touched; signed with a key that lives only in the OS keychain | **Works** |
 | `agora ci` and the GitHub Action — verify every commit's receipt in a pull request, and fail on a blocking advisory | **Works** |
 | `agora learn` and `agora replay` — propose a least-privilege `agora.cedar` from what agents did, and see what a policy would have denied | **Works** |
-| `agora plan` / `apply` — compile `agora.cedar` into Claude Code: the hook enforces it on every tool call, exact permits become allow rules | **Works** (Claude Code) |
+| `agora plan` / `apply` — compile `agora.cedar` into Claude Code (hooks plus exact allow rules) and OpenCode (a plugin); every rule a host cannot enforce is listed | **Works** |
+| `agora profile` — read-only policies for known MCP servers, added to `agora.cedar` | **Works** |
+| `agora canary` — a decoy credential file and decoy tool; any touch is denied, recorded and fails CI | **Works** |
+| `agora report` — an evidence report for a date range, from git notes alone | **Works** |
+| Runner-signed receipts — on a GitHub runner, receipts are signed with Sigstore keyless as the workflow | **Works** |
 | `agora doctor` — what Agora can see and enforce on this machine | **Works** |
 | `agora log` and the recording hooks — a hash-chained, tamper-evident log of every tool call, file touched, program run and host fetched | **Works** |
-| OpenCode support and canary files (phase 4) | Planned |
-| Runner-signed receipts and the evidence report (phase 5, release 2.0.0) | Planned |
+| Proof that learned policies cut approval prompts without blocking real work (phase 3 gate) | Waiting on real sessions |
 
 The full plan, with a runnable gate for each phase, is in [`docs/PLAN.md`](./docs/PLAN.md).
 
@@ -70,8 +73,9 @@ agora learn --apply    # write agora.cedar from what agents actually did here
 agora replay           # what that policy would have denied in past sessions
 agora apply            # compile it into .claude/settings.json; the hook enforces it
 agora signer init      # a signing key in your OS keychain; `agora signer trust` lists it here
-agora receipt write    # after a commit: record how agents produced it, as a git note
-git push origin refs/notes/agora
+agora receipt install  # git hooks: each commit gets its receipt, each push sends them
+agora canary install   # a decoy credential file no task should touch
+agora report           # an evidence report from the receipts, as one HTML file
 agora policy init      # scaffold agora.cedar at the repository root
 agora audit            # look every configured server up in OSV.dev
 ```
@@ -82,12 +86,12 @@ Every command takes `--json` and uses the same exit codes: `0` clean, `1` policy
 ## Put it in CI
 
 ```yaml
-- uses: actions/checkout@v4
+- uses: actions/checkout@v7
   with:
     fetch-depth: 0
 - uses: IrgenSlj/agora@v0
   with:
-    require-signer: none       # or local-keychain
+    require-signer: none       # or local-keychain, runner-oidc
     fail-on-unknown: false     # true: a commit without a receipt fails the build
 ```
 
@@ -95,6 +99,11 @@ This verifies the receipt on every commit of the pull request, against signing k
 pull request's base, and lists each commit with what its agent sessions did in the job summary. A
 commit without a receipt is reported as not established, never as a pass. It also fails the build
 when an MCP server the repository configures has a malware, critical or high advisory.
+
+When the agent itself runs in CI, give the job `permissions: id-token: write`: `agora receipt
+write` then signs with Sigstore keyless as that workflow, and `agora signer trust --workflow
+<file.yml>` tells the repository to trust it. [`agent-on-runner.yml`](./.github/workflows/agent-on-runner.yml)
+is a working example.
 
 ## What Agora will never do
 

@@ -8,6 +8,34 @@ Agora 2.0 is a written limit for every coding agent and a receipt for every agen
 ([`docs/PLAN.md`](./docs/PLAN.md)). 2.0 removes everything that plan does not build on. `src/` goes
 from about 30,000 lines to 8,600.
 
+### Added — runner-signed receipts, the evidence report and profiles (phase 5)
+
+- **Runner-signed receipts.** On a GitHub Actions runner with `permissions: id-token: write`,
+  `agora receipt write` signs with Sigstore keyless as the running workflow (level `runner-oidc`);
+  the note holds the Sigstore bundle. `agora signer trust --workflow <file.yml>` trusts that
+  workflow's identity in `.agora/signers.json`. Adds the `sigstore` dependency, loaded only for
+  runner-signed receipts. `.github/workflows/agent-on-runner.yml` runs an agent on a runner as a
+  working example.
+- **`agora report`** writes an evidence report for a date range as one self-contained HTML file,
+  or `--json`, from git notes alone: receipts that verify, rejected, not established, signer
+  levels, denials, canary hits, policy versions and every gap the receipts list.
+- **`agora profile`** adds read-only policies for known MCP servers, shipped in `profiles/`, to
+  `agora.cedar`.
+- **`agora receipt install`** adds git hooks: each commit gets its receipt, each push sends
+  `refs/notes/agora`. Neither ever blocks.
+- Fixed: `action.yml` had an input definition pasted into its step and would not have loaded.
+
+### Added — OpenCode and canaries (phase 4)
+
+- **OpenCode.** `agora apply` writes `.opencode/plugins/agora.js` in repositories that use
+  OpenCode. The plugin runs the same check before every tool call, blocks on a deny with the
+  policy's reason, and records the session. If `agora` is missing or fails, calls proceed.
+- **`agora canary install`** plants fake credentials in `.env.production.local`, hidden by
+  `.git/info/exclude`; `--tool` adds a decoy MCP tool. A tool call on either, or a shell command
+  naming the file, is denied and recorded as a canary event; `agora ci` fails on it.
+- **Receipts list each host's gaps** from the same source as `agora plan`, and list only what ran:
+  a denied call is counted, not shown as touched.
+
 ### Added — policy over agent actions, learned and compiled (phase 3)
 
 - **`agora.cedar` governs what agents do.** Every session event is a Cedar request: read and write
