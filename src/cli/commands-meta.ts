@@ -16,7 +16,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'hook',
     group: 'Enforce',
-    summary: 'Deny a revoked MCP tool at the moment an agent calls it',
+    summary: "run as the host's pre-tool hook",
     usage: 'agora hook install [--dry-run]\nagora hook check',
     details:
       'Installs a Claude Code PreToolUse hook that checks every MCP tool call before it runs. ' +
@@ -32,7 +32,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'learn',
     group: 'Enforce',
-    summary: 'Propose a minimal agora.cedar from what agents did in this repository',
+    summary: 'draft rules from what was recorded',
     usage: 'agora learn [--apply] [--session <id> | --all] [--json]',
     details:
       'Reads the recorded sessions for this repository (only those whose log verifies, and only ' +
@@ -52,7 +52,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'profile',
     group: 'Enforce',
-    summary: 'Add a minimal policy for a known MCP server to agora.cedar',
+    summary: 'add a policy for a known MCP server',
     usage: 'agora profile [list | show <name> | add <name> --server <name>] [--json]',
     details:
       'Profiles are read-only policies for MCP servers, shipped in profiles/ and contributed by ' +
@@ -71,7 +71,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'plan',
     group: 'Enforce',
-    summary: "Show how agora.cedar compiles into each host's settings; write nothing",
+    summary: 'show what the policy would change',
     usage: 'agora plan [--json]',
     details:
       'Compiles agora.cedar for Claude Code. The hooks enforce the whole policy: the PreToolUse ' +
@@ -87,7 +87,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'apply',
     group: 'Enforce',
-    summary: 'Write what `agora plan` shows into .claude/settings.json',
+    summary: 'write agora.cedar into each host',
     usage: 'agora apply [--json]',
     details:
       'Merges the hooks and compiled allow rules into .claude/settings.json, keeping every other ' +
@@ -100,7 +100,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'policy',
     group: 'Enforce',
-    summary: 'Scaffold and validate agora.cedar, what agents may do in this repository',
+    summary: 'scaffold and lint agora.cedar',
     usage: 'agora policy <init|check> [--json]',
     details:
       'agora.cedar holds Cedar rules over agent actions: read and write on File, exec on ' +
@@ -115,7 +115,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'replay',
     group: 'Enforce',
-    summary: 'Report what a policy would have denied in sessions that already ran',
+    summary: 'what a policy would have denied',
     usage: 'agora replay [--policy <file>] [--session <id> | --all] [--json]',
     details:
       "Evaluates every action that actually ran in this repository's recorded sessions " +
@@ -133,7 +133,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'run',
     group: 'Record',
-    summary: 'Run an MCP server through Agora so its tool calls can be recorded',
+    summary: "record an MCP server's tool calls",
     usage: 'agora run -- <command…>',
     details:
       'Spawns the real server and forwards stdio byte for byte in both directions. Recording ' +
@@ -144,7 +144,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'observe',
     group: 'Record',
-    summary: 'Show recorded MCP activity, and route host configs through `agora run`',
+    summary: 'show recorded MCP activity',
     usage: 'agora observe [status|enable|disable] [--dry-run] [--json]',
     details:
       '`status` reports recorded sessions: tool names and counts and sampled network peers. ' +
@@ -161,7 +161,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'log',
     group: 'Record',
-    summary: 'List, show and verify the hash-chained session logs',
+    summary: 'list, show and verify session logs',
     usage: 'agora log [list|show|verify] [<session>] [--all] [--json]',
     details:
       'Each agent session is one append-only log in which every event carries the hash of the one ' +
@@ -178,7 +178,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'receipt',
     group: 'Check',
-    summary: 'Write, show and verify the receipt that says how agents produced a commit',
+    summary: 'write, show and verify commit receipts',
     usage:
       'agora receipt install | uninstall\n' +
       'agora receipt write [<commit>] [--dry-run] [--no-sign]\n' +
@@ -212,7 +212,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'report',
     group: 'Check',
-    summary: 'Write an evidence report from the receipts in git notes',
+    summary: 'an evidence report from git notes',
     usage: 'agora report [--since <date>] [--until <date>] [--rev <rev>] [--out <file>] [--json]',
     details:
       'Verifies the receipt of every commit in the range, against keys trusted at --rev, and ' +
@@ -232,7 +232,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'canary',
     group: 'Setup',
-    summary: 'Plant a decoy credential file that no agent task should touch',
+    summary: 'plant a decoy no task should touch',
     usage: 'agora canary [status|install|remove] [--file <path>] [--tool] [--json]',
     details:
       '`install` writes fake credentials to .env.production.local (or --file) and hides it from ' +
@@ -251,7 +251,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'signer',
     group: 'Setup',
-    summary: 'Create and trust the keys and CI workflows that sign receipts',
+    summary: 'keys and workflows that sign receipts',
     usage:
       'agora signer [status|init|trust] [--name <label>] [--json]\n' +
       'agora signer trust --workflow <file.yml> [--ref <ref>] [--name <label>]',
@@ -280,7 +280,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'audit',
     group: 'Check',
-    summary: 'Look up every configured MCP server in OSV.dev',
+    summary: 'look configured servers up in OSV.dev',
     usage: 'agora audit [--json]',
     details:
       'MCP servers are commands in host configs, not dependencies, so `npm audit` and ' +
@@ -293,7 +293,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'ci',
     group: 'Check',
-    summary: 'Check configured MCP servers in CI, with annotations and a job summary',
+    summary: 'verify receipts and advisories in CI',
     usage: 'agora ci [--fail-on-unknown] [--json] [--json-file <path>]',
     details:
       'Read-only: it never starts a configured server. Today it checks published advisories ' +
@@ -309,8 +309,8 @@ export const COMMANDS: CommandMeta[] = [
   },
   {
     name: 'doctor',
-    group: 'Setup',
-    summary: 'Show what Agora can see and enforce on this machine',
+    group: 'Check',
+    summary: 'hosts, enforcement, receipts',
     usage: 'agora doctor [--json]',
     details:
       'Lists detected hosts and their configured MCP servers, whether the hook is installed, ' +
@@ -322,7 +322,7 @@ export const COMMANDS: CommandMeta[] = [
   {
     name: 'completions',
     group: 'Setup',
-    summary: 'Print a shell completion script for bash, zsh or fish',
+    summary: 'print a shell completion script',
     usage: 'agora completions bash|zsh|fish',
     examples: ['eval "$(agora completions bash)"']
   }

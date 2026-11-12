@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { createStyler, type Styler, shouldUseColor, supportsTrueColor } from '../ui.js';
+import { colorDepth, createStyler, type Styler, shouldUseColor } from '../ui.js';
 import type { CommandHandler } from './commands/types.js';
 import { COMMANDS, renderManual } from './commands-meta.js';
 import { ExitCode } from './exit-codes.js';
@@ -74,7 +74,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     env,
     Boolean(parsed.flags.json)
   );
-  style = createStyler(useColor, supportsTrueColor(env));
+  style = createStyler(useColor, colorDepth(env));
 
   if (parsed.flags.version) {
     writeLine(io.stdout, VERSION);
@@ -91,7 +91,10 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   }
 
   if (!parsed.command) {
-    writeLine(io.stdout, welcome(useColor, supportsTrueColor(env), cliTheme(style, io), VERSION));
+    writeLine(
+      io.stdout,
+      welcome(cliTheme(style, io), VERSION, (io.stdout as { columns?: number }).columns)
+    );
     return 0;
   }
 

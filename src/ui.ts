@@ -1,73 +1,69 @@
 /**
- * Terminal styling for the agora CLI — a flat, minimal look: one accent colour
- * for identifiers, dim for everything secondary, plain foreground for body text,
- * plus a gradient wordmark banner and a rounded header frame for the standalone
- * hub experience.
+ * The terminal identity: colour tokens, capability detection and the banner.
+ * Spec: docs/TERMINAL.md (from the Claude Design handoff, 2026-11-12).
  *
- * Colour is opt-in. It is emitted only to an interactive TTY, and never under
- * `NO_COLOR`, `TERM=dumb`, or `--json`. Non-TTY callers (pipes, the test
- * harness) get plain strings, so output stays assertable.
- *
- * The wordmark art, gradient, and accent colour below come from the Claude
- * Design handoff (docs/archive/claude-design-brief.md → `agora-wordmark.ts`). Palette:
- * "agora at golden hour" — Aegean blue → marble warm → terracotta.
+ * Meaning is carried by glyph and layout first, colour second, so every screen
+ * reads the same with no colour at all. Colour is emitted only to an
+ * interactive TTY, never under `NO_COLOR`, `TERM=dumb` or `--json`. Three
+ * tiers: truecolor when the terminal advertises it, xterm-256, then ANSI-16.
  */
 
 export type RGB = [number, number, number];
+export type ColorDepth = 'truecolor' | '256' | '16';
 
+export interface Token {
+  name: string;
+  hex: string;
+  rgb: RGB;
+  x256: number;
+  /** SGR code for 16-colour terminals; muted uses faint (2) rather than bright black. */
+  ansi16: number;
+}
+
+const token = (name: string, hex: string, x256: number, ansi16: number): Token => {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return { name, hex, rgb: [(n >> 16) & 255, (n >> 8) & 255, n & 255], x256, ansi16 };
+};
+
+/** One accent, four states, one quiet tone. Mid-luminance: they hold on dark and light. */
+export const TOKENS = {
+  accent: token('ink', '#3A86AD', 31, 36),
+  success: token('moss', '#4C9457', 65, 32),
+  warning: token('amber', '#B5802A', 136, 33),
+  error: token('brick', '#CC5A48', 167, 31),
+  unknown: token('violet', '#8B7BC4', 98, 35),
+  muted: token('stone', '#807D75', 244, 2)
+} as const;
+export type TokenName = keyof typeof TOKENS;
+
+const RESET = '\x1b[0m';
+
+export function sgr(t: Token, depth: ColorDepth): string {
+  if (depth === 'truecolor') return `\x1b[38;2;${t.rgb[0]};${t.rgb[1]};${t.rgb[2]}m`;
+  if (depth === '256') return `\x1b[38;5;${t.x256}m`;
+  return `\x1b[${t.ansi16}m`;
+}
+
+export function paint(t: Token, depth: ColorDepth, value: string): string {
+  return `${sgr(t, depth)}${value}${RESET}`;
+}
+
+/** The part of the theme commands receive before it is lifted into a full Theme. */
 export interface Styler {
   accent(value: string): string;
   dim(value: string): string;
   bold(value: string): string;
-  orange(value: string): string;
 }
 
-const RESET = '\x1b[0m';
+const plain: Styler = { accent: (v) => v, dim: (v) => v, bold: (v) => v };
 
-/**
- * ACCENT — used for package identifiers in list output. A desaturated amber:
- * high contrast on both light and dark terminals, and distinct from the
- * gradient stops so ids never blend into the banner.
- */
-export const ACCENT = {
-  hex: '#D4A85A',
-  rgb: [212, 168, 90] as RGB,
-  ansi256: 179, // xterm-256 warm gold
-  ansiBasic: 33 // ANSI yellow (fg) — 16-colour fallback
-} as const;
-
-export const ORANGE = {
-  hex: '#FF8C00',
-  rgb: [255, 140, 0] as RGB,
-  ansi256: 208,
-  ansiBasic: 33
-} as const;
-
-const plain: Styler = {
-  accent: (value) => value,
-  dim: (value) => value,
-  bold: (value) => value,
-  orange: (value) => value
-};
-
-/**
- * Builds a styler. The accent colour is emitted as 24-bit when the terminal
- * advertises truecolor, otherwise as the nearest xterm-256 cube colour.
- */
-export function createStyler(useColor: boolean, trueColor = false): Styler {
+export function createStyler(useColor: boolean, depth: ColorDepth | boolean = '256'): Styler {
   if (!useColor) return plain;
-  const accentCode = trueColor
-    ? `38;2;${ACCENT.rgb[0]};${ACCENT.rgb[1]};${ACCENT.rgb[2]}`
-    : `38;5;${ACCENT.ansi256}`;
-  const wrap = (code: string) => (value: string) => `\x1b[${code}m${value}${RESET}`;
-  const orangeCode = trueColor
-    ? `38;2;${ORANGE.rgb[0]};${ORANGE.rgb[1]};${ORANGE.rgb[2]}`
-    : `38;5;${ORANGE.ansi256}`;
+  const d: ColorDepth = depth === true ? 'truecolor' : depth === false ? '256' : depth;
   return {
-    accent: wrap(accentCode),
-    dim: wrap('2'),
-    bold: wrap('1'),
-    orange: wrap(orangeCode)
+    accent: (v) => paint(TOKENS.accent, d, v),
+    dim: (v) => `\x1b[2m${v}${RESET}`,
+    bold: (v) => `\x1b[1m${v}${RESET}`
   };
 }
 
@@ -88,114 +84,61 @@ export function supportsTrueColor(env: Record<string, string | undefined>): bool
   return colorterm === 'truecolor' || colorterm === '24bit';
 }
 
-// ── Wordmark + banner ───────────────────────────────────────────────────────
+export function colorDepth(env: Record<string, string | undefined>): ColorDepth {
+  if (supportsTrueColor(env)) return 'truecolor';
+  const term = env.TERM ?? '';
+  if (term.includes('256') || env.TERM_PROGRAM) return '256';
+  return '16';
+}
 
 /**
- * Carved-relief letterforms (7 rows × 52 cols). Built from a SOLID skeleton +
- * an algorithmic shading pass: cells whose neighbour above is empty get `▓`
- * (top highlight), cells whose neighbour below is empty get `▒` (bottom
- * shadow), plus a few weather specks on stroke interiors. The pass only ever
- * rewrites existing `█` cells, so it cannot bleed into the O / R counters.
- * Reads as top-lit carved stone; survives `NO_COLOR` because the texture is
- * in the *characters*, not the colours.
+ * Block and box glyphs need a UTF-8 terminal. ASCII when the terminal is dumb,
+ * when the locale says it is not UTF-8, or when asked with AGORA_ASCII.
  */
-export const AGORA_WORDMARK_RELIEF: string[] = [
-  '    ▓▓▓      ▓▓▓▓▓     ▓▓▓▓▓    ▓▓▓▓▓▓      ▓▓▓     ',
-  '   ▓▒▒▒▓    ▓█   ▒▓   ▓█   █▓   ██   █▓    ▓▒▒▒▓    ',
-  '  ▓▒   █▓   █▒        █▒   ██   █▒   █▒   ▓▒   █▓   ',
-  '  ██   ▒█   ██  ▓▓▓▓  ██   ██   ██▓▓▓▒    ██   ▒█   ',
-  '  ██▓▓▓██   ██   ▒█   ██   █▒   ██ ▒▒     ██▓▓▓██   ',
-  '  ██   █▒   ▒█   █▒   ▒█   █▒   ██  ▒▓    ██   █▒   ',
-  '  ▒▒   ▒▒    ▒▓▓▓▒     ▒▓▓▓▒    ▒▒   ▒▓   ▒▒   ▒▒   '
+export function supportsUnicode(env: Record<string, string | undefined>): boolean {
+  if (env.AGORA_ASCII) return false;
+  if (env.TERM === 'dumb') return false;
+  const locale = env.LC_ALL || env.LC_CTYPE || env.LANG;
+  if (locale && !/utf-?8/i.test(locale)) return false;
+  return true;
+}
+
+// ── Banner ──────────────────────────────────────────────────────────────────
+
+/** Three rows of half-block letters, 38 columns. */
+export const WORDMARK = [
+  '██▀▀██  ██▀▀▀▀  ██▀▀██  ██▀▀██  ██▀▀██',
+  '██▄▄██  ██ ▄▄▄  ██  ██  ██▄▄█▀  ██▄▄██',
+  '██  ██  ██▄▄██  ██▄▄██  ██ ▀█▄  ██  ██'
 ];
+/** The density ramp under the wordmark: depth from texture, light to solid. */
+export const RAMP = '░░░░░░░░░▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓██████████';
+export const WORDMARK_ASCII = ['A G O R A'];
+export const RAMP_ASCII = '.........:::::::::==========##########';
 
-/**
- * BANNER_GRADIENT — 3 stops sampled across the wordmark's columns.
- * "Marble & terracotta": warm cream → terracotta → deep brick. A purely
- * warm Mediterranean sweep; neither endpoint touches pure black or white,
- * so it holds contrast on either terminal background.
- */
-export const BANNER_GRADIENT: RGB[] = [
-  [220, 196, 158], // #DCC49E  warm cream
-  [198, 106, 74], // #C66A4A  terracotta
-  [148, 64, 56] // #944038  deep brick
-];
-
-function lerp(a: number, b: number, t: number): number {
-  return Math.round(a + (b - a) * t);
-}
-
-/** Nearest colour in the xterm-256 6×6×6 cube — the fallback when truecolor is off. */
-function rgbTo256(rgb: RGB): number {
-  const axis = (v: number) => Math.round((v / 255) * 5);
-  return 16 + 36 * axis(rgb[0]) + 6 * axis(rgb[1]) + axis(rgb[2]);
-}
-
-export function colorize(char: string, rgb: RGB, trueColor: boolean): string {
-  const code = trueColor ? `38;2;${rgb[0]};${rgb[1]};${rgb[2]}` : `38;5;${rgbTo256(rgb)}`;
-  return `\x1b[${code}m${char}${RESET}`;
-}
-
-export function sampleGradient(stops: RGB[], t: number): RGB {
-  if (stops.length === 1) return stops[0];
-  const clamped = Math.min(1, Math.max(0, t));
-  const span = clamped * (stops.length - 1);
-  const index = Math.min(stops.length - 2, Math.floor(span));
-  const local = span - index;
-  const from = stops[index];
-  const to = stops[index + 1];
-  return [lerp(from[0], to[0], local), lerp(from[1], to[1], local), lerp(from[2], to[2], local)];
-}
-
-/** Colorizes each character of `text` across BANNER_GRADIENT stops. */
-export function gradientText(text: string, opts: { trueColor: boolean }): string {
-  if (text.length === 0) return text;
-  let out = '';
-  for (let i = 0; i < text.length; i++) {
-    const t = text.length === 1 ? 0 : i / (text.length - 1);
-    const rgb = sampleGradient(BANNER_GRADIENT, t);
-    out += colorize(text[i], rgb, opts.trueColor);
-  }
-  return out;
-}
+export const TAGLINE = 'a written limit for every coding agent, a receipt for every change';
+const TAGLINE_FULL = ['a written limit for every coding agent,', 'a receipt for every change.'];
+const TAGLINE_COMPACT = ['a written limit for every coding', 'agent, a receipt for every change.'];
 
 export interface BannerOptions {
   color: boolean;
-  trueColor: boolean;
-  /** Dim line printed under the wordmark. */
-  subtitle?: string;
+  depth?: ColorDepth;
+  unicode?: boolean;
+  /** Terminal width; below 43 columns the tagline wraps shorter. */
+  columns?: number;
 }
 
-/**
- * Renders the AGORA wordmark with a left-to-right gradient applied per column
- * (so the gradient stays aligned across all rows), followed by an optional
- * dim subtitle. Degrades to plain block letters when colour is off.
- */
+/** The wordmark, its ramp in the accent, and the tagline in faint. Indented two columns. */
 export function renderBanner(opts: BannerOptions): string {
-  const rows = AGORA_WORDMARK_RELIEF;
-  const width = Math.max(...rows.map((line) => line.length));
-
-  const lines = rows.map((line) => {
-    if (!opts.color) return line;
-    let out = '';
-    for (let col = 0; col < line.length; col += 1) {
-      const char = line[col];
-      if (char === ' ') {
-        out += char;
-        continue;
-      }
-      const rgb = sampleGradient(BANNER_GRADIENT, col / (width - 1));
-      out += colorize(char, rgb, opts.trueColor);
-    }
-    return out;
-  });
-
-  if (opts.subtitle) {
-    const subtitle = opts.color ? `\x1b[2m${opts.subtitle}${RESET}` : opts.subtitle;
-    lines.push('', subtitle);
-  }
-
-  return lines.join('\n');
+  const unicode = opts.unicode !== false;
+  const depth = opts.depth ?? '256';
+  const faint = (s: string) => (opts.color ? `\x1b[2m${s}${RESET}` : s);
+  const ramp = unicode ? RAMP : RAMP_ASCII;
+  const tagline = (opts.columns ?? 80) < 43 ? TAGLINE_COMPACT : TAGLINE_FULL;
+  return [
+    ...(unicode ? WORDMARK : WORDMARK_ASCII).map((row) => `  ${row}`),
+    `  ${opts.color ? paint(TOKENS.accent, depth, ramp) : ramp}`,
+    '',
+    ...tagline.map((line) => `  ${faint(line)}`)
+  ].join('\n');
 }
-
-// ── Header frame ────────────────────────────────────────────────────────────

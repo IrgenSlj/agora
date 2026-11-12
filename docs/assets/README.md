@@ -1,51 +1,22 @@
 # Brand assets
 
-Generated, not hand-drawn. Regenerate with:
-
-```bash
-bun scripts/generate-brand-assets.ts
-```
-
-The wordmark is built from `AGORA_WORDMARK_RELIEF` and `BANNER_GRADIENT` in
-[`src/ui.ts`](../../src/ui.ts) — the same constants the CLI renders at runtime — so the README and
-the terminal can never drift apart. Editing the letterforms means editing `src/ui.ts` and re-running
-the generator.
+From the Claude Design handoff of 2026-11-12; the terminal side of the same identity is
+[`docs/TERMINAL.md`](../TERMINAL.md). Text is outlined to paths, so the SVGs need no fonts.
 
 | File | Size | Use |
 |---|---|---|
-| `banner.svg` | 1200×~370 | README hero |
+| `banner.svg` | 1200×370 | README hero |
 | `social-preview.svg` | 1280×640 | source for the social card |
-| `social-preview.png` | 1280×640 | **upload this** to Settings → Social preview (GitHub needs a raster). Still shows the 0.8 tagline until regenerated. |
-| `logomark.svg` | 512×512 | square icon / avatar |
-| `wordmark-dark.svg` | — | wordmark on the dark panel |
-| `wordmark-light.svg` | — | wordmark on the light panel |
+| `social-preview.png` | 1280×640 | **upload this** to Settings → Social preview (GitHub needs a raster) |
 
-## Palette — "marble & terracotta"
+Both sit on their own opaque panel (`#15181C`), so they read the same on GitHub's light and dark
+pages. Palette: ink `#3A86AD`, moss `#4C9457`, amber `#B5802A`, brick `#CC5A48`, violet `#8B7BC4`,
+stone `#807D75`, paper `#D9D6CE`.
 
-| Token | Hex |
-|---|---|
-| Cream | `#DCC49E` |
-| Terracotta | `#C66A4A` |
-| Brick | `#944038` |
-| Amber | `#D4A85A` |
-| Stone dim | `#6B6253` |
-
-Every asset sits on its own opaque panel, so it renders identically against GitHub's light and dark
-page backgrounds without needing `prefers-color-scheme` (which GitHub strips from README SVGs).
-
-## Regenerating the PNG
-
-`generate-brand-assets.ts` emits SVG only. The social card PNG is rendered from it:
+Render the PNG from the SVG with headless Chrome:
 
 ```bash
 cd docs/assets
-qlmanage -t -s 1280 -o . social-preview.svg
-ffmpeg -y -i social-preview.svg.png -vf "crop=1280:640:0:320" social-preview.png
-rm social-preview.svg.png
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --hide-scrollbars \
+  --window-size=1280,640 --screenshot="$PWD/social-preview.png" "file://$PWD/social-preview.svg"
 ```
-
-(`qlmanage` pads to a square, hence the crop.)
-
-Architecture diagrams may be added here when they can distinguish live, partial, and planned paths
-without overstating capability. Their source or generation instructions must be committed alongside
-the rendered assets.

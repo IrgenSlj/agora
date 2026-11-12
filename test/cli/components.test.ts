@@ -23,9 +23,10 @@ const TC_ESC = /\x1b\[38;2;/;
 describe('status', () => {
   test('each tone gets its own glyph', () => {
     expect(status('success', 'good', plain)).toContain('✓');
-    expect(status('warning', 'watch', plain)).toContain('⚠');
+    expect(status('warning', 'watch', plain)).toBe('! watch');
     expect(status('error', 'bad', plain)).toContain('✗');
-    expect(status('info', 'note', plain)).toContain('·');
+    expect(status('unknown', 'unseen', plain)).toBe('? unseen');
+    expect(status('info', 'note', plain)).toContain('•');
   });
 
   test('keeps the label', () => {
