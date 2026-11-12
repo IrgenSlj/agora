@@ -189,6 +189,26 @@ export const COMMANDS: CommandMeta[] = [
     ]
   },
   {
+    name: 'report',
+    group: 'Check',
+    summary: 'Write an evidence report from the receipts in git notes',
+    usage: 'agora report [--since <date>] [--until <date>] [--rev <rev>] [--out <file>] [--json]',
+    details:
+      'Verifies the receipt of every commit in the range, against keys trusted at --rev, and ' +
+      'writes one self-contained HTML file (default agora-report.html): commits with a receipt ' +
+      'that verifies, rejected or not established, signer levels, denials, canary hits, policy ' +
+      'versions, and everything the receipts say could not be seen. It needs no server. It is ' +
+      'evidence for review, not a compliance statement. Exits 1 when any receipt is rejected.',
+    flags: [
+      { flag: '--since', description: 'Earliest commit date, as git log accepts it' },
+      { flag: '--until', description: 'Latest commit date' },
+      { flag: '--rev', description: 'Revision to report on (default HEAD)' },
+      { flag: '--out', description: 'Where to write the HTML (default agora-report.html)' },
+      { flag: '--json', description: 'Print the report as JSON instead' }
+    ],
+    examples: ['agora report --since 2026-10-01', 'agora report --json']
+  },
+  {
     name: 'canary',
     group: 'Setup',
     summary: 'Plant a decoy credential file that no agent task should touch',

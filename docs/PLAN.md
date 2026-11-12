@@ -316,7 +316,7 @@ Canaries, checked the same way:
 ### Phase 5 — Runner-signed receipts and the evidence report
 
 - [ ] GitHub Action mode that signs receipts with Sigstore keyless via the runner's OIDC identity
-- [ ] `agora report`: a static evidence report for a repository and date range, built from its
+- [x] `agora report`: a static evidence report for a repository and date range, built from its
       receipts
 - [ ] Public profile registry repository: minimal policies per MCP server, contributed by pull
       request

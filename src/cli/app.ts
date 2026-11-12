@@ -113,7 +113,8 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
       learn: async () => (await import('./commands/learn.js')).commandLearn,
       plan: async () => (await import('./commands/plan.js')).commandPlan,
       apply: async () => (await import('./commands/plan.js')).commandPlan,
-      canary: async () => (await import('./commands/canary.js')).commandCanary
+      canary: async () => (await import('./commands/canary.js')).commandCanary,
+      report: async () => (await import('./commands/report.js')).commandReport
     };
 
     const load = cmd[parsed.command];

@@ -21,7 +21,8 @@ the code can actually prove. Labels:
 | Host adapters | Works | Read MCP servers from Claude Code, Cursor, Windsurf, VS Code and OpenCode configs; atomic, key-preserving writes (used by `observe enable`) | Emit native permissions (phase 3) |
 
 | Canaries (`agora canary`) | Works | A decoy credential file hidden from git, and with `--tool` a decoy MCP tool; any tool call on them, or a shell command naming the file, is denied and recorded as a canary event in Claude Code and OpenCode; receipts count hits and CI fails on them | A program that opens the file without naming it is not seen |
-| Runner signing, report | Planned | — | Phase 5 |
+| Evidence report (`agora report`) | Works | One self-contained HTML file (or `--json`) from the receipts in git notes for a date range: receipts that verify, rejected, not established, signer levels, denials, canary hits, policy versions, and every gap the receipts list; no server, no scripts; exits 1 on a rejected receipt | — |
+| Runner signing | Planned | — | Phase 5 |
 
 ## Invariants enforced by tests
 
