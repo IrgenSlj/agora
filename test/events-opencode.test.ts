@@ -112,3 +112,22 @@ describe('agora hook with an OpenCode payload', () => {
     expect(events.at(-1)).toMatchObject({ host: 'opencode', subject: 'curl', decision: 'denied' });
   });
 });
+
+describe('paths are relative to the repository root', () => {
+  test('a session whose shell is in a subdirectory still names files from the root', async () => {
+    const { normaliseHook } = await import('../src/events/hook-payload');
+    const root = mkdtempSync(join(tmpdir(), 'agora-subdir-'));
+    try {
+      mkdirSync(join(root, '.git'));
+      mkdirSync(join(root, 'docs', 'assets'), { recursive: true });
+      const drafts = normaliseHook({
+        cwd: join(root, 'docs', 'assets'),
+        tool_name: 'Read',
+        tool_input: { file_path: join(root, 'docs', 'assets', 'card.png') }
+      });
+      expect(drafts[0]?.subject).toBe('docs/assets/card.png');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
