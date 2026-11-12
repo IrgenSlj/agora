@@ -47,13 +47,7 @@ runs:
   steps:
     - id: agora
       shell: bash
-      require-signer:
-    description: >-
-      Reject receipts signed below this level: none, local-keychain or
-      runner-oidc. Default none accepts unsigned receipts, which say so.
-    required: false
-    default: 'none'
-  working-directory: ${{ inputs.working-directory }}
+      working-directory: ${{ inputs.working-directory }}
       env:
         AGORA_VERSION: ${{ inputs.version }}
         AGORA_FAIL_ON_UNKNOWN: ${{ inputs.fail-on-unknown }}
