@@ -1,10 +1,12 @@
-// `agora plan` and `agora apply`: agora.cedar compiled into Claude Code's
-// settings. `plan` shows what would change and writes nothing.
+// `agora plan` and `agora apply`: agora.cedar compiled into each host. Claude
+// Code always; OpenCode when the repository uses it. `plan` shows what would
+// change and writes nothing.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
 import { compileClaudeCode } from '../../compile/claude-code.js';
+import { compileOpenCode } from '../../compile/opencode.js';
 import { MANAGED_FILE, type Managed, mergeSettings } from '../../compile/settings.js';
 import { loadCedar, loadPolicySet, POLICY_FILE } from '../../policy/engine.js';
 import { repoRoot } from '../../receipt/git.js';
@@ -14,6 +16,14 @@ import { cliTheme } from '../theme.js';
 import type { CommandHandler } from './types.js';
 
 const SETTINGS = '.claude/settings.json';
+
+/** Whether the repository uses OpenCode: a `.opencode/` directory or a project config. */
+export const usesOpenCode = (root: string): boolean =>
+  ['.opencode', 'opencode.json', 'opencode.jsonc'].some((f) => existsSync(join(root, f)));
+
+function readText(path: string): string | undefined {
+  return existsSync(path) ? readFileSync(path, 'utf8') : undefined;
+}
 
 function readJson(path: string): Record<string, unknown> | undefined {
   if (!existsSync(path)) return undefined;
@@ -65,8 +75,14 @@ export const commandPlan: CommandHandler = async (parsed, io, style) => {
     );
   }
   const merged = mergeSettings(current, compilation, previous);
+  const opencode = usesOpenCode(root) ? compileOpenCode(ests) : undefined;
+  const pluginChanged =
+    opencode !== undefined && readText(join(root, opencode.plugin.path)) !== opencode.plugin.source;
   const nothing =
-    !merged.change.hooks.length && !merged.change.added.length && !merged.change.removed.length;
+    !merged.change.hooks.length &&
+    !merged.change.added.length &&
+    !merged.change.removed.length &&
+    !pluginChanged;
 
   if (parsed.flags.json) {
     writeJson(io.stdout, {
@@ -77,6 +93,14 @@ export const commandPlan: CommandHandler = async (parsed, io, style) => {
       compiled: compilation.compiled,
       hook_only: compilation.hookOnly,
       not_enforced: compilation.notEnforced,
+      opencode: opencode
+        ? {
+            plugin: opencode.plugin.path,
+            changed: pluginChanged,
+            hook_only: opencode.hookOnly,
+            not_enforced: opencode.notEnforced
+          }
+        : null,
       applied: write && !nothing
     });
   } else {
@@ -89,7 +113,9 @@ export const commandPlan: CommandHandler = async (parsed, io, style) => {
         )
       );
     }
-    if (nothing) writeLine(io.stdout, theme.dim('  up to date'));
+    const ccNothing =
+      !merged.change.hooks.length && !merged.change.added.length && !merged.change.removed.length;
+    if (ccNothing) writeLine(io.stdout, theme.dim('  up to date'));
     for (const h of merged.change.hooks) writeLine(io.stdout, theme.success(`  + hook ${h}`));
     for (const r of merged.change.added) writeLine(io.stdout, theme.success(`  + allow ${r}`));
     for (const r of merged.change.removed) writeLine(io.stdout, theme.error(`  - allow ${r}`));
@@ -104,6 +130,27 @@ export const commandPlan: CommandHandler = async (parsed, io, style) => {
     writeLine(io.stdout, theme.muted('\n  Not enforced, because Claude Code cannot see it:'));
     for (const n of compilation.notEnforced) writeLine(io.stdout, theme.dim(`    ${n}`));
     writeLine(io.stdout, '');
+    if (opencode) {
+      writeLine(io.stdout, `${theme.accent('OpenCode')} ${theme.dim(`· ${opencode.plugin.path}`)}`);
+      writeLine(
+        io.stdout,
+        pluginChanged ? theme.success('  + plugin agora.js') : theme.dim('  up to date')
+      );
+      writeLine(
+        io.stdout,
+        theme.dim(
+          '  The plugin enforces every rule; OpenCode allows by default, so no allow rules are written.'
+        )
+      );
+      writeLine(io.stdout, theme.muted('\n  Not enforced, because OpenCode cannot see it:'));
+      for (const n of opencode.notEnforced) writeLine(io.stdout, theme.dim(`    ${n}`));
+    } else {
+      writeLine(
+        io.stdout,
+        theme.dim('OpenCode · not used here (no .opencode/ or opencode.json); nothing to compile')
+      );
+    }
+    writeLine(io.stdout, '');
   }
 
   if (!write) {
@@ -112,10 +159,14 @@ export const commandPlan: CommandHandler = async (parsed, io, style) => {
     return ExitCode.OK;
   }
   if (!nothing) {
+    const wrote = [SETTINGS, MANAGED_FILE];
     atomicWriteFile(settingsPath, `${JSON.stringify(merged.doc, null, 2)}\n`, 0o644);
     atomicWriteFile(managedPath, `${JSON.stringify(merged.managed, null, 2)}\n`, 0o644);
-    if (!parsed.flags.json)
-      writeLine(io.stdout, `Wrote ${SETTINGS} and ${MANAGED_FILE}. Commit both.`);
+    if (opencode && pluginChanged) {
+      atomicWriteFile(join(root, opencode.plugin.path), opencode.plugin.source, 0o644);
+      wrote.push(opencode.plugin.path);
+    }
+    if (!parsed.flags.json) writeLine(io.stdout, `Wrote ${wrote.join(', ')}. Commit them.`);
   }
   return ExitCode.OK;
 };

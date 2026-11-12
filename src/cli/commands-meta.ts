@@ -59,7 +59,9 @@ export const COMMANDS: CommandMeta[] = [
       'check denies anything it does not permit, before Claude Code asks. Permits that translate ' +
       'exactly also become permissions.allow rules, so permitted actions stop prompting. Every ' +
       'rule is listed as compiled, enforced by the hook only, or not enforceable because Claude ' +
-      'Code cannot see it. Allow rules are only ever copies of permits in agora.cedar.',
+      'Code cannot see it. Allow rules are only ever copies of permits in agora.cedar. When the ' +
+      'repository uses OpenCode (.opencode/ or opencode.json), it also writes a plugin to ' +
+      '.opencode/plugins/agora.js that runs the same check before every OpenCode tool call.',
     flags: [{ flag: '--json', description: 'Output as JSON' }],
     examples: ['agora plan', 'agora apply']
   },

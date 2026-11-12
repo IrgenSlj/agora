@@ -1,10 +1,11 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { runCli } from '../src/cli/app';
 import { compileClaudeCode, translate } from '../src/compile/claude-code';
+import { OPENCODE_PLUGIN } from '../src/compile/opencode';
 import { mergeSettings } from '../src/compile/settings';
 import { loadCedar } from '../src/policy/engine';
 
@@ -184,5 +185,105 @@ describe('agora plan, apply and enforcement', () => {
   test('without agora.cedar a non-MCP call is not checked at all', () => {
     rmSync(join(repo, 'agora.cedar'));
     expect(check('Bash', { command: 'curl https://x.dev' })).toBeUndefined();
+  });
+});
+
+describe('OpenCode', () => {
+  let root: string;
+  let repo: string;
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'agora-opencode-compile-'));
+    repo = join(root, 'repo');
+    mkdirSync(join(repo, '.opencode'), { recursive: true });
+    execFileSync('git', ['init', '-q'], { cwd: repo });
+    writeFileSync(join(repo, 'agora.cedar'), LEARNED);
+  });
+  afterEach(() => rmSync(root, { recursive: true, force: true }));
+
+  async function cli(args: string[]) {
+    const out: string[] = [];
+    const io = {
+      stdout: { write: (s: string) => void out.push(s) },
+      stderr: { write: (s: string) => void out.push(s) },
+      env: { HOME: root, AGORA_HOME: join(root, 'agora'), NO_COLOR: '1' },
+      cwd: repo
+    };
+    return { code: await runCli(args, io as never), out: out.join('') };
+  }
+
+  test('one policy compiles to both hosts, each listing its gaps', async () => {
+    const plan = await cli(['plan']);
+    expect(plan.out).toContain('Claude Code');
+    expect(plan.out).toContain('OpenCode · .opencode/plugins/agora.js');
+    expect(plan.out).toContain('+ plugin agora.js');
+    expect(plan.out).toContain('Not enforced, because OpenCode cannot see it');
+    const json = JSON.parse((await cli(['plan', '--json'])).out);
+    expect(json.opencode.not_enforced.length).toBeGreaterThan(0);
+    expect(existsSync(join(repo, '.opencode/plugins/agora.js'))).toBe(false);
+
+    await cli(['apply']);
+    expect(readFileSync(join(repo, '.opencode/plugins/agora.js'), 'utf8')).toBe(OPENCODE_PLUGIN);
+    expect((await cli(['plan'])).out).not.toContain('+ plugin');
+  });
+
+  test('a repository without OpenCode gets no plugin', async () => {
+    rmSync(join(repo, '.opencode'), { recursive: true });
+    expect((await cli(['plan'])).out).toContain('OpenCode · not used here');
+    await cli(['apply']);
+    expect(existsSync(join(repo, '.opencode'))).toBe(false);
+  });
+
+  describe('the plugin', () => {
+    let bin: string;
+    let saved: string | undefined;
+    const load = async () => {
+      const file = join(root, `plugin-${Math.random()}.mjs`);
+      writeFileSync(file, OPENCODE_PLUGIN);
+      const mod = await import(file);
+      return mod.AgoraPlugin({ directory: repo });
+    };
+    const fakeAgora = (stdout: string) => {
+      bin = join(root, 'bin');
+      mkdirSync(bin, { recursive: true });
+      writeFileSync(join(bin, 'agora'), `#!/bin/sh\ncat >/dev/null\nprintf '%s' '${stdout}'\n`, {
+        mode: 0o755
+      });
+      process.env.PATH = `${bin}:${saved}`;
+    };
+    beforeEach(() => {
+      saved = process.env.PATH;
+    });
+    afterEach(() => {
+      process.env.PATH = saved;
+    });
+    const call = { tool: 'bash', sessionID: 'ses_1', callID: 'c1' };
+
+    test('blocks a call the check denies, with its reason', async () => {
+      fakeAgora(
+        JSON.stringify({
+          hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: 'no curl' }
+        })
+      );
+      const hooks = await load();
+      await expect(
+        hooks['tool.execute.before'](call, { args: { command: 'curl x' } })
+      ).rejects.toThrow('no curl');
+    });
+
+    test('lets the call proceed when the check has no opinion', async () => {
+      fakeAgora('');
+      const hooks = await load();
+      await expect(
+        hooks['tool.execute.before'](call, { args: { command: 'ls' } })
+      ).resolves.toBeUndefined();
+    });
+
+    test('fails open when agora is not installed', async () => {
+      process.env.PATH = join(root, 'nowhere');
+      const hooks = await load();
+      await expect(
+        hooks['tool.execute.before'](call, { args: { command: 'ls' } })
+      ).resolves.toBeUndefined();
+    });
   });
 });

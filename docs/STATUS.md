@@ -1,6 +1,6 @@
 # Status
 
-Last reviewed: 2026-11-11, phase 3 built, its gate open. The plan is [`PLAN.md`](./PLAN.md); this page says what
+Last reviewed: 2026-11-12, phase 3 built with its gate open; phase 4 under way. The plan is [`PLAN.md`](./PLAN.md); this page says what
 the code can actually prove. Labels:
 
 - **Works** — on a user-facing path and covered by tests.
@@ -17,10 +17,10 @@ the code can actually prove. Labels:
 | Session log (`agora log`, `agora hook record`) | Works | Claude Code hooks record session start and end, every tool call that ran, and denials, as hash-chained `AgentEvent`s; a closed session records its root; `agora log verify` detects any changed byte and truncation of a closed log; 72 ms per hook call | Signing the root (phase 2); an open session cannot detect truncation |
 | MCP shim (`agora run`, `agora observe`) | Works | Byte-transparent stdio supervision records tool names and counts and sampled direct-process network peers, and writes them as events to a session of its own; never arguments or results | Joining the host's session |
 | Policy (`agora policy`, `agora learn`, `agora replay`) | Works | `agora.cedar` holds Cedar rules over agent actions (read, write, exec, connect, call); with it present, anything unpermitted is denied; strict schema lint; `learn` proposes a minimal policy from verified sessions as a diff; `replay` reports what a policy would have denied | Real sessions on this repository to prove learned policies do not over-deny (phase 3 gate) |
-| Compile and enforce (`agora plan`, `agora apply`) | Works for Claude Code | The PreToolUse hook enforces `agora.cedar` on every tool; exact-equivalent permits compile to `permissions.allow`; every rule is reported as compiled, hook-only or not enforceable | OpenCode (phase 4); about 130 ms per checked tool call |
+| Compile and enforce (`agora plan`, `agora apply`) | Works for Claude Code and OpenCode | The PreToolUse hook enforces `agora.cedar` on every tool; exact-equivalent permits compile to `permissions.allow`; every rule is reported as compiled, hook-only or not enforceable. In a repository that uses OpenCode, a plugin runs the same check before every OpenCode tool call and records the session | About 130 ms per checked tool call |
 | Host adapters | Works | Read MCP servers from Claude Code, Cursor, Windsurf, VS Code and OpenCode configs; atomic, key-preserving writes (used by `observe enable`) | Emit native permissions (phase 3) |
 
-| Canaries, second host, runner signing, report | Planned | — | Phases 4 and 5 |
+| Canaries, runner signing, report | Planned | — | Phases 4 and 5 |
 
 ## Invariants enforced by tests
 

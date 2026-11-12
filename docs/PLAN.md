@@ -278,12 +278,25 @@ Decisions made while building it:
 
 ### Phase 4 — Second host and canaries
 
-- [ ] OpenCode normaliser and emitter (its plugin API has a tool-call boundary)
+- [x] OpenCode normaliser and emitter (its plugin API has a tool-call boundary)
 - [ ] `agora canary install`: decoy credential file and decoy tool; hits are denied and recorded
 - [ ] Receipts carry `not_enforced` per host
 
 **Gate:** one policy file compiles to both hosts, and each host's enforcement gaps appear in
 `agora plan` and in the receipt.
+
+Started while the phase 3 gate collects real sessions: that gate waits on use, not on code.
+
+How OpenCode works, checked against a live OpenCode 1.19.3 session on 2026-11-12:
+
+- `agora apply` writes `.opencode/plugins/agora.js` when the repository uses OpenCode. The plugin
+  sends each tool call to `agora hook check` before it runs and `agora hook record` after, so one
+  engine evaluates one policy for both hosts. A deny throws, and OpenCode shows the reason to the
+  agent. If `agora` is missing or fails, the call proceeds.
+- No allow rules are compiled for OpenCode: it allows everything by default, so there is no prompt
+  for a permit to remove.
+- MCP tools in OpenCode are named `<server>_<tool>`, which cannot be split reliably, so the
+  revocation list does not reach them. Approval prompts are not recorded yet.
 
 ### Phase 5 — Runner-signed receipts and the evidence report
 
