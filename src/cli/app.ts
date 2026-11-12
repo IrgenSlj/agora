@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { colorDepth, createStyler, type Styler, shouldUseColor } from '../ui.js';
+import { colorDepth, createStyler, type Styler, shouldUseColor, supportsUnicode } from '../ui.js';
 import type { CommandHandler } from './commands/types.js';
 import { COMMANDS, renderManual } from './commands-meta.js';
 import { headerLine } from './components.js';
@@ -85,6 +85,45 @@ function isFramed(parsed: ReturnType<typeof parseArgs>): boolean {
   return Boolean(rule?.(parsed.args[0] ?? ''));
 }
 
+const ASCII: Record<string, string> = {
+  '·': '.',
+  '…': '...',
+  '→': '->',
+  '─': '-',
+  '│': '|',
+  '┌': '.',
+  '└': "'",
+  '●': 'o',
+  '■': '#',
+  '◆': '*',
+  '◇': '~',
+  '✓': 'v',
+  '✗': 'x',
+  '•': '>',
+  '×': 'x',
+  '░': '.',
+  '▒': ':',
+  '▓': '=',
+  '█': '#',
+  '—': '-',
+  '–': '-',
+  '‘': "'",
+  '’': "'",
+  '“': '"',
+  '”': '"'
+};
+const NON_ASCII = new RegExp(`[${Object.keys(ASCII).join('')}]`, 'g');
+
+/** On a terminal that is not UTF-8, every known glyph leaves as its ASCII fallback. */
+function asciiOnly(stream: CliIo['stdout']): CliIo['stdout'] {
+  const tty = stream as { isTTY?: boolean; columns?: number };
+  return {
+    isTTY: tty.isTTY,
+    columns: tty.columns,
+    write: (chunk: string) => stream.write(String(chunk).replace(NON_ASCII, (c) => ASCII[c] ?? c))
+  } as CliIo['stdout'];
+}
+
 /** A stream that indents every line two columns. */
 function indented(stream: CliIo['stdout']): CliIo['stdout'] {
   let atStart = true;
@@ -104,6 +143,7 @@ function indented(stream: CliIo['stdout']): CliIo['stdout'] {
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
   const env = io.env ?? {};
+  if (!parsed.flags.json && !supportsUnicode(env)) io = { ...io, stdout: asciiOnly(io.stdout) };
   const useColor = shouldUseColor(
     io.stdout as { isTTY?: boolean },
     env,

@@ -1,0 +1,38 @@
+
+  ██▀▀██  ██▀▀▀▀  ██▀▀██  ██▀▀██  ██▀▀██
+  ██▄▄██  ██ ▄▄▄  ██  ██  ██▄▄█▀  ██▄▄██
+  ██  ██  ██▄▄██  ██▄▄██  ██ ▀█▄  ██  ██
+  [38;2;58;134;173m░░░░░░░░░▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓▓▓▓▓██████████[0m
+
+  [2ma written limit for every coding agent,[0m
+  [2ma receipt for every change.[0m
+
+  [2musage[0m  agora <command> [options]
+
+  [1mENFORCE[0m
+    [38;2;58;134;173mplan[0m [2m··············[0m [2mshow what the policy would change[0m
+    [38;2;58;134;173mapply[0m [2m·············[0m [2mwrite agora.cedar into each host[0m
+    [38;2;58;134;173mhook[0m [2m··············[0m [2mrun as the host's pre-tool hook[0m
+    [38;2;58;134;173mlearn[0m [2m·············[0m [2mdraft rules from what was recorded[0m
+    [38;2;58;134;173mreplay[0m [2m············[0m [2mwhat a policy would have denied[0m
+    [38;2;58;134;173mpolicy[0m [2m············[0m [2mscaffold and lint agora.cedar[0m
+    [38;2;58;134;173mprofile[0m [2m···········[0m [2madd a policy for a known MCP server[0m
+
+  [1mRECORD[0m
+    [38;2;58;134;173mlog[0m [2m···············[0m [2mlist, show and verify session logs[0m
+    [38;2;58;134;173mrun[0m [2m···············[0m [2mrecord an MCP server's tool calls[0m
+    [38;2;58;134;173mobserve[0m [2m···········[0m [2mshow recorded MCP activity[0m
+
+  [1mCHECK[0m
+    [38;2;58;134;173mreceipt[0m [2m···········[0m [2mwrite, show and verify commit receipts[0m
+    [38;2;58;134;173mci[0m [2m················[0m [2mverify receipts and advisories in CI[0m
+    [38;2;58;134;173mreport[0m [2m············[0m [2man evidence report from git notes[0m
+    [38;2;58;134;173mdoctor[0m [2m············[0m [2mhosts, enforcement, receipts[0m
+    [38;2;58;134;173maudit[0m [2m·············[0m [2mlook configured servers up in OSV.dev[0m
+
+  [1mSETUP[0m
+    [38;2;58;134;173msigner[0m [2m············[0m [2mkeys and workflows that sign receipts[0m
+    [38;2;58;134;173mcanary[0m [2m············[0m [2mplant a decoy no task should touch[0m
+    [38;2;58;134;173mcompletions[0m [2m·······[0m [2mprint a shell completion script[0m
+
+  [2magora <command> --help for details · v<version>[0m

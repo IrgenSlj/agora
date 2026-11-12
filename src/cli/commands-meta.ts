@@ -340,9 +340,11 @@ export function renderManual(meta: CommandMeta, theme: Theme): string {
     const w = Math.max(18, ...meta.flags.map((f) => f.flag.length + 5));
     for (const f of meta.flags) {
       const label = leader(f.flag, '', theme, w).trimEnd();
+      const [first, ...rest] = wrap(f.description, MEASURE - w - 3);
       lines.push(
-        `    ${theme.accent(f.flag)}${label.slice(f.flag.length)} ${theme.muted(f.description)}`
+        `    ${theme.accent(f.flag)}${label.slice(f.flag.length)} ${theme.muted(first ?? '')}`
       );
+      for (const r of rest) lines.push(`${' '.repeat(w + 5)}${theme.muted(r)}`);
     }
   }
   if (meta.examples?.length) {

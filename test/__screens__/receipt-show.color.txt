@@ -1,0 +1,40 @@
+
+  [38;2;58;134;173m░▒▓█[0m [1magora[0m receipt show 734cf0dc067a
+
+  [2mcommit  [0m [38;2;58;134;173m734cf0dc067a[0m  notes.md
+  [2msigner  [0m [38;2;181;128;42m◇ unsigned[0m  [2mnone[0m  [38;2;58;134;173m░░░[0m
+  [2m        [0m [2ma self-report: whoever can push notes can replace it[0m
+  [2mpolicy  [0m [2mno agora.cedar[0m
+
+  [1mSESSIONS[0m                                                     [2m1[0m
+  [2m●[0m ses_screens0 [2mclaude-code[0m [2m·················[0m 8 events · closed
+  [38;2;204;90;72m✗[0m 1 denied
+
+  [1mFILES WRITTEN[0m                                                [2m1[0m
+  src/orders/price.ts
+
+  [1mFILES READ[0m                                                   [2m1[0m
+  src/orders/schema.ts
+
+  [1mPROGRAMS RUN[0m                                                 [2m1[0m
+  bun
+
+  [1mHOSTS REACHED[0m                                                [2m1[0m
+  registry.npmjs.org:443
+
+  [1mNOT SEEN[0m                                                     [2m5[0m
+  [38;2;139;123;196m?[0m notes.md [2m·············[0m [2min the commit, in no recorded session[0m
+  [38;2;139;123;196m?[0m [2mclaude-code: files read or written by shell commands (cat,[0m
+    [2msed, redirects): only the program name is checked[0m
+  [38;2;139;123;196m?[0m [2mclaude-code: network connections made by shell commands:[0m
+    [2mconnect rules govern WebFetch only[0m
+  [38;2;139;123;196m?[0m [2mclaude-code: an MCP server's own file and network access:[0m
+    [2muse `agora run` to record its peers[0m
+  [38;2;139;123;196m?[0m [2mclaude-code: permissions.allow rules apply only after the[0m
+    [2mfolder is trusted in Claude Code[0m
+  [38;2;58;134;173m•[0m [2mThis receipt covers what agora recorded. It does not show[0m
+    [2mthat nothing else happened.[0m
+
+  [2m──────────────────────────────────────────────────────────────[0m
+  [38;2;181;128;42m◇ unsigned[0m[2m · [0m[38;2;76;148;87m✓ verifies[0m[2m · [0m[38;2;139;123;196m? 1 file not seen[0m
+

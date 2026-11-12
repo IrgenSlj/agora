@@ -1,0 +1,18 @@
+
+  [38;2;58;134;173m░▒▓█[0m [1magora[0m log show ses_screens0…                  [2mclaude-code[0m
+
+  [2mentries[0m  8    [2mdenied[0m  1    [2masked[0m  1
+
+  [2m┌─[0m [2m22:31:40[0m  start   session ses_screens0… · startup
+  [2m●[0m  [2m22:31:50[0m  read    src/orders/schema.ts
+  [2m●[0m  [2m22:32:10[0m  write   src/orders/price.ts
+  [2m●[0m  [2m22:32:30[0m  exec    bun
+  [2m●[0m  [2m22:32:50[0m  net     registry.npmjs.org:443
+  [38;2;204;90;72m■[0m  [2m22:33:10[0m  [38;2;204;90;72mDENIED[0m  exec curl                         [38;2;204;90;72mblocked[0m
+  [38;2;181;128;42m![0m  [2m22:33:20[0m  prompt  git                                 [38;2;181;128;42masked[0m
+  [2m└─[0m [2m22:33:30[0m  end     prompt_input_exit
+
+  [2m──────────────────────────────────────────────────────────────[0m
+  [2mchain[0m  #464d…2512 [2m●──●── 8 links ──●──●[0m #196e…6bb5
+  [38;2;76;148;87m✓[0m intact  [2mevery entry carries the hash of the one before it[0m
+  [2m6 calls · 5 allowed · 1 denied[0m

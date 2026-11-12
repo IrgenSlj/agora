@@ -1,0 +1,18 @@
+
+  ░▒▓█ agora log show ses_screens0…                  claude-code
+
+  entries  8    denied  1    asked  1
+
+  ┌─ 22:31:40  start   session ses_screens0… · startup
+  ●  22:31:50  read    src/orders/schema.ts
+  ●  22:32:10  write   src/orders/price.ts
+  ●  22:32:30  exec    bun
+  ●  22:32:50  net     registry.npmjs.org:443
+  ■  22:33:10  DENIED  exec curl                         blocked
+  !  22:33:20  prompt  git                                 asked
+  └─ 22:33:30  end     prompt_input_exit
+
+  ──────────────────────────────────────────────────────────────
+  chain  #464d…2512 ●──●── 8 links ──●──● #196e…6bb5
+  ✓ intact  every entry carries the hash of the one before it
+  6 calls · 5 allowed · 1 denied

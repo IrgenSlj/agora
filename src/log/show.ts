@@ -15,7 +15,7 @@ const KIND_LABEL: Record<string, string> = {
   file_write: 'write',
   exec: 'exec',
   net: 'net',
-  approval: 'approval',
+  approval: 'prompt',
   canary: 'canary'
 };
 

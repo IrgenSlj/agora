@@ -1,0 +1,35 @@
+
+  ░▒▓█ agora plan                           agora.cedar → 1 host
+
+  CLAUDE CODE                                         +3  -0  =0
+  .claude/settings.json
+  + hook   PreToolUse
+  + hook   PostToolUse
+  + hook   PermissionRequest
+  + hook   PermissionDenied
+  + hook   SessionStart
+  + hook   SessionEnd
+  + allow  Bash(bun *) ······························ exec-tools
+  + allow  Bash(git *) ······························ exec-tools
+  + allow  Read(/src/**) ······························ read-src
+
+  OpenCode · not used here (no .opencode/ or opencode.json)
+
+  ENFORCED BY THE HOOK ONLY                                    1
+  ! no-rm
+    a forbid rule: enforced by the hook, never as an allow
+  • These hold while the agora hook runs; the host still asks.
+
+  NOT ENFORCED                                                 4
+  ? claude-code: files read or written by shell commands (cat,
+    sed, redirects): only the program name is checked
+  ? claude-code: network connections made by shell commands:
+    connect rules govern WebFetch only
+  ? claude-code: an MCP server's own file and network access:
+    use `agora run` to record its peers
+  ? claude-code: permissions.allow rules apply only after the
+    folder is trusted in Claude Code
+
+  ──────────────────────────────────────────────────────────────
+  3 added · 1 hook only · 4 not enforced
+  nothing written. to apply  agora apply

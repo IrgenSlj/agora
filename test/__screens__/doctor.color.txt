@@ -1,0 +1,27 @@
+
+  [38;2;58;134;173m░▒▓█[0m [1magora[0m doctor                                       [2m~/repo[0m
+
+  [1mHOSTS[0m                                              [2menforcement[0m
+  [38;2;181;128;42m![0m claude-code [2m·····[0m hook not installed [2m··········[0m not enforced
+  [38;2;139;123;196m?[0m hosts [2m···········[0m no agent host found [2m··············[0m unknown
+
+  [1mPOLICY[0m
+  [38;2;76;148;87m✓[0m agora.cedar [2m·····[0m present [2m····························[0m found
+
+  [1mLOG[0m
+  [38;2;76;148;87m✓[0m sessions [2m········[0m 1 recorded [2m·················[0m last <time>
+  [38;2;76;148;87m✓[0m hash chain [2m······[0m 8 entries [2m·························[0m intact
+
+  [1mRECEIPTS[0m
+  [38;2;181;128;42m![0m git hooks [2m·······[0m receipts written by hand [2m···[0m not installed
+  [38;2;181;128;42m![0m signer [2m··········[0m ◇ unsigned [2m··························[0m none
+  [38;2;58;134;173m•[0m canary [2m··········[0m `agora canary install` [2m··············[0m none
+
+  [1mREVOCATIONS[0m
+  [38;2;76;148;87m✓[0m list [2m············[0m version 3 [2m························[0m current
+  [38;2;76;148;87m✓[0m servers [2m·········[0m 0 checked [2m··························[0m clear
+
+  [2m──────────────────────────────────────────────────────────────[0m
+  5 pass[2m · [0m3 warn[2m · [0m1 unknown
+    [2mnext[0m  agora hook install
+

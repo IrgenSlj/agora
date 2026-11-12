@@ -1,0 +1,27 @@
+
+  .:=# agora doctor                                       ~/repo
+
+  HOSTS                                              enforcement
+  ! claude-code ..... hook not installed .......... not enforced
+  ? hosts ........... no agent host found .............. unknown
+
+  POLICY
+  v agora.cedar ..... present ............................ found
+
+  LOG
+  v sessions ........ 1 recorded ................. last <time>
+  v hash chain ...... 8 entries ......................... intact
+
+  RECEIPTS
+  ! git hooks ....... receipts written by hand ... not installed
+  ! signer .......... ~ unsigned .......................... none
+  > canary .......... `agora canary install` .............. none
+
+  REVOCATIONS
+  v list ............ version 3 ........................ current
+  v servers ......... 0 checked .......................... clear
+
+  --------------------------------------------------------------
+  5 pass . 3 warn . 1 unknown
+    next  agora hook install
+

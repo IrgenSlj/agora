@@ -8,7 +8,7 @@ import type { ReceiptVerdict } from './verify.js';
 
 const METER: Record<SignerLevel, number> = { none: 0, 'local-keychain': 2, 'runner-oidc': 3 };
 const SIGNER: Record<SignerLevel, string> = {
-  none: 'a self-report; anyone who can write git notes could replace it',
+  none: 'a self-report: whoever can push notes can replace it',
   'local-keychain': "this machine's keychain key",
   'runner-oidc': 'sigstore keyless, signed by a CI runner'
 };

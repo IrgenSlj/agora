@@ -1,0 +1,35 @@
+
+  [38;2;58;134;173m░▒▓█[0m [1magora[0m plan                           [2magora.cedar → 1 host[0m
+
+  [1mCLAUDE CODE[0m                                         [2m+3  -0  =0[0m
+  [2m.claude/settings.json[0m
+  [38;2;76;148;87m+[0m hook   PreToolUse
+  [38;2;76;148;87m+[0m hook   PostToolUse
+  [38;2;76;148;87m+[0m hook   PermissionRequest
+  [38;2;76;148;87m+[0m hook   PermissionDenied
+  [38;2;76;148;87m+[0m hook   SessionStart
+  [38;2;76;148;87m+[0m hook   SessionEnd
+  [38;2;76;148;87m+[0m allow  Bash(bun *) [2m······························[0m [2mexec-tools[0m
+  [38;2;76;148;87m+[0m allow  Bash(git *) [2m······························[0m [2mexec-tools[0m
+  [38;2;76;148;87m+[0m allow  Read(/src/**) [2m······························[0m [2mread-src[0m
+
+  [2mOpenCode · not used here (no .opencode/ or opencode.json)[0m
+
+  [1mENFORCED BY THE HOOK ONLY[0m                                    [2m1[0m
+  [38;2;181;128;42m![0m no-rm
+    [2ma forbid rule: enforced by the hook, never as an allow[0m
+  [38;2;58;134;173m•[0m [2mThese hold while the agora hook runs; the host still asks.[0m
+
+  [1mNOT ENFORCED[0m                                                 [2m4[0m
+  [38;2;139;123;196m?[0m [2mclaude-code: files read or written by shell commands (cat,[0m
+    [2msed, redirects): only the program name is checked[0m
+  [38;2;139;123;196m?[0m [2mclaude-code: network connections made by shell commands:[0m
+    [2mconnect rules govern WebFetch only[0m
+  [38;2;139;123;196m?[0m [2mclaude-code: an MCP server's own file and network access:[0m
+    [2muse `agora run` to record its peers[0m
+  [38;2;139;123;196m?[0m [2mclaude-code: permissions.allow rules apply only after the[0m
+    [2mfolder is trusted in Claude Code[0m
+
+  [2m──────────────────────────────────────────────────────────────[0m
+  3 added[2m · [0m1 hook only[2m · [0m4 not enforced
+  [2mnothing written. to apply[0m  agora apply

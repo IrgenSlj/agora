@@ -1,0 +1,36 @@
+
+  A G O R A
+  .........:::::::::==========##########
+
+  a written limit for every coding agent,
+  a receipt for every change.
+
+  usage  agora <command> [options]
+
+  ENFORCE
+    plan .............. show what the policy would change
+    apply ............. write agora.cedar into each host
+    hook .............. run as the host's pre-tool hook
+    learn ............. draft rules from what was recorded
+    replay ............ what a policy would have denied
+    policy ............ scaffold and lint agora.cedar
+    profile ........... add a policy for a known MCP server
+
+  RECORD
+    log ............... list, show and verify session logs
+    run ............... record an MCP server's tool calls
+    observe ........... show recorded MCP activity
+
+  CHECK
+    receipt ........... write, show and verify commit receipts
+    ci ................ verify receipts and advisories in CI
+    report ............ an evidence report from git notes
+    doctor ............ hosts, enforcement, receipts
+    audit ............. look configured servers up in OSV.dev
+
+  SETUP
+    signer ............ keys and workflows that sign receipts
+    canary ............ plant a decoy no task should touch
+    completions ....... print a shell completion script
+
+  agora <command> --help for details . v<version>

@@ -1,0 +1,40 @@
+
+  ░▒▓█ agora receipt show 734cf0dc067a
+
+  commit   734cf0dc067a  notes.md
+  signer   ◇ unsigned  none  ░░░
+           a self-report: whoever can push notes can replace it
+  policy   no agora.cedar
+
+  SESSIONS                                                     1
+  ● ses_screens0 claude-code ················· 8 events · closed
+  ✗ 1 denied
+
+  FILES WRITTEN                                                1
+  src/orders/price.ts
+
+  FILES READ                                                   1
+  src/orders/schema.ts
+
+  PROGRAMS RUN                                                 1
+  bun
+
+  HOSTS REACHED                                                1
+  registry.npmjs.org:443
+
+  NOT SEEN                                                     5
+  ? notes.md ············· in the commit, in no recorded session
+  ? claude-code: files read or written by shell commands (cat,
+    sed, redirects): only the program name is checked
+  ? claude-code: network connections made by shell commands:
+    connect rules govern WebFetch only
+  ? claude-code: an MCP server's own file and network access:
+    use `agora run` to record its peers
+  ? claude-code: permissions.allow rules apply only after the
+    folder is trusted in Claude Code
+  • This receipt covers what agora recorded. It does not show
+    that nothing else happened.
+
+  ──────────────────────────────────────────────────────────────
+  ◇ unsigned · ✓ verifies · ? 1 file not seen
+
