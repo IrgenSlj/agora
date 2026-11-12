@@ -7,6 +7,7 @@
 // would launder the tampering into a signed statement.
 
 import { realpathSync } from 'node:fs';
+import { receiptGaps } from '../compile/gaps.js';
 import type { AgentEvent } from '../events/schema.js';
 import { statement } from '../evidence/dsse.js';
 import { listSessions, readEvents, readMeta, readRoot } from '../log/store.js';
@@ -23,19 +24,6 @@ import {
 } from './predicate.js';
 
 const CAP = 200;
-
-/**
- * What each host cannot enforce or record today. A receipt states these
- * rather than letting a reader assume the log is complete.
- */
-const NOT_ENFORCED: Record<AgentEvent['host'], string[]> = {
-  'claude-code': [
-    'network peers contacted by shell commands are not recorded',
-    'agora.cedar is not yet enforced on agent actions; only revoked MCP servers are denied'
-  ],
-  opencode: ['OpenCode is not yet supported'],
-  'mcp-shim': ['only MCP tool calls and sampled peers of the server process are recorded']
-};
 
 function real(path: string): string {
   try {
@@ -130,7 +118,7 @@ export function buildReceipt(input: {
     },
     denied: events.filter((e) => e.decision === 'denied').length,
     canary_hits: events.filter((e) => e.kind === 'canary').length,
-    not_enforced: hosts.flatMap((h) => NOT_ENFORCED[h]),
+    not_enforced: receiptGaps(hosts),
     signer: input.signer ?? 'none'
   };
 

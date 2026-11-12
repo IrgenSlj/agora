@@ -15,6 +15,7 @@
 // only, or listed as something Claude Code cannot see at all.
 
 import { hookConfig } from '../cli/commands/hook.js';
+import { CLAUDE_CODE_GAPS } from './gaps.js';
 
 export interface CompiledRule {
   policy: string;
@@ -34,13 +35,7 @@ export interface ClaudeCodeCompilation {
   hooks: ReturnType<typeof hookConfig>;
 }
 
-/** What Claude Code cannot see, so no policy can be enforced on it there. */
-export const CLAUDE_CODE_GAPS = [
-  'files read or written by shell commands (cat, sed, redirects): only the program name is checked',
-  'network connections made by shell commands: connect rules govern WebFetch only',
-  "an MCP server's own file and network access: use `agora run` to record its peers",
-  'permissions.allow rules apply only after the folder is trusted in Claude Code'
-];
+export { CLAUDE_CODE_GAPS } from './gaps.js';
 
 type Json = Record<string, unknown>;
 const isObj = (v: unknown): v is Json => typeof v === 'object' && v !== null && !Array.isArray(v);

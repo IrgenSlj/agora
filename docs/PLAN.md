@@ -280,7 +280,7 @@ Decisions made while building it:
 
 - [x] OpenCode normaliser and emitter (its plugin API has a tool-call boundary)
 - [ ] `agora canary install`: decoy credential file and decoy tool; hits are denied and recorded
-- [ ] Receipts carry `not_enforced` per host
+- [x] Receipts carry `not_enforced` per host
 
 **Gate:** one policy file compiles to both hosts, and each host's enforcement gaps appear in
 `agora plan` and in the receipt.

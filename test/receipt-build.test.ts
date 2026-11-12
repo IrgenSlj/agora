@@ -141,4 +141,22 @@ describe('buildReceipt', () => {
     const r = buildReceipt({ dataDir, repo, sha: c2 });
     expect(r.status === 'built' && r.predicate.policy_sha256).toMatch(/^sha256:[0-9a-f]{64}$/);
   });
+
+  test('lists what each host in the commit could not enforce, and only those hosts', () => {
+    commitAt(repo, 1000, 'a.txt');
+    ensureMeta(dataDir, 'oc', repo);
+    appendEvent(
+      dataDir,
+      'oc',
+      { host: 'opencode', kind: 'file_write', subject: 'b.txt', decision: 'allowed' },
+      at(1500)
+    );
+    const c2 = commitAt(repo, 2000, 'b.txt');
+    const r = buildReceipt({ dataDir, repo, sha: c2 });
+    if (r.status !== 'built') throw new Error(r.status);
+    const gaps = r.predicate.not_enforced;
+    expect(gaps.length).toBeGreaterThan(0);
+    expect(gaps.every((g) => g.startsWith('opencode: '))).toBe(true);
+    expect(gaps.some((g) => g.includes('MCP tools'))).toBe(true);
+  });
 });

@@ -11,16 +11,11 @@
 // (https://opencode.ai/docs/permissions/, read 2026-11-12), so there are no
 // prompts for a permit to remove. Every rule is enforced by the plugin.
 
+import { OPENCODE_GAPS } from './gaps.js';
+
 export const OPENCODE_PLUGIN_FILE = '.opencode/plugins/agora.js';
 
-/** What the plugin cannot see in OpenCode, so no policy can be enforced on it there. */
-export const OPENCODE_GAPS = [
-  'files read or written by shell commands (cat, sed, redirects): only the program name is checked',
-  'network connections made by shell commands: connect rules govern webfetch only',
-  'MCP tools are seen as plain tool names (`<server>_<tool>`), so the revocation list does not apply to them',
-  'approval prompts are not recorded, so OpenCode sessions do not count toward fewer approvals',
-  'sessions are closed only when OpenCode deletes them; an open log cannot detect truncation'
-];
+export { OPENCODE_GAPS } from './gaps.js';
 
 export interface OpenCodeCompilation {
   plugin: { path: string; source: string };
