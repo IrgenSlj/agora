@@ -88,7 +88,10 @@ export const commandObserve: CommandHandler = async (parsed, io, style) => {
     }
 
     for (const d of divergence) {
-      const glyph = d.severity === 'critical' ? theme.error('⚠') : theme.warning('⚠');
+      const glyph =
+        d.severity === 'critical'
+          ? theme.error(theme.glyph('fail'))
+          : theme.warning(theme.glyph('warn'));
       writeLine(io.stdout, `       ${glyph}  ${d.kind}: ${d.detail}`);
     }
 
@@ -185,11 +188,11 @@ const observeToggle: (
   for (const w of result.written) {
     writeLine(
       io.stdout,
-      `  ${theme.accent('✓')} ${w.configPath} ${theme.dim(`(${w.servers.length})`)}`
+      `  ${theme.success(theme.glyph('ok'))} ${w.configPath} ${theme.dim(`(${w.servers.length})`)}`
     );
   }
   for (const f of result.failed) {
-    writeLine(io.stderr, `  ${theme.error('✗')} ${f.configPath} — ${f.error}`);
+    writeLine(io.stderr, `  ${theme.error(theme.glyph('fail'))} ${f.configPath} — ${f.error}`);
   }
 
   if (mode === 'enable') {

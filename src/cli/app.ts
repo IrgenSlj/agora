@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { colorDepth, createStyler, type Styler, shouldUseColor } from '../ui.js';
 import type { CommandHandler } from './commands/types.js';
 import { COMMANDS, renderManual } from './commands-meta.js';
+import { headerLine } from './components.js';
 import { ExitCode } from './exit-codes.js';
 import { type CliIo, parseArgs } from './flags.js';
 import { usage, welcome } from './format.js';
@@ -66,6 +67,40 @@ export const ACTIVE_CLI_ENTRYPOINTS = [
   ...new Set([...COMMANDS.map((command) => command.name), ...HIDDEN_CLI_ENTRYPOINTS])
 ].sort();
 
+/** Commands whose few lines of output get the shared frame; never JSON, scripts or a server. */
+const FRAMED: Record<string, (sub: string) => boolean> = {
+  signer: () => true,
+  canary: (sub) => sub !== 'serve',
+  profile: (sub) => sub !== 'show',
+  policy: () => true,
+  report: () => true,
+  observe: () => true,
+  receipt: (sub) => sub === 'write' || sub === 'install' || sub === 'uninstall',
+  hook: (sub) => sub === 'install'
+};
+
+function isFramed(parsed: ReturnType<typeof parseArgs>): boolean {
+  if (parsed.flags.json || parsed.flags['dry-run']) return false;
+  const rule = parsed.command ? FRAMED[parsed.command] : undefined;
+  return Boolean(rule?.(parsed.args[0] ?? ''));
+}
+
+/** A stream that indents every line two columns. */
+function indented(stream: CliIo['stdout']): CliIo['stdout'] {
+  let atStart = true;
+  return {
+    write(chunk: string) {
+      let out = '';
+      for (const ch of String(chunk)) {
+        if (atStart && ch !== '\n') out += '  ';
+        out += ch;
+        atStart = ch === '\n';
+      }
+      return stream.write(out);
+    }
+  };
+}
+
 export async function runCli(argv: string[], io: CliIo): Promise<number> {
   const parsed = parseArgs(argv);
   const env = io.env ?? {};
@@ -122,7 +157,20 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
     };
 
     const load = cmd[parsed.command];
-    if (load) return await (await load())(parsed, io, style);
+    if (load) {
+      const handler = await load();
+      if (!isFramed(parsed)) return await handler(parsed, io, style);
+      // Short screens share one frame: the header line, a two-column indent
+      // and a closing blank line (docs/TERMINAL.md).
+      const theme = cliTheme(style, io);
+      const sub = parsed.args[0] ?? '';
+      writeLine(io.stdout, '');
+      writeLine(io.stdout, headerLine(`${parsed.command} ${sub}`.trim(), '', theme));
+      writeLine(io.stdout, '');
+      const code = await handler(parsed, { ...io, stdout: indented(io.stdout) }, style);
+      writeLine(io.stdout, '');
+      return code;
+    }
 
     if (parsed.command === 'help') {
       const helpTarget = parsed.args[0];

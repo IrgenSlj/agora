@@ -148,7 +148,7 @@ describe('agora policy and agora replay', () => {
     writeFileSync(join(repo, 'agora.cedar'), POLICY);
     const r = await cli(['replay']);
     expect(r.code).toBe(1);
-    expect(r.out).toContain('exec    curl');
+    expect(r.out).toMatch(/exec curl ·+ 1× · 1 session/);
     writeFileSync(join(repo, 'loose.cedar'), 'permit (principal, action, resource);');
     expect((await cli(['replay', '--policy', 'loose.cedar'])).code).toBe(0);
   });

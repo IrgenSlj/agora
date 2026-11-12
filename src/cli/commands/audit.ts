@@ -21,6 +21,7 @@ import type { OsvVulnerability } from '../../osv/types.js';
 import { installedPurls } from '../../revocation/installed.js';
 import { readAllServers } from '../../stack/registry.js';
 import type { ConfiguredServer } from '../../stack/types.js';
+import { headerLine, rule, section, status, tally } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import type { CliIo } from '../flags.js';
 import { writeJson, writeLine } from '../helpers.js';
@@ -125,84 +126,80 @@ export const commandAudit: CommandHandler = async (parsed, io, style) => {
 
   const theme = cliTheme(style, io);
 
+  const out = (l = '') => writeLine(io.stdout, l);
+  const plural = (k: number, w: string) => `${k} ${w}${k === 1 ? '' : 's'}`;
+  out('');
+  out(
+    headerLine(
+      'audit',
+      `${plural(addressable.length, 'server')} ${theme.glyph('arrow')} OSV.dev`,
+      theme
+    )
+  );
+  out('');
   if (!addressable.length) {
-    writeLine(io.stdout, 'No MCP servers found in any host config.');
-    writeLine(io.stdout, theme.muted('Run `agora doctor` to see what Agora can detect.'));
+    out(`  ${status('unknown', 'no MCP servers found in any host config', theme)}`);
+    out(`    ${theme.muted('agora doctor shows what Agora can detect')}`);
+    out('');
     return ExitCode.OK;
   }
 
-  writeLine(
-    io.stdout,
-    `Checked ${theme.bold(String(addressable.length))} MCP server${addressable.length === 1 ? '' : 's'} against OSV.`
-  );
-  writeLine(io.stdout, '');
-
-  for (const f of findings) {
-    const worst = f.advisories.some((a) => BLOCKING.has(a.severity));
-    const glyph = worst ? theme.error('✗') : theme.warning('⚠');
-    writeLine(io.stdout, `  ${glyph} ${theme.bold(f.server)}  ${theme.muted(f.purl)}`);
-    for (const a of f.advisories) {
-      writeLine(io.stdout, `      ${a.severity.padEnd(8)} ${a.id}  ${a.summary}`);
-      writeLine(io.stdout, theme.muted(`      ${a.url}`));
+  if (findings.length) {
+    out(
+      section('Advisories', theme, String(findings.reduce((k, f) => k + f.advisories.length, 0)))
+    );
+    for (const f of findings) {
+      const worst = f.advisories.some((a) => BLOCKING.has(a.severity));
+      out(
+        `  ${status(worst ? 'error' : 'warning', `${theme.bold(f.server)}  ${theme.muted(f.purl)}`, theme)}`
+      );
+      for (const a of f.advisories) {
+        out(`    ${theme.bold(a.severity)} ${a.id}  ${a.summary}`);
+        out(`    ${theme.muted(a.url)}`);
+      }
+      out(`    ${theme.muted(`configured in ${f.configPath}`)}`);
+      out('');
     }
-    writeLine(io.stdout, theme.muted(`      configured in ${f.configPath}`));
-    writeLine(io.stdout, '');
   }
 
   // Only claim a clean sweep when every server was actually reached. A single
-  // failed lookup means the set was never established, and printing "no
-  // published advisories" next to "1 server could not be checked" states a
-  // conclusion the run did not earn — with the reassuring half first, which is
-  // the half people read. Caught by test/audit.test.ts against this very file.
+  // failed lookup means the set was never established; "no published
+  // advisories" next to "1 server could not be checked" states a conclusion
+  // the run did not earn. test/audit.test.ts holds this.
   if (!findings.length && !unreachable.length) {
-    writeLine(
-      io.stdout,
-      `  ${theme.accent('✓')} No published advisories for any configured server.`
-    );
-    // The product's standing rule, at the one moment a user is most likely to
-    // read a clean result as a guarantee.
-    writeLine(
-      io.stdout,
-      theme.muted('    "No known advisories" is not "safe" — only what has been reported.')
-    );
-    writeLine(io.stdout, '');
+    out(`  ${status('success', 'No published advisories for any configured server.', theme)}`);
+    // The standing rule, at the moment a clean result is most likely read as a guarantee.
+    out(`    ${theme.muted('"No known advisories" is not "safe": only what has been reported.')}`);
   } else if (!findings.length && unreachable.length) {
-    writeLine(
-      io.stdout,
-      `  ${theme.muted('?')} No advisories found among the servers that could be checked.`
-    );
-    writeLine(io.stdout, '');
+    out(`  ${status('unknown', 'no advisories among the servers that could be checked', theme)}`);
   }
-
   if (unreachable.length) {
-    writeLine(
-      io.stdout,
-      theme.warning(
-        `  ? ${unreachable.length} server${unreachable.length === 1 ? '' : 's'} could not be checked — OSV unreachable`
-      )
+    out(
+      `  ${status('unknown', `${plural(unreachable.length, 'server')} could not be checked: OSV unreachable`, theme)}`
     );
-    writeLine(io.stdout, theme.muted('    Not checked is not the same as clean.'));
-    writeLine(io.stdout, '');
+    out(`    ${theme.muted('Not checked is not the same as clean.')}`);
   }
-
-  if (unaddressable.length) {
-    writeLine(
-      io.stdout,
-      theme.muted(
-        `  ${unaddressable.length} server${unaddressable.length === 1 ? '' : 's'} could not be identified as an npm package (remote, or a custom launcher) — not checked.`
-      )
+  if (unaddressable.length)
+    out(
+      `  ${status('unknown', `${plural(unaddressable.length, 'server')} not identifiable as an npm package; not checked`, theme)}`
     );
-    writeLine(io.stdout, '');
-  }
-
-  if (findings.length) {
-    writeLine(
-      io.stdout,
-      theme.dim(
-        'None of these appear in any package.json, which is why `npm audit` reports nothing.'
-      )
+  out('');
+  out(rule(theme));
+  out(
+    tally(
+      [
+        [addressable.length - unreachable.length, 'checked'],
+        [findings.length, 'with advisories'],
+        [unreachable.length + unaddressable.length, 'not checked']
+      ],
+      theme
+    )
+  );
+  if (findings.length)
+    out(
+      `  ${theme.muted('None of these is in a package.json, which is why npm audit reports nothing.')}`
     );
-  }
+  out('');
 
   return blocking.length ? ExitCode.POLICY_FORBID : ExitCode.OK;
 };

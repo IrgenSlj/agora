@@ -55,10 +55,10 @@ export function annotationsFor(report: CiReport): string[] {
 }
 
 const GLYPH: Record<CiCheck['state'], string> = {
-  pass: '✅',
-  fail: '❌',
-  not_established: '❔',
-  unavailable: '⚠️'
+  pass: '✓',
+  fail: '✗',
+  not_established: '?',
+  unavailable: '?'
 };
 
 const LABEL: Record<CiCheck['state'], string> = {
@@ -104,10 +104,10 @@ export function jobSummary(report: CiReport): string {
     for (const c of report.receipts) {
       const head =
         c.state === 'valid'
-          ? `✅ \`${c.sha.slice(0, 12)}\` receipt verifies · signer ${c.level}`
+          ? `✓ \`${c.sha.slice(0, 12)}\` receipt verifies · ${c.level === 'none' ? '◇ unsigned' : `◆ signed ${c.level}`}`
           : c.state === 'invalid'
-            ? `❌ \`${c.sha.slice(0, 12)}\` receipt rejected: ${c.problems.join('; ')}`
-            : `❔ \`${c.sha.slice(0, 12)}\` no receipt (not established)`;
+            ? `✗ \`${c.sha.slice(0, 12)}\` receipt rejected: ${c.problems.join('; ')}`
+            : `? \`${c.sha.slice(0, 12)}\` no receipt: not established`;
       out.push(`<details><summary>${head}</summary>`, '');
       if (c.lines.length) out.push('```', ...c.lines, '```');
       out.push('', '</details>', '');

@@ -6,7 +6,7 @@ import { atomicWriteFile } from '../../atomic-write.js';
 import { lintPolicyText, POLICY_FILE } from '../../policy/engine.js';
 import { addProfile, listProfiles, SERVER_NAME } from '../../policy/profiles.js';
 import { repoRoot } from '../../receipt/git.js';
-import { status } from '../components.js';
+import { section, status } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
@@ -25,11 +25,18 @@ export const commandProfile: CommandHandler = async (parsed, io, style) => {
       );
       return ExitCode.OK;
     }
-    for (const p of profiles)
-      writeLine(io.stdout, `${theme.accent(p.name)}  ${theme.dim(p.summary)}`);
+    writeLine(io.stdout, section('Profiles', theme, String(profiles.length)).slice(2));
+    for (const p of profiles) {
+      writeLine(io.stdout, theme.accent(p.name));
+      writeLine(
+        io.stdout,
+        `  ${theme.muted(`${p.package ?? ''} · ${p.summary.split(', ').at(-1) ?? ''}`)}`
+      );
+    }
+    writeLine(io.stdout, '');
     writeLine(
       io.stdout,
-      theme.dim('\nAdd one with `agora profile add <name> --server <name in your host config>`.')
+      theme.muted('add one  agora profile add <name> --server <name in your host config>')
     );
     return ExitCode.OK;
   }

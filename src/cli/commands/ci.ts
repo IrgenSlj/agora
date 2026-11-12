@@ -60,12 +60,10 @@ export const commandCi: CommandHandler = async (parsed, io, style) => {
     const theme = cliTheme(style, io);
     const glyph = (c: CiCheck) =>
       c.state === 'pass'
-        ? theme.accent('✓')
+        ? theme.success(theme.glyph('ok'))
         : c.state === 'fail'
-          ? theme.error('✗')
-          : c.state === 'unavailable'
-            ? theme.warning('⚠')
-            : theme.muted('?');
+          ? theme.error(theme.glyph('fail'))
+          : theme.unknown(theme.glyph('unknown'));
 
     writeLine(io.stdout, '');
     for (const check of report.checks) {

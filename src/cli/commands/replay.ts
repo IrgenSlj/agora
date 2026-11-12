@@ -8,6 +8,7 @@ import { loadPolicySet, POLICY_FILE } from '../../policy/engine.js';
 import { revocationFacts } from '../../policy/facts.js';
 import { replay } from '../../policy/replay.js';
 import { repoRoot } from '../../receipt/git.js';
+import { headerLine, leader, MEASURE, rule, section, status, tally } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
@@ -70,32 +71,47 @@ export const commandReplay: CommandHandler = async (parsed, io, style) => {
     });
   } else {
     const n = sessions.verified.length;
-    writeLine(
-      io.stdout,
-      `${result.evaluated} actions across ${n} session${n === 1 ? '' : 's'} replayed against ${policyArg ?? POLICY_FILE}.`
+    const out = (l = '') => writeLine(io.stdout, l);
+    const plural = (k: number, w: string) => `${k} ${w}${k === 1 ? '' : 's'}`;
+    out('');
+    out(
+      headerLine(
+        'replay',
+        `${policyArg ?? POLICY_FILE} ${theme.glyph('arrow')} ${plural(n, 'session')}`,
+        theme
+      )
     );
+    out('');
     if (!result.denied) {
-      writeLine(io.stdout, `${theme.success('✓')} nothing would have been denied.`);
+      out(`  ${status('success', 'nothing would have been denied', theme)}`);
     } else {
-      writeLine(io.stdout, `${theme.error('✗')} ${result.denied} would have been denied:`);
+      out(section('Would have been denied', theme, String(result.denied)));
       for (const g of result.groups.slice(0, 50)) {
         const why = g.reasons.length ? `by ${g.reasons.join(', ')}` : 'no rule permits it';
-        writeLine(
-          io.stdout,
-          `    ${g.action.padEnd(7)} ${g.subject}  ${theme.dim(`${g.count}× in ${g.sessions} session${g.sessions === 1 ? '' : 's'} · ${why}`)}`
+        out(
+          `  ${theme.error(theme.glyph('denied'))} ${leader(`${g.action} ${g.subject}`, theme.muted(`${g.count}× · ${plural(g.sessions, 'session')}`), theme, MEASURE - 2)}`
         );
+        out(`    ${theme.muted(why)}`);
       }
-      if (result.groups.length > 50)
-        writeLine(io.stdout, theme.dim(`    … ${result.groups.length - 50} more`));
+      if (result.groups.length > 50) out(`  ${theme.muted(`… ${result.groups.length - 50} more`)}`);
     }
-    if (result.inconclusive) {
-      writeLine(
-        io.stdout,
-        theme.warning(
-          `${result.inconclusive} decision(s) were reached with a rule skipped on error; run \`agora policy check\`.`
-        )
+    if (result.inconclusive)
+      out(
+        `  ${status('unknown', `${plural(result.inconclusive, 'decision')} had a rule skipped on error · agora policy check`, theme)}`
       );
-    }
+    out('');
+    out(rule(theme));
+    out(
+      tally(
+        [
+          [result.evaluated, 'actions replayed'],
+          [result.denied, 'denied'],
+          [result.inconclusive, 'inconclusive']
+        ],
+        theme
+      )
+    );
+    out('');
   }
   return result.denied || result.inconclusive ? ExitCode.POLICY_FORBID : ExitCode.OK;
 };

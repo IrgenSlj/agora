@@ -5,6 +5,7 @@ import { join, relative } from 'node:path';
 import { atomicWriteFile } from '../../atomic-write.js';
 import { lintPolicyText, POLICY_FILE } from '../../policy/engine.js';
 import { repoRoot } from '../../receipt/git.js';
+import { status } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
@@ -42,7 +43,7 @@ export const commandPolicy: CommandHandler = async (parsed, io, style) => {
     if (existsSync(path))
       return usageError(io, `${relative(cwd, path) || POLICY_FILE} already exists.`);
     atomicWriteFile(path, SCAFFOLD, 0o644);
-    writeLine(io.stdout, `Created ${theme.accent(relative(cwd, path) || POLICY_FILE)}.`);
+    writeLine(io.stdout, status('success', `created ${relative(cwd, path) || POLICY_FILE}`, theme));
     writeLine(
       io.stdout,
       theme.dim('It permits everything until you run `agora learn --apply` or edit it.')
@@ -56,7 +57,7 @@ export const commandPolicy: CommandHandler = async (parsed, io, style) => {
       else
         writeLine(
           io.stdout,
-          theme.muted(`No ${POLICY_FILE}: agents are limited only by the baseline.`)
+          status('unknown', `no ${POLICY_FILE}: agents are limited only by the baseline`, theme)
         );
       return ExitCode.OK;
     }
@@ -66,10 +67,10 @@ export const commandPolicy: CommandHandler = async (parsed, io, style) => {
     } else if (lint.ok) {
       writeLine(
         io.stdout,
-        `${theme.success('✓')} ${POLICY_FILE} is valid against the agent-action schema.`
+        status('success', `${POLICY_FILE} is valid against the agent-action schema`, theme)
       );
     } else {
-      writeLine(io.stdout, `${theme.error('✗')} ${POLICY_FILE}`);
+      writeLine(io.stdout, status('error', `${POLICY_FILE} does not validate`, theme));
       for (const p of [...lint.errors, ...lint.schemaViolations])
         writeLine(io.stdout, theme.dim(`    ${p}`));
     }
