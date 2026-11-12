@@ -91,8 +91,10 @@ export function buildReceipt(input: {
 
   if (!sessions.length) return { status: 'no-sessions', window };
 
+  // What happened: a denied call never ran, so it is counted under `denied`
+  // and not listed as touched.
   const of = (kind: AgentEvent['kind']) =>
-    events.filter((e) => e.kind === kind).map((e) => e.subject);
+    events.filter((e) => e.kind === kind && e.decision !== 'denied').map((e) => e.subject);
   const servers = new Map<string, number>();
   for (const subject of of('tool_call')) {
     const m = /^mcp:([^/]+)\//.exec(subject);

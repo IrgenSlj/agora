@@ -86,7 +86,9 @@ describe('buildReceipt', () => {
     expect(r.predicate.sessions[0]).toMatchObject({ seq: 2, events: 3, closed: false });
     expect(r.predicate.touched.written.items).toEqual(['b.txt']);
     expect(r.predicate.touched.commands.items).toEqual(['git']);
-    expect(r.predicate.servers).toEqual([{ name: 'github', calls: 1 }]);
+    // The github call was denied, so it never reached the server.
+    expect(r.predicate.servers).toEqual([]);
+    expect(r.predicate.touched.tools.items).toEqual([]);
     expect(r.predicate.denied).toBe(1);
     expect(r.predicate.policy_sha256).toBeNull();
     expect(r.statement.subject).toEqual([{ name: 'git:commit', digest: { gitCommit: c2 } }]);

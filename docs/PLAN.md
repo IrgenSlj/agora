@@ -287,6 +287,12 @@ Decisions made while building it:
 
 Started while the phase 3 gate collects real sessions: that gate waits on use, not on code.
 
+**Gate passed 2026-11-12.** In a scratch repository using both hosts, one `agora.cedar` compiled to
+Claude Code settings and the OpenCode plugin, and `agora plan` listed each host's gaps. A live
+OpenCode session was denied `curl` by the policy, then hit the canary file and the decoy tool;
+the commit's receipt verified, counted three denials and two canary hits, and listed OpenCode's
+gaps under "not seen". Receipts now list only what ran: denied calls are counted, not touched.
+
 How OpenCode works, checked against a live OpenCode 1.19.3 session on 2026-11-12:
 
 - `agora apply` writes `.opencode/plugins/agora.js` when the repository uses OpenCode. The plugin
