@@ -68,6 +68,20 @@ export function row(
   return `  ${head}${first} ${leader(middle, right, theme, width - vlen(first) - 1)}`;
 }
 
+/** Words wrapped to a width. */
+export function wrap(text: string, width: number): string[] {
+  const lines: string[] = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    if (line && line.length + word.length + 1 > width) {
+      lines.push(line);
+      line = word;
+    } else line = line ? `${line} ${word}` : word;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
 export function rule(theme: Theme): string {
   return `  ${theme.muted(theme.glyph('rule').repeat(MEASURE))}`;
 }

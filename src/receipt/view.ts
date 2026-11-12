@@ -1,7 +1,7 @@
 // A receipt on the terminal (docs/TERMINAL.md): what the sessions did, how it
 // was signed, and everything the receipt cannot speak for.
 
-import { headerLine, leader, MEASURE, rule, section, status } from '../cli/components.js';
+import { headerLine, leader, MEASURE, rule, section, status, wrap } from '../cli/components.js';
 import type { Theme } from '../cli/theme.js';
 import type { ReceiptPredicate, SignerLevel } from './predicate.js';
 import type { ReceiptVerdict } from './verify.js';
@@ -12,19 +12,6 @@ const SIGNER: Record<SignerLevel, string> = {
   'local-keychain': "this machine's keychain key",
   'runner-oidc': 'sigstore keyless, signed by a CI runner'
 };
-
-function wrap(text: string, width: number): string[] {
-  const lines: string[] = [];
-  let line = '';
-  for (const word of text.split(' ')) {
-    if (line && line.length + word.length + 1 > width) {
-      lines.push(line);
-      line = word;
-    } else line = line ? `${line} ${word}` : word;
-  }
-  if (line) lines.push(line);
-  return lines;
-}
 
 export interface ReceiptView {
   sha: string;

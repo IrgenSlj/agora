@@ -10,6 +10,7 @@ import { compileOpenCode } from '../../compile/opencode.js';
 import { MANAGED_FILE, type Managed, mergeSettings } from '../../compile/settings.js';
 import { loadCedar, loadPolicySet, POLICY_FILE } from '../../policy/engine.js';
 import { repoRoot } from '../../receipt/git.js';
+import { headerLine, leader, MEASURE, rule, section, status, tally, wrap } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { usageError, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
@@ -104,58 +105,100 @@ export const commandPlan: CommandHandler = async (parsed, io, style) => {
       applied: write && !nothing
     });
   } else {
-    writeLine(io.stdout, `${theme.accent('Claude Code')} ${theme.dim(`· ${SETTINGS}`)}`);
-    if (!set.project) {
-      writeLine(
-        io.stdout,
-        theme.dim(
-          `  no ${POLICY_FILE}: only the hooks are installed; agents are limited by the baseline alone`
-        )
+    const hosts = opencode ? 2 : 1;
+    const out = (line = '') => writeLine(io.stdout, line);
+    const arrow = theme.glyph('arrow');
+    out('');
+    out(
+      headerLine(
+        write ? 'apply' : 'plan',
+        `${POLICY_FILE} ${arrow} ${hosts} host${hosts === 1 ? '' : 's'}`,
+        theme
+      )
+    );
+    if (!set.project)
+      out(
+        `  ${theme.muted(`no ${POLICY_FILE}: hooks only; agents are limited by the baseline alone`)}`
       );
-    }
-    const ccNothing =
-      !merged.change.hooks.length && !merged.change.added.length && !merged.change.removed.length;
-    if (ccNothing) writeLine(io.stdout, theme.dim('  up to date'));
-    for (const h of merged.change.hooks) writeLine(io.stdout, theme.success(`  + hook ${h}`));
-    for (const r of merged.change.added) writeLine(io.stdout, theme.success(`  + allow ${r}`));
-    for (const r of merged.change.removed) writeLine(io.stdout, theme.error(`  - allow ${r}`));
-    if (compilation.hookOnly.length) {
-      writeLine(
-        io.stdout,
-        theme.muted('\n  Enforced by the hook only (Claude Code will still ask before these):')
-      );
-      for (const h of compilation.hookOnly)
-        writeLine(io.stdout, theme.dim(`    ${h.policy}: ${h.why}`));
-    }
-    writeLine(io.stdout, theme.muted('\n  Not enforced, because Claude Code cannot see it:'));
-    for (const n of compilation.notEnforced) writeLine(io.stdout, theme.dim(`    ${n}`));
-    writeLine(io.stdout, '');
+    out('');
+
+    const ch = merged.change;
+    const unchanged = compilation.allow.filter((r) => !ch.added.includes(r)).length;
+    const byRule = new Map(compilation.compiled.flatMap((c) => c.native.map((n) => [n, c.policy])));
+    out(section('Claude Code', theme, `+${ch.added.length}  -${ch.removed.length}  =${unchanged}`));
+    out(`  ${theme.muted(SETTINGS)}`);
+    for (const h of ch.hooks) out(`  ${theme.success('+')} hook   ${h}`);
+    const ruleLine = (sign: string, r: string, why: string) =>
+      `  ${leader(`${sign} allow  ${r}`, theme.muted(why), theme, MEASURE)}`;
+    for (const r of ch.added) out(ruleLine(theme.success('+'), r, byRule.get(r) ?? ''));
+    for (const r of ch.removed) out(ruleLine(theme.error('-'), r, 'no longer in the policy'));
+    if (unchanged)
+      out(`  ${theme.muted(`= ${unchanged} rule${unchanged === 1 ? '' : 's'} unchanged`)}`);
+    if (!ch.hooks.length && !ch.added.length && !ch.removed.length)
+      out(`  ${theme.muted('up to date')}`);
+
     if (opencode) {
-      writeLine(io.stdout, `${theme.accent('OpenCode')} ${theme.dim(`· ${opencode.plugin.path}`)}`);
-      writeLine(
-        io.stdout,
-        pluginChanged ? theme.success('  + plugin agora.js') : theme.dim('  up to date')
+      out('');
+      out(section('OpenCode', theme, pluginChanged ? '+1' : '=1'));
+      out(`  ${theme.muted(opencode.plugin.path)}`);
+      out(
+        pluginChanged ? `  ${theme.success('+')} plugin agora.js` : `  ${theme.muted('up to date')}`
       );
-      writeLine(
-        io.stdout,
-        theme.dim(
-          '  The plugin enforces every rule; OpenCode allows by default, so no allow rules are written.'
-        )
+      out(
+        `  ${status('info', theme.muted('OpenCode allows by default, so no allow rules are written.'), theme)}`
       );
-      writeLine(io.stdout, theme.muted('\n  Not enforced, because OpenCode cannot see it:'));
-      for (const n of opencode.notEnforced) writeLine(io.stdout, theme.dim(`    ${n}`));
     } else {
-      writeLine(
-        io.stdout,
-        theme.dim('OpenCode · not used here (no .opencode/ or opencode.json); nothing to compile')
+      out('');
+      out(`  ${theme.muted('OpenCode · not used here (no .opencode/ or opencode.json)')}`);
+    }
+
+    if (compilation.hookOnly.length) {
+      out('');
+      out(section('Enforced by the hook only', theme, String(compilation.hookOnly.length)));
+      for (const h of compilation.hookOnly) {
+        out(`  ${status('warning', h.policy, theme)}`);
+        for (const l of wrap(h.why, MEASURE - 4)) out(`    ${theme.muted(l)}`);
+      }
+      out(
+        `  ${status('info', theme.muted('These hold while the agora hook runs; the host still asks.'), theme)}`
       );
     }
-    writeLine(io.stdout, '');
+
+    const gaps = [
+      ...compilation.notEnforced.map((g) => `claude-code: ${g}`),
+      ...(opencode?.notEnforced ?? []).map((g) => `opencode: ${g}`)
+    ];
+    out('');
+    out(section('Not enforced', theme, String(gaps.length)));
+    for (const g of gaps) {
+      const [head, ...rest] = wrap(g, MEASURE - 2);
+      out(`  ${status('unknown', theme.muted(head ?? ''), theme)}`);
+      for (const r of rest) out(`    ${theme.muted(r)}`);
+    }
+
+    out('');
+    out(rule(theme));
+    out(
+      tally(
+        [
+          [ch.added.length, `added`],
+          [ch.removed.length, 'removed'],
+          [compilation.hookOnly.length, 'hook only'],
+          [gaps.length, 'not enforced']
+        ],
+        theme
+      )
+    );
   }
 
   if (!write) {
-    if (!parsed.flags.json && !nothing)
-      writeLine(io.stdout, theme.dim('Nothing written. Run `agora apply` to write it.'));
+    if (!parsed.flags.json)
+      writeLine(
+        io.stdout,
+        nothing
+          ? `  ${theme.muted('nothing to write')}\n`
+          : `  ${theme.muted('nothing written. to apply')}  agora apply\n`
+      );
     return ExitCode.OK;
   }
   if (!nothing) {
@@ -166,7 +209,11 @@ export const commandPlan: CommandHandler = async (parsed, io, style) => {
       atomicWriteFile(join(root, opencode.plugin.path), opencode.plugin.source, 0o644);
       wrote.push(opencode.plugin.path);
     }
-    if (!parsed.flags.json) writeLine(io.stdout, `Wrote ${wrote.join(', ')}. Commit them.`);
+    if (!parsed.flags.json)
+      writeLine(
+        io.stdout,
+        `  ${status('success', `wrote ${wrote.join(', ')}; commit them`, theme)}\n`
+      );
   }
   return ExitCode.OK;
 };

@@ -133,8 +133,8 @@ describe('agora plan, apply and enforcement', () => {
   test('plan writes nothing; apply writes settings and is idempotent', async () => {
     const plan = await cli(['plan']);
     expect(plan.code).toBe(0);
-    expect(plan.out).toContain('+ allow Read(/src/**)');
-    expect(plan.out).toContain('Enforced by the hook only');
+    expect(plan.out).toMatch(/\+ allow {2}Read\(\/src\/\*\*\)/);
+    expect(plan.out).toContain('ENFORCED BY THE HOOK ONLY');
     expect(() => settings()).toThrow();
 
     expect((await cli(['apply'])).code).toBe(0);
@@ -147,7 +147,7 @@ describe('agora plan, apply and enforcement', () => {
     await cli(['apply']);
     writeFileSync(join(repo, 'agora.cedar'), LEARNED.replace(/@id\("learn-exec"\).*\n/, ''));
     const r = await cli(['apply']);
-    expect(r.out).toContain('- allow Bash(git *)');
+    expect(r.out).toMatch(/- allow {2}Bash\(git \*\)/);
     expect(settings().permissions.allow).not.toContain('Bash(git *)');
   });
 
@@ -213,10 +213,10 @@ describe('OpenCode', () => {
 
   test('one policy compiles to both hosts, each listing its gaps', async () => {
     const plan = await cli(['plan']);
-    expect(plan.out).toContain('Claude Code');
-    expect(plan.out).toContain('OpenCode · .opencode/plugins/agora.js');
+    expect(plan.out).toContain('CLAUDE CODE');
+    expect(plan.out).toMatch(/OPENCODE +\+1\n +\.opencode\/plugins\/agora\.js/);
     expect(plan.out).toContain('+ plugin agora.js');
-    expect(plan.out).toContain('Not enforced, because OpenCode cannot see it');
+    expect(plan.out).toMatch(/\? opencode: /);
     const json = JSON.parse((await cli(['plan', '--json'])).out);
     expect(json.opencode.not_enforced.length).toBeGreaterThan(0);
     expect(existsSync(join(repo, '.opencode/plugins/agora.js'))).toBe(false);
