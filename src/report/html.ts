@@ -34,7 +34,7 @@ function commitRow(c: ReportCommit): string {
     : '';
   return `<tr>
   <td class="mono">${esc(c.sha.slice(0, 12))}</td>
-  <td>${esc(c.date.slice(0, 10))}</td>
+  <td class="mono nowrap">${esc(c.date.slice(0, 10))}</td>
   <td>${esc(c.subject)}<div class="muted">${esc(detail)}</div>${problems}</td>
   <td><span class="state ${s.cls}">${s.label}</span>${c.level && c.state === 'valid' ? `<div class="muted">signer ${esc(c.level)}</div>` : ''}</td>
 </tr>`;
@@ -58,32 +58,39 @@ export function renderReportHtml(r: Report): string {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agent evidence report · ${esc(r.repository)}</title>
 <style>
-:root { --bg:#faf8f4; --fg:#2b2620; --muted:#7a7166; --line:#e4ddd2; --ok:#3f7d4e; --bad:#a8432f; --unknown:#8a6d1f; --panel:#f2eee6; }
-@media (prefers-color-scheme: dark) { :root { --bg:#1c1a17; --fg:#ece6dc; --muted:#a39a8d; --line:#3a352e; --ok:#7fbf8e; --bad:#e08a75; --unknown:#d9b75e; --panel:#25221e; } }
+/* Tokens from src/ui.ts (docs/TERMINAL.md). Dark is the brand panel; light follows the reader. */
+:root { --bg:#15181C; --panel:#1C2026; --fg:#D9D6CE; --muted:#807D75; --line:#2A2F36;
+  --accent:#3A86AD; --ok:#4C9457; --warn:#B5802A; --bad:#CC5A48; --unknown:#8B7BC4; }
+@media (prefers-color-scheme: light) { :root { --bg:#F4F2EC; --panel:#FFFFFF; --fg:#1E2126;
+  --muted:#6B6860; --line:#E2DED5; } }
 * { box-sizing: border-box; }
-body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+body { margin:0; background:var(--bg); color:var(--fg);
+  font:15px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
-h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 32px 0 8px; }
+.ramp { color: var(--accent); letter-spacing: 1px; }
+h1 { font-size: 20px; margin: 0 0 4px; font-weight: 600; }
+h2 { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 32px 0 8px; }
 .muted { color: var(--muted); font-size: 13px; }
-.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+.mono { font-size: 13px; }
 .stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 20px; }
 .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
 .stat .n { font-size: 22px; font-weight: 600; } .stat .l { color: var(--muted); font-size: 13px; }
 .stat.ok .n { color: var(--ok); } .stat.bad .n { color: var(--bad); } .stat.unknown .n { color: var(--unknown); }
 table { width:100%; border-collapse: collapse; } td { border-top: 1px solid var(--line); padding: 10px 8px; vertical-align: top; }
-.table { overflow-x: auto; }
+.table { overflow-x: auto; } .nowrap { white-space: nowrap; }
 .state { font-size: 13px; font-weight: 600; white-space: nowrap; }
 .state.ok { color: var(--ok); } .state.bad { color: var(--bad); } .state.unknown { color: var(--unknown); }
 .state.ok::before { content: "✓ "; } .state.bad::before { content: "✗ "; } .state.unknown::before { content: "? "; }
 .problems { color: var(--bad); font-size: 13px; margin-top: 4px; }
-ul { padding-left: 18px; } li { margin: 2px 0; }
+ul { padding-left: 18px; } li { margin: 2px 0; } li::marker { color: var(--unknown); content: "? "; }
 footer { margin-top: 40px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 12px; }
-@media print { body { background: #fff; } .stat { break-inside: avoid; } }
+@media print { body { background: #fff; color: #000; } .stat { break-inside: avoid; } }
 </style>
 </head>
 <body>
 <main>
-<h1>Agent evidence report</h1>
+<div class="ramp" aria-hidden="true">░▒▓█</div>
+<h1>agora · agent evidence report</h1>
 <div class="muted">${esc(r.repository)} · ${esc(r.rev)} · ${range} · generated ${esc(r.generated)}</div>
 
 <div class="stats">

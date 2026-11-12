@@ -53,8 +53,13 @@ export async function buildReport(opts: {
 }): Promise<Report> {
   const rev = opts.rev ?? 'HEAD';
   const args = ['log', '--format=%H%x09%cI%x09%s', '--no-merges'];
-  if (opts.since) args.push(`--since=${opts.since}`);
-  if (opts.until) args.push(`--until=${opts.until}`);
+  // Git reads a bare date as that day at the current time of day, so
+  // `--since 2026-11-12` would skip the morning. A bare date means the whole day.
+  const day = /^\d{4}-\d{2}-\d{2}$/;
+  if (opts.since)
+    args.push(`--since=${day.test(opts.since) ? `${opts.since} 00:00:00` : opts.since}`);
+  if (opts.until)
+    args.push(`--until=${day.test(opts.until) ? `${opts.until} 23:59:59` : opts.until}`);
   args.push(rev, '--');
   const out = git(opts.repo, args);
   // Keys trusted at the reported revision, the same rule `agora ci` applies.

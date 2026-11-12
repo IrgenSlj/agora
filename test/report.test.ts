@@ -113,4 +113,15 @@ describe('agora report', () => {
     repo = root;
     expect((await cli(['report'])).code).toBe(2);
   });
+
+  test('a bare --since date covers the whole day', async () => {
+    const { buildReport } = await import('../src/report/build');
+    // commitAt dates are in November 2023; the day of the first commit covers both.
+    const day = execFileSync('git', ['log', '--reverse', '--format=%cs'], {
+      cwd: repo,
+      encoding: 'utf8'
+    }).split('\n')[0] as string;
+    const r = await buildReport({ repo, name: 'r', since: day, until: day });
+    expect(r.totals.commits).toBe(2);
+  });
 });

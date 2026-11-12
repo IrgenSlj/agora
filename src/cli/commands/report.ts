@@ -41,7 +41,7 @@ export const commandReport: CommandHandler = async (parsed, io, style) => {
   writeLine(
     io.stdout,
     status(
-      t.invalid ? 'error' : t.missing ? 'warning' : 'success',
+      t.invalid ? 'error' : !t.commits ? 'unknown' : t.missing ? 'warning' : 'success',
       `${t.valid} of ${t.commits} commits carry a receipt that verifies` +
         (t.invalid ? ` · ${t.invalid} rejected` : '') +
         (t.missing ? ` · ${t.missing} not established` : ''),
