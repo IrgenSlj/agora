@@ -160,7 +160,7 @@ describe('agora log', () => {
     write3();
     const ok = await run(['show', S]);
     expect(ok.code).toBe(0);
-    expect(ok.out).toMatch(/● +[0-9:]+  read +b\.ts/);
+    expect(ok.out).toMatch(/● +[0-9:]+ {2}read +b\.ts/);
     const path = logPath(dir, S);
     writeFileSync(path, readFileSync(path, 'utf8').replace('b.ts', 'x.ts'));
     expect((await run(['show', S])).code).toBe(1);

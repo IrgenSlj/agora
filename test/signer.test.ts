@@ -128,6 +128,6 @@ describe.runIf(process.platform === 'darwin')('macOS keychain, end to end', () =
     expect(await runCli(['receipt', 'write'], io as never)).toBe(0);
     out.length = 0;
     expect(await runCli(['receipt', 'verify'], io as never)).toBe(0);
-    expect(out.join('')).toContain('signer local-keychain');
+    expect(out.join('')).toMatch(/◆ signed +local-keychain/);
   });
 });

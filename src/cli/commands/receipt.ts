@@ -4,7 +4,7 @@
 import { envelope } from '../../evidence/dsse.js';
 import { sha256Hex } from '../../model/hash.js';
 import { buildReceipt, POLICY_FILE } from '../../receipt/build.js';
-import { fileAt, readNote, repoRoot, resolveCommit, writeNote } from '../../receipt/git.js';
+import { fileAt, readNote, repoRoot, resolveCommit, tryGit, writeNote } from '../../receipt/git.js';
 import { parseRunners, parseSigners, SIGNERS_FILE, type TrustedKey } from '../../receipt/keys.js';
 import { receiptLines } from '../../receipt/render.js';
 import { verifyReceipt } from '../../receipt/verify.js';
@@ -160,20 +160,33 @@ export const commandReceipt: CommandHandler = async (parsed, io, style) => {
       trusted: trustedKeysAt(repo, trustedAt),
       runners: trustedRunnersAt(repo, trustedAt)
     });
+    const written = new Set(verdict.predicate?.touched.written.items ?? []);
+    const changed = (
+      tryGit(repo, ['diff-tree', '--no-commit-id', '--name-only', '-r', '--root', sha]) ?? ''
+    )
+      .split('\n')
+      .filter(Boolean);
+    const unseen = verdict.predicate?.touched.written.truncated
+      ? []
+      : changed.filter((f) => !written.has(f));
     if (parsed.flags.json) {
       writeJson(io.stdout, {
         commit: sha,
         status: verdict.valid ? 'valid' : 'invalid',
-        ...verdict
+        ...verdict,
+        unseen
       });
-    } else {
-      const head = `${sha.slice(0, 12)} · receipt ${verdict.valid ? 'verifies' : 'does not verify'} · signer ${verdict.level}`;
-      writeLine(io.stdout, status(verdict.valid ? 'success' : 'error', head, theme));
+    } else if (!verdict.predicate) {
+      writeLine(io.stdout, status('error', `${sha.slice(0, 12)} · receipt does not verify`, theme));
       for (const p of verdict.problems) writeLine(io.stdout, theme.error(`  ${p}`));
-      if (verdict.predicate) {
-        for (const line of receiptLines(verdict.predicate))
-          writeLine(io.stdout, theme.dim(`  ${line}`));
-      }
+    } else {
+      const { renderReceiptView } = await import('../../receipt/view.js');
+      const subject = tryGit(repo, ['log', '-1', '--format=%s', sha]);
+      for (const line of renderReceiptView(
+        { sha, subject, verdict, unseen, command: `receipt ${sub}` },
+        theme
+      ))
+        writeLine(io.stdout, line);
     }
     return verdict.valid ? ExitCode.OK : ExitCode.POLICY_FORBID;
   }

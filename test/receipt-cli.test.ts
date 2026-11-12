@@ -59,8 +59,9 @@ describe('agora receipt', () => {
     expect(JSON.parse(note(sha)).payloadType).toBe('application/vnd.in-toto+json');
     const v = await cli(['verify']);
     expect(v.code).toBe(0);
-    expect(v.out).toContain('receipt verifies · signer none');
-    expect(v.out).toContain('wrote      b.txt');
+    expect(v.out).toContain('✓ verifies');
+    expect(v.out).toMatch(/signer +◇ unsigned +none/);
+    expect(v.out).toMatch(/FILES WRITTEN +1\n +b\.txt/);
   });
 
   test('a commit without agent activity gets no receipt; verify says not established', async () => {
@@ -90,7 +91,7 @@ describe('agora receipt', () => {
     setNote(sha, JSON.stringify(env));
     const v = await cli(['verify']);
     expect(v.code).toBe(0);
-    expect(v.out).toContain('signer none');
+    expect(v.out).toMatch(/◇ unsigned +none/);
   });
 
   test('a receipt moved to another commit does not verify', async () => {
@@ -134,5 +135,17 @@ describe('agora receipt', () => {
   test('outside a git repository it is a usage error', async () => {
     repo = root;
     expect((await cli(['show'])).code).toBe(2);
+  });
+
+  test('a file in the commit that no session wrote is listed as not seen', async () => {
+    // A second, hand-made file in the same commit as the agent's b.txt.
+    execFileSync('git', ['reset', '-q', '--soft', 'HEAD~1'], { cwd: repo });
+    writeFileSync(join(repo, 'by-hand.txt'), 'x');
+    sha = commitAt(repo, 2000, 'b.txt');
+    await cli(['write']);
+    const v = await cli(['show']);
+    expect(v.out).toMatch(/\? by-hand\.txt ·+ in the commit, in no recorded session/);
+    expect(v.out).not.toMatch(/\? b\.txt ·/);
+    expect(JSON.parse((await cli(['show', '--json'])).out).unseen).toEqual(['by-hand.txt']);
   });
 });
