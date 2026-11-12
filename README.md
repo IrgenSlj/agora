@@ -51,19 +51,32 @@ The full plan, with a runnable gate for each phase, is in [`docs/PLAN.md`](./doc
 ## Try it
 
 ```console
-$ npx -y agora-hub doctor
+$ agora doctor
+  ░▒▓█ agora doctor                                       ~/repo
 
-Hosts
-  ✓ Claude Code · 3 MCP servers
-  ✓ Cursor · 1 MCP server
-  · VS Code · not found
+  HOSTS                                              enforcement
+  ! claude-code ····· hook not installed ·········· not enforced
+  ? hosts ··········· no agent host found ·············· unknown
 
-Enforcement
-  ⚠ Claude Code hook not installed · run `agora hook install`
-  ⚠ no agora.cedar · run `agora policy init`
+  POLICY
+  ✓ agora.cedar ····· present ···························· found
 
-Revocations
-  ✓ no configured server is on the revocation list (4 checked)
+  LOG
+  ✓ sessions ········ 1 recorded ················· last <time>
+  ✓ hash chain ······ 8 entries ························· intact
+
+  RECEIPTS
+  ! git hooks ······· receipts written by hand ··· not installed
+  ! signer ·········· ◇ unsigned ·························· none
+  • canary ·········· `agora canary install` ·············· none
+
+  REVOCATIONS
+  ✓ list ············ version 3 ························ current
+  ✓ servers ········· 0 checked ·························· clear
+
+  ──────────────────────────────────────────────────────────────
+  5 pass · 3 warn · 1 unknown
+    next  agora hook install
 ```
 
 ```bash
