@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
@@ -92,5 +92,60 @@ describe('agora canary', () => {
 
   test('outside a git repository it is a usage error', async () => {
     expect((await cli(['install'], root)).code).toBe(2);
+  });
+
+  describe('the decoy tool', () => {
+    const top = () =>
+      execFileSync('git', ['rev-parse', '--show-toplevel'], { cwd: repo, encoding: 'utf8' }).trim();
+    const claudeJson = () => JSON.parse(readFileSync(join(root, '.claude.json'), 'utf8'));
+
+    test('install --tool registers it for this repository only, keeping every other key', async () => {
+      writeFileSync(
+        join(root, '.claude.json'),
+        JSON.stringify({ theme: 'dark', projects: { '/other': { mcpServers: { x: {} } } } })
+      );
+      expect((await cli(['install', '--tool'])).code).toBe(0);
+      const doc = claudeJson();
+      expect(doc.theme).toBe('dark');
+      expect(doc.projects['/other']).toEqual({ mcpServers: { x: {} } });
+      expect(doc.projects[top()].mcpServers['deploy-vault']).toMatchObject({
+        command: 'agora',
+        args: ['canary', 'serve']
+      });
+
+      expect(denied(check('mcp__deploy-vault__get_deploy_credentials', {}).out)).toBe(true);
+      expect(denied(check('get_deploy_credentials', {}, 'opencode').out)).toBe(true);
+      const events = readEvents(join(root, 'agora'), 's1');
+      expect(events.map((e) => [e.host, e.kind, e.subject])).toEqual([
+        ['claude-code', 'canary', 'mcp:deploy-vault/get_deploy_credentials'],
+        ['opencode', 'canary', 'tool:get_deploy_credentials']
+      ]);
+
+      await cli(['remove']);
+      expect(claudeJson().projects[top()].mcpServers['deploy-vault']).toBeUndefined();
+      expect(claudeJson().theme).toBe('dark');
+    });
+
+    test('the server lists one tool and refuses every call', () => {
+      const lines = [
+        { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18' } },
+        { jsonrpc: '2.0', method: 'notifications/initialized' },
+        { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+        { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'get_deploy_credentials' } }
+      ];
+      const r = spawnSync('bun', [CLI, 'canary', 'serve'], {
+        input: `${lines.map((l) => JSON.stringify(l)).join('\n')}\n`,
+        encoding: 'utf8'
+      });
+      const out = r.stdout
+        .trim()
+        .split('\n')
+        .map((l) => JSON.parse(l));
+      expect(out.map((o) => o.id)).toEqual([1, 2, 3]);
+      expect(out[1].result.tools.map((t: { name: string }) => t.name)).toEqual([
+        'get_deploy_credentials'
+      ]);
+      expect(out[2].result.isError).toBe(true);
+    });
   });
 });

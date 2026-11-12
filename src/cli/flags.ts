@@ -28,6 +28,7 @@ export interface ParsedArgs {
 }
 
 const booleanFlags = new Set([
+  'tool',
   'acceptRisk',
   'accept-risk',
   'acceptWarnings',

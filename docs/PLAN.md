@@ -279,7 +279,7 @@ Decisions made while building it:
 ### Phase 4 — Second host and canaries
 
 - [x] OpenCode normaliser and emitter (its plugin API has a tool-call boundary)
-- [ ] `agora canary install`: decoy credential file and decoy tool; hits are denied and recorded
+- [x] `agora canary install`: decoy credential file and decoy tool; hits are denied and recorded
 - [x] Receipts carry `not_enforced` per host
 
 **Gate:** one policy file compiles to both hosts, and each host's enforcement gaps appear in
@@ -297,6 +297,15 @@ How OpenCode works, checked against a live OpenCode 1.19.3 session on 2026-11-12
   for a permit to remove.
 - MCP tools in OpenCode are named `<server>_<tool>`, which cannot be split reliably, so the
   revocation list does not reach them. Approval prompts are not recorded yet.
+
+Canaries, checked the same way:
+
+- `agora canary install` plants fresh fake keys in `.env.production.local`, hidden by
+  `.git/info/exclude`. `--tool` adds a decoy MCP tool, `deploy-vault/get_deploy_credentials`:
+  in Claude Code's local scope for this repository (never committed), and in the OpenCode plugin.
+- The hook denies a tool call on the file, a shell command that names it, or a call to the decoy
+  tool, and records a `canary` event. Receipts count hits; `agora ci` fails on them.
+- Not seen: a program that opens the file without naming it (a script, `cat .env*`).
 
 ### Phase 5 — Runner-signed receipts and the evidence report
 

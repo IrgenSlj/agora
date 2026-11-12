@@ -11,6 +11,7 @@
 // (https://opencode.ai/docs/permissions/, read 2026-11-12), so there are no
 // prompts for a permit to remove. Every rule is enforced by the plugin.
 
+import { DECOY_DESCRIPTION, DECOY_TOOL } from '../canary/tool.js';
 import { OPENCODE_GAPS } from './gaps.js';
 
 export const OPENCODE_PLUGIN_FILE = '.opencode/plugins/agora.js';
@@ -42,6 +43,8 @@ export const OPENCODE_PLUGIN = `// Written by \`agora apply\`. Agora checks each
 // agora.cedar before it runs and records it after. It only ever blocks; it
 // never grants. If agora is missing or fails, the call proceeds.
 import { spawn } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 const KEYS = ['filePath', 'path', 'command', 'url'];
 const pick = (args) => {
@@ -68,9 +71,27 @@ function agora(sub, payload) {
   });
 }
 
+// With a canary planted by \`agora canary install --tool\`, offer the decoy.
+function decoy(directory) {
+  try {
+    const state = JSON.parse(readFileSync(join(directory, '.agora', 'canaries.json'), 'utf8'));
+    if (!state.tool) return {};
+  } catch {
+    return {};
+  }
+  return {
+    ${DECOY_TOOL}: {
+      description: '${DECOY_DESCRIPTION}',
+      args: {},
+      execute: async () => 'access denied'
+    }
+  };
+}
+
 export const AgoraPlugin = async ({ directory }) => {
   const base = (sessionID) => ({ host: 'opencode', session_id: sessionID, cwd: directory });
   return {
+    tool: decoy(directory),
     'tool.execute.before': async (input, output) => {
       const out = await agora('check', {
         ...base(input.sessionID),

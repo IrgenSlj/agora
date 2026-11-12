@@ -8,6 +8,7 @@ import {
   readCanaries,
   removeCanary
 } from '../../canary/canary.js';
+import { DECOY_SERVER, DECOY_TOOL, serveDecoy } from '../../canary/tool.js';
 import { repoRoot } from '../../receipt/git.js';
 import { status } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
@@ -20,6 +21,11 @@ const SAFE_FILE = /^(?!\/)(?!.*\.\.)[A-Za-z0-9._/-]{1,200}$/;
 export const commandCanary: CommandHandler = async (parsed, io, style) => {
   const sub = parsed.args[0] ?? 'status';
   const theme = cliTheme(style, io);
+  // The decoy MCP server: started by the agent host, wherever it runs.
+  if (sub === 'serve') {
+    await serveDecoy();
+    return ExitCode.OK;
+  }
   const root = repoRoot(io.cwd ?? process.cwd());
   if (!root) return usageError(io, 'agora canary works inside a git repository.');
   const json = Boolean(parsed.flags.json);
@@ -28,7 +34,17 @@ export const commandCanary: CommandHandler = async (parsed, io, style) => {
     const file = stringFlag(parsed, 'file') ?? DEFAULT_CANARY_FILE;
     if (!SAFE_FILE.test(file))
       return usageError(io, '--file must be a plain path inside the repository.');
-    const r = installCanary(root, file);
+    const tool = Boolean(parsed.flags.tool);
+    let r: ReturnType<typeof installCanary>;
+    try {
+      r = installCanary(root, file, { tool, home: io.env?.HOME });
+    } catch (e) {
+      writeLine(
+        io.stderr,
+        `Could not register the decoy tool: ${e instanceof Error ? e.message : String(e)}`
+      );
+      return ExitCode.COULD_NOT_CHECK;
+    }
     if (json) {
       writeJson(io.stdout, r);
       return ExitCode.OK;
@@ -49,11 +65,20 @@ export const commandCanary: CommandHandler = async (parsed, io, style) => {
           '  Not seen: a program that opens it without naming it (a script, `cat .env*`).'
       )
     );
+    if (readCanaries(root).tool)
+      writeLine(
+        io.stdout,
+        theme.dim(
+          `  Decoy tool ${DECOY_SERVER}/${DECOY_TOOL}: registered for you in ~/.claude.json\n` +
+            '  (local scope, this repository only), and offered by the OpenCode plugin after\n' +
+            '  `agora apply`. Restart the agent to see it. Any call is denied and recorded.'
+        )
+      );
     return ExitCode.OK;
   }
 
   if (sub === 'remove') {
-    const file = removeCanary(root);
+    const file = removeCanary(root, io.env?.HOME);
     if (json) writeJson(io.stdout, { removed: file ?? null });
     else
       writeLine(
@@ -87,5 +112,8 @@ export const commandCanary: CommandHandler = async (parsed, io, style) => {
     return ExitCode.OK;
   }
 
-  return usageError(io, 'Usage: agora canary [status|install|remove] [--file <path>] [--json]');
+  return usageError(
+    io,
+    'Usage: agora canary [status|install|remove] [--file <path>] [--tool] [--json]'
+  );
 };

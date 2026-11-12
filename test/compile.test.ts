@@ -278,6 +278,16 @@ describe('OpenCode', () => {
       ).resolves.toBeUndefined();
     });
 
+    test('offers the decoy tool only when a canary with a tool is planted', async () => {
+      fakeAgora('');
+      expect(Object.keys((await load()).tool)).toEqual([]);
+      mkdirSync(join(repo, '.agora'), { recursive: true });
+      writeFileSync(join(repo, '.agora', 'canaries.json'), JSON.stringify({ tool: true }));
+      const hooks = await load();
+      expect(Object.keys(hooks.tool)).toEqual(['get_deploy_credentials']);
+      expect(await hooks.tool.get_deploy_credentials.execute({}, {})).toBe('access denied');
+    });
+
     test('fails open when agora is not installed', async () => {
       process.env.PATH = join(root, 'nowhere');
       const hooks = await load();

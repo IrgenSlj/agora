@@ -15,6 +15,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { atomicWriteFile } from '../atomic-write.js';
+import { DECOY_SUBJECTS, setClaudeDecoy } from './tool.js';
 
 export const CANARY_STATE = '.agora/canaries.json';
 export const DEFAULT_CANARY_FILE = '.env.production.local';
@@ -22,6 +23,8 @@ export const DEFAULT_CANARY_FILE = '.env.production.local';
 export interface CanaryState {
   /** Repository-relative path of the decoy credential file. */
   file?: string;
+  /** True when the decoy tool is offered (`install --tool`). */
+  tool?: boolean;
   installed?: string;
 }
 
@@ -77,26 +80,41 @@ export type InstallResult =
   | { status: 'installed'; file: string }
   | { status: 'exists'; file: string };
 
-export function installCanary(root: string, file = DEFAULT_CANARY_FILE): InstallResult {
+export function installCanary(
+  root: string,
+  file = DEFAULT_CANARY_FILE,
+  opts: { tool?: boolean; home?: string } = {}
+): InstallResult {
   const state = readCanaries(root);
-  if (state.file && existsSync(join(root, state.file)))
-    return { status: 'exists', file: state.file };
-  if (existsSync(join(root, file))) return { status: 'exists', file };
-  atomicWriteFile(join(root, file), decoyContent(), 0o600);
-  setExcluded(root, file, true);
+  let changed = false;
+  if (!(state.file && existsSync(join(root, state.file)))) {
+    if (existsSync(join(root, file))) return { status: 'exists', file };
+    atomicWriteFile(join(root, file), decoyContent(), 0o600);
+    setExcluded(root, file, true);
+    state.file = file;
+    changed = true;
+  }
+  if (opts.tool && !state.tool) {
+    if (opts.home) setClaudeDecoy(opts.home, root, true);
+    state.tool = true;
+    changed = true;
+  }
+  if (!changed) return { status: 'exists', file: state.file as string };
   atomicWriteFile(
     join(root, CANARY_STATE),
-    `${JSON.stringify({ ...state, file, installed: new Date().toISOString() }, null, 2)}\n`,
+    `${JSON.stringify({ ...state, installed: new Date().toISOString() }, null, 2)}\n`,
     0o644
   );
-  return { status: 'installed', file };
+  return { status: 'installed', file: state.file as string };
 }
 
-export function removeCanary(root: string): string | undefined {
+export function removeCanary(root: string, home?: string): string | undefined {
   const state = readCanaries(root);
-  if (!state.file) return undefined;
-  rmSync(join(root, state.file), { force: true });
-  setExcluded(root, state.file, false);
+  if (state.tool && home) setClaudeDecoy(home, root, false);
+  if (state.file) {
+    rmSync(join(root, state.file), { force: true });
+    setExcluded(root, state.file, false);
+  }
   rmSync(join(root, CANARY_STATE), { force: true });
   return state.file;
 }
@@ -112,10 +130,13 @@ export function canaryHit(
   command: string | undefined
 ): string | undefined {
   const file = state.file;
-  if (!file) return undefined;
+  if (!file && !state.tool) return undefined;
   for (const s of subjects) {
-    if ((s.kind === 'file_read' || s.kind === 'file_write') && s.subject === file) return file;
+    if (file && (s.kind === 'file_read' || s.kind === 'file_write') && s.subject === file)
+      return file;
+    if (state.tool && s.kind === 'tool_call' && DECOY_SUBJECTS.includes(s.subject))
+      return s.subject;
   }
-  if (command?.includes(basename(file))) return file;
+  if (file && command?.includes(basename(file))) return file;
   return undefined;
 }

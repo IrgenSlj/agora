@@ -20,7 +20,8 @@ the code can actually prove. Labels:
 | Compile and enforce (`agora plan`, `agora apply`) | Works for Claude Code and OpenCode | The PreToolUse hook enforces `agora.cedar` on every tool; exact-equivalent permits compile to `permissions.allow`; every rule is reported as compiled, hook-only or not enforceable. In a repository that uses OpenCode, a plugin runs the same check before every OpenCode tool call and records the session | About 130 ms per checked tool call |
 | Host adapters | Works | Read MCP servers from Claude Code, Cursor, Windsurf, VS Code and OpenCode configs; atomic, key-preserving writes (used by `observe enable`) | Emit native permissions (phase 3) |
 
-| Canaries, runner signing, report | Planned | — | Phases 4 and 5 |
+| Canaries (`agora canary`) | Works | A decoy credential file hidden from git, and with `--tool` a decoy MCP tool; any tool call on them, or a shell command naming the file, is denied and recorded as a canary event in Claude Code and OpenCode; receipts count hits and CI fails on them | A program that opens the file without naming it is not seen |
+| Runner signing, report | Planned | — | Phase 5 |
 
 ## Invariants enforced by tests
 

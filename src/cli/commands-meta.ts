@@ -192,17 +192,20 @@ export const COMMANDS: CommandMeta[] = [
     name: 'canary',
     group: 'Setup',
     summary: 'Plant a decoy credential file that no agent task should touch',
-    usage: 'agora canary [status|install|remove] [--file <path>] [--json]',
+    usage: 'agora canary [status|install|remove] [--file <path>] [--tool] [--json]',
     details:
       '`install` writes fake credentials to .env.production.local (or --file) and hides it from ' +
       'git through .git/info/exclude. The hook denies any tool call that reads or writes it, or ' +
       'any shell command that names it, and records a canary event; receipts count hits and ' +
-      '`agora ci` fails on them. A program that opens the file without naming it is not seen.',
+      '`agora ci` fails on them. A program that opens the file without naming it is not seen. ' +
+      '`--tool` also offers a decoy MCP tool, deploy-vault/get_deploy_credentials: registered ' +
+      'for you alone in ~/.claude.json for this repository, and by the OpenCode plugin.',
     flags: [
+      { flag: '--tool', description: 'Also offer a decoy tool to the agent' },
       { flag: '--file', description: 'Where to plant the decoy, relative to the repository' },
       { flag: '--json', description: 'Output as JSON' }
     ],
-    examples: ['agora canary install', 'agora canary status', 'agora canary remove']
+    examples: ['agora canary install --tool', 'agora canary status', 'agora canary remove']
   },
   {
     name: 'signer',
