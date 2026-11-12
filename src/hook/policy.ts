@@ -4,16 +4,16 @@
 // does not parse, a rule that errored, or an engine that will not load is no
 // opinion with a note, never a block.
 
-import type { ClaudeCodePayload } from '../events/claude-code.js';
+import type { HookPayload } from '../events/hook-payload.js';
 import type { HookDecision } from './pretooluse.js';
 
 export async function decidePolicy(
-  payload: ClaudeCodePayload,
+  payload: HookPayload,
   ctx: { root: string; dataDir: string; home?: string }
 ): Promise<HookDecision> {
-  const [{ normaliseClaudeCode }, { evaluate, loadPolicySet, POLICY_FILE }, { requestFor }] =
+  const [{ normaliseHook }, { evaluate, loadPolicySet, POLICY_FILE }, { requestFor }] =
     await Promise.all([
-      import('../events/claude-code.js'),
+      import('../events/hook-payload.js'),
       import('../policy/engine.js'),
       import('../policy/requests.js')
     ]);
@@ -38,7 +38,7 @@ export async function decidePolicy(
       })
     : {};
 
-  for (const draft of normaliseClaudeCode(payload)) {
+  for (const draft of normaliseHook(payload)) {
     const req = requestFor(draft, facts);
     if (!req) continue;
     const d = await evaluate(set, req);
