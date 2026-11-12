@@ -116,6 +116,7 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
     writeLine(io.stdout, row(c.tone, c.label, c.middle, c.right, theme));
   };
   const home = io.env?.HOME;
+  const dot = theme.glyph('leader');
   const where = root ?? cwd;
   const shown = home && where.startsWith(home) ? `~${where.slice(home.length)}` : where;
 
@@ -131,7 +132,12 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
     if (h.id === 'claude-code')
       out(
         hook
-          ? { tone: 'success', label: h.id, middle: `hook installed · ${mcp}`, right: 'enforced' }
+          ? {
+              tone: 'success',
+              label: h.id,
+              middle: `hook installed ${dot} ${mcp}`,
+              right: 'enforced'
+            }
           : {
               tone: 'warning',
               label: h.id,
@@ -143,7 +149,12 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
     else if (h.id === 'opencode')
       out(
         plugin
-          ? { tone: 'success', label: h.id, middle: `plugin installed · ${mcp}`, right: 'enforced' }
+          ? {
+              tone: 'success',
+              label: h.id,
+              middle: `plugin installed ${dot} ${mcp}`,
+              right: 'enforced'
+            }
           : {
               tone: 'warning',
               label: h.id,
@@ -153,7 +164,12 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
             }
       );
     else
-      out({ tone: 'warning', label: h.id, middle: `no adapter · ${mcp}`, right: 'not enforced' });
+      out({
+        tone: 'warning',
+        label: h.id,
+        middle: `no adapter ${dot} ${mcp}`,
+        right: 'not enforced'
+      });
   }
   if (!hosts.some((x) => x.present))
     out({ tone: 'unknown', label: 'hosts', middle: 'no agent host found', right: 'unknown' });
