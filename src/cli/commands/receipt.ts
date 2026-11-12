@@ -34,6 +34,38 @@ export const commandReceipt: CommandHandler = async (parsed, io, style) => {
   const theme = cliTheme(style, io);
   const repo = repoRoot(io.cwd ?? process.cwd());
   if (!repo) return usageError(io, 'Not inside a git repository.');
+
+  if (sub === 'install' || sub === 'uninstall') {
+    const { installGitHooks, uninstallGitHooks } = await import('../../receipt/githooks.js');
+    if (sub === 'uninstall') {
+      const removed = uninstallGitHooks(repo);
+      if (parsed.flags.json) writeJson(io.stdout, { removed });
+      else
+        writeLine(
+          io.stdout,
+          removed.length
+            ? `Removed Agora's lines from ${removed.join(' and ')}.`
+            : 'No Agora git hooks here.'
+        );
+      return ExitCode.OK;
+    }
+    const changes = installGitHooks(repo);
+    if (parsed.flags.json) {
+      writeJson(io.stdout, { hooks: changes });
+      return changes.some((c) => c.result === 'skipped') ? ExitCode.COULD_NOT_CHECK : ExitCode.OK;
+    }
+    for (const c of changes) {
+      const line = `${c.hook} ${c.result}${c.why ? `: ${c.why}` : ''} · ${c.path}`;
+      writeLine(io.stdout, c.result === 'skipped' ? theme.warning(line) : theme.dim(line));
+    }
+    writeLine(
+      io.stdout,
+      'Each commit now gets its receipt, and pushes send refs/notes/agora. Neither hook ever ' +
+        'blocks a commit or a push.'
+    );
+    return changes.some((c) => c.result === 'skipped') ? ExitCode.COULD_NOT_CHECK : ExitCode.OK;
+  }
+
   const rev = parsed.args[1] ?? 'HEAD';
   const sha = resolveCommit(repo, rev);
   if (!sha) return usageError(io, `Not a commit: ${rev}`);

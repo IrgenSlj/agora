@@ -161,6 +161,7 @@ export const COMMANDS: CommandMeta[] = [
     group: 'Check',
     summary: 'Write, show and verify the receipt that says how agents produced a commit',
     usage:
+      'agora receipt install | uninstall\n' +
       'agora receipt write [<commit>] [--dry-run] [--no-sign]\n' +
       'agora receipt show [<commit>]\n' +
       'agora receipt verify [<commit>] [--trusted-from <rev>] [--fail-on-unknown]',
@@ -173,7 +174,8 @@ export const COMMANDS: CommandMeta[] = [
       'A receipt states its signer level. `none` is a self-reported log that an agent with ' +
       'shell access could forge. A signed level verifies only against keys listed in ' +
       '.agora/signers.json at --trusted-from (default HEAD; CI uses the pull request base). ' +
-      'Push receipts with `git push origin refs/notes/agora`. `write` refuses a log that does ' +
+      '`install` adds git hooks so every commit gets its receipt and every push sends them; ' +
+      'without it, push receipts with `git push origin refs/notes/agora`. `write` refuses a log that does ' +
       'not verify. `verify` exits 1 on an invalid receipt; a missing one is not established.',
     flags: [
       { flag: '--dry-run', description: 'Print the receipt instead of writing the note' },
