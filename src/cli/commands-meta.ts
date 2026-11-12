@@ -1,4 +1,5 @@
-import type { Styler } from '../ui.js';
+import { headerLine, leader, MEASURE, section, wrap } from './components.js';
+import type { Theme } from './theme.js';
 
 export type CommandGroup = 'Enforce' | 'Record' | 'Check' | 'Setup';
 
@@ -328,23 +329,34 @@ export const COMMANDS: CommandMeta[] = [
   }
 ];
 
-export function renderManual(meta: CommandMeta, style: Styler): string {
-  const lines: string[] = [
-    style.accent(meta.name),
-    meta.summary,
-    '',
-    style.dim('Usage:'),
-    ...meta.usage.split('\n').map((line) => `  ${line}`)
-  ];
+/** A command's manual, in the same frame as every other screen. */
+export function renderManual(meta: CommandMeta, theme: Theme): string {
+  const lines: string[] = ['', headerLine(meta.name, meta.group.toLowerCase(), theme), ''];
+  lines.push(`  ${meta.summary}`, '');
+  lines.push(section('Usage', theme));
+  for (const line of meta.usage.split('\n')) lines.push(`    ${line}`);
   if (meta.flags?.length) {
-    const w = Math.max(...meta.flags.map((f) => f.flag.length));
-    lines.push('', style.dim('Flags:'));
-    for (const f of meta.flags) lines.push(`  ${f.flag.padEnd(w)}  ${style.dim(f.description)}`);
+    lines.push('', section('Flags', theme));
+    const w = Math.max(18, ...meta.flags.map((f) => f.flag.length + 5));
+    for (const f of meta.flags) {
+      const label = leader(f.flag, '', theme, w).trimEnd();
+      lines.push(
+        `    ${theme.accent(f.flag)}${label.slice(f.flag.length)} ${theme.muted(f.description)}`
+      );
+    }
   }
   if (meta.examples?.length) {
-    lines.push('', style.dim('Examples:'));
-    for (const ex of meta.examples) lines.push(`  ${ex}`);
+    lines.push('', section('Examples', theme));
+    for (const ex of meta.examples) lines.push(`    ${ex}`);
   }
-  if (meta.details) lines.push('', meta.details);
+  if (meta.details) {
+    lines.push('', section('About', theme));
+    for (const para of meta.details.split('\n\n')) {
+      for (const l of wrap(para, MEASURE - 2)) lines.push(`    ${l}`);
+      lines.push('');
+    }
+    lines.pop();
+  }
+  lines.push('');
   return lines.join('\n');
 }

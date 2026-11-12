@@ -118,7 +118,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
 
   if (parsed.flags.help) {
     if (parsed.command && COMMANDS.some((c) => c.name === parsed.command)) {
-      writeLine(io.stdout, commandManual(parsed.command));
+      writeLine(io.stdout, commandManual(parsed.command, io));
     } else {
       writeLine(io.stdout, usage(cliTheme(style, io), VERSION));
     }
@@ -181,7 +181,7 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
           writeLine(io.stderr, 'Run `agora help` for a list of commands.');
           return ExitCode.USAGE;
         }
-        writeLine(io.stdout, commandManual(helpTarget));
+        writeLine(io.stdout, commandManual(helpTarget, io));
       } else {
         writeLine(io.stdout, usage(cliTheme(style, io), VERSION));
       }
@@ -209,10 +209,13 @@ export async function runCli(argv: string[], io: CliIo): Promise<number> {
   }
 }
 
-export function commandManual(name: string): string {
+export function commandManual(
+  name: string,
+  io: CliIo = { stdout: process.stdout, stderr: process.stderr }
+): string {
   const meta = COMMANDS.find((c) => c.name === name);
   if (!meta) return '';
-  return renderManual(meta, style);
+  return renderManual(meta, cliTheme(style, io));
 }
 
 export async function commandCompletions(
