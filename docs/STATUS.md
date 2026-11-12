@@ -1,6 +1,6 @@
 # Status
 
-Last reviewed: 2026-11-12, phase 3 built with its gate open; phase 4 under way. The plan is [`PLAN.md`](./PLAN.md); this page says what
+Last reviewed: 2026-11-12. Phases 0, 1, 2, 4 and 5 passed their gates; phase 3 is built, its gate waiting on real sessions. The plan is [`PLAN.md`](./PLAN.md); this page says what
 the code can actually prove. Labels:
 
 - **Works** — on a user-facing path and covered by tests.
@@ -22,7 +22,8 @@ the code can actually prove. Labels:
 
 | Canaries (`agora canary`) | Works | A decoy credential file hidden from git, and with `--tool` a decoy MCP tool; any tool call on them, or a shell command naming the file, is denied and recorded as a canary event in Claude Code and OpenCode; receipts count hits and CI fails on them | A program that opens the file without naming it is not seen |
 | Evidence report (`agora report`) | Works | One self-contained HTML file (or `--json`) from the receipts in git notes for a date range: receipts that verify, rejected, not established, signer levels, denials, canary hits, policy versions, and every gap the receipts list; no server, no scripts; exits 1 on a rejected receipt | — |
-| Runner signing | Planned | — | Phase 5 |
+| Runner signing (`agora signer trust --workflow`) | Works | On a GitHub runner with `id-token: write`, receipts are signed with Sigstore keyless as the running workflow and verify at `runner-oidc` against workflow identities trusted in `.agora/signers.json` at the base; checked from a fresh clone of the public repository | GitHub Actions only |
+| Profiles (`agora profile`) | Works | Read-only policies for MCP servers in `profiles/`, with tools read from the published packages; `add` writes one into an existing `agora.cedar` between markers | Two servers so far; more by pull request |
 
 ## Invariants enforced by tests
 

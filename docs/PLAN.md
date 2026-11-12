@@ -315,14 +315,21 @@ Canaries, checked the same way:
 
 ### Phase 5 — Runner-signed receipts and the evidence report
 
-- [ ] GitHub Action mode that signs receipts with Sigstore keyless via the runner's OIDC identity
+- [x] GitHub Action mode that signs receipts with Sigstore keyless via the runner's OIDC identity
 - [x] `agora report`: a static evidence report for a repository and date range, built from its
       receipts
-- [ ] Public profile registry repository: minimal policies per MCP server, contributed by pull
+- [x] Public profile registry repository: minimal policies per MCP server, contributed by pull
       request
 
 **Gate:** a stranger can verify a runner-signed receipt with only the public repository, and the
 report renders from git notes with no server.
+
+**Gate passed 2026-11-12.** The `Agent on a runner` workflow ran OpenCode on a GitHub runner, which
+wrote one line on branch `agent/runner-43261882340` and signed its receipt through Sigstore. A
+fresh clone of the public repository verified it at `runner-oidc` with `agora receipt verify
+--trusted-from origin/main`; the same receipt with one path changed failed ("DSSE payload hash
+mismatch"). `agora report` renders from git notes alone. The first run found a real bug: Sigstore
+omits an empty `keyid`, which the envelope schema rejected.
 
 How runner signing works:
 
@@ -332,6 +339,10 @@ How runner signing works:
 - `agora signer trust --workflow agent.yml` adds that workflow's identity to `.agora/signers.json`.
   Verification checks the bundle against Sigstore's public trust root and that identity, read from
   the pull request base like keys are.
+- The registry is a folder, `profiles/`, in this repository and the package, decided 2026-11-12: one
+  repository to maintain, and it can move out later. `agora profile add <name> --server <name>`
+  writes a profile into an existing `agora.cedar` between markers. Each profile names tools read
+  from the published package.
 - New runtime dependency, `sigstore` (v5, pure JavaScript, maintained by the Sigstore and npm
   teams): Fulcio certificates, Rekor entries and bundle verification are security code that should
   not be rewritten. It is imported only when a receipt is runner-signed or verified.

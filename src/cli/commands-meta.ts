@@ -50,6 +50,25 @@ export const COMMANDS: CommandMeta[] = [
     examples: ['agora learn', 'agora learn --apply', 'agora replay']
   },
   {
+    name: 'profile',
+    group: 'Enforce',
+    summary: 'Add a minimal policy for a known MCP server to agora.cedar',
+    usage: 'agora profile [list | show <name> | add <name> --server <name>] [--json]',
+    details:
+      'Profiles are read-only policies for MCP servers, shipped in profiles/ and contributed by ' +
+      'pull request. `add` fills in the name the server has in your host config and writes the ' +
+      'profile into agora.cedar between markers, so adding it again replaces it. It needs an ' +
+      'existing agora.cedar: on its own a profile would deny everything else.',
+    flags: [
+      { flag: '--server', description: 'The server name in your host config' },
+      { flag: '--json', description: 'Output as JSON' }
+    ],
+    examples: [
+      'agora profile list',
+      'agora profile add modelcontextprotocol-server-filesystem --server filesystem'
+    ]
+  },
+  {
     name: 'plan',
     group: 'Enforce',
     summary: "Show how agora.cedar compiles into each host's settings; write nothing",
