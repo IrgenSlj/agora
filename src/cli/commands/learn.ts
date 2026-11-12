@@ -7,6 +7,7 @@ import { sessionsForRepo } from '../../log/select.js';
 import { lintPolicyText, POLICY_FILE } from '../../policy/engine.js';
 import { applyBlock, learnPolicy, lineDiff } from '../../policy/learn.js';
 import { repoRoot } from '../../receipt/git.js';
+import { headerLine, rule, section, status, tally } from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, stringFlag, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
@@ -64,20 +65,41 @@ export const commandLearn: CommandHandler = async (parsed, io, style) => {
       proposal: proposed
     });
   } else {
-    writeLine(
-      io.stdout,
-      `Learned ${rules} rule${rules === 1 ? '' : 's'} from ${verified.length} session${verified.length === 1 ? '' : 's'}.`
+    const out = (l = '') => writeLine(io.stdout, l);
+    const n = (k: number, w: string) => `${k} ${w}${k === 1 ? '' : 's'}`;
+    out('');
+    out(
+      headerLine(
+        'learn',
+        `${n(verified.length, 'session')} ${theme.glyph('arrow')} ${n(rules, 'rule')}`,
+        theme
+      )
     );
+    out('');
     if (!changed) {
-      writeLine(io.stdout, theme.dim(`${POLICY_FILE} already matches.`));
+      out(`  ${status('success', `${POLICY_FILE} already matches what agents did`, theme)}`);
+      out('');
       return ExitCode.OK;
     }
-    writeLine(io.stdout, '');
-    for (const line of lineDiff(current ?? '', proposed)) {
-      if (line.startsWith('+ ')) writeLine(io.stdout, theme.success(line));
-      else if (line.startsWith('- ')) writeLine(io.stdout, theme.error(line));
+    const diff = lineDiff(current ?? '', proposed);
+    const added = diff.filter((l) => l.startsWith('+ '));
+    const removed = diff.filter((l) => l.startsWith('- '));
+    out(section('Proposed rules', theme, `+${added.length}  -${removed.length}`));
+    for (const line of diff) {
+      if (line.startsWith('+ ')) out(`  ${theme.success('+')} ${line.slice(2)}`);
+      else if (line.startsWith('- ')) out(`  ${theme.error('-')} ${line.slice(2)}`);
     }
-    writeLine(io.stdout, '');
+    out('');
+    out(rule(theme));
+    out(
+      tally(
+        [
+          [added.length, 'lines added'],
+          [removed.length, 'removed']
+        ],
+        theme
+      )
+    );
   }
 
   if (parsed.flags.apply && changed) {
@@ -85,11 +107,11 @@ export const commandLearn: CommandHandler = async (parsed, io, style) => {
     if (!parsed.flags.json) {
       writeLine(
         io.stdout,
-        `Wrote ${POLICY_FILE}. Next: \`agora replay\` to check it against what ran.`
+        `  ${status('success', `wrote ${POLICY_FILE}`, theme)}  ${theme.muted('next')}  agora replay\n`
       );
     }
   } else if (!parsed.flags.json && changed) {
-    writeLine(io.stdout, theme.dim('Nothing written. Run `agora learn --apply` to write it.'));
+    writeLine(io.stdout, `  ${theme.muted('nothing written. to apply')}  agora learn --apply\n`);
   }
   return ExitCode.OK;
 };

@@ -104,3 +104,12 @@ export function tagList(tags: ReadonlyArray<string>, theme: Theme): string {
 export function kvRow(key: string, value: string, keyW: number, theme: Theme): string {
   return theme.muted(padRight(key, keyW)) + value;
 }
+
+/** A timestamp as `12 min ago`, `3 h ago`, `4 days ago`. */
+export function ago(iso: string): string {
+  const min = Math.round((Date.now() - Date.parse(iso)) / 60000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min} min ago`;
+  const h = Math.round(min / 60);
+  return h < 48 ? `${h} h ago` : `${Math.round(h / 24)} days ago`;
+}

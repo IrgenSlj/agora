@@ -171,6 +171,7 @@ export function readEvents(dataDir: string, session: string): AgentEvent[] {
 }
 
 export interface SessionSummary {
+  host: string;
   session: string;
   events: number;
   /** Permission prompts Claude Code showed a person. */
@@ -191,6 +192,7 @@ export function listSessions(dataDir: string): SessionSummary[] {
       const lines = readFileSync(path, 'utf8').split('\n').filter(Boolean);
       return {
         session,
+        host: /"host":"([a-z-]+)"/.exec(lines[0] ?? '')?.[1] ?? 'unknown',
         events: lines.length,
         prompts: lines.filter((l) => l.includes('"kind":"approval"')).length,
         modified: statSync(path).mtime.toISOString(),

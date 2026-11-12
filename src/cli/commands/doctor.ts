@@ -15,21 +15,22 @@ import { checkRevocations, refreshFeed } from '../../revocation/client.js';
 import { installedPurls } from '../../revocation/installed.js';
 import { isBlockingMatch } from '../../revocation/match.js';
 import { detectTools, readAllServers } from '../../stack/registry.js';
-import { type HealthTone, headerLine, row, rule, section, status, tally } from '../components.js';
+import {
+  ago,
+  type HealthTone,
+  headerLine,
+  row,
+  rule,
+  section,
+  status,
+  tally
+} from '../components.js';
 import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import { hookInstalled } from './hook.js';
 import { usesOpenCode } from './plan.js';
 import type { CommandHandler } from './types.js';
-
-function ago(iso: string): string {
-  const min = Math.round((Date.now() - Date.parse(iso)) / 60000);
-  if (min < 1) return 'just now';
-  if (min < 60) return `${min} min ago`;
-  const h = Math.round(min / 60);
-  return h < 48 ? `${h} h ago` : `${Math.round(h / 24)} days ago`;
-}
 
 export const commandDoctor: CommandHandler = async (parsed, io, style) => {
   const cwd = io.cwd ?? process.cwd();
