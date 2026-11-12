@@ -14,7 +14,13 @@ function cli() {
     io: {
       stdout: { write: (s: string) => void out.push(s) },
       stderr: { write: (s: string) => void out.push(s) },
-      env: { HOME: home, AGORA_HOME: join(home, 'agora'), NO_COLOR: '1' },
+      // A keychain file of its own, so doctor never reads the real login keychain.
+      env: {
+        HOME: home,
+        AGORA_HOME: join(home, 'agora'),
+        AGORA_KEYCHAIN: join(home, 'test.keychain'),
+        NO_COLOR: '1'
+      },
       cwd: repo,
       // Hermetic: the opportunistic list refresh must never reach the network.
       fetcher: (() => Promise.reject(new Error('offline'))) as never
@@ -73,5 +79,20 @@ describe('agora doctor', () => {
     const second = cli();
     await runCli(['doctor', '--json'], second.io as never);
     expect(JSON.parse(second.out()).policy.present).toBe(true);
+  });
+
+  test('reports whether receipts are automatic, signed, and guarded by a canary', async () => {
+    const { execFileSync } = await import('node:child_process');
+    execFileSync('git', ['init', '-q'], { cwd: repo });
+    const before = cli();
+    await runCli(['doctor', '--json'], before.io as never);
+    expect(JSON.parse(before.out()).receipts.git_hooks).toBe(false);
+    await runCli(['receipt', 'install'], cli().io as never);
+    await runCli(['canary', 'install'], cli().io as never);
+    const after = cli();
+    await runCli(['doctor', '--json'], after.io as never);
+    const report = JSON.parse(after.out());
+    expect(report.receipts.git_hooks).toBe(true);
+    expect(report.canary.file).toBe('.env.production.local');
   });
 });

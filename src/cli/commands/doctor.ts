@@ -4,7 +4,11 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { readCanaries } from '../../canary/canary.js';
+import { OPENCODE_PLUGIN_FILE } from '../../compile/opencode.js';
 import { POLICY_FILE } from '../../policy/engine.js';
+import { repoRoot } from '../../receipt/git.js';
+import { gitHooksInstalled } from '../../receipt/githooks.js';
 import { checkRevocations, refreshFeed } from '../../revocation/client.js';
 import { installedPurls } from '../../revocation/installed.js';
 import { isBlockingMatch } from '../../revocation/match.js';
@@ -14,6 +18,7 @@ import { ExitCode } from '../exit-codes.js';
 import { detectDataDir, writeJson, writeLine } from '../helpers.js';
 import { cliTheme } from '../theme.js';
 import { hookInstalled } from './hook.js';
+import { usesOpenCode } from './plan.js';
 import type { CommandHandler } from './types.js';
 
 export const commandDoctor: CommandHandler = async (parsed, io, style) => {
@@ -37,6 +42,13 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
   });
   const hook = hookInstalled(cwd);
   const policy = existsSync(join(cwd, POLICY_FILE));
+  const root = repoRoot(cwd);
+  const opencode = root ? usesOpenCode(root) : false;
+  const plugin = root ? existsSync(join(root, OPENCODE_PLUGIN_FILE)) : false;
+  const gitHooks = root ? gitHooksInstalled(root) : false;
+  const canary = root ? readCanaries(root) : {};
+  const { signerAvailable } = await import('../../signer/client.js');
+  const signer = await signerAvailable(io.env ?? {});
 
   // Refreshing is opportunistic and never fails the report; the lookup is offline.
   await refreshFeed({ dataDir, fetcher: io.fetcher }).catch(() => undefined);
@@ -68,8 +80,10 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
         transport: s.transport,
         enabled: s.enabled
       })),
-      hook: { claudeCode: hook },
+      hook: { claudeCode: hook, opencode: opencode ? plugin : null },
       policy: { path: POLICY_FILE, present: policy },
+      receipts: root ? { git_hooks: gitHooks, signer } : null,
+      canary: root ? { file: canary.file ?? null, tool: Boolean(canary.tool) } : null,
       revocations: {
         feedVersion: revocations.feedVersion,
         stale: revocations.stale,
@@ -107,10 +121,38 @@ export const commandDoctor: CommandHandler = async (parsed, io, style) => {
       ? 'Claude Code hook installed in this repository'
       : 'Claude Code hook not installed · run `agora hook install`'
   );
+  if (opencode)
+    line(
+      plugin ? true : 'warn',
+      plugin
+        ? 'OpenCode plugin installed in this repository'
+        : 'OpenCode used here, plugin not installed · run `agora apply`'
+    );
   line(
     policy ? true : 'warn',
-    policy ? `${POLICY_FILE} found` : `no ${POLICY_FILE} · run \`agora policy init\``
+    policy ? `${POLICY_FILE} found` : `no ${POLICY_FILE} · run \`agora learn --apply\``
   );
+
+  if (root) {
+    writeLine(io.stdout, '');
+    writeLine(io.stdout, theme.muted('Receipts'));
+    line(
+      gitHooks ? true : 'warn',
+      gitHooks
+        ? 'written on every commit and sent on every push'
+        : 'written only by hand · run `agora receipt install`'
+    );
+    line(
+      signer === 'none' ? 'warn' : true,
+      signer === 'none' ? 'unsigned (signer none) · run `agora signer init`' : `signed at ${signer}`
+    );
+    line(
+      canary.file ? true : false,
+      canary.file
+        ? `canary planted: ${canary.file}${canary.tool ? ' and the decoy tool' : ''}`
+        : theme.dim('no canary · `agora canary install` plants one')
+    );
+  }
 
   writeLine(io.stdout, '');
   writeLine(io.stdout, theme.muted('Revocations'));
