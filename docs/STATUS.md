@@ -1,6 +1,6 @@
 # Status
 
-Last reviewed: 2026-11-12. Phases 0, 1, 2, 4 and 5 passed their gates; phase 3 is built, its gate waiting on real sessions. The plan is [`PLAN.md`](./PLAN.md); this page says what
+Last reviewed: 2026-11-13. Phases 0, 1, 2, 4 and 5 passed their gates; phase 3 is built, its gate waiting on real sessions. The plan is [`PLAN.md`](./PLAN.md); this page says what
 the code can actually prove. Labels:
 
 - **Works** — on a user-facing path and covered by tests.
@@ -68,3 +68,16 @@ the code can actually prove. Labels:
    `learn`, `replay` and receipts skip them.
 5. Network peers reached by shell commands are not recorded; only `WebFetch` hosts and sampled MCP
    server connections are.
+
+## Next
+
+What is left before the single 2.0.0 release, in order:
+
+1. Rewrite the README as a whole (the design pass changed only its hero and the `doctor` block),
+   then tidy the repository: stale docs, leftover files, `docs/archive`.
+2. The phase 3 gate: 20 + 10 real sessions in this repository, then `agora learn` and
+   `agora replay` against them.
+3. Re-check EU law (`docs/PLAN.md`, Law and regulation) and release 2.0.0 per `AGENTS.md`.
+
+The terminal identity is done and held by `test/screens.test.ts`; refresh the snapshots with
+`bunx vitest run test/screens -u` only for a deliberate change to the look.
